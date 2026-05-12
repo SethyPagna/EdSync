@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat } from "@/lib/openrouter";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ suggestions: ["Unauthorized"] }, { status: 401 });
+    }
+
     const { studentStats, lessonStats } = await request.json();
 
     if (!process.env.OPENROUTER_API_KEY) {
