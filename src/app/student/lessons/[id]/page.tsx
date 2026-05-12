@@ -588,12 +588,6 @@ export default function StudentLesson() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      setReflectionLoading(false);
-      toast.error("Please sign in again to save your reflection.");
-      return;
-    }
-    const userId = user.id;
     if (!user) return;
 
     let lessonData = null;
@@ -855,6 +849,12 @@ export default function StudentLesson() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    if (!user) {
+      setReflectionLoading(false);
+      toast.error("Please sign in again to save your reflection.");
+      return;
+    }
+    const userId = user.id;
 
     try {
       const lectureContext = sections
