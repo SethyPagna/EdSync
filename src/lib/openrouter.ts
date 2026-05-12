@@ -6,7 +6,7 @@
  */
 
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
-const MODEL = "openai/gpt-oss-120b:free";
+const MODEL = process.env.OPENROUTER_DEFAULT_MODEL || "openai/gpt-oss-120b:free";
 
 interface OpenRouterErrorShape {
   message?: string;
@@ -108,8 +108,9 @@ export async function openRouterChat(opts: OpenRouterOptions): Promise<string> {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         // OpenRouter recommends these headers for analytics / free-tier access
-        "HTTP-Referer": "https://atlas-learning.app",
-        "X-Title": "Atlas Learning Platform",
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "https://edsync-learning.vercel.app",
+        "X-Title": "EdSync Learning OS",
       },
       body: JSON.stringify({
         model: opts.model ?? MODEL,
@@ -190,15 +191,3 @@ const FREE_MODELS = [
   "qwen/qwen3-coder:free",
   "stepfun/step-3.5-flash:free",
 ];
-
-export interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
-export interface OpenRouterOptions {
-  messages: ChatMessage[];
-  maxTokens?: number;
-  temperature?: number;
-  model?: string;
-}
