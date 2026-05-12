@@ -1,89 +1,130 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import type { Profile, Lesson, StudentProgress } from "@/types";
-import toast from "react-hot-toast";
-import { getStatusBadge } from "@/lib/utils";
 
-type AssignedLesson = Lesson & { progress?: StudentProgress };
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client";
+import type {
+  LearningGoal,
+  LearningReflection,
+  Lesson,
+  Profile,
+  StudentProgress,
+} from "@/types";
+import {
+  ArrowRight,
+  BookOpenCheck,
+  CheckCircle2,
+  Flame,
+  GraduationCap,
+  Sparkles,
+  Target,
+} from "lucide-react";
+
+type AssignedLesson = Lesson & {
+  progress?: StudentProgress;
+  sectionCount?: number;
+};
 
 export default function StudentDashboard() {
+  const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [lessons, setLessons] = useState<AssignedLesson[]>([]);
+  const [goals, setGoals] = useState<LearningGoal[]>([]);
+  const [reflections, setReflections] = useState<LearningReflection[]>([]);
   const [joinCode, setJoinCode] = useState("");
   const [joiningClass, setJoiningClass] = useState(false);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [supabase]);
 
   const loadDashboard = async () => {
+    setLoading(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    setProfile(prof);
-
-    // Get enrolled classes
-    const { data: enrollments } = await supabase
-      .from("class_enrollments")
-      .select("class_id")
-      .eq("student_id", user.id);
-    const classIds = (enrollments || []).map((e: any) => e.class_id);
-
-    // Get assigned lessons
-    if (classIds.length > 0) {
-      const { data: assignments } = await supabase
-        .from("lesson_assignments")
-        .select("lesson_id")
-        .in("class_id", classIds)
-        .eq("is_active", true);
-
-      const lessonIds = Array.from(
-        new Set((assignments || []).map((a: any) => a.lesson_id)),
-      );
-
-      if (lessonIds.length > 0) {
-        const { data: lessonData } = await supabase
-          .from("lessons")
-          .select("*")
-          .in("id", lessonIds)
-          .eq("status", "published");
-
-        // Get section counts for progress calculation
-        const { data: sectionsData } = await supabase
-          .from("lesson_sections")
-          .select("lesson_id")
-          .in("lesson_id", lessonIds);
-
-        const sectionCounts: { [key: string]: number } = {};
-        (sectionsData || []).forEach((s: any) => {
-          sectionCounts[s.lesson_id] = (sectionCounts[s.lesson_id] || 0) + 1;
-        });
-
-        const { data: progressData } = await supabase
-          .from("student_progress")
+    const [profileRes, enrollmentsRes, goalsRes, reflectionsRes] =
+      await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        supabase
+          .from("class_enrollments")
+          .select("class_id")
+          .eq("student_id", user.id)
+          .eq("is_active", true),
+        supabase
+          .from("learning_goals")
           .select("*")
           .eq("student_id", user.id)
-          .in("lesson_id", lessonIds);
+          .order("created_at", { ascending: false })
+          .limit(4),
+        supabase
+          .from("learning_reflections")
+          .select("*")
+          .eq("student_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(4),
+      ]);
 
-        const withProgress = (lessonData || []).map((l) => ({
-          ...l,
-          progress: (progressData || []).find((p) => p.lesson_id === l.id),
-          sectionCount: sectionCounts[l.id] || 0,
-        }));
-        setLessons(withProgress);
-      }
+    setProfile(profileRes.data);
+    setGoals(goalsRes.data || []);
+    setReflections(reflectionsRes.data || []);
+
+    const classIds = (enrollmentsRes.data || []).map((row: any) => row.class_id);
+    if (classIds.length === 0) {
+      setLessons([]);
+      setLoading(false);
+      return;
     }
+
+    const { data: assignments } = await supabase
+      .from("lesson_assignments")
+      .select("lesson_id")
+      .in("class_id", classIds)
+      .eq("is_active", true);
+
+    const lessonIds = Array.from(
+      new Set((assignments || []).map((assignment: any) => assignment.lesson_id)),
+    );
+
+    if (lessonIds.length === 0) {
+      setLessons([]);
+      setLoading(false);
+      return;
+    }
+
+    const [lessonRes, sectionRes, progressRes] = await Promise.all([
+      supabase
+        .from("lessons")
+        .select("*")
+        .in("id", lessonIds)
+        .eq("status", "published")
+        .order("updated_at", { ascending: false }),
+      supabase.from("lesson_sections").select("lesson_id").in("lesson_id", lessonIds),
+      supabase
+        .from("student_progress")
+        .select("*")
+        .eq("student_id", user.id)
+        .in("lesson_id", lessonIds),
+    ]);
+
+    const sectionCounts: Record<string, number> = {};
+    (sectionRes.data || []).forEach((section: any) => {
+      sectionCounts[section.lesson_id] = (sectionCounts[section.lesson_id] || 0) + 1;
+    });
+
+    setLessons(
+      (lessonRes.data || []).map((lesson: Lesson) => ({
+        ...lesson,
+        progress: (progressRes.data || []).find(
+          (progress: StudentProgress) => progress.lesson_id === lesson.id,
+        ),
+        sectionCount: sectionCounts[lesson.id] || 0,
+      })),
+    );
     setLoading(false);
   };
 
@@ -98,233 +139,401 @@ export default function StudentDashboard() {
       return;
     }
 
-    const { data: cls, error: clsErr } = await supabase
+    const { data: cls, error: clsError } = await supabase
       .from("classes")
       .select("id, name")
       .eq("join_code", joinCode.trim().toUpperCase())
       .maybeSingle();
 
-    if (clsErr) {
-      toast.error("Error looking up class: " + clsErr.message);
+    if (clsError) {
+      toast.error(`Could not look up class: ${clsError.message}`);
       setJoiningClass(false);
       return;
     }
 
     if (!cls) {
-      toast.error("Invalid join code. Ask your teacher for the correct code.");
+      toast.error("Invalid join code. Ask your teacher for the current code.");
       setJoiningClass(false);
       return;
     }
 
-    const { error } = await supabase
-      .from("class_enrollments")
-      .upsert(
-        { class_id: cls.id, student_id: user.id },
-        { onConflict: "class_id,student_id" },
-      );
+    const { error } = await supabase.from("class_enrollments").upsert(
+      { class_id: cls.id, student_id: user.id, is_active: true },
+      { onConflict: "class_id,student_id" },
+    );
 
     if (error) {
-      toast.error("Could not join class. You may already be enrolled.");
+      toast.error(`Could not join class: ${error.message}`);
     } else {
-      toast.success(`Joined ${cls.name}`);
+      toast.success(`Joined ${cls.name}.`);
+      setJoinCode("");
+      await loadDashboard();
     }
-    setJoinCode("");
     setJoiningClass(false);
-    loadDashboard();
   };
 
-  const inProgress = lessons.filter(
-    (l) => l.progress?.status === "in_progress",
-  );
-  const notStarted = lessons.filter(
-    (l) => !l.progress || l.progress.status === "not_started",
-  );
-  const completed = lessons.filter((l) => l.progress?.status === "completed");
+  const createGoal = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("learning_goals")
+      .insert({
+        student_id: user.id,
+        title: "Complete one focused lesson",
+        target_type: "weekly_lessons",
+        target_value: 1,
+        current_value: lessons.filter((lesson) => lesson.progress?.status === "completed")
+          .length,
+        due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+      })
+      .select()
+      .single();
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    if (error) {
+      toast.error(`Could not create goal: ${error.message}`);
+      return;
+    }
+    setGoals((current) => [data, ...current]);
+    toast.success("Learning goal created.");
+  };
+
+  const completed = lessons.filter((lesson) => lesson.progress?.status === "completed");
+  const active = lessons.filter((lesson) => lesson.progress?.status === "in_progress");
+  const next = lessons.filter(
+    (lesson) => !lesson.progress || lesson.progress.status === "not_started",
+  );
+  const avgScore =
+    completed.filter((lesson) => lesson.progress?.score != null).length > 0
+      ? Math.round(
+          completed
+            .filter((lesson) => lesson.progress?.score != null)
+            .reduce((sum, lesson) => sum + Number(lesson.progress?.score || 0), 0) /
+            completed.filter((lesson) => lesson.progress?.score != null).length,
+        )
+      : 0;
+
+  const recommendation = active[0] || next[0] || completed[0];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display font-bold text-3xl text-atlas-text">
-            {greeting}, {profile?.full_name?.split(" ")[0] || "Learner"}
-          </h1>
-          <p className="text-atlas-subtle mt-1">
-            Continue your learning journey
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-            placeholder="Join code (e.g. ABC12345)"
-            className="atlas-input py-2 w-48 font-mono uppercase"
-            onKeyDown={(e) => e.key === "Enter" && joinClass()}
-          />
-          <button
-            onClick={joinClass}
-            disabled={joiningClass || !joinCode.trim()}
-            className="btn-primary py-2"
-          >
-            Join Class
-          </button>
-        </div>
-      </div>
-
-      {/* XP streak card */}
-      {profile && (
-        <div className="atlas-card mb-6 bg-gradient-to-r from-atlas-blue/10 to-atlas-purple/10 border-atlas-blue/30">
-          <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
+      <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="font-display font-bold text-2xl text-atlas-text">
-                {profile.total_xp} XP
+              <p className="text-sm font-semibold text-atlas-emerald">
+                Student learning cockpit
               </p>
-              <p className="text-atlas-subtle text-sm mt-1">
-                Keep up the momentum.
+              <h1 className="mt-2 font-display text-4xl font-bold">
+                Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-atlas-subtle">
+                Continue assigned lessons, track mastery, and use AI guidance
+                when a concept feels unclear.
               </p>
             </div>
-            <div className="flex gap-3">
-              {[
-                { label: "Completed", value: completed.length },
-                { label: "In Progress", value: inProgress.length },
-              ].map((s, i) => (
-                <div
-                  key={i}
-                  className="text-center px-4 py-2 bg-atlas-surface rounded-xl border border-atlas-border"
-                >
-                  <p className="font-bold text-atlas-text">{s.value}</p>
-                  <p className="text-xs text-atlas-subtle">{s.label}</p>
+            <div className="rounded-lg border border-atlas-border bg-atlas-surface p-4">
+              <div className="flex items-center gap-3">
+                <Flame className="h-5 w-5 text-atlas-amber" />
+                <div>
+                  <p className="font-display text-2xl font-bold">
+                    {profile?.streak_days ?? 0}
+                  </p>
+                  <p className="text-xs text-atlas-subtle">day streak</p>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-atlas-card rounded-2xl shimmer" />
-          ))}
-        </div>
-      ) : lessons.length === 0 ? (
-        <div className="atlas-card text-center py-16">
-          <h2 className="font-display font-bold text-2xl text-atlas-text mb-2">
-            No lessons yet
-          </h2>
-          <p className="text-atlas-subtle mb-6">
-            Join a class using the join code from your teacher
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                label: "Total XP",
+                value: profile?.total_xp ?? 0,
+                icon: Sparkles,
+                tone: "text-atlas-cyan",
+              },
+              {
+                label: "In progress",
+                value: active.length,
+                icon: BookOpenCheck,
+                tone: "text-atlas-blue",
+              },
+              {
+                label: "Completed",
+                value: completed.length,
+                icon: CheckCircle2,
+                tone: "text-atlas-emerald",
+              },
+              {
+                label: "Average score",
+                value: avgScore ? `${avgScore}%` : "N/A",
+                icon: GraduationCap,
+                tone: "text-atlas-amber",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                >
+                  <Icon className={`mb-4 h-5 w-5 ${item.tone}`} />
+                  <p className="font-display text-3xl font-bold text-atlas-text">
+                    {loading ? "..." : item.value}
+                  </p>
+                  <p className="text-xs text-atlas-subtle">{item.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <h2 className="font-display text-xl font-bold">Join a class</h2>
+          <p className="mt-1 text-sm text-atlas-subtle">
+            Enter the join code your teacher shared.
           </p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* In Progress */}
-          {inProgress.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-lg text-atlas-text mb-3">
-                Continue Learning
-              </h2>
-              <div className="space-y-3">
-                {inProgress.map((lesson) => (
-                  <LessonCard key={lesson.id} lesson={lesson} />
-                ))}
-              </div>
-            </section>
-          )}
+          <div className="mt-5 flex gap-2">
+            <input
+              value={joinCode}
+              onChange={(event) => setJoinCode(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && joinClass()}
+              placeholder="EDSYNC8"
+              className="atlas-input font-mono uppercase"
+            />
+            <button
+              type="button"
+              onClick={joinClass}
+              disabled={joiningClass || !joinCode.trim()}
+              className="btn-primary px-4"
+            >
+              Join
+            </button>
+          </div>
+          <div className="mt-5 rounded-lg border border-atlas-border bg-atlas-surface p-4">
+            <p className="text-sm font-semibold text-atlas-text">
+              Recommended next step
+            </p>
+            {recommendation ? (
+              <>
+                <p className="mt-1 text-sm text-atlas-subtle">
+                  {recommendation.progress?.status === "completed"
+                    ? "Review your strongest completed lesson."
+                    : "Continue the lesson that best matches your current path."}
+                </p>
+                <Link
+                  href={`/student/lessons/${recommendation.id}`}
+                  className="btn-secondary mt-4 w-full justify-center text-sm"
+                >
+                  Open {recommendation.title.slice(0, 28)}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-atlas-subtle">
+                Join a class to receive your first lesson.
+              </p>
+            )}
+          </div>
+        </section>
+      </header>
 
-          {/* Not Started */}
-          {notStarted.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-lg text-atlas-text mb-3">
-                Assigned Lessons
-              </h2>
-              <div className="space-y-3">
-                {notStarted.map((lesson) => (
-                  <LessonCard key={lesson.id} lesson={lesson} />
-                ))}
-              </div>
-            </section>
-          )}
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-xl font-bold">Learning path</h2>
+              <p className="text-sm text-atlas-subtle">
+                Assigned lessons sorted by what needs attention.
+              </p>
+            </div>
+          </div>
 
-          {/* Completed */}
-          {completed.length > 0 && (
-            <section>
-              <h2 className="font-display font-semibold text-lg text-atlas-text mb-3">
-                Completed
-              </h2>
-              <div className="space-y-3">
-                {completed.map((lesson) => (
-                  <LessonCard key={lesson.id} lesson={lesson} />
-                ))}
-              </div>
-            </section>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="h-24 animate-pulse rounded-lg bg-atlas-surface" />
+              ))}
+            </div>
+          ) : lessons.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-atlas-border bg-atlas-surface p-10 text-center">
+              <Target className="mx-auto mb-4 h-9 w-9 text-atlas-subtle" />
+              <p className="font-semibold text-atlas-text">No lessons yet</p>
+              <p className="mt-1 text-sm text-atlas-subtle">
+                Join a class or ask your teacher to assign a lesson.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {active.length > 0 && (
+                <LessonGroup title="Continue now" lessons={active} />
+              )}
+              {next.length > 0 && <LessonGroup title="Up next" lessons={next} />}
+              {completed.length > 0 && (
+                <LessonGroup title="Completed" lessons={completed} />
+              )}
+            </div>
           )}
-        </div>
-      )}
+        </section>
+
+        <aside className="space-y-6">
+          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-xl font-bold">Goals</h2>
+                <p className="text-sm text-atlas-subtle">Small weekly targets.</p>
+              </div>
+              <button
+                type="button"
+                onClick={createGoal}
+                className="rounded-lg border border-atlas-border bg-atlas-surface px-3 py-2 text-sm font-semibold text-atlas-text hover:border-atlas-blue/50"
+              >
+                New
+              </button>
+            </div>
+            <div className="space-y-3">
+              {goals.length === 0 ? (
+                <p className="rounded-lg border border-atlas-border bg-atlas-surface p-4 text-sm text-atlas-subtle">
+                  Create a goal to make your next study session concrete.
+                </p>
+              ) : (
+                goals.map((goal) => {
+                  const pct = Math.min(
+                    100,
+                    Math.round((goal.current_value / Math.max(1, goal.target_value)) * 100),
+                  );
+                  return (
+                    <div
+                      key={goal.id}
+                      className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-semibold text-atlas-text">
+                          {goal.title}
+                        </p>
+                        <span className="text-xs font-semibold text-atlas-emerald">
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="mt-3 progress-bar">
+                        <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                      {goal.due_date && (
+                        <p className="mt-2 text-xs text-atlas-subtle">
+                          Due {new Date(goal.due_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+            <h2 className="font-display text-xl font-bold">Recent reflections</h2>
+            <p className="mt-1 text-sm text-atlas-subtle">
+              Confidence notes and AI next steps.
+            </p>
+            <div className="mt-4 space-y-3">
+              {reflections.length === 0 ? (
+                <p className="rounded-lg border border-atlas-border bg-atlas-surface p-4 text-sm text-atlas-subtle">
+                  Reflection notes will appear after lessons.
+                </p>
+              ) : (
+                reflections.map((reflection) => (
+                  <div
+                    key={reflection.id}
+                    className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-atlas-blue">
+                        Confidence {reflection.confidence ?? "N/A"}/5
+                      </span>
+                      <span className="text-xs text-atlas-subtle">
+                        {new Date(reflection.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-6 text-atlas-text">
+                      {reflection.reflection}
+                    </p>
+                    {reflection.next_step && (
+                      <p className="mt-3 text-xs leading-5 text-atlas-subtle">
+                        Next: {reflection.next_step}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function LessonGroup({
+  title,
+  lessons,
+}: {
+  title: string;
+  lessons: AssignedLesson[];
+}) {
+  return (
+    <div>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-atlas-subtle">
+        {title}
+      </h3>
+      <div className="space-y-3">
+        {lessons.map((lesson) => (
+          <LessonCard key={lesson.id} lesson={lesson} />
+        ))}
+      </div>
     </div>
   );
 }
 
 function LessonCard({ lesson }: { lesson: AssignedLesson }) {
   const progress = lesson.progress;
-  const totalSections = (lesson as any).sectionCount || 1;
+  const totalSections = Math.max(1, lesson.sectionCount || 1);
   const pct =
     progress?.status === "completed"
       ? 100
       : progress?.status === "in_progress"
-        ? Math.min(100, Math.round(
-            ((progress.sections_completed?.length || 0) / Math.max(1, totalSections)) * 100,
-          ))
+        ? Math.min(
+            100,
+            Math.round(((progress.sections_completed?.length || 0) / totalSections) * 100),
+          )
         : 0;
 
   return (
     <Link
       href={`/student/lessons/${lesson.id}`}
-      className="atlas-card-hover flex items-center gap-4 py-4 px-5 group"
+      className="flex items-center gap-4 rounded-lg border border-atlas-border bg-atlas-surface p-4 transition hover:border-atlas-blue/50"
     >
-      <div className="w-12 h-12 rounded-2xl bg-atlas-blue/10 flex items-center justify-center text-xs font-semibold text-atlas-blue flex-shrink-0">
-        {progress?.status === "completed"
-          ? "Done"
-          : progress?.status === "in_progress"
-            ? "Now"
-            : "Next"}
+      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-blue/10 text-atlas-blue">
+        <BookOpenCheck className="h-5 w-5" />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-atlas-text">{lesson.title}</p>
-        <p className="text-xs text-atlas-subtle mt-0.5">
-          {lesson.subject} · {lesson.estimated_duration}min
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-semibold text-atlas-text">{lesson.title}</p>
+        <p className="mt-1 text-xs text-atlas-subtle">
+          {lesson.subject || "General"} - {lesson.estimated_duration} min -
+          {lesson.difficulty}
         </p>
-        {pct > 0 && (
-          <div className="mt-2">
-            <div className="flex justify-between text-xs text-atlas-subtle mb-1">
-              <span>Progress</span>
-              <span className="text-atlas-blue font-medium">{pct}%</span>
-            </div>
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
-            </div>
+        <div className="mt-3">
+          <div className="mb-1 flex justify-between text-xs text-atlas-subtle">
+            <span>{progress?.status?.replace("_", " ") || "not started"}</span>
+            <span className="font-semibold text-atlas-blue">{pct}%</span>
           </div>
-        )}
+          <div className="progress-bar">
+            <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
       </div>
-      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        {progress?.score !== null && progress?.score !== undefined && (
-          <span
-            className={`font-bold text-lg ${progress.score >= 80 ? "text-atlas-emerald" : progress.score >= 60 ? "text-atlas-amber" : "text-atlas-red"}`}
-          >
-            {Math.round(progress.score)}%
-          </span>
-        )}
-        <span className="text-atlas-blue text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-          {progress?.status === "in_progress"
-            ? "Continue →"
-            : progress?.status === "completed"
-              ? "Review →"
-              : "Start →"}
-        </span>
-      </div>
+      <ArrowRight className="h-4 w-4 flex-shrink-0 text-atlas-subtle" />
     </Link>
   );
 }
