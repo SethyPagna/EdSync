@@ -1,177 +1,162 @@
 "use client";
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import { ArrowRight, GraduationCap, ShieldCheck } from "lucide-react";
 
 function LoginForm() {
- const searchParams = useSearchParams();
- const [email, setEmail] = useState("");
- const [password, setPassword] = useState("");
- const [loading, setLoading] = useState(false);
- const router = useRouter();
- const supabase = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
- const handleLogin = async (e: React.FormEvent) => {
- e.preventDefault();
- setLoading(true);
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
 
- const { data, error } = await supabase.auth.signInWithPassword({
- email,
- password,
- });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
- if (error) {
- if (error.message?.toLowerCase().includes("email not confirmed")) {
- toast.error(
- "Please confirm your email first, or disable email confirmation in Supabase Dashboard → Auth → Settings.",
- );
- } else if (
- error.message?.toLowerCase().includes("invalid login credentials")
- ) {
- toast.error("Wrong email or password.");
- } else {
- toast.error(error.message);
- }
- setLoading(false);
- return;
- }
+    if (error) {
+      const message = error.message.toLowerCase();
+      if (message.includes("email not confirmed")) {
+        toast.error("Please confirm your email before signing in.");
+      } else if (message.includes("invalid login credentials")) {
+        toast.error("Wrong email or password.");
+      } else {
+        toast.error(error.message);
+      }
+      setLoading(false);
+      return;
+    }
 
- if (!data.user) {
- toast.error("Login failed. Please try again.");
- setLoading(false);
- return;
- }
+    const role = (data.user?.user_metadata?.role as string) || "student";
+    const next = searchParams.get("next");
+    const safeNext =
+      next && (next.startsWith("/teacher") || next.startsWith("/student"))
+        ? next
+        : role === "teacher"
+          ? "/teacher/dashboard"
+          : "/student/dashboard";
 
- // Role comes directly from the JWT — no DB query, never fails
- const role = (data.user.user_metadata?.role as string) || "student";
+    toast.success("Welcome back.");
+    router.push(safeNext);
+    router.refresh();
+  };
 
- toast.success("Welcome back!");
-
- const next = searchParams.get("next");
- if (next && (next.startsWith("/teacher") || next.startsWith("/student"))) {
- router.push(next);
- } else {
- router.push(
- role === "teacher" ? "/teacher/dashboard" : "/student/dashboard",
- );
- }
- router.refresh();
- };
-
- return (
- <div className="atlas-card p-8">
- <form onSubmit={handleLogin} className="space-y-5">
- <div>
- <label className="block text-sm font-medium text-atlas-subtle mb-2">
- Email
- </label>
- <input
- type="email"
- value={email}
- onChange={(e) => setEmail(e.target.value)}
- placeholder="you@school.edu"
- required
- autoComplete="email"
- className="atlas-input"
- />
- </div>
- <div>
- <label className="block text-sm font-medium text-atlas-subtle mb-2">
- Password
- </label>
- <input
- type="password"
- value={password}
- onChange={(e) => setPassword(e.target.value)}
- placeholder="••••••••"
- required
- autoComplete="current-password"
- className="atlas-input"
- />
- </div>
- <button
- type="submit"
- disabled={loading}
- className="btn-primary w-full justify-center py-3.5"
- >
- {loading ? (
- <span className="flex items-center gap-2">
- <svg
- className="animate-spin w-4 h-4"
- fill="none"
- viewBox="0 0 24 24"
- >
- <circle
- className="opacity-25"
- cx="12"
- cy="12"
- r="10"
- stroke="currentColor"
- strokeWidth="4"
- />
- <path
- className="opacity-75"
- fill="currentColor"
- d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
- />
- </svg>
- Signing in...
- </span>
- ) : (
- "Sign In"
- )}
- </button>
- </form>
- <p className="text-center text-atlas-subtle text-sm mt-6">
- Don&apos;t have an account?{" "}
- <Link
- href="/auth/signup"
- className="text-atlas-blue hover:underline font-medium"
- >
- Create one
- </Link>
- </p>
- </div>
- );
+  return (
+    <form onSubmit={handleLogin} className="space-y-5">
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+          Email
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@school.edu"
+          required
+          autoComplete="email"
+          className="atlas-input"
+        />
+      </div>
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+          Password
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Minimum 8 characters"
+          required
+          autoComplete="current-password"
+          className="atlas-input"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary w-full justify-center py-3.5"
+      >
+        {loading ? "Signing in..." : "Sign in"}
+        {!loading && <ArrowRight className="h-4 w-4" />}
+      </button>
+    </form>
+  );
 }
 
 export default function LoginPage() {
- return (
- <div className="min-h-screen bg-atlas-bg flex items-center justify-center p-4 relative overflow-hidden">
- <div className="absolute inset-0 bg-grid-pattern opacity-20" />
- <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-atlas-blue/10 rounded-full blur-[80px]" />
- <div className="absolute bottom-1/4 right-1/3 w-48 h-48 bg-atlas-purple/8 rounded-full blur-[60px]" />
+  return (
+    <main className="grid min-h-screen bg-atlas-bg lg:grid-cols-[1fr_520px]">
+      <section className="hidden border-r border-atlas-border bg-atlas-surface/40 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
+          <span className="font-display text-xl font-bold">EdSync</span>
+        </Link>
+        <div>
+          <p className="mb-4 inline-flex rounded-lg border border-atlas-border bg-atlas-card px-3 py-2 text-sm text-atlas-subtle">
+            Secure role-aware workspace
+          </p>
+          <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
+            Pick up right where your learning evidence left off.
+          </h1>
+          <p className="mt-5 max-w-xl text-lg leading-8 text-atlas-subtle">
+            Teachers see class actions. Students see their next step. EdSync
+            keeps both views connected by progress and reflection data.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-atlas-subtle">
+          <ShieldCheck className="h-5 w-5 text-atlas-emerald" />
+          Supabase Auth with protected teacher and student portals.
+        </div>
+      </section>
 
- <div className="relative w-full max-w-md animate-slide-up">
- <div className="text-center mb-8">
- <Link href="/" className="inline-flex items-center gap-3 mb-6">
- <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-atlas-blue to-atlas-cyan flex items-center justify-center shadow-glow-blue">
- <span className="text-white font-display font-bold text-2xl">
- A
- </span>
- </div>
- <span className="font-display font-bold text-3xl text-atlas-text">
- Atlas
- </span>
- </Link>
- <h1 className="font-display font-bold text-2xl text-atlas-text">
- Welcome back
- </h1>
- <p className="text-atlas-subtle mt-1">Sign in to your account</p>
- </div>
-
- <Suspense
- fallback={
- <div className="atlas-card p-8 text-center">
- <div className="w-8 h-8 border-2 border-atlas-blue/30 border-t-atlas-blue rounded-full animate-spin mx-auto" />
- </div>
- }
- >
- <LoginForm />
- </Suspense>
- </div>
- </div>
- );
+      <section className="flex items-center justify-center px-5 py-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 lg:hidden">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+                <GraduationCap className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-display text-xl font-bold">EdSync</span>
+            </Link>
+          </div>
+          <div className="atlas-card p-7">
+            <h2 className="font-display text-3xl font-bold">Welcome back</h2>
+            <p className="mt-2 text-sm leading-6 text-atlas-subtle">
+              Sign in to continue your teacher or student workspace.
+            </p>
+            <div className="mt-7">
+              <Suspense
+                fallback={
+                  <div className="h-48 animate-pulse rounded-lg bg-atlas-surface" />
+                }
+              >
+                <LoginForm />
+              </Suspense>
+            </div>
+            <p className="mt-6 text-center text-sm text-atlas-subtle">
+              New to EdSync?{" "}
+              <Link
+                href="/auth/signup"
+                className="font-semibold text-atlas-blue hover:underline"
+              >
+                Create an account
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }
