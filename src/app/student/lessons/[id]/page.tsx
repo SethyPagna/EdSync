@@ -802,14 +802,23 @@ export default function StudentLesson() {
     if (error) {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("total_xp")
+        .select("total_xp, streak_days")
         .eq("id", user.id)
         .single();
       if (prof)
         await supabase
           .from("profiles")
-          .update({ total_xp: (prof.total_xp || 0) + xp })
+          .update({
+            total_xp: (prof.total_xp || 0) + xp,
+            streak_days: Math.max(1, prof.streak_days || 0),
+            last_active_at: new Date().toISOString(),
+          })
           .eq("id", user.id);
+    } else {
+      await supabase
+        .from("profiles")
+        .update({ last_active_at: new Date().toISOString() })
+        .eq("id", user.id);
     }
     setProgress((p) =>
       p ? { ...p, status: "completed", final_quiz_score: score, score } : p,
@@ -901,6 +910,21 @@ export default function StudentLesson() {
           console.error("Failed to save reflection metadata:", error);
           toast.error("Coaching generated, but reflection was not saved.");
         } else {
+          const { error: reflectionError } = await supabase
+            .from("learning_reflections")
+            .insert({
+              student_id: user.id,
+              lesson_id: lesson?.id ?? null,
+              confidence: reflectionConfidence,
+              reflection: reflectionNotes.trim(),
+              ai_feedback: advice.encouragement,
+              next_step: advice.nextSteps[0] ?? advice.guidingQuestion,
+            });
+
+          if (reflectionError) {
+            console.error("Failed to save reflection row:", reflectionError);
+          }
+
           setProgress((p) =>
             p ? { ...p, metadata: nextMetadata, last_active: now } : p,
           );
