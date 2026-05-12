@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat, parseJsonResponse } from "@/lib/openrouter";
 import type { AILessonDraft } from "@/types";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 const MAX_SOURCE_CHARS = 5000;
 const LESSON_MODEL = process.env.OPENROUTER_LESSON_MODEL?.trim() || undefined;
@@ -302,6 +303,11 @@ function buildLocalFallbackLesson(topic: string): FallbackLessonDraft {
 
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const {
       mode,
       content,
