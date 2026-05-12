@@ -28,6 +28,8 @@ export interface Profile {
   preferences: { theme: string; text_size: string };
   achievements: Achievement[];
   total_xp: number;
+  streak_days?: number;
+  last_active_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -183,6 +185,30 @@ export interface KnowledgeNode {
   evidence: unknown[];
   created_at: string;
   updated_at: string;
+}
+
+export interface LearningGoal {
+  id: string;
+  student_id: string;
+  title: string;
+  target_type: string;
+  target_value: number;
+  current_value: number;
+  is_complete: boolean;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningReflection {
+  id: string;
+  student_id: string;
+  lesson_id: string | null;
+  confidence: number | null;
+  reflection: string;
+  ai_feedback: string | null;
+  next_step: string | null;
+  created_at: string;
 }
 
 export interface LessonAnalytics {
