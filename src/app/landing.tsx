@@ -1,140 +1,207 @@
 import Link from "next/link";
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpenCheck,
+  Brain,
+  CheckCircle2,
+  GraduationCap,
+  LineChart,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
+
+const teacherSignals = [
+  "AI lesson studio",
+  "Class readiness",
+  "Intervention queue",
+  "Progress evidence",
+];
+
+const workflowCards = [
+  {
+    icon: BookOpenCheck,
+    title: "Plan",
+    copy: "Generate and refine lesson sequences from objectives, source text, or class needs.",
+  },
+  {
+    icon: Brain,
+    title: "Personalize",
+    copy: "Adapt pacing, support, checks, and next steps around each learner profile.",
+  },
+  {
+    icon: BarChart3,
+    title: "Respond",
+    copy: "Turn progress, confidence, and quiz evidence into practical teacher actions.",
+  },
+];
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-atlas-bg relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-pattern opacity-20" />
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-atlas-blue/10 rounded-full blur-[100px]" />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-      >
-        <div
-          className="bg-shape bg-shape-drift left-[-4rem] top-20 h-52 w-52 bg-atlas-blue/25 blur-3xl"
-          style={{ animationDelay: "-6s" }}
-        />
-        <div
-          className="bg-shape bg-shape-drift-alt right-[10%] top-[18%] h-40 w-40 bg-atlas-cyan/20 blur-2xl"
-          style={{ animationDelay: "-3s" }}
-        />
-        <div
-          className="bg-shape bg-shape-sway left-[8%] top-[58%] h-36 w-36 border border-atlas-cyan/35 bg-atlas-cyan/10 blur-xl"
-          style={{ animationDelay: "-8s" }}
-        />
-        <div
-          className="bg-shape bg-shape-drift hidden md:block right-[-5rem] top-[52%] h-60 w-60 bg-atlas-emerald/20 blur-3xl"
-          style={{ animationDelay: "-11s" }}
-        />
-        <div
-          className="bg-shape bg-shape-drift-alt hidden md:block left-[32%] top-[74%] h-24 w-24 bg-atlas-blue/20 blur-2xl"
-          style={{ animationDelay: "-14s" }}
-        />
-      </div>
-
-      <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-atlas-blue to-atlas-cyan flex items-center justify-center">
-            <span className="text-white font-display font-bold text-lg">A</span>
+    <main className="min-h-screen bg-atlas-bg text-atlas-text">
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+            <GraduationCap className="h-5 w-5 text-white" />
           </div>
-          <span className="font-display font-bold text-xl text-atlas-text">
-            Atlas
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/auth/login"
-            className="text-atlas-subtle hover:text-atlas-text text-sm font-medium transition-colors"
-          >
-            Sign In
+          <div>
+            <p className="font-display text-xl font-bold">EdSync</p>
+            <p className="text-xs text-atlas-subtle">AI Learning OS</p>
+          </div>
+        </Link>
+        <nav className="flex items-center gap-3">
+          <Link href="/auth/login" className="btn-ghost text-sm">
+            Sign in
           </Link>
-          <Link href="/auth/signup" className="btn-primary text-sm py-2">
-            Get Started
+          <Link href="/auth/signup" className="btn-primary py-2.5 text-sm">
+            Start workspace
+            <ArrowRight className="h-4 w-4" />
           </Link>
-        </div>
-      </nav>
+        </nav>
+      </header>
 
-      <section className="relative z-10 px-6 pt-16 pb-20 max-w-7xl mx-auto text-center">
-        <h1 className="font-display text-5xl md:text-6xl font-extrabold text-atlas-text leading-tight mb-6">
-          Lesson Creation and Learning,
-          <span className="block bg-gradient-to-r from-atlas-blue to-atlas-cyan bg-clip-text text-transparent">
-            kept clear and practical
-          </span>
-        </h1>
-
-        <p className="text-atlas-subtle text-lg max-w-3xl mx-auto mb-10 leading-relaxed">
-          Atlas helps teachers create structured lessons quickly and gives
-          students a focused path through each topic. The interface stays simple
-          so users can focus on teaching and learning.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-          <Link
-            href="/auth/signup?role=teacher"
-            className="w-full min-h-[260px] md:min-h-[320px] rounded-3xl bg-gradient-to-br from-atlas-blue to-atlas-blue-dim text-white p-8 md:p-10 flex flex-col justify-center text-left transition-transform duration-200 shadow-card hover:scale-[1.02] hover:brightness-110"
-          >
-            <span className="font-display font-bold text-3xl md:text-4xl">
-              Continue as Teacher
-            </span>
-            <span className="text-white/90 text-base md:text-lg mt-4 leading-relaxed">
-              Build lessons, monitor class progress, and support students from
-              one clear dashboard.
-            </span>
-          </Link>
-
-          <Link
-            href="/auth/signup?role=student"
-            className="w-full min-h-[260px] md:min-h-[320px] rounded-3xl bg-gradient-to-br from-atlas-emerald to-atlas-emerald-dim text-white p-8 md:p-10 flex flex-col justify-center text-left transition-transform duration-200 shadow-card hover:scale-[1.02] hover:brightness-110"
-          >
-            <span className="font-display font-bold text-3xl md:text-4xl">
-              Continue as Student
-            </span>
-            <span className="text-white/90 text-base md:text-lg mt-4 leading-relaxed">
-              Follow guided lessons, answer checkpoints, and learn each topic at
-              your own pace.
-            </span>
-          </Link>
-        </div>
-      </section>
-
-      <section className="relative z-10 max-w-7xl mx-auto px-6 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              title: "Structured Lesson Builder",
-              description:
-                "Create lessons from objectives, source text, links, or uploaded files with editable sections and question sets.",
-            },
-            {
-              title: "Adaptive Student Flow",
-              description:
-                "Use pre-checks and checkpoints so students can move at an appropriate pace with less confusion.",
-            },
-            {
-              title: "Teacher Visibility",
-              description:
-                "Track progress, identify students who need support, and review key class signals from one dashboard.",
-            },
-          ].map((feature, i) => (
-            <div key={i} className="atlas-card">
-              <h3 className="font-display font-bold text-xl text-atlas-text mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-atlas-subtle leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <footer className="relative z-10 border-t border-atlas-border/70">
-        <div className="max-w-7xl mx-auto px-6 py-5 text-xs sm:text-sm text-atlas-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p>ATLAS built by Group 13 for COMP3122.</p>
-          <p>
-            Contributors: UNG SETHYPAGNA, KEDIA PRANAV, KIM REEWON, SHORE
-            MATTHEW
+      <section className="mx-auto grid max-w-7xl gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:pt-16">
+        <div>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-lg border border-atlas-border bg-atlas-card px-3 py-2 text-sm text-atlas-subtle">
+            <Sparkles className="h-4 w-4 text-atlas-amber" />
+            Built for teachers, students, and evidence-based learning
+          </div>
+          <h1 className="max-w-4xl font-display text-5xl font-extrabold leading-[1.03] tracking-normal text-atlas-text md:text-7xl">
+            A mature education workspace that keeps learning personal.
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-atlas-subtle">
+            EdSync helps teachers create stronger lessons, monitor class health,
+            and guide students through adaptive learning paths with AI support
+            that stays practical and classroom-ready.
           </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/auth/signup?role=teacher"
+              className="btn-primary justify-center py-3.5"
+            >
+              Continue as teacher
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/auth/signup?role=student"
+              className="btn-secondary justify-center py-3.5"
+            >
+              Continue as student
+            </Link>
+          </div>
+          <div className="mt-8 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+            {teacherSignals.map((signal) => (
+              <div
+                key={signal}
+                className="rounded-lg border border-atlas-border bg-atlas-card/70 px-3 py-3 text-sm text-atlas-subtle"
+              >
+                <CheckCircle2 className="mb-2 h-4 w-4 text-atlas-emerald" />
+                {signal}
+              </div>
+            ))}
+          </div>
         </div>
+
+        <div className="rounded-xl border border-atlas-border bg-atlas-card p-4 shadow-2xl shadow-black/30">
+          <div className="rounded-lg border border-atlas-border bg-atlas-surface p-4">
+            <div className="flex items-center justify-between border-b border-atlas-border pb-4">
+              <div>
+                <p className="text-sm font-semibold text-atlas-text">
+                  Grade 8 Science Studio
+                </p>
+                <p className="text-xs text-atlas-subtle">
+                  Live class pulse and next actions
+                </p>
+              </div>
+              <span className="rounded-lg bg-atlas-emerald/10 px-3 py-1 text-xs font-semibold text-atlas-emerald">
+                On track
+              </span>
+            </div>
+
+            <div className="grid gap-3 py-4 sm:grid-cols-3">
+              {[
+                ["23", "students active"],
+                ["81%", "avg mastery"],
+                ["4", "needs attention"],
+              ].map(([value, label]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-atlas-border bg-atlas-card p-3"
+                >
+                  <p className="font-display text-2xl font-bold text-atlas-text">
+                    {value}
+                  </p>
+                  <p className="text-xs text-atlas-subtle">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              {[
+                {
+                  icon: LineChart,
+                  title: "Intervention suggested",
+                  copy: "Review energy transfer with 4 students before the final quiz.",
+                  color: "text-atlas-amber",
+                },
+                {
+                  icon: UsersRound,
+                  title: "Group ready",
+                  copy: "7 students can move into the extension activity.",
+                  color: "text-atlas-emerald",
+                },
+                {
+                  icon: Brain,
+                  title: "AI draft waiting",
+                  copy: "Ecosystem balance lesson generated from your objectives.",
+                  color: "text-atlas-blue",
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.title}
+                    className="flex gap-3 rounded-lg border border-atlas-border bg-atlas-bg/50 p-3"
+                  >
+                    <Icon className={`mt-0.5 h-5 w-5 ${item.color}`} />
+                    <div>
+                      <p className="text-sm font-semibold text-atlas-text">
+                        {item.title}
+                      </p>
+                      <p className="text-xs leading-5 text-atlas-subtle">
+                        {item.copy}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-atlas-border bg-atlas-surface/45">
+        <div className="mx-auto grid max-w-7xl gap-4 px-6 py-12 md:grid-cols-3">
+          {workflowCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className="atlas-card">
+                <Icon className="mb-5 h-6 w-6 text-atlas-blue" />
+                <h2 className="font-display text-xl font-bold text-atlas-text">
+                  {card.title}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-atlas-subtle">
+                  {card.copy}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <footer className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-6 text-sm text-atlas-subtle sm:flex-row sm:items-center sm:justify-between">
+        <p>EdSync education platform.</p>
+        <p>AI, Supabase, and Vercel-ready deployment.</p>
       </footer>
     </main>
   );
