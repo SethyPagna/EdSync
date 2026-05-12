@@ -593,6 +593,7 @@ export default function StudentLesson() {
       toast.error("Please sign in again to save your reflection.");
       return;
     }
+    const userId = user.id;
     if (!user) return;
 
     let lessonData = null;
@@ -921,7 +922,7 @@ export default function StudentLesson() {
           const { error: reflectionError } = await supabase
             .from("learning_reflections")
             .insert({
-              student_id: user.id,
+              student_id: userId,
               lesson_id: lesson?.id ?? null,
               confidence: reflectionConfidence,
               reflection: reflectionNotes.trim(),
