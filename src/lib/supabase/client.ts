@@ -10,9 +10,9 @@ export function createClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    throw new Error(
-      "[Atlas] Missing Supabase env vars.\n" +
-        "Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in .env.local, then restart the dev server.",
+    return createBrowserClient(
+      "https://example.supabase.co",
+      "missing-supabase-anon-key",
     );
   }
 
