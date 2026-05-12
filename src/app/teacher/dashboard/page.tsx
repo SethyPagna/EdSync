@@ -1,36 +1,57 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile, Lesson, TeacherAlert, Class } from "@/types";
+import type { Class, Lesson, Profile, TeacherAlert } from "@/types";
 import { formatRelativeTime, getAlertColor, getStatusBadge } from "@/lib/utils";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpenCheck,
+  ClipboardList,
+  Plus,
+  Sparkles,
+  TrendingUp,
+  UsersRound,
+} from "lucide-react";
+
+type DashboardStats = {
+  totalStudents: number;
+  activeLessons: number;
+  avgScore: number;
+  interactions: number;
+  lowConfidence: number;
+};
 
 export default function TeacherDashboard() {
+  const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
   const [recentLessons, setRecentLessons] = useState<Lesson[]>([]);
   const [alerts, setAlerts] = useState<TeacherAlert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
-    activeLesson: 0,
+    activeLessons: 0,
     avgScore: 0,
     interactions: 0,
+    lowConfidence: 0,
   });
-  const supabase = createClient();
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [supabase]);
 
   const loadDashboard = async () => {
+    setLoading(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
     const [profileRes, classesRes, lessonsRes, alertsRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase
         .from("classes")
         .select("*")
@@ -42,69 +63,70 @@ export default function TeacherDashboard() {
         .select("*")
         .eq("teacher_id", user.id)
         .order("updated_at", { ascending: false })
-        .limit(5),
+        .limit(6),
       supabase
         .from("teacher_alerts")
         .select("*")
         .eq("teacher_id", user.id)
         .eq("is_dismissed", false)
         .order("created_at", { ascending: false })
-        .limit(8),
+        .limit(6),
     ]);
 
+    const classRows = classesRes.data || [];
+    const lessonRows = lessonsRes.data || [];
+    const lessonIds = lessonRows.map((lesson) => lesson.id);
+    const classIds = classRows.map((cls) => cls.id);
+
+    const [enrollmentRes, progressRes, interactionRes, reflectionRes] =
+      await Promise.all([
+        classIds.length
+          ? supabase
+              .from("class_enrollments")
+              .select("id", { count: "exact", head: true })
+              .in("class_id", classIds)
+              .eq("is_active", true)
+          : Promise.resolve({ count: 0 }),
+        lessonIds.length
+          ? supabase
+              .from("student_progress")
+              .select("score")
+              .in("lesson_id", lessonIds)
+              .not("score", "is", null)
+          : Promise.resolve({ data: [] }),
+        lessonIds.length
+          ? supabase
+              .from("socratic_interactions")
+              .select("id", { count: "exact", head: true })
+              .in("lesson_id", lessonIds)
+          : Promise.resolve({ count: 0 }),
+        lessonIds.length
+          ? supabase
+              .from("learning_reflections")
+              .select("confidence")
+              .in("lesson_id", lessonIds)
+              .lte("confidence", 2)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+    const scores = (progressRes.data || [])
+      .map((row: any) => Number(row.score))
+      .filter((score: number) => Number.isFinite(score));
+
     setProfile(profileRes.data);
-    setClasses(classesRes.data || []);
-    setRecentLessons(lessonsRes.data || []);
+    setClasses(classRows);
+    setRecentLessons(lessonRows);
     setAlerts(alertsRes.data || []);
-
-    // Compute real stats from actual data
-    const classIds = (classesRes.data || []).map((c: any) => c.id);
-    let totalStudents = 0;
-    if (classIds.length > 0) {
-      const { count } = await supabase
-        .from("class_enrollments")
-        .select("id", { count: "exact", head: true })
-        .in("class_id", classIds)
-        .eq("is_active", true);
-      totalStudents = count || 0;
-    }
-
-    const publishedLessons = (lessonsRes.data || []).filter(
-      (l: any) => l.status === "published",
-    ).length;
-
-    // Avg score from real student_progress
-    const lessonIds = (lessonsRes.data || []).map((l: any) => l.id);
-    let avgScore = 0;
-    let aiInteractions = 0;
-    if (lessonIds.length > 0) {
-      const { data: progressRows } = await supabase
-        .from("student_progress")
-        .select("score")
-        .in("lesson_id", lessonIds)
-        .not("score", "is", null);
-      const scores = (progressRows || [])
-        .map((p: any) => p.score)
-        .filter((s: any) => s !== null);
-      avgScore =
-        scores.length > 0
-          ? Math.round(
-              scores.reduce((a: number, b: number) => a + b, 0) / scores.length,
-            )
-          : 0;
-
-      const { count: interactionCount } = await supabase
-        .from("socratic_interactions")
-        .select("id", { count: "exact", head: true })
-        .in("lesson_id", lessonIds);
-      aiInteractions = interactionCount || 0;
-    }
-
     setStats({
-      totalStudents,
-      activeLesson: publishedLessons,
-      avgScore,
-      interactions: aiInteractions,
+      totalStudents: enrollmentRes.count || 0,
+      activeLessons: lessonRows.filter((lesson) => lesson.status === "published")
+        .length,
+      avgScore:
+        scores.length > 0
+          ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+          : 0,
+      interactions: interactionRes.count || 0,
+      lowConfidence: reflectionRes.data?.length || 0,
     });
     setLoading(false);
   };
@@ -114,92 +136,165 @@ export default function TeacherDashboard() {
       .from("teacher_alerts")
       .update({ is_dismissed: true })
       .eq("id", alertId);
-    setAlerts(alerts.filter((a) => a.id !== alertId));
+    setAlerts((current) => current.filter((alert) => alert.id !== alertId));
   };
 
-  if (loading) return <DashboardSkeleton />;
-
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = profile?.full_name?.split(" ")[0] || "Teacher";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="font-display font-bold text-3xl text-atlas-text">
-            {greeting}, {profile?.full_name?.split(" ")[0] || "Teacher"}
-          </h1>
-          <p className="text-atlas-subtle mt-1">
-            Here's what's happening in your classroom
-          </p>
-        </div>
-        <Link href="/teacher/lessons/create" className="btn-primary">
-          <span>+</span> New Lesson
-        </Link>
-      </div>
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          {
-            label: "Total Students",
-            value: stats.totalStudents,
-            color: "blue",
-          },
-          {
-            label: "Active Lessons",
-            value: stats.activeLesson,
-            color: "emerald",
-          },
-          { label: "Avg Score", value: `${stats.avgScore}%`, color: "amber" },
-          {
-            label: "AI Interactions",
-            value: stats.interactions,
-            color: "purple",
-          },
-        ].map((stat, i) => (
-          <div key={i} className="atlas-card">
-            <div className="flex items-center justify-end mb-3">
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full bg-atlas-${stat.color}/10 text-atlas-${stat.color} font-medium`}
-              >
-                Live
-              </span>
+    <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
+      <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <div className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <div className="mb-8 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-atlas-amber">
+                Teacher command center
+              </p>
+              <h1 className="mt-2 font-display text-4xl font-bold">
+                Good to see you, {firstName}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-atlas-subtle">
+                Review class health, act on learning evidence, and create the
+                next lesson from one focused workspace.
+              </p>
             </div>
-            <p className="font-display font-bold text-3xl text-atlas-text">
-              {stat.value}
-            </p>
-            <p className="text-atlas-subtle text-sm mt-1">{stat.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Lessons */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-semibold text-lg text-atlas-text">
-              Recent Lessons
-            </h2>
-            <Link
-              href="/teacher/lessons"
-              className="text-atlas-blue text-sm hover:underline"
-            >
-              View all →
+            <Link href="/teacher/lessons/create" className="btn-primary hidden sm:flex">
+              <Plus className="h-4 w-4" />
+              New lesson
             </Link>
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                label: "Students",
+                value: stats.totalStudents,
+                icon: UsersRound,
+                tone: "text-atlas-blue",
+              },
+              {
+                label: "Published lessons",
+                value: stats.activeLessons,
+                icon: BookOpenCheck,
+                tone: "text-atlas-emerald",
+              },
+              {
+                label: "Average score",
+                value: stats.avgScore ? `${stats.avgScore}%` : "N/A",
+                icon: TrendingUp,
+                tone: "text-atlas-amber",
+              },
+              {
+                label: "AI tutor chats",
+                value: stats.interactions,
+                icon: Sparkles,
+                tone: "text-atlas-cyan",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                >
+                  <Icon className={`mb-4 h-5 w-5 ${item.tone}`} />
+                  <p className="font-display text-3xl font-bold text-atlas-text">
+                    {loading ? "..." : item.value}
+                  </p>
+                  <p className="text-xs text-atlas-subtle">{item.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="font-display text-xl font-bold">Today&apos;s queue</p>
+              <p className="text-sm text-atlas-subtle">Highest signal actions</p>
+            </div>
+            <AlertTriangle className="h-5 w-5 text-atlas-amber" />
+          </div>
           <div className="space-y-3">
-            {recentLessons.length === 0 ? (
-              <EmptyState
-                title="No lessons yet"
-                subtitle="Create your first lesson"
-                action={{
-                  label: "Create Lesson",
-                  href: "/teacher/lessons/create",
-                }}
-              />
+            <Link
+              href="/teacher/analytics"
+              className="block rounded-lg border border-atlas-border bg-atlas-surface p-4 hover:border-atlas-blue/50"
+            >
+              <div className="flex justify-between gap-4">
+                <p className="text-sm font-semibold text-atlas-text">
+                  Review interventions
+                </p>
+                <span className="text-sm font-bold text-atlas-amber">
+                  {stats.lowConfidence}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-atlas-subtle">
+                Low-confidence reflections need teacher attention.
+              </p>
+            </Link>
+            <Link
+              href="/teacher/students"
+              className="block rounded-lg border border-atlas-border bg-atlas-surface p-4 hover:border-atlas-blue/50"
+            >
+              <p className="text-sm font-semibold text-atlas-text">
+                Manage classes and assignments
+              </p>
+              <p className="mt-1 text-xs text-atlas-subtle">
+                Share join codes, assign lessons, and check enrollment.
+              </p>
+            </Link>
+            <Link
+              href="/teacher/reports"
+              className="block rounded-lg border border-atlas-border bg-atlas-surface p-4 hover:border-atlas-blue/50"
+            >
+              <p className="text-sm font-semibold text-atlas-text">
+                Export learning evidence
+              </p>
+              <p className="mt-1 text-xs text-atlas-subtle">
+                Prepare class reports for grading and parent updates.
+              </p>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-xl font-bold">Recent lessons</h2>
+              <p className="text-sm text-atlas-subtle">
+                Drafts, published lessons, and recent updates.
+              </p>
+            </div>
+            <Link href="/teacher/lessons" className="btn-ghost text-sm">
+              View all <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {loading ? (
+              [...Array(4)].map((_, index) => (
+                <div
+                  key={index}
+                  className="h-20 animate-pulse rounded-lg bg-atlas-surface"
+                />
+              ))
+            ) : recentLessons.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-atlas-border bg-atlas-surface p-8 text-center">
+                <ClipboardList className="mx-auto mb-3 h-8 w-8 text-atlas-subtle" />
+                <p className="font-semibold text-atlas-text">No lessons yet</p>
+                <p className="mt-1 text-sm text-atlas-subtle">
+                  Start with AI-assisted lesson creation.
+                </p>
+                <Link
+                  href="/teacher/lessons/create"
+                  className="btn-primary mt-5 inline-flex"
+                >
+                  Create first lesson
+                </Link>
+              </div>
             ) : (
               recentLessons.map((lesson) => {
                 const badge = getStatusBadge(lesson.status);
@@ -207,21 +302,24 @@ export default function TeacherDashboard() {
                   <Link
                     key={lesson.id}
                     href={`/teacher/lessons/${lesson.id}`}
-                    className="atlas-card-hover flex items-center gap-4 py-4 px-5 group"
+                    className="flex items-center gap-4 rounded-lg border border-atlas-border bg-atlas-surface p-4 transition hover:border-atlas-blue/50"
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-blue/10 text-atlas-blue">
+                      <BookOpenCheck className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-atlas-text truncate">
+                        <p className="truncate font-semibold text-atlas-text">
                           {lesson.title}
                         </p>
                         {lesson.ai_generated && (
-                          <span className="badge bg-atlas-purple/10 text-atlas-purple border border-atlas-purple/20 text-xs">
+                          <span className="badge bg-atlas-purple/10 text-atlas-purple">
                             AI
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-atlas-subtle mt-0.5">
-                        {lesson.subject} · {lesson.estimated_duration}min ·
+                      <p className="mt-1 text-xs text-atlas-subtle">
+                        {lesson.subject || "General"} - {lesson.estimated_duration} min -
                         Updated {formatRelativeTime(lesson.updated_at)}
                       </p>
                     </div>
@@ -233,147 +331,98 @@ export default function TeacherDashboard() {
               })
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Alerts Panel */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-semibold text-lg text-atlas-text">
-              Alerts
-            </h2>
-            {alerts.filter((a) => !a.is_read).length > 0 && (
-              <span className="badge bg-atlas-red/20 text-atlas-red border-atlas-red/30">
-                {alerts.filter((a) => !a.is_read).length} new
-              </span>
-            )}
-          </div>
-          <div className="space-y-3">
-            {alerts.length === 0 ? (
-              <div className="atlas-card text-center py-8">
-                <p className="text-atlas-subtle text-sm">
-                  All caught up! No alerts right now.
-                </p>
-              </div>
-            ) : (
-              alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`atlas-card py-3 px-4 border ${getAlertColor(alert.alert_type)}`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{alert.title}</p>
-                      <p className="text-xs mt-0.5 opacity-80">
-                        {alert.message}
-                      </p>
-                      {alert.action_suggestion && (
-                        <p className="text-xs mt-1 italic opacity-70">
-                          Action: {alert.action_suggestion}
-                        </p>
-                      )}
-                      <p className="text-xs opacity-50 mt-1">
-                        {formatRelativeTime(alert.created_at)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => dismissAlert(alert.id)}
-                      className="text-current opacity-40 hover:opacity-100 flex-shrink-0 text-lg leading-none mt-0.5"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Classes Grid */}
-      {classes.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-semibold text-lg text-atlas-text">
-              My Classes
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {classes.map((cls, i) => (
-              <div key={cls.id} className="atlas-card">
-                <div className="flex items-center gap-3 mb-3">
+        <aside className="space-y-6">
+          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-xl font-bold">Alerts</h2>
+              {alerts.length > 0 && (
+                <span className="badge bg-atlas-red/10 text-atlas-red">
+                  {alerts.length} active
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {loading ? (
+                [...Array(3)].map((_, index) => (
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg`}
-                    style={{ background: `hsl(${(i * 60) % 360}, 60%, 15%)` }}
+                    key={index}
+                    className="h-20 animate-pulse rounded-lg bg-atlas-surface"
+                  />
+                ))
+              ) : alerts.length === 0 ? (
+                <p className="rounded-lg border border-atlas-border bg-atlas-surface p-4 text-sm text-atlas-subtle">
+                  No urgent alerts. Your class queue is clear.
+                </p>
+              ) : (
+                alerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className={`rounded-lg border p-4 ${getAlertColor(alert.alert_type)}`}
                   >
-                    {cls.name.slice(0, 1).toUpperCase()}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{alert.title}</p>
+                        <p className="mt-1 text-xs leading-5 opacity-80">
+                          {alert.message}
+                        </p>
+                        {alert.action_suggestion && (
+                          <p className="mt-2 text-xs font-medium opacity-90">
+                            Action: {alert.action_suggestion}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dismissAlert(alert.id)}
+                        className="text-lg leading-none opacity-50 hover:opacity-100"
+                        aria-label="Dismiss alert"
+                      >
+                        x
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-atlas-text">{cls.name}</p>
-                    <p className="text-xs text-atlas-subtle">
-                      {cls.subject} · {cls.grade_level}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs text-atlas-subtle pt-3 border-t border-atlas-border">
-                  <span>
-                    Join Code:{" "}
-                    <span className="font-mono text-atlas-amber font-bold">
-                      {cls.join_code}
-                    </span>
-                  </span>
-                  <Link
-                    href={`/teacher/students?class=${cls.id}`}
-                    className="text-atlas-blue hover:underline"
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+            <h2 className="font-display text-xl font-bold">Classes</h2>
+            <p className="mt-1 text-sm text-atlas-subtle">
+              Share join codes with students.
+            </p>
+            <div className="mt-4 space-y-3">
+              {classes.length === 0 ? (
+                <Link href="/teacher/students" className="btn-secondary w-full justify-center">
+                  Create class
+                </Link>
+              ) : (
+                classes.slice(0, 4).map((cls) => (
+                  <div
+                    key={cls.id}
+                    className="rounded-lg border border-atlas-border bg-atlas-surface p-3"
                   >
-                    View →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  subtitle,
-  action,
-}: {
-  title: string;
-  subtitle: string;
-  action?: { label: string; href: string };
-}) {
-  return (
-    <div className="atlas-card text-center py-10">
-      <p className="font-semibold text-atlas-text">{title}</p>
-      <p className="text-atlas-subtle text-sm mt-1">{subtitle}</p>
-      {action && (
-        <Link
-          href={action.href}
-          className="btn-primary mt-4 inline-flex text-sm py-2"
-        >
-          {action.label}
-        </Link>
-      )}
-    </div>
-  );
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="h-10 w-64 bg-atlas-card rounded-xl shimmer mb-8" />
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-atlas-card rounded-2xl shimmer" />
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 h-64 bg-atlas-card rounded-2xl shimmer" />
-        <div className="h-64 bg-atlas-card rounded-2xl shimmer" />
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-atlas-text">
+                          {cls.name}
+                        </p>
+                        <p className="text-xs text-atlas-subtle">
+                          {cls.subject || "General"}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm font-bold text-atlas-amber">
+                        {cls.join_code}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
