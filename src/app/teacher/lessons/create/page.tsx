@@ -111,53 +111,33 @@ export default function CreateLesson() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── File Upload ──────────────────────────────────────────────
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadedFile(file);
-    const reader = new FileReader();
-    reader.onerror = () => toast.error("Could not read file");
 
-    if (file.type === "application/pdf") {
-      // PDFs: extract text via FileReader (binary fallback) and pass what we can
-      // For proper PDF text extraction a server-side PDF library would be used;
-      // here we provide the filename + any readable text segments
-      reader.onload = (ev) => {
-        const raw = ev.target?.result as string;
-        // Attempt to grab readable ASCII runs from the binary data
-        const readable = (raw || "")
-          .replace(/[^\x20-\x7E\n\r]/g, " ")
-          .replace(/\s{3,}/g, "\n")
-          .slice(0, 3000);
-        const desc =
-          readable.trim().length > 100
-            ? `PDF Document: "${file.name}"\n\nExtracted content:\n${readable}`
-            : `PDF Document: "${file.name}"\nTopic: ${file.name.replace(/\.(pdf|docx?|txt)$/i, "").replace(/[-_]/g, " ")}\n(Please generate a comprehensive lesson covering the key concepts in this document.)`;
-        setInputText(desc);
-        toast.success(`"${file.name}" loaded and ready to generate`);
-      };
-      reader.readAsBinaryString(file);
-    } else if (file.name.endsWith(".docx") || file.name.endsWith(".doc")) {
-      // Word docs: read as text (will be garbled but contains some readable content)
-      reader.onload = (ev) => {
-        const raw = ev.target?.result as string;
-        const readable = (raw || "")
-          .replace(/[^\x20-\x7E\n\r]/g, " ")
-          .replace(/\s{3,}/g, "\n")
-          .slice(0, 3000);
-        setInputText(
-          `Word Document: "${file.name}"\n\nExtracted content:\n${readable}`,
-        );
-        toast.success(`"${file.name}" loaded`);
-      };
-      reader.readAsBinaryString(file);
-    } else {
-      // Plain text, markdown, CSV, etc.
-      reader.onload = (ev) => {
-        setInputText(ev.target?.result as string);
-        toast.success(`"${file.name}" loaded`);
-      };
-      reader.readAsText(file);
+    const form = new FormData();
+    form.append("file", file);
+
+    try {
+      const response = await fetch("/api/content/extract", {
+        method: "POST",
+        body: form,
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data?.text) {
+        throw new Error(data?.error || "Could not extract this file.");
+      }
+
+      setInputText(data.text);
+      if (data.warning) {
+        toast(data.warning, { duration: 8000 });
+      }
+      toast.success(`"${file.name}" loaded and ready to generate`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not read file");
+      setUploadedFile(null);
     }
   };
 
