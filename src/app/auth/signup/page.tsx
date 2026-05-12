@@ -1,57 +1,54 @@
 "use client";
-import { useEffect, useMemo, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import { ArrowRight, BookOpenCheck, GraduationCap, UsersRound } from "lucide-react";
 
-// Inner component uses useSearchParams — must be inside Suspense
+type Role = "teacher" | "student";
+
+const roleDetails = {
+  teacher: {
+    label: "Teacher",
+    icon: UsersRound,
+    copy: "Create classes, generate lessons, assign work, and monitor progress.",
+  },
+  student: {
+    label: "Student",
+    icon: BookOpenCheck,
+    copy: "Join classes, follow guided lessons, reflect, and build mastery.",
+  },
+};
+
 function SignupForm() {
   const searchParams = useSearchParams();
-  const requestedRole = searchParams.get("role");
-  const presetRole =
-    requestedRole === "teacher" || requestedRole === "student"
-      ? requestedRole
-      : null;
-  const [role, setRole] = useState<"teacher" | "student">(
-    presetRole || "student",
-  );
+  const preset = searchParams.get("role");
+  const initialRole: Role = preset === "teacher" ? "teacher" : "student";
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [role, setRole] = useState<Role>(initialRole);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
-
-  const roleCopy = useMemo(
-    () => ({
-      teacher: {
-        label: "Teacher",
-        blurb: "You will start with lesson creation tools and class analytics.",
-      },
-      student: {
-        label: "Student",
-        blurb: "You will start with guided lessons and progress checkpoints.",
-      },
-    }),
-    [],
-  );
 
   useEffect(() => {
-    if (presetRole) {
-      setRole(presetRole);
+    if (preset === "teacher" || preset === "student") {
+      setRole(preset);
     }
-  }, [presetRole]);
+  }, [preset]);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignup = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      toast.error("Password must be at least 8 characters.");
       return;
     }
-    setLoading(true);
 
+    setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -62,20 +59,17 @@ function SignupForm() {
     });
 
     if (error) {
-      // 401 / invalid API key → give a clear developer message
+      const message = error.message.toLowerCase();
       if (
         error.status === 401 ||
-        error.message?.toLowerCase().includes("invalid api key") ||
-        error.message?.toLowerCase().includes("apikey")
+        message.includes("invalid api key") ||
+        message.includes("apikey")
       ) {
-        toast.error(
-          " Supabase 401: Your anon key is wrong. Check .env.local — the key must start with eyJ... (get it from Supabase Dashboard → Settings → API → anon public)",
-          { duration: 10000 },
-        );
-      } else if (error.message?.toLowerCase().includes("already registered")) {
-        toast.error(
-          "This email is already registered. Try signing in instead.",
-        );
+        toast.error("Supabase anon key is invalid. Check .env.local.", {
+          duration: 9000,
+        });
+      } else if (message.includes("already registered")) {
+        toast.error("This email is already registered. Try signing in.");
       } else {
         toast.error(error.message);
       }
@@ -83,223 +77,188 @@ function SignupForm() {
       return;
     }
 
-    // If session is null, Supabase sent a confirmation email
     if (data.user && !data.session) {
       setEmailSent(true);
       setLoading(false);
       return;
     }
 
-    // Session exists → logged in immediately (email confirmation is disabled)
-    if (data.session) {
-      // Ensure profile row exists (trigger may not have fired yet in some edge cases)
+    if (data.session && data.user) {
       await supabase.from("profiles").upsert(
         {
-          id: data.user!.id,
+          id: data.user.id,
           email,
           full_name: fullName,
           role,
+          subjects: [],
+          interests: [],
         },
-        { onConflict: "id", ignoreDuplicates: true },
+        { onConflict: "id" },
       );
 
-      toast.success("Account created! Welcome to Atlas.");
-      router.push(
-        role === "teacher" ? "/teacher/dashboard" : "/student/dashboard",
-      );
+      toast.success("Account created.");
+      router.push(role === "teacher" ? "/teacher/dashboard" : "/student/dashboard");
       router.refresh();
     }
   };
 
   if (emailSent) {
     return (
-      <div className="atlas-card p-8 text-center">
-        <h2 className="font-display font-bold text-2xl text-atlas-text mb-2">
-          Check your email
-        </h2>
-        <p className="text-atlas-subtle mb-4">
+      <div className="space-y-5 text-center">
+        <h2 className="font-display text-3xl font-bold">Check your email</h2>
+        <p className="text-sm leading-6 text-atlas-subtle">
           We sent a confirmation link to{" "}
-          <span className="text-atlas-blue font-medium">{email}</span>. Click it
-          to activate your account.
+          <span className="font-semibold text-atlas-blue">{email}</span>.
         </p>
-        <p className="text-xs text-atlas-subtle mt-4">
-          Want to skip email confirmation?{" "}
-          <span className="text-atlas-amber">
-            In Supabase Dashboard → Authentication → Settings → disable "Confirm
-            email"
-          </span>
-        </p>
-        <Link href="/auth/login" className="btn-secondary mt-6 inline-flex">
-          ← Back to Login
+        <Link href="/auth/login" className="btn-secondary inline-flex">
+          Back to sign in
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="atlas-card p-8">
-      {presetRole ? (
-        <div className="mb-6 rounded-xl border border-atlas-blue/35 bg-atlas-blue/10 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-atlas-blue mb-1">
-            Selected role
-          </p>
-          <p className="text-atlas-text font-semibold">
-            Continue as {roleCopy[role].label}
-          </p>
-          <p className="text-sm text-atlas-subtle mt-1">
-            {roleCopy[role].blurb}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {(["teacher", "student"] as const).map((r) => (
+    <form onSubmit={handleSignup} className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {(["teacher", "student"] as const).map((item) => {
+          const Icon = roleDetails[item].icon;
+          const selected = role === item;
+          return (
             <button
-              key={r}
+              key={item}
               type="button"
-              onClick={() => setRole(r)}
-              className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                role === r
+              onClick={() => setRole(item)}
+              className={`rounded-lg border p-4 text-left transition ${
+                selected
                   ? "border-atlas-blue bg-atlas-blue/10 text-atlas-text"
-                  : "border-atlas-border bg-atlas-surface text-atlas-subtle hover:border-atlas-muted"
+                  : "border-atlas-border bg-atlas-surface text-atlas-subtle hover:border-atlas-blue/50"
               }`}
             >
-              <span className="font-semibold capitalize text-sm">{r}</span>
-              <span className="block mt-1 text-xs opacity-80">
-                {r === "teacher"
-                  ? "Build lessons and monitor progress"
-                  : "Learn with checkpoints and feedback"}
+              <Icon className="mb-3 h-5 w-5" />
+              <span className="block font-semibold">{roleDetails[item].label}</span>
+              <span className="mt-1 block text-xs leading-5">
+                {roleDetails[item].copy}
               </span>
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      <form onSubmit={handleSignup} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-atlas-subtle mb-2">
-            Full Name
-          </label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Your full name"
-            required
-            className="atlas-input"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-atlas-subtle mb-2">
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@school.edu"
-            required
-            className="atlas-input"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-atlas-subtle mb-2">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Min. 8 characters"
-            minLength={8}
-            required
-            className="atlas-input"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary w-full justify-center py-3.5"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg
-                className="animate-spin w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Creating account...
-            </span>
-          ) : (
-            `Join as ${role === "teacher" ? "Teacher" : "Student"} →`
-          )}
-        </button>
-      </form>
-
-      <p className="text-center text-atlas-subtle text-sm mt-6">
-        Already have an account?{" "}
-        <Link
-          href="/auth/login"
-          className="text-atlas-blue hover:underline font-medium"
-        >
-          Sign in
-        </Link>
-      </p>
-    </div>
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+          Full name
+        </label>
+        <input
+          type="text"
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          placeholder="Your full name"
+          required
+          className="atlas-input"
+        />
+      </div>
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+          Email
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@school.edu"
+          required
+          className="atlas-input"
+        />
+      </div>
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+          Password
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Minimum 8 characters"
+          minLength={8}
+          required
+          className="atlas-input"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary w-full justify-center py-3.5"
+      >
+        {loading ? "Creating account..." : `Create ${roleDetails[role].label} workspace`}
+        {!loading && <ArrowRight className="h-4 w-4" />}
+      </button>
+    </form>
   );
 }
 
 export default function SignupPage() {
   return (
-    <div className="min-h-screen bg-atlas-bg flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-pattern opacity-20" />
-      <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-atlas-emerald/8 rounded-full blur-[80px]" />
-      <div className="absolute bottom-1/3 left-1/4 w-48 h-48 bg-atlas-blue/10 rounded-full blur-[60px]" />
-
-      <div className="relative w-full max-w-md animate-slide-up">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-atlas-blue to-atlas-cyan flex items-center justify-center shadow-glow-blue">
-              <span className="text-white font-display font-bold text-2xl">
-                A
-              </span>
-            </div>
-            <span className="font-display font-bold text-3xl text-atlas-text">
-              Atlas
-            </span>
-          </Link>
-          <h1 className="font-display font-bold text-2xl text-atlas-text">
-            Create your account
+    <main className="grid min-h-screen bg-atlas-bg lg:grid-cols-[1fr_560px]">
+      <section className="hidden border-r border-atlas-border bg-atlas-surface/40 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
+          <span className="font-display text-xl font-bold">EdSync</span>
+        </Link>
+        <div>
+          <p className="mb-4 inline-flex rounded-lg border border-atlas-border bg-atlas-card px-3 py-2 text-sm text-atlas-subtle">
+            Personalized learning from the first session
+          </p>
+          <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
+            Build a workspace around the way your class learns.
           </h1>
-          <p className="text-atlas-subtle mt-1">
-            Start your personalized learning journey
+          <p className="mt-5 max-w-xl text-lg leading-8 text-atlas-subtle">
+            Teachers get planning and intervention tools. Students get a clear
+            path through lessons, practice, reflection, and next steps.
           </p>
         </div>
+        <p className="text-sm text-atlas-subtle">
+          Configure Supabase Auth and EdSync handles role routing automatically.
+        </p>
+      </section>
 
-        {/* Suspense required for useSearchParams in Next.js 14 App Router */}
-        <Suspense
-          fallback={
-            <div className="atlas-card p-8 text-center">
-              <div className="w-8 h-8 border-2 border-atlas-blue/30 border-t-atlas-blue rounded-full animate-spin mx-auto" />
+      <section className="flex items-center justify-center px-5 py-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 lg:hidden">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+                <GraduationCap className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-display text-xl font-bold">EdSync</span>
+            </Link>
+          </div>
+          <div className="atlas-card p-7">
+            <h2 className="font-display text-3xl font-bold">Create account</h2>
+            <p className="mt-2 text-sm leading-6 text-atlas-subtle">
+              Choose the workspace type that matches your role.
+            </p>
+            <div className="mt-7">
+              <Suspense
+                fallback={
+                  <div className="h-72 animate-pulse rounded-lg bg-atlas-surface" />
+                }
+              >
+                <SignupForm />
+              </Suspense>
             </div>
-          }
-        >
-          <SignupForm />
-        </Suspense>
-      </div>
-    </div>
+            <p className="mt-6 text-center text-sm text-atlas-subtle">
+              Already have an account?{" "}
+              <Link
+                href="/auth/login"
+                className="font-semibold text-atlas-blue hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
