@@ -282,7 +282,7 @@ export default function TeacherAnalytics() {
       else setAiSuggestions(["No specific interventions needed at this time."]);
     } catch {
       setAiSuggestions([
-        "Could not load AI suggestions. Check your OpenRouter API key.",
+        "Could not load AI suggestions. Check your AI provider configuration.",
       ]);
     }
     setGettingSuggestions(false);
