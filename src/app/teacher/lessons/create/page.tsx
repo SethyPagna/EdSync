@@ -101,6 +101,7 @@ export default function CreateLesson() {
   const [genStep, setGenStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedKind, setUploadedKind] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "overview" | "sections" | "questions" | "glossary"
   >("overview");
@@ -131,6 +132,7 @@ export default function CreateLesson() {
       }
 
       setInputText(data.text);
+      setUploadedKind(data.kind || null);
       if (data.warning) {
         toast(data.warning, { duration: 8000 });
       }
@@ -138,6 +140,7 @@ export default function CreateLesson() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not read file");
       setUploadedFile(null);
+      setUploadedKind(null);
     }
   };
 
@@ -473,8 +476,8 @@ export default function CreateLesson() {
                 },
                 {
                   mode: "file" as const,
-                  label: "Upload File",
-                  desc: ".txt, .pdf, .docx",
+                  label: "Upload Media",
+                  desc: "Docs, data, image, video",
                 },
               ].map((opt) => (
                 <button
@@ -501,7 +504,7 @@ export default function CreateLesson() {
             <input
               ref={fileRef}
               type="file"
-              accept=".txt,.pdf,.doc,.docx,.md"
+              accept=".txt,.pdf,.doc,.docx,.md,.csv,.json,.png,.jpg,.jpeg,.webp,.gif,.mp4,.mov,.webm,.mp3,.wav"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -514,6 +517,7 @@ export default function CreateLesson() {
                   </p>
                   <p className="text-xs text-edsync-subtle">
                     {(uploadedFile.size / 1024).toFixed(1)} KB
+                    {uploadedKind ? ` • ${uploadedKind}` : ""}
                   </p>
                 </div>
                 <button
