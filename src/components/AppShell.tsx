@@ -60,6 +60,7 @@ export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/teacher/reports", label: "Reports", icon: ClipboardList },
+  { href: "/teacher/profile", label: "Profile", icon: UserRound },
 ];
 
 export const studentNavItems: ShellNavItem[] = [
