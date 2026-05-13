@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
+import NotificationMenu from "@/components/NotificationMenu";
 import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
@@ -91,7 +92,16 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         .select("*")
         .eq("id", user.id)
         .maybeSingle()
-        .then(({ data }) => setProfile(data));
+        .then(({ data }) => {
+          setProfile(data);
+          const theme = data?.preferences?.theme;
+          if (theme === "dark" || theme === "light") {
+            const useDark = theme === "dark";
+            document.documentElement.classList.toggle("dark", useDark);
+            window.localStorage.setItem("edsync-theme", theme);
+            setDarkMode(useDark);
+          }
+        });
     });
   }, [edsync]);
 
@@ -105,7 +115,13 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const next = !darkMode;
     setDarkMode(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("edsync-theme", next ? "dark" : "light");
+    const theme = next ? "dark" : "light";
+    window.localStorage.setItem("edsync-theme", theme);
+    if (profile) {
+      const preferences = { ...(profile.preferences ?? { text_size: "medium" }), theme };
+      setProfile({ ...profile, preferences });
+      edsync.from("profiles").update({ preferences }).eq("id", profile.id);
+    }
   };
 
   const sidebar = (
@@ -252,7 +268,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           <Brain className={`h-5 w-5 ${copy.accent}`} />
           EdSync
         </Link>
-        <div className="h-10 w-10" />
+        <NotificationMenu />
       </div>
 
       <div className="flex">
@@ -271,6 +287,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </div>
         )}
         <main className="min-h-screen flex-1 overflow-x-hidden pt-16 lg:pt-0">
+          <div className="sticky top-0 z-20 hidden justify-end border-b border-edsync-border bg-edsync-bg/80 px-6 py-3 backdrop-blur lg:flex">
+            <NotificationMenu />
+          </div>
           {children}
         </main>
       </div>
