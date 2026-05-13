@@ -1400,6 +1400,16 @@ export default function TeacherLessonDetail() {
       },
     ]);
     if (lesson?.status !== "published") await changeStatus("published");
+    await fetch("/api/notifications/lesson-assigned", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        lessonId,
+        classId: assignClassId,
+        dueDate: assignDueDate || null,
+      }),
+    });
     setAssignClassId("");
     setAssignDueDate("");
     setAssigning(false);
