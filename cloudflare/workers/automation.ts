@@ -12,6 +12,32 @@ type AutomationJob = {
   payload?: Record<string, unknown>;
 };
 
+async function runAutomation(job: AutomationJob, env: Env) {
+  if (job.job_type === "automation_rule.created") {
+    return { handledBy: "cloudflare-worker", message: "Automation rule queued for future trigger evaluation." };
+  }
+
+  if (job.job_type === "certification.expiry_check") {
+    const tenantId = String(job.payload?.tenantId || "");
+    if (!tenantId) return { handledBy: "cloudflare-worker", skipped: "missing tenant" };
+    const expiring = await env.EDSYNC_DB.prepare(
+      `SELECT lc.user_id, cr.title, lc.expires_at
+         FROM learner_certifications lc
+         JOIN certification_rules cr ON cr.id = lc.rule_id
+        WHERE lc.tenant_id = ?
+          AND lc.status = 'active'
+          AND lc.expires_at IS NOT NULL
+          AND lc.expires_at <= datetime('now', '+' || cr.notify_before_days || ' days')
+        LIMIT 100`,
+    )
+      .bind(tenantId)
+      .all();
+    return { handledBy: "cloudflare-worker", expiring: expiring.results?.length ?? 0 };
+  }
+
+  return { handledBy: "cloudflare-worker", message: "No processor registered for this job type." };
+}
+
 export default {
   async queue(batch: MessageBatch<AutomationJob>, env: Env) {
     for (const message of batch.messages) {
@@ -22,10 +48,12 @@ export default {
         .bind("running", job.id)
         .run();
 
+      const result = await runAutomation(job, env);
+
       await env.EDSYNC_DB.prepare(
         "UPDATE automation_jobs SET status = ?, result = ?, updated_at = datetime('now') WHERE id = ?",
       )
-        .bind("completed", JSON.stringify({ handledBy: "cloudflare-worker" }), job.id)
+        .bind("completed", JSON.stringify(result), job.id)
         .run();
 
       message.ack();
