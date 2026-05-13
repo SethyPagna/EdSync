@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat, parseJsonResponse } from "@/lib/openrouter";
 import type { AILessonDraft } from "@/types";
 import { getAuthenticatedUser } from "@/lib/auth";
+import {
+  buildGenerationStylePrompt,
+  loadAiUserContext,
+  type GenerationStyle,
+} from "@/lib/ai/personalization";
 
 const MAX_SOURCE_CHARS = 5000;
 const LESSON_MODEL = process.env.OPENROUTER_LESSON_MODEL?.trim() || undefined;
@@ -58,6 +63,9 @@ function buildLessonUserPrompt({
   pacingDesc,
   scaffoldingDesc,
   wasTruncated,
+  profilePrompt,
+  stylePrompt,
+  versionInstruction,
 }: {
   mode: string;
   safeContent: string;
@@ -65,6 +73,9 @@ function buildLessonUserPrompt({
   pacingDesc: string;
   scaffoldingDesc: string;
   wasTruncated: boolean;
+  profilePrompt: string;
+  stylePrompt: string;
+  versionInstruction?: string;
 }) {
   const sourceType =
     mode === "url" ? "url" : mode === "text" ? "text" : "objectives";
@@ -79,6 +90,13 @@ Settings:
 - Pacing: ${pacingDesc}
 - Scaffolding: ${scaffoldingDesc}
 - Output style: illustrative teaching with analogies, worked examples, and quick checks using text/HTML only.
+
+Personalization:
+${profilePrompt}
+
+Generation style:
+${stylePrompt}
+${versionInstruction ? `\nVersion focus:\n${versionInstruction}` : ""}
 
 Input type: ${sourceType}
 Source input:
@@ -314,6 +332,10 @@ export async function POST(request: NextRequest) {
       complexity = 50,
       pacing = 50,
       scaffolding = 50,
+      depth = "standard",
+      languageStyle = "student_friendly",
+      versionCount = 1,
+      audienceLanguage = "English",
     } = await request.json();
 
     const normalizedContent = typeof content === "string" ? content.trim() : "";
@@ -352,14 +374,34 @@ export async function POST(request: NextRequest) {
           ? "moderate scaffolding with some independence"
           : "minimal scaffolding for independent learners";
 
-    const userPrompt = buildLessonUserPrompt({
-      mode,
-      safeContent,
-      complexityDesc,
-      pacingDesc,
-      scaffoldingDesc,
-      wasTruncated,
-    });
+    const aiContext = await loadAiUserContext(user.id);
+    const generationStyle: GenerationStyle = {
+      depth,
+      languageStyle,
+      versionCount,
+      audienceLanguage,
+    };
+    const stylePrompt = buildGenerationStylePrompt(generationStyle);
+    const requestedVersions = Math.min(3, Math.max(1, Number(versionCount || 1)));
+
+    const makeUserPrompt = (versionInstruction?: string) =>
+      buildLessonUserPrompt({
+        mode,
+        safeContent,
+        complexityDesc,
+        pacingDesc,
+        scaffoldingDesc,
+        wasTruncated,
+        profilePrompt: aiContext.prompt,
+        stylePrompt,
+        versionInstruction,
+      });
+
+    const userPrompt = makeUserPrompt(
+      requestedVersions > 1
+        ? "Version 1: balanced classroom-ready version with the clearest progression."
+        : undefined,
+    );
 
     const buildMessages = (extraInstruction?: string) => [
       { role: "system" as const, content: FIXED_LESSON_SYSTEM_PROMPT },
@@ -371,26 +413,31 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    let raw: string;
-    try {
-      raw = await openRouterChat({
-        messages: buildMessages(),
+    const generateRawLesson = async (prompt: string, extraInstruction?: string) =>
+      openRouterChat({
+        messages: [
+          { role: "system" as const, content: FIXED_LESSON_SYSTEM_PROMPT },
+          {
+            role: "user" as const,
+            content: extraInstruction ? `${prompt}\n\n${extraInstruction}` : prompt,
+          },
+        ],
         model: LESSON_MODEL,
         maxTokens: 2200,
         temperature: 0.2,
       });
+
+    let raw: string;
+    try {
+      raw = await generateRawLesson(userPrompt);
     } catch (generationError) {
       if (!shouldRetryForTruncation(generationError)) throw generationError;
 
       try {
-        raw = await openRouterChat({
-          messages: buildMessages(
+        raw = await generateRawLesson(
+          userPrompt,
             "Retry in compact mode. Keep each section concise but preserve labeled parts (Core idea, Analogy, Worked example, Why it matters, Quick check) and keep quiz explanations short while preserving schema and counts.",
-          ),
-          model: LESSON_MODEL,
-          maxTokens: 1500,
-          temperature: 0.1,
-        });
+        );
       } catch (compactGenerationError) {
         if (!shouldRetryForTruncation(compactGenerationError)) {
           throw compactGenerationError;
@@ -510,7 +557,37 @@ export async function POST(request: NextRequest) {
     if (!lesson.prerequisites) lesson.prerequisites = [];
     if (!lesson.estimated_duration) lesson.estimated_duration = 45;
 
-    return NextResponse.json({ lesson });
+    const variants: AILessonDraft[] = [lesson];
+    if (requestedVersions > 1) {
+      const versionPrompts = [
+        "Version 2: more scaffolded, conversational, and supportive for learners who need confidence.",
+        "Version 3: more advanced, professional, and extension-rich for students ready to stretch.",
+      ].slice(0, requestedVersions - 1);
+
+      const generatedVariants = await Promise.all(
+        versionPrompts.map(async (instruction) => {
+          try {
+            const variantRaw = await generateRawLesson(makeUserPrompt(instruction));
+            return parseJsonResponse(variantRaw) as AILessonDraft;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      variants.push(
+        ...generatedVariants.filter(
+          (variant): variant is AILessonDraft => variant !== null,
+        ),
+      );
+    }
+
+    return NextResponse.json({
+      lesson,
+      variants: variants.map((variant, index) => ({
+        ...variant,
+        tags: Array.from(new Set([...(variant.tags || []), `version-${index + 1}`])),
+      })),
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error("[create-lesson]", msg);
