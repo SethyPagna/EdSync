@@ -6,7 +6,7 @@ const requiredEnv = [
   "CLOUDFLARE_D1_DATABASE_ID",
   "CLOUDFLARE_API_TOKEN",
   "SESSION_SECRET",
-  "OPENROUTER_API_KEY",
+  "APP_ENCRYPTION_KEY",
 ];
 
 function loadLocalEnvKeys() {
