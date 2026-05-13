@@ -25,6 +25,8 @@ export const TABLES = [
   "content_extractions",
   "announcements",
   "schedule_events",
+  "rate_limits",
+  "security_events",
   "ai_runs",
   "automation_jobs",
 ] as const;
@@ -46,6 +48,7 @@ export const JSON_COLUMNS: Record<string, string[]> = {
   content_extractions: ["metadata"],
   announcements: ["metadata"],
   schedule_events: ["metadata"],
+  security_events: ["metadata"],
   lesson_analytics: [
     "concept_mastery",
     "common_mistakes",
