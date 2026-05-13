@@ -1,7 +1,7 @@
 import { d1Query } from "@/lib/db/d1";
 import { decryptSecret, encryptSecret, maskSecret } from "@/lib/security/secrets";
 
-export type AIProviderKey = "openrouter" | "groq" | "mistral" | "cerebras" | "google" | "cohere" | "cloudflare";
+export type AIProviderKey = "groq" | "mistral" | "cerebras" | "google" | "cohere";
 export type AIProviderType = "chat" | "embed";
 
 export type AIProviderRow = {
@@ -46,36 +46,12 @@ export const PROVIDER_META: Record<
     safeCooldownSeconds: number;
   }
 > = {
-  openrouter: {
-    label: "OpenRouter",
-    providerType: "chat",
-    defaultEndpoint: "https://openrouter.ai/api/v1/chat/completions",
-    defaultModel: "openai/gpt-oss-120b:free",
-    defaultPriority: 15,
-    safeRequestsPerMinute: 18,
-    safeMaxInputChars: 4000,
-    safeMaxCompletionTokens: 3000,
-    safeTimeoutMs: 25000,
-    safeCooldownSeconds: 20,
-  },
-  cloudflare: {
-    label: "Cloudflare AI Gateway",
-    providerType: "chat",
-    defaultEndpoint: "",
-    defaultModel: "openai/gpt-oss-120b:free",
-    defaultPriority: 10,
-    safeRequestsPerMinute: 24,
-    safeMaxInputChars: 4000,
-    safeMaxCompletionTokens: 3000,
-    safeTimeoutMs: 25000,
-    safeCooldownSeconds: 20,
-  },
   groq: {
     label: "Groq",
     providerType: "chat",
     defaultEndpoint: "https://api.groq.com/openai/v1/chat/completions",
-    defaultModel: "llama-3.3-70b-versatile",
-    defaultPriority: 20,
+    defaultModel: "groq/compound",
+    defaultPriority: 10,
     safeRequestsPerMinute: 18,
     safeMaxInputChars: 3000,
     safeMaxCompletionTokens: 2200,
@@ -86,12 +62,12 @@ export const PROVIDER_META: Record<
     label: "Google AI",
     providerType: "chat",
     defaultEndpoint: "https://generativelanguage.googleapis.com/v1beta/models",
-    defaultModel: "gemini-1.5-flash",
-    defaultPriority: 30,
+    defaultModel: "gemini-flash-latest",
+    defaultPriority: 20,
     safeRequestsPerMinute: 14,
     safeMaxInputChars: 3200,
     safeMaxCompletionTokens: 2200,
-    safeTimeoutMs: 18000,
+    safeTimeoutMs: 17000,
     safeCooldownSeconds: 20,
   },
   mistral: {
@@ -111,11 +87,11 @@ export const PROVIDER_META: Record<
     providerType: "chat",
     defaultEndpoint: "https://api.cerebras.ai/v1/chat/completions",
     defaultModel: "llama3.1-8b",
-    defaultPriority: 50,
+    defaultPriority: 40,
     safeRequestsPerMinute: 12,
     safeMaxInputChars: 2500,
     safeMaxCompletionTokens: 1600,
-    safeTimeoutMs: 15000,
+    safeTimeoutMs: 14000,
     safeCooldownSeconds: 25,
   },
   cohere: {
@@ -217,7 +193,15 @@ export function normalizeProviderPayload(payload: Record<string, unknown>, exist
   };
 }
 
-export async function listProviderRows(type: AIProviderType = "chat") {
+export async function listProviderRows(type?: AIProviderType) {
+  if (!type) {
+    return d1Query<AIProviderRow>(
+      `SELECT *
+         FROM ai_provider_configs
+        ORDER BY enabled DESC, provider_type ASC, priority ASC, updated_at DESC`,
+    );
+  }
+
   return d1Query<AIProviderRow>(
     `SELECT *
        FROM ai_provider_configs
