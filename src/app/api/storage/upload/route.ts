@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { putR2Object } from "@/lib/storage/r2";
 import { d1Query } from "@/lib/db/d1";
 import { getSessionUser } from "@/lib/auth/session";
+import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { sanitizeObjectPath, validateUploadFile } from "@/lib/security/upload";
 
@@ -63,17 +64,44 @@ export async function POST(request: Request) {
   const safeBucketAlias = sanitizeObjectPath(bucketAlias) || "uploads";
   const safePath = sanitizeObjectPath(path) || safeFile.fileName;
   const objectKey = `${env}/users/${user.id}/${safeBucketAlias}/${safePath}`.replace(/\/+/g, "/");
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const malwareScan = await scanUploadBuffer({
+    buffer: fileBuffer,
+    fileName: safeFile.fileName,
+    contentType: safeFile.contentType,
+  });
+
+  if (malwareScan.status === "failed") {
+    await logSecurityEvent({
+      request,
+      userId: user.id,
+      eventType: "malware_upload_blocked",
+      severity: "critical",
+      message: "Upload blocked by malware scan.",
+      metadata: {
+        fileName: safeFile.fileName,
+        contentType: safeFile.contentType,
+        size: file.size,
+        scan: malwareScan,
+      },
+    });
+    return NextResponse.json(
+      { data: null, error: { message: "Upload blocked because the file looks unsafe." } },
+      { status: 422 },
+    );
+  }
+
   const uploaded = await putR2Object({
     key: objectKey,
-    body: Buffer.from(await file.arrayBuffer()),
+    body: fileBuffer,
     contentType: safeFile.contentType,
   });
 
   const storageObjectId = crypto.randomUUID();
   await d1Query(
     `INSERT OR REPLACE INTO storage_objects
-       (id, owner_id, bucket, object_key, public_url, content_type, size_bytes, purpose, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+       (id, owner_id, bucket, object_key, public_url, content_type, size_bytes, purpose, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     [
       storageObjectId,
       user.id,
@@ -83,6 +111,7 @@ export async function POST(request: Request) {
       safeFile.contentType,
       file.size,
       safeBucketAlias,
+      JSON.stringify({ malwareScan }),
     ],
   );
 
@@ -97,12 +126,23 @@ export async function POST(request: Request) {
       safeFile.assetType,
       safeFile.fileName,
       uploaded.publicUrl,
-      JSON.stringify({ bucketAlias: safeBucketAlias, objectKey: uploaded.key, contentType: safeFile.contentType, sizeBytes: file.size }),
+      JSON.stringify({
+        bucketAlias: safeBucketAlias,
+        objectKey: uploaded.key,
+        contentType: safeFile.contentType,
+        sizeBytes: file.size,
+        malwareScan,
+      }),
     ],
   );
 
   return NextResponse.json({
-    data: { path: uploaded.key, publicUrl: uploaded.publicUrl, assetType: safeFile.assetType },
+    data: {
+      path: uploaded.key,
+      publicUrl: uploaded.publicUrl,
+      assetType: safeFile.assetType,
+      scanStatus: malwareScan.status,
+    },
     error: null,
   });
 }
