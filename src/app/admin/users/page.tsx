@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Search, ShieldCheck, UserCog, UsersRound } from "lucide-react";
 
@@ -40,15 +40,15 @@ export default function AdminUsersPage() {
   const [query, setQuery] = useState("");
   const [activeGroup, setActiveGroup] = useState<UserGroupKey | "all">("all");
 
-  const loadUsers = () => {
-    fetch(`/api/admin/users?q=${encodeURIComponent(query)}`, { cache: "no-store" })
+  const loadUsers = useCallback((searchTerm = "") => {
+    fetch(`/api/admin/users?q=${encodeURIComponent(searchTerm)}`, { cache: "no-store" })
       .then((response) => response.json())
       .then((payload) => setUsers(payload.data ?? []));
-  };
+  }, []);
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   const grouped = useMemo(() => {
     return users.reduce<Record<UserGroupKey, AdminUser[]>>(
@@ -75,7 +75,7 @@ export default function AdminUsersPage() {
       return;
     }
     toast.success(admin ? "Platform admin access granted." : "Platform admin access removed.");
-    loadUsers();
+    loadUsers(query);
   };
 
   return (
@@ -91,7 +91,7 @@ export default function AdminUsersPage() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            loadUsers();
+            loadUsers(query);
           }}
           className="flex flex-col gap-2 sm:flex-row"
         >
