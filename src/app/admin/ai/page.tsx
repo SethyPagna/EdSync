@@ -431,14 +431,81 @@ export default function AdminAIPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-4">
           <div className="edsync-card overflow-hidden p-0">
             <div className="border-b border-edsync-border px-4 py-3">
               <h2 className="font-display text-xl font-bold">Routing Stack</h2>
               <p className="text-sm text-edsync-subtle">Lower priority numbers are tried first; failed providers cool down automatically.</p>
             </div>
-            <div className="overflow-x-auto">
+            <div className="grid gap-3 p-3 lg:hidden">
+              {providers.map((provider) => (
+                <div key={provider.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2.5 w-2.5 rounded-full ${provider.enabled ? "bg-edsync-emerald" : "bg-edsync-subtle"}`} />
+                        <p className="truncate font-semibold text-edsync-text">{provider.name}</p>
+                      </div>
+                      <p className="mt-1 truncate text-xs text-edsync-subtle">{provider.provider} - {provider.default_model}</p>
+                    </div>
+                    <span className={`badge flex-shrink-0 ${statusClasses(provider.last_status)}`}>{provider.last_status}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-edsync-subtle">
+                    <p>Priority <span className="font-semibold text-edsync-text">{provider.priority}</span></p>
+                    <p>RPM <span className="font-semibold text-edsync-text">{provider.requests_per_minute}</span></p>
+                    <p>Timeout <span className="font-semibold text-edsync-text">{provider.timeout_ms} ms</span></p>
+                    <p>Cooldown <span className="font-semibold text-edsync-text">{provider.cooldown_seconds}s</span></p>
+                  </div>
+                  <p className="mt-2 break-all text-xs text-edsync-subtle">{provider.endpoint_effective}</p>
+                  {provider.last_error && <p className="mt-2 text-xs text-edsync-red">{provider.last_error}</p>}
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => editProvider(provider)} className="btn-secondary justify-center px-3 py-2">
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => testProvider(provider)}
+                      className="btn-secondary justify-center px-3 py-2"
+                      disabled={testingId === provider.id}
+                    >
+                      <TestTube2 className="h-4 w-4" />
+                      {testingId === provider.id ? "Testing" : "Test"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => patchProviderAction(provider, "toggle", !provider.enabled)}
+                      className={`${provider.enabled ? "btn-secondary" : "btn-primary"} justify-center px-3 py-2`}
+                      disabled={busyId === provider.id}
+                    >
+                      {provider.enabled ? "Pause" : "Enable"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => patchProviderAction(provider, "reset_status")}
+                      className="btn-secondary justify-center px-3 py-2"
+                      disabled={busyId === provider.id}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteProvider(provider)}
+                    className="btn-danger mt-2 w-full justify-center px-3 py-2"
+                    disabled={busyId === provider.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              ))}
+              {!loading && providers.length === 0 && (
+                <div className="p-3 text-sm text-edsync-subtle">No providers are configured yet. Add Groq, Google, Mistral, Cerebras, or Cohere to enable smart fallback.</div>
+              )}
+            </div>
+            <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[920px] text-left text-sm">
                 <thead className="border-b border-edsync-border text-xs uppercase tracking-wide text-edsync-subtle">
                   <tr>
@@ -565,7 +632,7 @@ export default function AdminAIPage() {
           </div>
         </section>
 
-        <aside className="edsync-card h-fit p-4 xl:sticky xl:top-6">
+        <aside className="edsync-card h-fit p-4 2xl:sticky 2xl:top-6">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit Provider" : "Add Provider"}</h2>
