@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Brain,
   ClipboardList,
+  FileCheck2,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -22,6 +23,9 @@ import {
   PanelLeftOpen,
   Sparkles,
   Sun,
+  ShieldCheck,
+  StickyNote,
+  MessageSquareText,
   UserRound,
   UsersRound,
   X,
@@ -35,7 +39,7 @@ export type ShellNavItem = {
 };
 
 type AppShellProps = {
-  role: "teacher" | "student";
+  role: "admin" | "teacher" | "student";
   children: React.ReactNode;
   navItems: ShellNavItem[];
 };
@@ -46,6 +50,12 @@ const roleCopy = {
     accent: "text-edsync-amber",
     badge: "bg-edsync-amber/10 border-edsync-amber/25 text-edsync-amber",
     gradient: "from-edsync-amber to-edsync-blue",
+  },
+  admin: {
+    label: "Admin Console",
+    accent: "text-edsync-blue",
+    badge: "bg-edsync-blue/10 border-edsync-blue/25 text-edsync-blue",
+    gradient: "from-edsync-blue to-edsync-cyan",
   },
   student: {
     label: "Student Learning OS",
@@ -58,6 +68,10 @@ const roleCopy = {
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
+  { href: "/teacher/work", label: "Work", icon: FileCheck2 },
+  { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList },
+  { href: "/teacher/notes", label: "Notes", icon: StickyNote },
+  { href: "/teacher/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
@@ -67,7 +81,22 @@ export const teacherNavItems: ShellNavItem[] = [
 
 export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Learning Cockpit", icon: LayoutDashboard },
+  { href: "/student/work", label: "My Work", icon: FileCheck2 },
+  { href: "/student/grades", label: "Grades", icon: ClipboardList },
+  { href: "/student/notes", label: "Notes", icon: StickyNote },
+  { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/student/profile", label: "Profile", icon: UserRound },
+];
+
+export const adminNavItems: ShellNavItem[] = [
+  { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/users", label: "Users", icon: UsersRound },
+  { href: "/admin/ai", label: "AI Providers", icon: Brain },
+  { href: "/admin/email", label: "Email Outbox", icon: MessageSquareText },
+  { href: "/admin/security", label: "Security", icon: ShieldCheck },
+  { href: "/admin/settings", label: "Settings", icon: ClipboardList },
+  { href: "/teacher/dashboard", label: "Teacher View", icon: GraduationCap },
+  { href: "/student/dashboard", label: "Student View", icon: BookOpenCheck },
 ];
 
 export default function AppShell({ role, children, navItems }: AppShellProps) {
@@ -172,6 +201,11 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
               </p>
             </div>
           </div>
+          {role === "admin" && (
+            <div className="mt-3 rounded-lg border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
+              Read-only view mode is audited.
+            </div>
+          )}
           {role === "student" && (
             <div className="mt-3">
               <div className="mb-1 flex justify-between text-xs text-edsync-subtle">
