@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -128,6 +128,15 @@ for (const key of [
 
 run("npx", ["opennextjs-cloudflare", "build", "--config", "wrangler.app.jsonc", ...envArgs]);
 const pagesDeployCwd = mkdtempSync(join(tmpdir(), "edsync-pages-"));
+const pagesIndexPath = resolve(".open-next/assets/index.html");
+const appUrl =
+  environment === "production"
+    ? "https://edsync-app-production.learn-learning-app.workers.dev"
+    : "https://edsync-app-preview.learn-learning-app.workers.dev";
+writeFileSync(
+  pagesIndexPath,
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=${appUrl}"><title>EdSync</title></head><body><a href="${appUrl}">Open EdSync</a></body></html>`,
+);
 const pagesDeployEnv = { ...process.env };
 if (pagesDeployEnv.CLOUDFLARE_GLOBAL_API_KEY || pagesDeployEnv.CLOUDFLARE_API_KEY) {
   delete pagesDeployEnv.CLOUDFLARE_API_TOKEN;
@@ -143,6 +152,7 @@ run("npx", [
   "--branch",
   environment === "production" ? "main" : "preview",
 ], { cwd: pagesDeployCwd, env: pagesDeployEnv });
+unlinkSync(pagesIndexPath);
 run("npx", ["opennextjs-cloudflare", "deploy", "--config", "wrangler.app.jsonc", ...envArgs, "--", "--keep-vars"]);
 const automationDeployCwd = mkdtempSync(join(tmpdir(), "edsync-worker-"));
 run("npx", ["wrangler", "deploy", "--config", resolve("wrangler.toml"), ...envArgs], {
