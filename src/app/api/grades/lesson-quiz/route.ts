@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { recordGradeEvent } from "@/lib/learning-events";
+import { resolveTenantContext } from "@/lib/tenancy";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -28,23 +30,21 @@ export async function POST(request: Request) {
   const pointsPossible = Math.max(0, Number(body.pointsPossible ?? 100));
   const pointsEarned = body.pointsEarned !== undefined ? Number(body.pointsEarned) : Math.round((score / 100) * pointsPossible);
 
-  await d1Query(
-    `INSERT OR REPLACE INTO gradebook_scores (
-       id, class_id, student_id, teacher_id, source_type, source_id, title,
-       points_earned, points_possible, percent, status, graded_at, metadata, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, 'lesson_quiz', ?, ?, ?, ?, ?, 'graded', datetime('now'), '{}', datetime('now'), datetime('now'))`,
-    [
-      crypto.randomUUID(),
-      lesson.class_id,
-      user.id,
-      lesson.teacher_id,
-      lesson.id,
-      `${lesson.title} final quiz`,
-      pointsEarned,
-      pointsPossible,
-      score,
-    ],
-  );
+  const context = await resolveTenantContext(user);
+  const result = await recordGradeEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    studentId: user.id,
+    classId: lesson.class_id,
+    sourceType: "lesson_quiz",
+    sourceId: lesson.id,
+    eventType: "grade.lesson_quiz.recorded",
+    teacherId: lesson.teacher_id,
+    title: `${lesson.title} final quiz`,
+    pointsEarned,
+    pointsPossible,
+    payload: { score },
+  });
 
-  return NextResponse.json({ data: { recorded: true }, error: null });
+  return NextResponse.json({ data: { recorded: true, eventId: result.eventId }, error: null });
 }
