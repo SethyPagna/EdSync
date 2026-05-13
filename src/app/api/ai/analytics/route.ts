@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openRouterChat } from "@/lib/openrouter";
+import { generateAIChat } from "@/lib/ai/chat";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -28,12 +28,6 @@ export async function POST(request: NextRequest) {
     const { studentStats, lessonStats } = await request.json();
     const aiContext = await loadAiUserContext(user.id);
 
-    if (!process.env.OPENROUTER_API_KEY) {
-      return NextResponse.json({
-        suggestions: ["OPENROUTER_API_KEY not set. Add it to .env.local."],
-      });
-    }
-
     const atRisk = (studentStats || []).filter(
       (s: any) => (s.avgScore ?? 0) < 60,
     );
@@ -57,7 +51,7 @@ Class data:
 ${aiContext.prompt}
 
 - Total students: ${(studentStats || []).length}
-- At risk (below 60%): ${atRisk.length} — names: ${atRisk.map((s: any) => s.name).join(", ") || "none"}
+- At risk (below 60%): ${atRisk.length} - names: ${atRisk.map((s: any) => s.name).join(", ") || "none"}
 - Advanced (80%+): ${advanced.length}
 - Reflection entries logged: ${reflectionsLogged}
 - Low-confidence reflections (1-2/5): ${lowConfidenceReflections}
@@ -75,7 +69,7 @@ ${aiContext.prompt}
     }%
 `;
 
-    const raw = await openRouterChat({
+    const raw = await generateAIChat({
       messages: [
         {
           role: "system",
