@@ -31,6 +31,8 @@ export type AIProviderRow = {
   updated_at: string;
 };
 
+export type SerializedAIProvider = ReturnType<typeof serializeProvider>;
+
 export const PROVIDER_META: Record<
   AIProviderKey,
   {
@@ -75,7 +77,7 @@ export const PROVIDER_META: Record<
     providerType: "chat",
     defaultEndpoint: "https://api.mistral.ai/v1/chat/completions",
     defaultModel: "mistral-small-latest",
-    defaultPriority: 40,
+    defaultPriority: 30,
     safeRequestsPerMinute: 10,
     safeMaxInputChars: 3000,
     safeMaxCompletionTokens: 1800,
@@ -112,6 +114,10 @@ function trim(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function hasPayloadValue(payload: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(payload, key);
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -126,10 +132,61 @@ function parseSupportedModels(value: string | null) {
   }
 }
 
+function parseBooleanPayload(value: unknown, fallback: number) {
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "number") return value === 0 ? 0 : 1;
+  const normalized = trim(value).toLowerCase();
+  if (!normalized) return fallback;
+  return ["false", "0", "off", "disabled", "no"].includes(normalized) ? 0 : 1;
+}
+
+function optionalText(payload: Record<string, unknown>, key: string, existingValue?: string | null) {
+  if (!hasPayloadValue(payload, key)) return existingValue ?? null;
+  return trim(payload[key]) || null;
+}
+
+function normalizeSupportedModels(payload: Record<string, unknown>, existing?: AIProviderRow | null) {
+  if (!hasPayloadValue(payload, "supported_models")) {
+    return existing?.supported_models ?? "[]";
+  }
+
+  const value = payload.supported_models;
+  const supported = Array.isArray(value)
+    ? value.map(trim).filter(Boolean)
+    : trim(value)
+      .split(/\r?\n|,/)
+      .map(trim)
+      .filter(Boolean);
+
+  return JSON.stringify(supported);
+}
+
+export function providerDefaults(provider: AIProviderKey) {
+  const meta = PROVIDER_META[provider];
+  return {
+    provider,
+    label: meta.label,
+    provider_type: meta.providerType,
+    default_endpoint: meta.defaultEndpoint,
+    endpoint_effective: meta.defaultEndpoint,
+    default_model: meta.defaultModel,
+    priority: meta.defaultPriority,
+    requests_per_minute: meta.safeRequestsPerMinute,
+    max_input_chars: meta.safeMaxInputChars,
+    max_completion_tokens: meta.safeMaxCompletionTokens,
+    timeout_ms: meta.safeTimeoutMs,
+    cooldown_seconds: meta.safeCooldownSeconds,
+  };
+}
+
 export function serializeProvider(row: AIProviderRow) {
   const key = decryptSecret(row.api_key_encrypted);
+  const meta = PROVIDER_META[row.provider];
   return {
     ...row,
+    label: meta.label,
+    default_endpoint: meta.defaultEndpoint,
+    endpoint_effective: row.endpoint_override || meta.defaultEndpoint,
     supported_models: parseSupportedModels(row.supported_models),
     enabled: Boolean(row.enabled),
     has_key: Boolean(key),
@@ -143,13 +200,6 @@ export function normalizeProviderPayload(payload: Record<string, unknown>, exist
   const meta = PROVIDER_META[provider];
   if (!meta) throw new Error("Choose a supported AI provider.");
 
-  const supported = Array.isArray(payload.supported_models)
-    ? payload.supported_models.map(trim).filter(Boolean)
-    : trim(payload.supported_models)
-      .split(/\r?\n|,/)
-      .map(trim)
-      .filter(Boolean);
-
   const apiKey = trim(payload.api_key);
   const encryptedKey = apiKey ? encryptSecret(apiKey) : existing?.api_key_encrypted;
   if (!encryptedKey) throw new Error("API key is required.");
@@ -158,14 +208,14 @@ export function normalizeProviderPayload(payload: Record<string, unknown>, exist
     name: trim(payload.name) || existing?.name || meta.label,
     provider,
     provider_type: (trim(payload.provider_type) || existing?.provider_type || meta.providerType) as AIProviderType,
-    account_email: trim(payload.account_email) || null,
-    project_name: trim(payload.project_name) || null,
+    account_email: optionalText(payload, "account_email", existing?.account_email),
+    project_name: optionalText(payload, "project_name", existing?.project_name),
     api_key_encrypted: encryptedKey,
     default_model: trim(payload.default_model) || existing?.default_model || meta.defaultModel,
-    supported_models: JSON.stringify(supported),
-    endpoint_override: trim(payload.endpoint_override) || null,
-    notes: trim(payload.notes) || null,
-    enabled: payload.enabled === false ? 0 : 1,
+    supported_models: normalizeSupportedModels(payload, existing),
+    endpoint_override: optionalText(payload, "endpoint_override", existing?.endpoint_override),
+    notes: optionalText(payload, "notes", existing?.notes),
+    enabled: hasPayloadValue(payload, "enabled") ? parseBooleanPayload(payload.enabled, existing?.enabled ?? 1) : existing?.enabled ?? 1,
     priority: clamp(Number(payload.priority ?? existing?.priority ?? meta.defaultPriority) || meta.defaultPriority, 1, 999),
     requests_per_minute: clamp(
       Number(payload.requests_per_minute ?? existing?.requests_per_minute ?? meta.safeRequestsPerMinute) ||
