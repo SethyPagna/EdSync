@@ -1,4 +1,4 @@
-export type UserRole = "teacher" | "student";
+export type UserRole = "admin" | "teacher" | "student";
 export type LessonStatus = "draft" | "published" | "archived";
 export type ContentType =
   | "text"
@@ -329,6 +329,199 @@ export interface ScheduleEvent {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+export type WorkType = "quiz" | "test" | "task" | "discussion" | "activity";
+export type WorkStatus = "draft" | "published" | "archived";
+export type SubmissionStatus = "draft" | "submitted" | "returned" | "graded" | "missing";
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface FeatureFlag {
+  id: string;
+  flag_key: string;
+  label: string;
+  description: string | null;
+  enabled: boolean;
+  audience: "all" | "admin" | "teacher" | "student";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIProviderConfig {
+  id: string;
+  name: string;
+  provider: "openrouter" | "groq" | "mistral" | "cerebras" | "google" | "cohere" | "cloudflare";
+  provider_type: "chat" | "embed";
+  account_email: string | null;
+  project_name: string | null;
+  default_model: string | null;
+  supported_models: string[];
+  endpoint_override: string | null;
+  notes: string | null;
+  enabled: boolean;
+  priority: number;
+  requests_per_minute: number;
+  max_input_chars: number;
+  max_completion_tokens: number;
+  timeout_ms: number;
+  cooldown_seconds: number;
+  last_status: "untested" | "ok" | "error";
+  last_error: string | null;
+  last_checked_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  has_key?: boolean;
+  key_masked?: string;
+}
+
+export interface GradebookCategory {
+  id: string;
+  class_id: string;
+  teacher_id: string;
+  name: string;
+  weight: number;
+  drop_lowest: number;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GradebookScore {
+  id: string;
+  class_id: string | null;
+  student_id: string;
+  teacher_id: string;
+  category_id: string | null;
+  source_type: "lesson_quiz" | WorkType | "manual";
+  source_id: string | null;
+  title: string;
+  points_earned: number;
+  points_possible: number;
+  percent: number | null;
+  feedback: string | null;
+  status: "draft" | "submitted" | "graded" | "excused" | "missing";
+  graded_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningWorkItem {
+  id: string;
+  teacher_id: string;
+  class_id: string | null;
+  lesson_id: string | null;
+  category_id: string | null;
+  title: string;
+  description: string | null;
+  work_type: WorkType;
+  instructions: string | null;
+  points_possible: number;
+  due_at: string | null;
+  status: WorkStatus;
+  allow_late: boolean;
+  rubric: unknown[];
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningWorkQuestion {
+  id: string;
+  work_item_id: string;
+  prompt: string;
+  question_type: string;
+  options: { id: string; text: string; is_correct?: boolean }[];
+  correct_answer: string | null;
+  points: number;
+  order_index: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface LearningSubmission {
+  id: string;
+  work_item_id: string;
+  student_id: string;
+  class_id: string | null;
+  response: Record<string, unknown>;
+  attachment_storage_id: string | null;
+  status: SubmissionStatus;
+  points_earned: number | null;
+  points_possible: number | null;
+  percent: number | null;
+  feedback: string | null;
+  ai_feedback: string | null;
+  submitted_at: string | null;
+  graded_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscussionThread {
+  id: string;
+  work_item_id: string | null;
+  class_id: string | null;
+  teacher_id: string;
+  title: string;
+  prompt: string | null;
+  is_locked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscussionPost {
+  id: string;
+  thread_id: string;
+  author_id: string;
+  parent_id: string | null;
+  body: string;
+  visibility: "class" | "teacher" | "private";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentNote {
+  id: string;
+  teacher_id: string;
+  student_id: string;
+  class_id: string | null;
+  title: string;
+  body: string;
+  visibility: "teacher" | "student" | "guardian";
+  priority: "low" | "normal" | "high";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailOutboxEvent {
+  id: string;
+  teacher_id: string | null;
+  class_id: string | null;
+  subject: string;
+  body_text: string;
+  recipient_count: number;
+  recipients: string[];
+  sender_display: string | null;
+  reply_to: string | null;
+  compose_url: string | null;
+  provider: string;
+  status: "queued" | "composed" | "sent" | "failed" | "skipped";
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 // AI Generation Types
