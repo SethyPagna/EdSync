@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { appendLearningEvent, recordGradeEvent } from "@/lib/learning-events";
+import { resolveTenantContext } from "@/lib/tenancy";
 
 function percent(pointsEarned: number, pointsPossible: number) {
   return pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 10000) / 100 : null;
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
   }
 
   const id = crypto.randomUUID();
+  const context = await resolveTenantContext(user);
   await d1Query(
     `INSERT INTO learning_submissions (
        id, work_item_id, student_id, class_id, response, status, submitted_at, created_at, updated_at
@@ -83,7 +86,17 @@ export async function POST(request: Request) {
        updated_at = datetime('now')`,
     [id, body.workItemId, user.id, work.class_id, JSON.stringify(body.response ?? {})],
   );
-  return NextResponse.json({ data: { id }, error: null });
+  const eventId = await appendLearningEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    studentId: user.id,
+    classId: work.class_id,
+    sourceType: "learning_work_item",
+    sourceId: body.workItemId,
+    eventType: "work.submitted",
+    payload: { submissionId: id },
+  });
+  return NextResponse.json({ data: { id, eventId }, error: null });
 }
 
 export async function PATCH(request: Request) {
@@ -138,26 +151,22 @@ export async function PATCH(request: Request) {
     [pointsEarned, pointsPossible, scorePercent, body.feedback ?? null, body.submissionId],
   );
 
-  await d1Query(
-    `INSERT OR REPLACE INTO gradebook_scores (
-       id, class_id, student_id, teacher_id, category_id, source_type, source_id, title,
-       points_earned, points_possible, percent, feedback, status, graded_at, metadata, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'graded', datetime('now'), '{}', datetime('now'), datetime('now'))`,
-    [
-      crypto.randomUUID(),
-      submission.class_id,
-      submission.student_id,
-      submission.teacher_id,
-      submission.category_id,
-      submission.work_type,
-      submission.work_item_id,
-      submission.title,
-      pointsEarned,
-      pointsPossible,
-      scorePercent,
-      body.feedback ?? null,
-    ],
-  );
+  const context = await resolveTenantContext(user);
+  const result = await recordGradeEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    studentId: submission.student_id,
+    classId: submission.class_id,
+    sourceType: submission.work_type,
+    sourceId: submission.work_item_id,
+    eventType: "grade.work_submission.recorded",
+    teacherId: submission.teacher_id,
+    title: submission.title,
+    pointsEarned,
+    pointsPossible,
+    feedback: body.feedback ?? null,
+    payload: { submissionId: submission.id, categoryId: submission.category_id },
+  });
 
-  return NextResponse.json({ data: { graded: true, percent: scorePercent }, error: null });
+  return NextResponse.json({ data: { graded: true, percent: scorePercent, eventId: result.eventId }, error: null });
 }
