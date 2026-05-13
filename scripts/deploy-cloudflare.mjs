@@ -12,26 +12,61 @@ function loadEnvFile(path) {
   }
 }
 
-function run(command, args) {
+function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
-    stdio: "inherit",
+    input: options.input,
+    stdio: options.input ? ["pipe", "inherit", "inherit"] : "inherit",
     shell: process.platform === "win32",
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function tryRun(command, args) {
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  return {
+    ok: result.status === 0,
+    output: `${result.stdout || ""}\n${result.stderr || ""}`,
+  };
+}
+
 async function cf(method, path, body) {
   const token = process.env.CLOUDFLARE_API_TOKEN;
+  const email = process.env.CLOUDFLARE_EMAIL;
+  const globalKey = process.env.CLOUDFLARE_GLOBAL_API_KEY || process.env.CLOUDFLARE_API_KEY;
+  const authHeaders = token
+    ? { Authorization: `Bearer ${token}` }
+    : email && globalKey
+      ? { "X-Auth-Email": email, "X-Auth-Key": globalKey }
+      : {};
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...authHeaders,
       "Content-Type": "application/json",
     },
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.success === false) {
+    if (token && email && globalKey && payload.errors?.some((error) => /auth/i.test(error.message))) {
+      const retryResponse = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers: {
+          "X-Auth-Email": email,
+          "X-Auth-Key": globalKey,
+          "Content-Type": "application/json",
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const retryPayload = await retryResponse.json().catch(() => ({}));
+      if (retryResponse.ok && retryPayload.success !== false) return retryPayload.result;
+      const retryMessage =
+        retryPayload.errors?.map((error) => error.message).join("; ") || retryResponse.statusText;
+      throw new Error(retryMessage);
+    }
     const message = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
     throw new Error(message);
   }
@@ -57,21 +92,78 @@ async function ensurePagesProject(projectName) {
   }
 }
 
+function ensureR2Bucket(bucketName) {
+  if (!bucketName) return;
+  const result = tryRun("npx", ["wrangler", "r2", "bucket", "create", bucketName]);
+  if (!result.ok && !/already exists|exists/i.test(result.output)) {
+    process.stderr.write(result.output);
+    process.exit(1);
+  }
+}
+
+function putWorkerSecret(key, config, environment) {
+  const value = process.env[key];
+  if (!value) return;
+  const args = ["wrangler", "secret", "put", key];
+  if (config) args.push("--config", config);
+  if (environment) args.push("--env", environment);
+  run("npx", args, { input: `${value}\n` });
+}
+
 loadEnvFile(".env.local");
 loadEnvFile(".env");
 
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-const token = process.env.CLOUDFLARE_API_TOKEN;
-if (!accountId || !token) throw new Error("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required.");
+const hasCloudflareAuth =
+  process.env.CLOUDFLARE_API_TOKEN ||
+  (process.env.CLOUDFLARE_EMAIL && (process.env.CLOUDFLARE_GLOBAL_API_KEY || process.env.CLOUDFLARE_API_KEY));
+if (!accountId || !hasCloudflareAuth) {
+  throw new Error("CLOUDFLARE_ACCOUNT_ID and either CLOUDFLARE_API_TOKEN or Cloudflare email/global key are required.");
+}
 
 const environment = process.argv.includes("--preview") ? "preview" : "production";
 const pagesProject = process.env.CLOUDFLARE_PAGES_PROJECT || "edsync";
-const workerEnvArgs = environment === "production" ? ["deploy", "--env", "production"] : ["deploy", "--env", "preview"];
+const envArgs = environment === "production" ? ["--env", "production"] : ["--env", "preview"];
+const cacheBucket =
+  environment === "production"
+    ? "edsync-cache-prod"
+    : environment === "preview"
+      ? "edsync-cache-preview"
+      : "edsync-cache-dev";
 
 await ensurePagesProject(pagesProject);
+ensureR2Bucket(cacheBucket);
 
-run("npx", ["vercel", "build"]);
-run("npx", ["wrangler", "pages", "deploy", ".vercel/output/static", "--project-name", pagesProject, "--branch", environment === "production" ? "main" : "preview"]);
-run("npx", ["wrangler", ...workerEnvArgs]);
+for (const key of [
+  "APP_ENCRYPTION_KEY",
+  "CLOUDFLARE_ACCOUNT_ID",
+  "CLOUDFLARE_API_TOKEN",
+  "CLOUDFLARE_AI_GATEWAY_URL",
+  "NEXT_PUBLIC_APP_URL",
+  "NEXT_PUBLIC_R2_PUBLIC_BASE_URL",
+  "OPENROUTER_API_KEY",
+  "R2_ACCESS_KEY_ID",
+  "R2_PUBLIC_BASE_URL",
+  "R2_SECRET_ACCESS_KEY",
+  "SESSION_SECRET",
+  "TURNSTILE_SECRET_KEY",
+  "TURNSTILE_SITE_KEY",
+]) {
+  putWorkerSecret(key, "wrangler.app.jsonc", environment);
+}
+
+run("npx", ["opennextjs-cloudflare", "build", "--config", "wrangler.app.jsonc", ...envArgs]);
+run("npx", [
+  "wrangler",
+  "pages",
+  "deploy",
+  ".open-next/assets",
+  "--project-name",
+  pagesProject,
+  "--branch",
+  environment === "production" ? "main" : "preview",
+]);
+run("npx", ["opennextjs-cloudflare", "deploy", "--config", "wrangler.app.jsonc", ...envArgs, "--", "--keep-vars"]);
+run("npx", ["wrangler", "deploy", ...envArgs]);
 
 console.log(`Cloudflare Pages and Worker deployed for ${pagesProject} (${environment}).`);
