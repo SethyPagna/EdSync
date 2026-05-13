@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type { Lesson } from "@/types";
 import {
   BarChart,
@@ -70,7 +70,7 @@ export default function TeacherAnalytics() {
   const [loading, setLoading] = useState(true);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [gettingSuggestions, setGettingSuggestions] = useState(false);
-  const supabase = createClient();
+  const edsync = createClient();
 
   useEffect(() => {
     loadData();
@@ -80,10 +80,10 @@ export default function TeacherAnalytics() {
     setLoading(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
-    const { data: lessonData } = await supabase
+    const { data: lessonData } = await edsync
       .from("lessons")
       .select("*")
       .eq("teacher_id", user.id)
@@ -100,12 +100,12 @@ export default function TeacherAnalytics() {
     const lessonIds = myLessons.map((l) => l.id);
     const titleMap = new Map(myLessons.map((l) => [l.id, l.title]));
 
-    const { data: progressData } = await supabase
+    const { data: progressData } = await edsync
       .from("student_progress")
       .select("*")
       .in("lesson_id", lessonIds);
 
-    const { data: socraticData } = await supabase
+    const { data: socraticData } = await edsync
       .from("socratic_interactions")
       .select("id, student_question, created_at, student_id, lesson_id")
       .in("lesson_id", lessonIds)
@@ -122,7 +122,7 @@ export default function TeacherAnalytics() {
 
     const profileMap = new Map<string, { full_name: string; email: string }>();
     if (allStudentIds.length > 0) {
-      const { data: profileData } = await supabase
+      const { data: profileData } = await edsync
         .from("profiles")
         .select("id, full_name, email")
         .in("id", allStudentIds);
@@ -345,15 +345,15 @@ export default function TeacherAnalytics() {
     <div className="p-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display font-bold text-3xl text-atlas-text">
+          <h1 className="font-display font-bold text-3xl text-edsync-text">
             Analytics Dashboard
           </h1>
-          <p className="text-atlas-subtle">Real-time classroom insights</p>
+          <p className="text-edsync-subtle">Real-time classroom insights</p>
         </div>
         <select
           value={selectedLesson}
           onChange={(e) => setSelectedLesson(e.target.value)}
-          className="atlas-input w-56 py-2"
+          className="edsync-input w-56 py-2"
         >
           <option value="all">All Lessons</option>
           {lessons.map((l) => (
@@ -410,12 +410,12 @@ export default function TeacherAnalytics() {
             color: "amber",
           },
         ].map((s, i) => (
-          <div key={i} className="atlas-card">
+          <div key={i} className="edsync-card">
             <span className="text-xl block mb-2">{s.icon}</span>
-            <p className="font-display font-bold text-2xl text-atlas-text">
+            <p className="font-display font-bold text-2xl text-edsync-text">
               {s.value}
             </p>
-            <p className="text-atlas-subtle text-xs mt-1">{s.label}</p>
+            <p className="text-edsync-subtle text-xs mt-1">{s.label}</p>
           </div>
         ))}
       </div>
@@ -428,8 +428,8 @@ export default function TeacherAnalytics() {
             onClick={() => setTab(t.key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
               tab === t.key
-                ? "bg-atlas-blue text-white"
-                : "bg-atlas-card text-atlas-subtle hover:text-atlas-text border border-atlas-border"
+                ? "bg-edsync-blue text-white"
+                : "bg-edsync-card text-edsync-subtle hover:text-edsync-text border border-edsync-border"
             }`}
           >
             {t.label}
@@ -440,15 +440,15 @@ export default function TeacherAnalytics() {
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-atlas-card rounded-2xl shimmer" />
+            <div key={i} className="h-24 bg-edsync-card rounded-2xl shimmer" />
           ))}
         </div>
       ) : lessons.length === 0 ? (
-        <div className="atlas-card text-center py-16">
-          <h2 className="font-display font-bold text-xl text-atlas-text mb-2">
+        <div className="edsync-card text-center py-16">
+          <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
             No data yet
           </h2>
-          <p className="text-atlas-subtle">
+          <p className="text-edsync-subtle">
             Create and assign lessons to students to see analytics.
           </p>
         </div>
@@ -457,8 +457,8 @@ export default function TeacherAnalytics() {
           {/* ── OVERVIEW ── */}
           {tab === "overview" && (
             <div className="animate-fade-in space-y-6">
-              <div className="atlas-card">
-                <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+              <div className="edsync-card">
+                <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
                   Lesson Completion
                 </h3>
                 {chartData.length > 0 ? (
@@ -490,34 +490,34 @@ export default function TeacherAnalytics() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-atlas-subtle text-sm text-center py-8">
+                  <p className="text-edsync-subtle text-sm text-center py-8">
                     No student progress recorded yet.
                   </p>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredLessonStats.map((lesson) => (
-                  <div key={lesson.id} className="atlas-card">
-                    <p className="font-semibold text-atlas-text text-sm mb-3 truncate">
+                  <div key={lesson.id} className="edsync-card">
+                    <p className="font-semibold text-edsync-text text-sm mb-3 truncate">
                       {lesson.title}
                     </p>
                     <div className="space-y-2 text-sm mb-3">
                       <div className="flex justify-between">
-                        <span className="text-atlas-subtle">Started</span>
-                        <span className="text-atlas-blue font-medium">
+                        <span className="text-edsync-subtle">Started</span>
+                        <span className="text-edsync-blue font-medium">
                           {lesson.studentsStarted}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-atlas-subtle">Completed</span>
-                        <span className="text-atlas-emerald font-medium">
+                        <span className="text-edsync-subtle">Completed</span>
+                        <span className="text-edsync-emerald font-medium">
                           {lesson.studentsCompleted}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-atlas-subtle">Avg Score</span>
+                        <span className="text-edsync-subtle">Avg Score</span>
                         <span
-                          className={`font-bold ${lesson.avgScore === null ? "text-atlas-subtle" : lesson.avgScore >= 80 ? "text-atlas-emerald" : lesson.avgScore >= 60 ? "text-atlas-amber" : "text-atlas-red"}`}
+                          className={`font-bold ${lesson.avgScore === null ? "text-edsync-subtle" : lesson.avgScore >= 80 ? "text-edsync-emerald" : lesson.avgScore >= 60 ? "text-edsync-amber" : "text-edsync-red"}`}
                         >
                           {lesson.avgScore !== null
                             ? `${lesson.avgScore}%`
@@ -526,15 +526,15 @@ export default function TeacherAnalytics() {
                       </div>
                     </div>
                     {lesson.knowledgeGaps.length > 0 && (
-                      <div className="pt-2 border-t border-atlas-border">
-                        <p className="text-xs text-atlas-subtle mb-1">
+                      <div className="pt-2 border-t border-edsync-border">
+                        <p className="text-xs text-edsync-subtle mb-1">
                           Top Gaps
                         </p>
                         <div className="flex flex-wrap gap-1">
                           {lesson.knowledgeGaps.map((g) => (
                             <span
                               key={g}
-                              className="badge bg-atlas-red/10 text-atlas-red border-atlas-red/20 text-xs"
+                              className="badge bg-edsync-red/10 text-edsync-red border-edsync-red/20 text-xs"
                             >
                               {g}
                             </span>
@@ -552,29 +552,29 @@ export default function TeacherAnalytics() {
           {tab === "heatmap" && (
             <div className="animate-fade-in space-y-6">
               {/* Class readiness */}
-              <div className="atlas-card">
-                <h3 className="font-display font-semibold text-lg text-atlas-text mb-2">
+              <div className="edsync-card">
+                <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
                   Classroom Readiness Map
                 </h3>
-                <p className="text-atlas-subtle text-sm mb-5">
+                <p className="text-edsync-subtle text-sm mb-5">
                   Color-coded view of student understanding across concepts
                 </p>
                 {studentStats.length === 0 ? (
-                  <p className="text-atlas-subtle text-sm text-center py-8">
+                  <p className="text-edsync-subtle text-sm text-center py-8">
                     No student data yet. Assign lessons to get started.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
                       <thead>
-                        <tr className="border-b border-atlas-border">
-                          <th className="text-left text-xs text-atlas-subtle font-medium pb-3 pr-4">
+                        <tr className="border-b border-edsync-border">
+                          <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
                             Student
                           </th>
                           {filteredLessonStats.slice(0, 5).map((l) => (
                             <th
                               key={l.id}
-                              className="text-center text-xs text-atlas-subtle font-medium pb-3 px-2 max-w-[100px]"
+                              className="text-center text-xs text-edsync-subtle font-medium pb-3 px-2 max-w-[100px]"
                             >
                               <span className="block truncate">
                                 {l.title.slice(0, 14)}
@@ -582,7 +582,7 @@ export default function TeacherAnalytics() {
                               </span>
                             </th>
                           ))}
-                          <th className="text-center text-xs text-atlas-subtle font-medium pb-3 px-2">
+                          <th className="text-center text-xs text-edsync-subtle font-medium pb-3 px-2">
                             Overall
                           </th>
                         </tr>
@@ -591,13 +591,13 @@ export default function TeacherAnalytics() {
                         {studentStats.map((student) => (
                           <tr
                             key={student.id}
-                            className="border-b border-atlas-border/50 hover:bg-atlas-surface/50"
+                            className="border-b border-edsync-border/50 hover:bg-edsync-surface/50"
                           >
                             <td className="py-3 pr-4">
-                              <p className="text-sm font-medium text-atlas-text">
+                              <p className="text-sm font-medium text-edsync-text">
                                 {student.name}
                               </p>
-                              <p className="text-xs text-atlas-subtle">
+                              <p className="text-xs text-edsync-subtle">
                                 {student.email}
                               </p>
                             </td>
@@ -611,12 +611,12 @@ export default function TeacherAnalytics() {
                                   <div
                                     className={`w-8 h-8 rounded-lg mx-auto flex items-center justify-center text-xs font-bold ${
                                       score === null
-                                        ? "bg-atlas-muted/20 text-atlas-subtle"
+                                        ? "bg-edsync-muted/20 text-edsync-subtle"
                                         : score >= 80
-                                          ? "bg-atlas-emerald/20 text-atlas-emerald border border-atlas-emerald/30"
+                                          ? "bg-edsync-emerald/20 text-edsync-emerald border border-edsync-emerald/30"
                                           : score >= 60
-                                            ? "bg-atlas-amber/20 text-atlas-amber border border-atlas-amber/30"
-                                            : "bg-atlas-red/20 text-atlas-red border border-atlas-red/30"
+                                            ? "bg-edsync-amber/20 text-edsync-amber border border-edsync-amber/30"
+                                            : "bg-edsync-red/20 text-edsync-red border border-edsync-red/30"
                                     }`}
                                   >
                                     {score !== null ? `${score}` : "—"}
@@ -628,10 +628,10 @@ export default function TeacherAnalytics() {
                               <span
                                 className={`font-bold text-sm ${
                                   student.status === "advanced"
-                                    ? "text-atlas-emerald"
+                                    ? "text-edsync-emerald"
                                     : student.status === "at_risk"
-                                      ? "text-atlas-red"
-                                      : "text-atlas-amber"
+                                      ? "text-edsync-red"
+                                      : "text-edsync-amber"
                                 }`}
                               >
                                 {student.avgScore !== null
@@ -645,17 +645,17 @@ export default function TeacherAnalytics() {
                     </table>
                   </div>
                 )}
-                <div className="flex gap-4 mt-4 text-xs text-atlas-subtle">
+                <div className="flex gap-4 mt-4 text-xs text-edsync-subtle">
                   <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-atlas-emerald/20 border border-atlas-emerald/30 inline-block" />{" "}
+                    <span className="w-3 h-3 rounded bg-edsync-emerald/20 border border-edsync-emerald/30 inline-block" />{" "}
                     ≥80% Mastered
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-atlas-amber/20 border border-atlas-amber/30 inline-block" />{" "}
+                    <span className="w-3 h-3 rounded bg-edsync-amber/20 border border-edsync-amber/30 inline-block" />{" "}
                     60–79% Developing
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-atlas-red/20 border border-atlas-red/30 inline-block" />{" "}
+                    <span className="w-3 h-3 rounded bg-edsync-red/20 border border-edsync-red/30 inline-block" />{" "}
                     &lt;60% At Risk
                   </span>
                 </div>
@@ -663,11 +663,11 @@ export default function TeacherAnalytics() {
 
               {/* Knowledge gap summary */}
               {topGaps.length > 0 && (
-                <div className="atlas-card">
-                  <h3 className="font-display font-semibold text-lg text-atlas-text mb-2">
+                <div className="edsync-card">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
                     Class-Wide Knowledge Gaps
                   </h3>
-                  <p className="text-atlas-subtle text-sm mb-4">
+                  <p className="text-edsync-subtle text-sm mb-4">
                     Concepts where multiple students are struggling
                   </p>
                   <div className="space-y-3">
@@ -675,16 +675,16 @@ export default function TeacherAnalytics() {
                       <div key={gap} className="flex items-center gap-3">
                         <div className="flex-1">
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="text-atlas-text font-medium">
+                            <span className="text-edsync-text font-medium">
                               {gap}
                             </span>
-                            <span className="text-atlas-red text-xs font-bold">
+                            <span className="text-edsync-red text-xs font-bold">
                               {count} student{count > 1 ? "s" : ""}
                             </span>
                           </div>
-                          <div className="h-2 bg-atlas-muted/20 rounded-full">
+                          <div className="h-2 bg-edsync-muted/20 rounded-full">
                             <div
-                              className="h-full bg-atlas-red/50 rounded-full"
+                              className="h-full bg-edsync-red/50 rounded-full"
                               style={{
                                 width: `${Math.min(100, (count / Math.max(1, studentStats.length)) * 100)}%`,
                               }}
@@ -723,41 +723,41 @@ export default function TeacherAnalytics() {
                     items: atRisk,
                   },
                 ].map((group, i) => (
-                  <div key={i} className="atlas-card py-3 px-4">
-                    <p className="text-xs text-atlas-subtle mb-1">
+                  <div key={i} className="edsync-card py-3 px-4">
+                    <p className="text-xs text-edsync-subtle mb-1">
                       {group.label}
                     </p>
                     <p
-                      className={`font-display font-bold text-2xl text-atlas-${group.color}`}
+                      className={`font-display font-bold text-2xl text-edsync-${group.color}`}
                     >
                       {group.count}
                     </p>
                   </div>
                 ))}
               </div>
-              <div className="atlas-card overflow-x-auto">
+              <div className="edsync-card overflow-x-auto">
                 <table className="w-full min-w-[500px]">
                   <thead>
-                    <tr className="text-left border-b border-atlas-border">
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 pr-4">
+                    <tr className="text-left border-b border-edsync-border">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 pr-4">
                         Student
                       </th>
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 px-3 text-center">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         Status
                       </th>
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 px-3 text-center">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         Completed
                       </th>
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 px-3 text-center">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         Avg Score
                       </th>
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 px-3 text-center">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         AI Chats
                       </th>
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 px-3 text-center">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         Reflections
                       </th>
-                      <th className="text-xs text-atlas-subtle font-medium pb-3 px-3 text-center">
+                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         Low Conf.
                       </th>
                     </tr>
@@ -767,7 +767,7 @@ export default function TeacherAnalytics() {
                       <tr>
                         <td
                           colSpan={7}
-                          className="py-8 text-center text-atlas-subtle text-sm"
+                          className="py-8 text-center text-edsync-subtle text-sm"
                         >
                           No students have started your lessons yet.
                         </td>
@@ -778,13 +778,13 @@ export default function TeacherAnalytics() {
                         .map((s) => (
                           <tr
                             key={s.id}
-                            className="border-b border-atlas-border/50 hover:bg-atlas-surface/50"
+                            className="border-b border-edsync-border/50 hover:bg-edsync-surface/50"
                           >
                             <td className="py-3 pr-4">
-                              <p className="font-medium text-atlas-text text-sm">
+                              <p className="font-medium text-edsync-text text-sm">
                                 {s.name}
                               </p>
-                              <p className="text-xs text-atlas-subtle">
+                              <p className="text-xs text-edsync-subtle">
                                 {s.email}
                               </p>
                             </td>
@@ -792,10 +792,10 @@ export default function TeacherAnalytics() {
                               <span
                                 className={`badge text-xs ${
                                   s.status === "advanced"
-                                    ? "bg-atlas-emerald/10 text-atlas-emerald border-atlas-emerald/20"
+                                    ? "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20"
                                     : s.status === "at_risk"
-                                      ? "bg-atlas-red/10 text-atlas-red border-atlas-red/20"
-                                      : "bg-atlas-blue/10 text-atlas-blue border-atlas-blue/20"
+                                      ? "bg-edsync-red/10 text-edsync-red border-edsync-red/20"
+                                      : "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20"
                                 }`}
                               >
                                 {s.status === "at_risk"
@@ -805,39 +805,39 @@ export default function TeacherAnalytics() {
                                     : "On Track"}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-center text-sm text-atlas-text font-medium">
+                            <td className="py-3 px-3 text-center text-sm text-edsync-text font-medium">
                               {s.lessonsCompleted}
                             </td>
                             <td className="py-3 px-3 text-center">
                               {s.avgScore !== null ? (
                                 <span
-                                  className={`font-bold text-sm ${s.avgScore >= 80 ? "text-atlas-emerald" : s.avgScore >= 60 ? "text-atlas-amber" : "text-atlas-red"}`}
+                                  className={`font-bold text-sm ${s.avgScore >= 80 ? "text-edsync-emerald" : s.avgScore >= 60 ? "text-edsync-amber" : "text-edsync-red"}`}
                                 >
                                   {s.avgScore}%
                                 </span>
                               ) : (
-                                <span className="text-atlas-subtle text-xs">
+                                <span className="text-edsync-subtle text-xs">
                                   No score
                                 </span>
                               )}
                             </td>
                             <td className="py-3 px-3 text-center">
                               <span
-                                className={`text-sm font-medium ${s.aiInteractions > 0 ? "text-atlas-purple" : "text-atlas-subtle"}`}
+                                className={`text-sm font-medium ${s.aiInteractions > 0 ? "text-edsync-purple" : "text-edsync-subtle"}`}
                               >
                                 {s.aiInteractions}
                               </span>
                             </td>
                             <td className="py-3 px-3 text-center">
                               <span
-                                className={`text-sm font-medium ${s.reflectionCount > 0 ? "text-atlas-cyan" : "text-atlas-subtle"}`}
+                                className={`text-sm font-medium ${s.reflectionCount > 0 ? "text-edsync-cyan" : "text-edsync-subtle"}`}
                               >
                                 {s.reflectionCount}
                               </span>
                             </td>
                             <td className="py-3 px-3 text-center">
                               <span
-                                className={`text-sm font-medium ${s.lowConfidenceReflections > 0 ? "text-atlas-amber" : "text-atlas-subtle"}`}
+                                className={`text-sm font-medium ${s.lowConfidenceReflections > 0 ? "text-edsync-amber" : "text-edsync-subtle"}`}
                               >
                                 {s.lowConfidenceReflections}
                               </span>
@@ -854,17 +854,17 @@ export default function TeacherAnalytics() {
           {/* ── REFLECTIONS ── */}
           {tab === "reflections" && (
             <div className="animate-fade-in space-y-6">
-              <div className="atlas-card">
-                <h3 className="font-display font-semibold text-lg text-atlas-text mb-2">
+              <div className="edsync-card">
+                <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
                   Student Reflection Log
                 </h3>
-                <p className="text-atlas-subtle text-sm mb-4">
+                <p className="text-edsync-subtle text-sm mb-4">
                   Captures what students say they learned and where they still
                   feel uncertain.
                 </p>
 
                 {reflectionLog.length === 0 ? (
-                  <p className="text-atlas-subtle text-sm text-center py-8">
+                  <p className="text-edsync-subtle text-sm text-center py-8">
                     No reflections yet. Students will appear here after using
                     the reflection coach in lessons.
                   </p>
@@ -873,15 +873,15 @@ export default function TeacherAnalytics() {
                     {reflectionLog.map((entry) => (
                       <div
                         key={entry.id}
-                        className="p-4 bg-atlas-surface rounded-xl border border-atlas-border"
+                        className="p-4 bg-edsync-surface rounded-xl border border-edsync-border"
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <div>
-                            <p className="font-semibold text-atlas-text text-sm">
+                            <p className="font-semibold text-edsync-text text-sm">
                               {entry.student_name}
                             </p>
                             {entry.lesson_title && (
-                              <p className="text-xs text-atlas-subtle">
+                              <p className="text-xs text-edsync-subtle">
                                 {entry.lesson_title}
                               </p>
                             )}
@@ -890,27 +890,27 @@ export default function TeacherAnalytics() {
                             <span
                               className={`badge text-xs ${
                                 entry.confidence <= 2
-                                  ? "bg-atlas-red/10 text-atlas-red border-atlas-red/20"
+                                  ? "bg-edsync-red/10 text-edsync-red border-edsync-red/20"
                                   : entry.confidence === 3
-                                    ? "bg-atlas-amber/10 text-atlas-amber border-atlas-amber/20"
-                                    : "bg-atlas-emerald/10 text-atlas-emerald border-atlas-emerald/20"
+                                    ? "bg-edsync-amber/10 text-edsync-amber border-edsync-amber/20"
+                                    : "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20"
                               }`}
                             >
                               Confidence {entry.confidence}/5
                             </span>
-                            <p className="text-xs text-atlas-subtle mt-1">
+                            <p className="text-xs text-edsync-subtle mt-1">
                               {formatRelativeTime(entry.created_at)}
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm text-atlas-text mb-3">
+                        <p className="text-sm text-edsync-text mb-3">
                           {entry.notes_preview}
                         </p>
-                        <div className="p-3 rounded-xl bg-atlas-purple/5 border border-atlas-purple/20">
-                          <p className="text-xs text-atlas-purple font-medium mb-1">
+                        <div className="p-3 rounded-xl bg-edsync-purple/5 border border-edsync-purple/20">
+                          <p className="text-xs text-edsync-purple font-medium mb-1">
                             AI Guiding Question
                           </p>
-                          <p className="text-sm text-atlas-subtle italic">
+                          <p className="text-sm text-edsync-subtle italic">
                             {entry.guiding_question}
                           </p>
                         </div>
@@ -921,11 +921,11 @@ export default function TeacherAnalytics() {
               </div>
 
               {lowConfidenceReflections > 0 && (
-                <div className="atlas-card border-atlas-amber/30 bg-atlas-amber/5">
-                  <h3 className="font-display font-semibold text-lg text-atlas-text mb-2">
+                <div className="edsync-card border-edsync-amber/30 bg-edsync-amber/5">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
                     Confidence Alert
                   </h3>
-                  <p className="text-sm text-atlas-subtle">
+                  <p className="text-sm text-edsync-subtle">
                     {lowConfidenceReflections} reflection
                     {lowConfidenceReflections > 1
                       ? "s indicate"
@@ -941,13 +941,13 @@ export default function TeacherAnalytics() {
           {/* ── INTERVENTIONS ── */}
           {tab === "interventions" && (
             <div className="animate-fade-in space-y-6">
-              <div className="atlas-card">
+              <div className="edsync-card">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="font-display font-semibold text-lg text-atlas-text">
+                    <h3 className="font-display font-semibold text-lg text-edsync-text">
                       AI Intervention Suggestions
                     </h3>
-                    <p className="text-atlas-subtle text-sm mt-1">
+                    <p className="text-edsync-subtle text-sm mt-1">
                       Personalized action recommendations based on your class
                       data
                     </p>
@@ -962,8 +962,8 @@ export default function TeacherAnalytics() {
                 </div>
                 {aiSuggestions.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-atlas-subtle text-sm">
-                      Click "Get Suggestions" to have Atlas AI analyze your
+                    <p className="text-edsync-subtle text-sm">
+                      Click "Get Suggestions" to have EdSync AI analyze your
                       class data and recommend specific actions.
                     </p>
                   </div>
@@ -972,12 +972,12 @@ export default function TeacherAnalytics() {
                     {aiSuggestions.map((s, i) => (
                       <div
                         key={i}
-                        className="flex gap-3 p-4 bg-atlas-blue/5 border border-atlas-blue/20 rounded-xl"
+                        className="flex gap-3 p-4 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl"
                       >
-                        <span className="text-atlas-blue font-bold text-sm flex-shrink-0 mt-0.5">
+                        <span className="text-edsync-blue font-bold text-sm flex-shrink-0 mt-0.5">
                           {i + 1}.
                         </span>
-                        <p className="text-atlas-text text-sm">{s}</p>
+                        <p className="text-edsync-text text-sm">{s}</p>
                       </div>
                     ))}
                   </div>
@@ -986,30 +986,30 @@ export default function TeacherAnalytics() {
 
               {/* At-risk students quick view */}
               {atRisk.length > 0 && (
-                <div className="atlas-card">
-                  <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+                <div className="edsync-card">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
                     Students Needing Support
                   </h3>
                   <div className="space-y-3">
                     {atRisk.map((s) => (
                       <div
                         key={s.id}
-                        className="flex items-center gap-4 p-3 bg-atlas-red/5 border border-atlas-red/20 rounded-xl"
+                        className="flex items-center gap-4 p-3 bg-edsync-red/5 border border-edsync-red/20 rounded-xl"
                       >
-                        <div className="w-9 h-9 rounded-full bg-atlas-red/20 text-atlas-red flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-edsync-red/20 text-edsync-red flex items-center justify-center font-bold text-sm flex-shrink-0">
                           {s.name.charAt(0)}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-atlas-text text-sm">
+                          <p className="font-medium text-edsync-text text-sm">
                             {s.name}
                           </p>
-                          <p className="text-xs text-atlas-subtle">{s.email}</p>
+                          <p className="text-xs text-edsync-subtle">{s.email}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-atlas-red">
+                          <p className="font-bold text-edsync-red">
                             {s.avgScore}%
                           </p>
-                          <p className="text-xs text-atlas-subtle">
+                          <p className="text-xs text-edsync-subtle">
                             {s.aiInteractions} AI chats
                           </p>
                         </div>
@@ -1021,11 +1021,11 @@ export default function TeacherAnalytics() {
 
               {/* Advanced students */}
               {advanced.length > 0 && (
-                <div className="atlas-card">
-                  <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+                <div className="edsync-card">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
                     Advanced Students
                   </h3>
-                  <p className="text-atlas-subtle text-sm mb-3">
+                  <p className="text-edsync-subtle text-sm mb-3">
                     Consider enrichment activities or peer tutoring assignments
                     for these students.
                   </p>
@@ -1033,12 +1033,12 @@ export default function TeacherAnalytics() {
                     {advanced.map((s) => (
                       <div
                         key={s.id}
-                        className="p-3 bg-atlas-emerald/5 border border-atlas-emerald/20 rounded-xl text-center"
+                        className="p-3 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl text-center"
                       >
-                        <p className="font-medium text-atlas-text text-sm">
+                        <p className="font-medium text-edsync-text text-sm">
                           {s.name}
                         </p>
-                        <p className="font-bold text-atlas-emerald">
+                        <p className="font-bold text-edsync-emerald">
                           {s.avgScore}%
                         </p>
                       </div>
@@ -1051,12 +1051,12 @@ export default function TeacherAnalytics() {
 
           {/* ── SOCRATIC LOG ── */}
           {tab === "socratic" && (
-            <div className="animate-fade-in atlas-card">
-              <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+            <div className="animate-fade-in edsync-card">
+              <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
                 Student–AI Interactions
               </h3>
               {socraticLog.length === 0 ? (
-                <p className="text-atlas-subtle text-sm text-center py-8">
+                <p className="text-edsync-subtle text-sm text-center py-8">
                   No AI interactions yet. Students can use "Ask Socratic" while
                   working through lessons.
                 </p>
@@ -1065,25 +1065,25 @@ export default function TeacherAnalytics() {
                   {socraticLog.map((entry) => (
                     <div
                       key={entry.id}
-                      className="p-4 bg-atlas-surface rounded-xl border border-atlas-border"
+                      className="p-4 bg-edsync-surface rounded-xl border border-edsync-border"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm text-atlas-text">
+                        <span className="font-semibold text-sm text-edsync-text">
                           {entry.student_name}
                         </span>
                         <div className="flex gap-2 items-center">
                           {entry.lesson_title && (
-                            <span className="badge bg-atlas-blue/10 text-atlas-blue border-atlas-blue/20 text-xs">
+                            <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20 text-xs">
                               {entry.lesson_title.slice(0, 20)}
                               {entry.lesson_title.length > 20 ? "…" : ""}
                             </span>
                           )}
-                          <span className="text-xs text-atlas-subtle">
+                          <span className="text-xs text-edsync-subtle">
                             {formatRelativeTime(entry.created_at)}
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-atlas-subtle italic">
+                      <p className="text-sm text-edsync-subtle italic">
                         "{entry.student_question}"
                       </p>
                     </div>
