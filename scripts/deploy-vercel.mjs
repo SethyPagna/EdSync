@@ -2,8 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 const requiredEnv = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "CLOUDFLARE_ACCOUNT_ID",
+  "CLOUDFLARE_D1_DATABASE_ID",
+  "CLOUDFLARE_API_TOKEN",
+  "SESSION_SECRET",
   "OPENROUTER_API_KEY",
 ];
 
@@ -20,11 +22,10 @@ function loadLocalEnvKeys() {
   return keys;
 }
 
-function run(command, args, options = {}) {
+function run(command, args) {
   const result = spawnSync(command, args, {
     stdio: "inherit",
     shell: process.platform === "win32",
-    ...options,
   });
 
   if (result.status !== 0) {
@@ -49,25 +50,10 @@ if (!skipBuild) {
   run("npm", ["run", "build"]);
 }
 
-const vercelArgs = ["vercel"];
 const token = process.env.VERCEL_TOKEN;
 const tokenArgs = token ? ["--token", token] : [];
 const environment = prod ? "production" : "preview";
 
-run("npx", [
-  ...vercelArgs,
-  "pull",
-  "--yes",
-  `--environment=${environment}`,
-  ...tokenArgs,
-]);
-
-run("npx", [...vercelArgs, "build", ...(prod ? ["--prod"] : []), ...tokenArgs]);
-
-run("npx", [
-  ...vercelArgs,
-  "deploy",
-  "--prebuilt",
-  ...(prod ? ["--prod"] : []),
-  ...tokenArgs,
-]);
+run("npx", ["vercel", "pull", "--yes", `--environment=${environment}`, ...tokenArgs]);
+run("npx", ["vercel", "build", ...(prod ? ["--prod"] : []), ...tokenArgs]);
+run("npx", ["vercel", "deploy", "--prebuilt", ...(prod ? ["--prod"] : []), ...tokenArgs]);
