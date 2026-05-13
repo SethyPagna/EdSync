@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createCipheriv, randomBytes } from "node:crypto";
 
+const ENCRYPTION_PREFIX = "enc:v1";
+
 const PROVIDERS = [
   { env: "GROQ_RESEARCH_1_KEY", name: "Groq Research 1", provider: "groq", type: "chat", model: "groq/compound", priority: 10, rpm: 18, timeout: 18000, cooldown: 20 },
   { env: "GROQ_GPT_OSS_2_KEY", name: "Groq GPT OSS 2", provider: "groq", type: "chat", model: "groq/compound", priority: 11, rpm: 18, timeout: 18000, cooldown: 20 },
@@ -36,6 +38,7 @@ function loadEnvFile(path) {
 function encryptionKey() {
   const value = process.env.APP_ENCRYPTION_KEY;
   if (!value) throw new Error("APP_ENCRYPTION_KEY is required.");
+  if (/^[a-f0-9]{64}$/i.test(value)) return Buffer.from(value, "hex");
   const decoded = Buffer.from(value, "base64");
   if (decoded.length === 32) return decoded;
   const raw = Buffer.from(value);
@@ -48,7 +51,7 @@ function encrypt(value) {
   const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return `v1:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
+  return `${ENCRYPTION_PREFIX}:${iv.toString("base64url")}:${tag.toString("base64url")}:${encrypted.toString("base64url")}`;
 }
 
 async function d1Query(sql, params = []) {
