@@ -5,12 +5,28 @@
 @tailwind utilities;
 
 :root {
-  --bg: #080b12;
-  --surface: #0d1320;
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --border: #d9e2ef;
+  --text: #142033;
+  --subtle: #627089;
+  --blue: #2563eb;
+  --amber: #b7791f;
+  --emerald: #108765;
+  --red: #dc2626;
+  --cyan: #0891b2;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #07090f;
+  --surface: #0d1117;
   --card: #111827;
   --border: #263244;
-  --text: #eef3fb;
-  --subtle: #99a5b7;
+  --text: #e8edf5;
+  --subtle: #8b95a7;
   --blue: #4f86f7;
   --amber: #f5a623;
   --emerald: #23d18b;
@@ -29,7 +45,7 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   background:
-    linear-gradient(180deg, rgba(34, 46, 70, 0.28) 0%, rgba(8, 11, 18, 0) 380px),
+    linear-gradient(180deg, rgba(37, 99, 235, 0.08) 0%, rgba(246, 248, 251, 0) 380px),
     var(--bg);
   color: var(--text);
   font-family: "Instrument Sans", sans-serif;
@@ -278,47 +294,47 @@ h6 {
 }
 
 /* Custom input styles */
-.atlas-input {
-  @apply w-full rounded-lg border border-atlas-border bg-atlas-surface px-4 py-3 font-body text-atlas-text placeholder-atlas-subtle transition-all duration-200 focus:border-atlas-blue focus:outline-none focus:ring-1 focus:ring-atlas-blue/30;
+.edsync-input {
+  @apply w-full rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 font-body text-edsync-text placeholder-edsync-subtle transition-all duration-200 focus:border-edsync-blue focus:outline-none focus:ring-1 focus:ring-edsync-blue/30;
 }
 
-.atlas-textarea {
-  @apply w-full resize-none rounded-lg border border-atlas-border bg-atlas-surface px-4 py-3 font-body text-atlas-text placeholder-atlas-subtle transition-all duration-200 focus:border-atlas-blue focus:outline-none focus:ring-1 focus:ring-atlas-blue/30;
+.edsync-textarea {
+  @apply w-full resize-none rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 font-body text-edsync-text placeholder-edsync-subtle transition-all duration-200 focus:border-edsync-blue focus:outline-none focus:ring-1 focus:ring-edsync-blue/30;
 }
 
 /* Card styles */
-.atlas-card {
-  @apply rounded-lg border border-atlas-border bg-atlas-card p-6 transition-all duration-200;
+.edsync-card {
+  @apply rounded-lg border border-edsync-border bg-edsync-card p-6 transition-all duration-200;
 }
 
-.atlas-card-hover {
-  @apply atlas-card hover:border-atlas-blue/30 hover:shadow-card-hover cursor-pointer;
+.edsync-card-hover {
+  @apply edsync-card hover:border-edsync-blue/30 hover:shadow-card-hover cursor-pointer;
 }
 
 /* Button variants */
 .btn-primary {
-  @apply flex items-center gap-2 rounded-lg bg-atlas-blue px-6 py-3 font-semibold text-white transition-all duration-200 hover:bg-atlas-blue/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply flex items-center gap-2 rounded-lg bg-edsync-blue px-6 py-3 font-semibold text-white transition-all duration-200 hover:bg-edsync-blue/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-secondary {
-  @apply flex items-center gap-2 rounded-lg border border-atlas-border bg-atlas-surface px-6 py-3 font-semibold text-atlas-text transition-all duration-200 hover:bg-atlas-card active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply flex items-center gap-2 rounded-lg border border-edsync-border bg-edsync-surface px-6 py-3 font-semibold text-edsync-text transition-all duration-200 hover:bg-edsync-card active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-ghost {
-  @apply flex items-center gap-2 rounded-lg bg-transparent px-4 py-2 font-medium text-atlas-subtle transition-all duration-200 hover:bg-atlas-card hover:text-atlas-text;
+  @apply flex items-center gap-2 rounded-lg bg-transparent px-4 py-2 font-medium text-edsync-subtle transition-all duration-200 hover:bg-edsync-card hover:text-edsync-text;
 }
 
 .btn-danger {
-  @apply flex items-center gap-2 rounded-lg border border-atlas-red/30 bg-atlas-red/10 px-6 py-3 font-semibold text-atlas-red transition-all duration-200 hover:bg-atlas-red/20;
+  @apply flex items-center gap-2 rounded-lg border border-edsync-red/30 bg-edsync-red/10 px-6 py-3 font-semibold text-edsync-red transition-all duration-200 hover:bg-edsync-red/20;
 }
 
 /* Sidebar nav items */
 .nav-item {
-  @apply flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-atlas-subtle transition-all duration-200 hover:bg-atlas-card hover:text-atlas-text;
+  @apply flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-edsync-subtle transition-all duration-200 hover:bg-edsync-card hover:text-edsync-text;
 }
 
 .nav-item-active {
-  @apply flex cursor-pointer items-center gap-3 rounded-lg border border-atlas-blue/20 bg-atlas-blue/10 px-4 py-3 text-sm font-semibold text-atlas-blue;
+  @apply flex cursor-pointer items-center gap-3 rounded-lg border border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 text-sm font-semibold text-edsync-blue;
 }
 
 /* Heat map cells */
@@ -337,7 +353,7 @@ h6 {
 
 /* Mastery bar */
 .mastery-bar {
-  @apply h-2 rounded-full bg-atlas-border overflow-hidden;
+  @apply h-2 rounded-full bg-edsync-border overflow-hidden;
 }
 
 /* Badge */
@@ -347,21 +363,21 @@ h6 {
 
 /* Tooltip */
 .tooltip {
-  @apply absolute z-50 px-3 py-2 text-xs text-atlas-text bg-atlas-card border border-atlas-border rounded-lg shadow-lg whitespace-nowrap;
+  @apply absolute z-50 px-3 py-2 text-xs text-edsync-text bg-edsync-card border border-edsync-border rounded-lg shadow-lg whitespace-nowrap;
 }
 
 /* Socratic chat bubble */
 .chat-bubble-user {
-  @apply bg-atlas-blue/20 border border-atlas-blue/30 rounded-2xl rounded-tr-sm px-4 py-3 text-atlas-text max-w-[80%] ml-auto;
+  @apply bg-edsync-blue/20 border border-edsync-blue/30 rounded-2xl rounded-tr-sm px-4 py-3 text-edsync-text max-w-[80%] ml-auto;
 }
 
 .chat-bubble-ai {
-  @apply bg-atlas-card border border-atlas-border rounded-2xl rounded-tl-sm px-4 py-3 text-atlas-text max-w-[80%];
+  @apply bg-edsync-card border border-edsync-border rounded-2xl rounded-tl-sm px-4 py-3 text-edsync-text max-w-[80%];
 }
 
 /* Typing indicator */
 .typing-dot {
-  @apply w-2 h-2 bg-atlas-subtle rounded-full;
+  @apply w-2 h-2 bg-edsync-subtle rounded-full;
   animation: typing 1.2s ease-in-out infinite;
 }
 .typing-dot:nth-child(2) {
