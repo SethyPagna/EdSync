@@ -2,12 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat } from "@/lib/openrouter";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
     const { user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ suggestions: ["Unauthorized"] }, { status: 401 });
+    }
+
+    const rate = await enforceRateLimit({
+      request,
+      scope: "ai_analytics",
+      limit: 30,
+      windowSeconds: 900,
+      userId: user.id,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { suggestions: ["Too many analytics requests. Try again shortly."] },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+      );
     }
 
     const { studentStats, lessonStats } = await request.json();
