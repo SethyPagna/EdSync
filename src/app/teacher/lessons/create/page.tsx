@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
@@ -90,7 +90,7 @@ const GENERATION_STEPS = [
 // ─── Main Component ───────────────────────────────────────────
 export default function CreateLesson() {
   const router = useRouter();
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
   const [creationMode, setCreationMode] = useState<CreationMode>("ai_collab");
   const [importMode, setImportMode] = useState<ImportMode>("objectives");
