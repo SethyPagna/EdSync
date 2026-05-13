@@ -16,16 +16,16 @@ type Provider = {
   key_masked?: string;
 };
 
-const providerOptions = ["cloudflare", "openrouter", "groq", "google", "mistral", "cerebras", "cohere"];
+const providerOptions = ["groq", "google", "mistral", "cerebras", "cohere"];
 
 export default function AdminAIPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [form, setForm] = useState({
-    name: "OpenRouter",
-    provider: "openrouter",
+    name: "Groq",
+    provider: "groq",
     api_key: "",
-    default_model: "openai/gpt-oss-120b:free",
-    priority: 15,
+    default_model: "groq/compound",
+    priority: 10,
   });
 
   const loadProviders = () => {
@@ -107,7 +107,7 @@ export default function AdminAIPage() {
             </button>
           </div>
         ))}
-        {providers.length === 0 && <p className="edsync-card p-4 text-sm text-edsync-subtle">No stored providers yet. Env OpenRouter still works as fallback when configured.</p>}
+        {providers.length === 0 && <p className="edsync-card p-4 text-sm text-edsync-subtle">No stored providers yet. Add Groq, Google, Mistral, Cerebras, or Cohere to enable smart fallback.</p>}
       </div>
     </div>
   );
