@@ -26,6 +26,41 @@ const ENDPOINTS = {
   cohere: "https://api.cohere.com/v2/embed",
 };
 
+function cloudflareGatewayProviderBase(provider) {
+  const rawGatewayUrl = process.env.CLOUDFLARE_AI_GATEWAY_URL;
+  if (!rawGatewayUrl) return null;
+
+  try {
+    const url = new URL(rawGatewayUrl);
+    const parts = url.pathname.replace(/\/$/, "").split("/").filter(Boolean);
+    if (parts.length >= 4) {
+      parts[3] = provider;
+    } else {
+      parts.push(provider);
+    }
+    url.pathname = `/${parts.join("/")}`;
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function endpointFor(provider) {
+  if (provider === "groq") {
+    const gateway = cloudflareGatewayProviderBase("groq");
+    return gateway ? `${gateway}/chat/completions` : ENDPOINTS.groq;
+  }
+  if (provider === "cerebras") {
+    const gateway = cloudflareGatewayProviderBase("cerebras");
+    return gateway ? `${gateway}/chat/completions` : ENDPOINTS.cerebras;
+  }
+  if (provider === "google") {
+    const gateway = cloudflareGatewayProviderBase("google-ai-studio");
+    return gateway ? `${gateway}/v1beta/models` : ENDPOINTS.google;
+  }
+  return ENDPOINTS[provider];
+}
+
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -113,7 +148,7 @@ for (const provider of PROVIDERS) {
       provider.type,
       encrypt(apiKey),
       provider.model,
-      ENDPOINTS[provider.provider],
+      endpointFor(provider.provider),
       `Seeded ${provider.provider} provider for EdSync smart fallback.`,
       provider.priority,
       provider.rpm,
