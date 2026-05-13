@@ -40,11 +40,13 @@ function LoginForm() {
     const role = (data.user?.user_metadata?.role as string) || "student";
     const next = searchParams.get("next");
     const safeNext =
-      next && (next.startsWith("/teacher") || next.startsWith("/student"))
+      next && (next.startsWith("/admin") || next.startsWith("/teacher") || next.startsWith("/student"))
         ? next
-        : role === "teacher"
-          ? "/teacher/dashboard"
-          : "/student/dashboard";
+        : role === "admin"
+          ? "/admin/dashboard"
+          : role === "teacher"
+            ? "/teacher/dashboard"
+            : "/student/dashboard";
 
     toast.success("Welcome back.");
     router.push(safeNext);
