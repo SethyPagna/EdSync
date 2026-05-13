@@ -17,6 +17,7 @@ function loadEnvFile(path) {
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
+    env: options.env,
     input: options.input,
     stdio: options.input ? ["pipe", "inherit", "inherit"] : "inherit",
     shell: process.platform === "win32",
@@ -157,6 +158,11 @@ for (const key of [
 
 run("npx", ["opennextjs-cloudflare", "build", "--config", "wrangler.app.jsonc", ...envArgs]);
 const pagesDeployCwd = mkdtempSync(join(tmpdir(), "edsync-pages-"));
+const pagesDeployEnv = { ...process.env };
+if (pagesDeployEnv.CLOUDFLARE_GLOBAL_API_KEY || pagesDeployEnv.CLOUDFLARE_API_KEY) {
+  delete pagesDeployEnv.CLOUDFLARE_API_TOKEN;
+  pagesDeployEnv.CLOUDFLARE_API_KEY = pagesDeployEnv.CLOUDFLARE_GLOBAL_API_KEY || pagesDeployEnv.CLOUDFLARE_API_KEY;
+}
 run("npx", [
   "wrangler",
   "pages",
@@ -166,7 +172,7 @@ run("npx", [
   pagesProject,
   "--branch",
   environment === "production" ? "main" : "preview",
-], { cwd: pagesDeployCwd });
+], { cwd: pagesDeployCwd, env: pagesDeployEnv });
 run("npx", ["opennextjs-cloudflare", "deploy", "--config", "wrangler.app.jsonc", ...envArgs, "--", "--keep-vars"]);
 run("npx", ["wrangler", "deploy", ...envArgs]);
 
