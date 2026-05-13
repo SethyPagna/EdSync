@@ -54,6 +54,16 @@ Required values:
 Keep real token values in `.env.local`, Vercel env, Cloudflare secrets, or CI
 secrets only.
 
+Optional security integrations:
+
+- `MALWARE_SCAN_ENDPOINT`
+- `MALWARE_SCAN_TOKEN`
+- `MALWARE_SCAN_FAIL_CLOSED=false|true`
+
+EdSync always runs local upload signature checks. When `MALWARE_SCAN_ENDPOINT`
+is configured, uploads and content extraction also call the scanner before files
+are stored or parsed.
+
 ## D1 Migration
 
 ```powershell
@@ -88,6 +98,23 @@ npx wrangler deploy --env=""
 npx wrangler deploy --env preview
 npx wrangler deploy --env production
 ```
+
+## Cloudflare Edge Security
+
+Configure a dedicated EdSync hostname before applying WAF and rate limiting
+rules. The deployer requires both values so rules are scoped to EdSync and do not
+affect AllChess, LEARN, or any other app in the account:
+
+```powershell
+$env:CLOUDFLARE_ZONE_ID="your-zone-id"
+$env:CLOUDFLARE_DOMAIN="edsync.example.com"
+npm.cmd run security:cloudflare
+```
+
+The script manages only rules with `edsync-edge-*` refs and preserves unrelated
+zone rules. It installs hostname-scoped blocks for secret/legacy probes,
+executable path probes, unexpected HTTP methods, high-threat API challenges, and
+edge rate limits for auth, uploads/extraction, AI routes, and the data API.
 
 ## Deployment Matrix
 
