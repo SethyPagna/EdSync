@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
 import { openRouterChat } from "@/lib/openrouter";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 type HistoryMsg = {
   role: string;
@@ -13,6 +14,22 @@ export async function POST(request: NextRequest) {
     const { user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rate = await enforceRateLimit({
+      request,
+      scope: "ai_socratic",
+      limit: 80,
+      windowSeconds: 900,
+      userId: user.id,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          hint: "I need a short pause before answering more questions. Try again in a moment.",
+        },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+      );
     }
 
     const {
