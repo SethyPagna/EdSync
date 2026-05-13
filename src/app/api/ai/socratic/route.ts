@@ -4,6 +4,8 @@ import { loadAiUserContext } from "@/lib/ai/personalization";
 import { generateAIChat } from "@/lib/ai/chat";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 type HistoryMsg = {
   role: string;
   content: string;
