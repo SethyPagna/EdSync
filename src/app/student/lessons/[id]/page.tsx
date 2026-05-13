@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type {
   Lesson,
   LessonSection,
@@ -83,7 +83,7 @@ function ImageContent({ content, title }: { content: string; title: string }) {
   const [imgUrl, caption] = content.split("|||");
   if (!imgUrl)
     return (
-      <div className="py-4 text-center text-atlas-subtle">
+      <div className="py-4 text-center text-edsync-subtle">
         <p className="text-sm">Image content — no URL set</p>
       </div>
     );
@@ -92,10 +92,10 @@ function ImageContent({ content, title }: { content: string; title: string }) {
       <img
         src={imgUrl}
         alt={caption || title}
-        className="w-full max-h-[500px] object-contain rounded-xl border border-atlas-border"
+        className="w-full max-h-[500px] object-contain rounded-xl border border-edsync-border"
       />
       {caption && (
-        <p className="text-sm text-atlas-subtle text-center mt-2 italic">
+        <p className="text-sm text-edsync-subtle text-center mt-2 italic">
           {caption}
         </p>
       )}
@@ -120,14 +120,14 @@ function VideoContent({ content }: { content: string }) {
 
   if (!rawUrl)
     return (
-      <div className="py-4 text-center text-atlas-subtle">
+      <div className="py-4 text-center text-edsync-subtle">
         <p className="text-sm">No video URL set</p>
       </div>
     );
   return (
     <div className="py-2">
       {isEmbeddable ? (
-        <div className="aspect-video rounded-xl overflow-hidden border border-atlas-border bg-black">
+        <div className="aspect-video rounded-xl overflow-hidden border border-edsync-border bg-black">
           <iframe
             src={embed}
             className="w-full h-full"
@@ -140,16 +140,16 @@ function VideoContent({ content }: { content: string }) {
           href={rawUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 p-4 bg-atlas-surface border border-atlas-border rounded-xl hover:border-atlas-blue transition-colors"
+          className="flex items-center gap-3 p-4 bg-edsync-surface border border-edsync-border rounded-xl hover:border-edsync-blue transition-colors"
         >
           <div>
-            <p className="font-medium text-atlas-text">Watch Video</p>
-            <p className="text-xs text-atlas-subtle truncate">{rawUrl}</p>
+            <p className="font-medium text-edsync-text">Watch Video</p>
+            <p className="text-xs text-edsync-subtle truncate">{rawUrl}</p>
           </div>
         </a>
       )}
       {caption && (
-        <p className="text-sm text-atlas-subtle text-center mt-2 italic">
+        <p className="text-sm text-edsync-subtle text-center mt-2 italic">
           {caption}
         </p>
       )}
@@ -160,8 +160,8 @@ function VideoContent({ content }: { content: string }) {
 function ActivityContent({ content }: { content: string }) {
   return (
     <div className="py-2">
-      <div className="p-4 bg-atlas-emerald/5 border border-atlas-emerald/20 rounded-xl mb-3">
-        <p className="text-xs text-atlas-emerald font-semibold mb-1">
+      <div className="p-4 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl mb-3">
+        <p className="text-xs text-edsync-emerald font-semibold mb-1">
           ACTIVITY
         </p>
       </div>
@@ -174,21 +174,21 @@ function DiscussionContent({ content }: { content: string }) {
   const [response, setResponse] = useState("");
   return (
     <div className="py-2">
-      <div className="p-4 bg-atlas-purple/5 border border-atlas-purple/20 rounded-xl mb-4">
-        <p className="text-xs text-atlas-purple font-semibold mb-2">
+      <div className="p-4 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl mb-4">
+        <p className="text-xs text-edsync-purple font-semibold mb-2">
           DISCUSSION PROMPT
         </p>
         {renderContent(content)}
       </div>
       <div>
-        <label className="block text-sm font-medium text-atlas-text mb-2">
+        <label className="block text-sm font-medium text-edsync-text mb-2">
           Your thoughts (optional):
         </label>
         <textarea
           value={response}
           onChange={(e) => setResponse(e.target.value)}
           rows={4}
-          className="atlas-textarea text-sm"
+          className="edsync-textarea text-sm"
           placeholder="Share your thoughts..."
         />
       </div>
@@ -240,37 +240,37 @@ function QuestionItem({
 
   return (
     <div
-      className={`atlas-card transition-all ${submitted && correct ? "border-atlas-emerald/40" : submitted && wrong ? "border-atlas-red/40" : ""}`}
+      className={`edsync-card transition-all ${submitted && correct ? "border-edsync-emerald/40" : submitted && wrong ? "border-edsync-red/40" : ""}`}
     >
       <div className="flex items-start gap-3 mb-4">
-        <span className="w-6 h-6 rounded-full bg-atlas-blue/20 text-atlas-blue text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span className="w-6 h-6 rounded-full bg-edsync-blue/20 text-edsync-blue text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
           {index + 1}
         </span>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {q.is_diagnostic && (
-              <span className="badge bg-atlas-purple/10 text-atlas-purple border-atlas-purple/20 text-xs">
+              <span className="badge bg-edsync-purple/10 text-edsync-purple border-edsync-purple/20 text-xs">
                 Pre-check
               </span>
             )}
             {q.is_micro_check && (
-              <span className="badge bg-atlas-cyan/10 text-atlas-cyan border-atlas-cyan/20 text-xs">
+              <span className="badge bg-edsync-cyan/10 text-edsync-cyan border-edsync-cyan/20 text-xs">
                 Check
               </span>
             )}
             {q.is_final_quiz && (
-              <span className="badge bg-atlas-amber/10 text-atlas-amber border-atlas-amber/20 text-xs">
+              <span className="badge bg-edsync-amber/10 text-edsync-amber border-edsync-amber/20 text-xs">
                 Final
               </span>
             )}
           </div>
-          <p className="font-medium text-atlas-text text-sm leading-relaxed">
+          <p className="font-medium text-edsync-text text-sm leading-relaxed">
             {q.question_text}
           </p>
         </div>
         {submitted && (
           <span
-            className={`text-lg flex-shrink-0 ${correct ? "text-atlas-emerald" : wrong ? "text-atlas-red" : "text-atlas-amber"}`}
+            className={`text-lg flex-shrink-0 ${correct ? "text-edsync-emerald" : wrong ? "text-edsync-red" : "text-edsync-amber"}`}
           >
             {correct ? "✓" : wrong ? "✗" : ""}
           </span>
@@ -293,25 +293,25 @@ function QuestionItem({
                   disabled={submitted}
                   className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm flex items-center gap-3 ${
                     showCorrect
-                      ? "bg-atlas-emerald/10 border-atlas-emerald text-atlas-emerald"
+                      ? "bg-edsync-emerald/10 border-edsync-emerald text-edsync-emerald"
                       : showWrong
-                        ? "bg-atlas-red/10 border-atlas-red text-atlas-red"
+                        ? "bg-edsync-red/10 border-edsync-red text-edsync-red"
                         : selected
-                          ? "bg-atlas-blue/10 border-atlas-blue text-atlas-text"
+                          ? "bg-edsync-blue/10 border-edsync-blue text-edsync-text"
                           : submitted
-                            ? "bg-atlas-surface border-atlas-border text-atlas-subtle cursor-default"
-                            : "bg-atlas-surface border-atlas-border text-atlas-subtle hover:border-atlas-muted hover:text-atlas-text"
+                            ? "bg-edsync-surface border-edsync-border text-edsync-subtle cursor-default"
+                            : "bg-edsync-surface border-edsync-border text-edsync-subtle hover:border-edsync-muted hover:text-edsync-text"
                   }`}
                 >
                   <span
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold ${
                       showCorrect
-                        ? "border-atlas-emerald bg-atlas-emerald text-white"
+                        ? "border-edsync-emerald bg-edsync-emerald text-white"
                         : showWrong
-                          ? "border-atlas-red bg-atlas-red text-white"
+                          ? "border-edsync-red bg-edsync-red text-white"
                           : selected
-                            ? "border-atlas-blue bg-atlas-blue text-white"
-                            : "border-atlas-border"
+                            ? "border-edsync-blue bg-edsync-blue text-white"
+                            : "border-edsync-border"
                     }`}
                   >
                     {showCorrect
@@ -336,11 +336,11 @@ function QuestionItem({
             value={ans}
             onChange={(e) => setAns(e.target.value)}
             disabled={submitted}
-            className={`atlas-input py-2 text-sm ${submitted && correct ? "border-atlas-emerald bg-atlas-emerald/10 text-atlas-emerald" : submitted && !correct ? "border-atlas-red bg-atlas-red/10 text-atlas-red" : ""}`}
+            className={`edsync-input py-2 text-sm ${submitted && correct ? "border-edsync-emerald bg-edsync-emerald/10 text-edsync-emerald" : submitted && !correct ? "border-edsync-red bg-edsync-red/10 text-edsync-red" : ""}`}
             placeholder="Type your answer..."
           />
           {submitted && q.correct_answer && (
-            <p className="text-xs text-atlas-emerald mt-1">
+            <p className="text-xs text-edsync-emerald mt-1">
               ✓ Answer: <span className="font-medium">{q.correct_answer}</span>
             </p>
           )}
@@ -355,15 +355,15 @@ function QuestionItem({
             onChange={(e) => setAns(e.target.value)}
             disabled={submitted}
             rows={3}
-            className="atlas-textarea text-sm"
+            className="edsync-textarea text-sm"
             placeholder="Write your answer (2-4 sentences)..."
           />
           {submitted && q.correct_answer && (
-            <div className="mt-2 p-3 bg-atlas-blue/5 border border-atlas-blue/20 rounded-xl">
-              <p className="text-xs text-atlas-blue font-medium mb-1">
+            <div className="mt-2 p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl">
+              <p className="text-xs text-edsync-blue font-medium mb-1">
                 Key points
               </p>
-              <p className="text-xs text-atlas-subtle">{q.correct_answer}</p>
+              <p className="text-xs text-edsync-subtle">{q.correct_answer}</p>
             </div>
           )}
         </div>
@@ -377,15 +377,15 @@ function QuestionItem({
             onChange={(e) => setAns(e.target.value)}
             disabled={submitted}
             rows={6}
-            className="atlas-textarea text-sm"
+            className="edsync-textarea text-sm"
             placeholder="Write a detailed response..."
           />
           {submitted && q.correct_answer && (
-            <div className="mt-2 p-3 bg-atlas-blue/5 border border-atlas-blue/20 rounded-xl">
-              <p className="text-xs text-atlas-blue font-medium mb-1">
+            <div className="mt-2 p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl">
+              <p className="text-xs text-edsync-blue font-medium mb-1">
                 Rubric / Criteria
               </p>
-              <p className="text-xs text-atlas-subtle">{q.correct_answer}</p>
+              <p className="text-xs text-edsync-subtle">{q.correct_answer}</p>
             </div>
           )}
         </div>
@@ -393,11 +393,11 @@ function QuestionItem({
 
       {/* Explanation */}
       {submitted && q.explanation && (
-        <div className="mt-3 p-3 bg-atlas-muted/20 border border-atlas-border rounded-xl">
-          <p className="text-xs font-medium text-atlas-blue mb-0.5">
+        <div className="mt-3 p-3 bg-edsync-muted/20 border border-edsync-border rounded-xl">
+          <p className="text-xs font-medium text-edsync-blue mb-0.5">
             Explanation
           </p>
-          <p className="text-xs text-atlas-subtle">{q.explanation}</p>
+          <p className="text-xs text-edsync-subtle">{q.explanation}</p>
         </div>
       )}
     </div>
@@ -449,8 +449,8 @@ function QuizSection({
 
   return (
     <div className="space-y-4">
-      <div className="p-4 bg-atlas-amber/5 border border-atlas-amber/20 rounded-xl">
-        <p className="text-sm font-semibold text-atlas-amber">
+      <div className="p-4 bg-edsync-amber/5 border border-edsync-amber/20 rounded-xl">
+        <p className="text-sm font-semibold text-edsync-amber">
           {title || "Quiz"}
         </p>
       </div>
@@ -473,21 +473,21 @@ function QuizSection({
           Submit Answers →
         </button>
       ) : (
-        <div className="atlas-card text-center py-6">
+        <div className="edsync-card text-center py-6">
           <p className="font-display font-bold text-3xl mb-2">
             <span
               className={
                 score !== null && score >= 80
-                  ? "text-atlas-emerald"
+                  ? "text-edsync-emerald"
                   : score !== null && score >= 60
-                    ? "text-atlas-amber"
-                    : "text-atlas-red"
+                    ? "text-edsync-amber"
+                    : "text-edsync-red"
               }
             >
               {score}%
             </span>
           </p>
-          <p className="text-atlas-subtle text-sm mb-4">
+          <p className="text-edsync-subtle text-sm mb-4">
             {score !== null && score >= 80
               ? "Excellent work!"
               : score !== null && score >= 60
@@ -511,7 +511,7 @@ export default function StudentLesson() {
   const params = useParams();
   const router = useRouter();
   const lessonId = params.id as string;
-  const supabase = createClient();
+  const edsync = createClient();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [sections, setSections] = useState<LessonSection[]>([]);
@@ -587,7 +587,7 @@ export default function StudentLesson() {
   const loadLesson = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
     let lessonData = null;
@@ -596,7 +596,7 @@ export default function StudentLesson() {
     let glossaryData = [];
 
     try {
-      const lessonRes = await supabase
+      const lessonRes = await edsync
         .from("lessons")
         .select("*")
         .eq("id", lessonId)
@@ -609,7 +609,7 @@ export default function StudentLesson() {
     }
 
     try {
-      const sectionsRes = await supabase
+      const sectionsRes = await edsync
         .from("lesson_sections")
         .select("*")
         .eq("lesson_id", lessonId)
@@ -621,7 +621,7 @@ export default function StudentLesson() {
     }
 
     try {
-      const questionsRes = await supabase
+      const questionsRes = await edsync
         .from("quiz_questions")
         .select("*")
         .eq("lesson_id", lessonId)
@@ -633,7 +633,7 @@ export default function StudentLesson() {
     }
 
     try {
-      const glossaryRes = await supabase
+      const glossaryRes = await edsync
         .from("glossary_terms")
         .select("*")
         .eq("lesson_id", lessonId)
@@ -650,7 +650,7 @@ export default function StudentLesson() {
     setGlossary(glossaryData);
 
     try {
-      const progressRes = await supabase
+      const progressRes = await edsync
         .from("student_progress")
         .select("*")
         .eq("student_id", user.id)
@@ -670,7 +670,7 @@ export default function StudentLesson() {
           setPhase(p.diagnostic_completed ? "learning" : "diagnostic");
         }
       } else {
-        const { data: np } = await supabase
+        const { data: np } = await edsync
           .from("student_progress")
           .insert({
             student_id: user.id,
@@ -696,7 +696,7 @@ export default function StudentLesson() {
   const completeDiagnostic = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user || !progress) return;
     let correct = 0;
     diagQs.forEach((q) => {
@@ -716,7 +716,7 @@ export default function StudentLesson() {
     });
     const score =
       diagQs.length > 0 ? Math.round((correct / diagQs.length) * 100) : 100;
-    await supabase
+    await edsync
       .from("student_progress")
       .update({ diagnostic_completed: true, diagnostic_score: score })
       .eq("id", progress.id);
@@ -758,11 +758,11 @@ export default function StudentLesson() {
   const completeSection = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user || !progress) return;
     const sec = sections[sectionIdx];
     const newCompleted = [...(progress.sections_completed || []), sec.id];
-    await supabase
+    await edsync
       .from("student_progress")
       .update({ sections_completed: newCompleted })
       .eq("id", progress.id);
@@ -783,9 +783,9 @@ export default function StudentLesson() {
   const completeLesson = async (score: number) => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user || !progress) return;
-    await supabase
+    await edsync
       .from("student_progress")
       .update({
         status: "completed",
@@ -795,18 +795,18 @@ export default function StudentLesson() {
       })
       .eq("id", progress.id);
     const xp = Math.max(10, Math.round(score / 10));
-    const { error } = await supabase.rpc("increment_xp", {
+    const { error } = await edsync.rpc("increment_xp", {
       user_id: user.id,
       xp,
     });
     if (error) {
-      const { data: prof } = await supabase
+      const { data: prof } = await edsync
         .from("profiles")
         .select("total_xp, streak_days")
         .eq("id", user.id)
         .single();
       if (prof)
-        await supabase
+        await edsync
           .from("profiles")
           .update({
             total_xp: (prof.total_xp || 0) + xp,
@@ -815,7 +815,7 @@ export default function StudentLesson() {
           })
           .eq("id", user.id);
     } else {
-      await supabase
+      await edsync
         .from("profiles")
         .update({ last_active_at: new Date().toISOString() })
         .eq("id", user.id);
@@ -848,7 +848,7 @@ export default function StudentLesson() {
     const now = new Date().toISOString();
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setReflectionLoading(false);
       toast.error("Please sign in again to save your reflection.");
@@ -910,7 +910,7 @@ export default function StudentLesson() {
           reflections: [...existing.slice(-19), record],
         };
 
-        const { error } = await supabase
+        const { error } = await edsync
           .from("student_progress")
           .update({ metadata: nextMetadata, last_active: now })
           .eq("id", progress.id);
@@ -919,7 +919,7 @@ export default function StudentLesson() {
           console.error("Failed to save reflection metadata:", error);
           toast.error("Coaching generated, but reflection was not saved.");
         } else {
-          const { error: reflectionError } = await supabase
+          const { error: reflectionError } = await edsync
             .from("learning_reflections")
             .insert({
               student_id: userId,
@@ -1045,10 +1045,10 @@ export default function StudentLesson() {
 
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await edsync.auth.getUser();
 
       if (user) {
-        await supabase.from("socratic_interactions").insert({
+        await edsync.from("socratic_interactions").insert({
           student_id: user.id,
           lesson_id: lessonId,
           student_question: question,
@@ -1253,8 +1253,8 @@ export default function StudentLesson() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-atlas-blue/30 border-t-atlas-blue rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-atlas-subtle">Loading your lesson...</p>
+          <div className="w-16 h-16 border-4 border-edsync-blue/30 border-t-edsync-blue rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-edsync-subtle">Loading your lesson...</p>
         </div>
       </div>
     );
@@ -1262,7 +1262,7 @@ export default function StudentLesson() {
   return (
     <div className="min-h-screen">
       {/* ── Top bar ── */}
-      <div className="sticky top-0 z-30 bg-atlas-surface border-b border-atlas-border">
+      <div className="sticky top-0 z-30 bg-edsync-surface border-b border-edsync-border">
         <div className="flex items-center gap-3 px-4 py-2.5 max-w-5xl mx-auto">
           <button
             onClick={() => router.push("/student/dashboard")}
@@ -1271,17 +1271,17 @@ export default function StudentLesson() {
             ← Back
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-atlas-subtle truncate">
+            <p className="text-xs text-edsync-subtle truncate">
               {lesson?.title}
             </p>
             <div className="flex items-center gap-2 mt-0.5">
-              <div className="flex-1 h-1.5 bg-atlas-border rounded-full">
+              <div className="flex-1 h-1.5 bg-edsync-border rounded-full">
                 <div
-                  className="h-full bg-atlas-blue rounded-full transition-all duration-500"
+                  className="h-full bg-edsync-blue rounded-full transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <span className="text-xs text-atlas-blue font-medium flex-shrink-0">
+              <span className="text-xs text-edsync-blue font-medium flex-shrink-0">
                 {progressPct}%
               </span>
             </div>
@@ -1293,7 +1293,7 @@ export default function StudentLesson() {
                   setShowGlossary((v) => !v);
                   setShowChat(false);
                 }}
-                className={`btn-ghost text-xs py-1.5 px-3 ${showGlossary ? "text-atlas-blue" : ""}`}
+                className={`btn-ghost text-xs py-1.5 px-3 ${showGlossary ? "text-edsync-blue" : ""}`}
               >
                 Glossary
               </button>
@@ -1307,7 +1307,7 @@ export default function StudentLesson() {
             >
               Ask
               {chatMessages.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-atlas-amber rounded-full text-xs flex items-center justify-center text-black font-bold">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-edsync-amber rounded-full text-xs flex items-center justify-center text-black font-bold">
                   {chatMessages.filter((m) => m.role === "assistant").length}
                 </span>
               )}
@@ -1322,7 +1322,7 @@ export default function StudentLesson() {
         phase === "micro_check" ||
         phase === "extended_learning") &&
         sections.length > 0 && (
-          <div className="bg-atlas-surface border-b border-atlas-border px-4 py-2">
+          <div className="bg-edsync-surface border-b border-edsync-border px-4 py-2">
             <div className="max-w-5xl mx-auto flex gap-1.5 overflow-x-auto items-center">
               {sections.map((s, i) => {
                 const done = (progress?.sections_completed || []).includes(
@@ -1354,12 +1354,12 @@ export default function StudentLesson() {
                     }
                     className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       current
-                        ? "bg-atlas-blue text-white shadow-sm"
+                        ? "bg-edsync-blue text-white shadow-sm"
                         : done
-                          ? "bg-atlas-emerald/20 text-atlas-emerald border border-atlas-emerald/30 hover:bg-atlas-emerald/30 cursor-pointer"
+                          ? "bg-edsync-emerald/20 text-edsync-emerald border border-edsync-emerald/30 hover:bg-edsync-emerald/30 cursor-pointer"
                           : canNavigate
-                            ? "bg-atlas-card text-atlas-subtle border border-atlas-border hover:border-atlas-blue hover:text-atlas-blue cursor-pointer"
-                            : "bg-atlas-card text-atlas-subtle/40 border border-atlas-border/40 cursor-not-allowed"
+                            ? "bg-edsync-card text-edsync-subtle border border-edsync-border hover:border-edsync-blue hover:text-edsync-blue cursor-pointer"
+                            : "bg-edsync-card text-edsync-subtle/40 border border-edsync-border/40 cursor-not-allowed"
                     }`}
                   >
                     {done && !current ? "✓ " : null}
@@ -1379,21 +1379,21 @@ export default function StudentLesson() {
             (() => {
               return (
                 <div>
-                  <div className="atlas-card mb-6 border-atlas-blue/30 bg-atlas-blue/5">
+                  <div className="edsync-card mb-6 border-edsync-blue/30 bg-edsync-blue/5">
                     <div className="flex items-center gap-3 mb-2">
                       <div>
-                        <h2 className="font-display font-bold text-xl text-atlas-text">
+                        <h2 className="font-display font-bold text-xl text-edsync-text">
                           Pre-Check Survey
                         </h2>
-                        <p className="text-atlas-subtle text-sm">
+                        <p className="text-edsync-subtle text-sm">
                           Helps us personalize your learning. No grade!
                         </p>
                       </div>
                     </div>
                   </div>
                   {diagQs.length === 0 ? (
-                    <div className="atlas-card text-center py-10">
-                      <p className="text-atlas-text font-medium mb-4">
+                    <div className="edsync-card text-center py-10">
+                      <p className="text-edsync-text font-medium mb-4">
                         Ready to start! No pre-check for this lesson.
                       </p>
                       <button
@@ -1424,8 +1424,8 @@ export default function StudentLesson() {
                           Submit Pre-Check →
                         </button>
                       ) : (
-                        <div className="atlas-card text-center py-6">
-                          <p className="text-atlas-emerald font-semibold mb-3">
+                        <div className="edsync-card text-center py-6">
+                          <p className="text-edsync-emerald font-semibold mb-3">
                             Pre-check submitted!
                           </p>
                           <button
@@ -1446,20 +1446,20 @@ export default function StudentLesson() {
           {phase === "learning" && currentSection && (
             <div>
               {/* Section header */}
-              <div className="flex items-center gap-3 mb-5 pb-4 border-b border-atlas-border">
-                <span className="w-8 h-8 rounded-xl bg-atlas-blue flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+              <div className="flex items-center gap-3 mb-5 pb-4 border-b border-edsync-border">
+                <span className="w-8 h-8 rounded-xl bg-edsync-blue flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                   {sectionIdx + 1}
                 </span>
                 <div>
-                  <p className="text-xs text-atlas-subtle uppercase tracking-wide font-medium">
+                  <p className="text-xs text-edsync-subtle uppercase tracking-wide font-medium">
                     Section {sectionIdx + 1} of {sections.length}
                   </p>
-                  <h2 className="font-display font-bold text-2xl text-atlas-text">
+                  <h2 className="font-display font-bold text-2xl text-edsync-text">
                     {currentSection.title}
                   </h2>
                 </div>
                 {currentSection.duration_minutes && (
-                  <span className="ml-auto text-xs text-atlas-subtle bg-atlas-card border border-atlas-border px-2 py-1 rounded-lg flex-shrink-0">
+                  <span className="ml-auto text-xs text-edsync-subtle bg-edsync-card border border-edsync-border px-2 py-1 rounded-lg flex-shrink-0">
                     ~{currentSection.duration_minutes} min
                   </span>
                 )}
@@ -1502,7 +1502,7 @@ export default function StudentLesson() {
                         }}
                       />
                     ) : (
-                      <p className="text-atlas-subtle text-sm text-center py-8">
+                      <p className="text-edsync-subtle text-sm text-center py-8">
                         No quiz questions for this section yet.
                       </p>
                     );
@@ -1540,14 +1540,14 @@ export default function StudentLesson() {
           {/* INLINE QUIZ (section quiz phase) */}
           {phase === "quiz_section" && (
             <div>
-              <div className="atlas-card mb-6 border-atlas-amber/30 bg-atlas-amber/5">
+              <div className="edsync-card mb-6 border-edsync-amber/30 bg-edsync-amber/5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div>
-                      <h2 className="font-display font-bold text-xl text-atlas-text">
+                      <h2 className="font-display font-bold text-xl text-edsync-text">
                         Section Quiz
                       </h2>
-                      <p className="text-atlas-subtle text-sm">
+                      <p className="text-edsync-subtle text-sm">
                         Answer these questions about what you just learned
                       </p>
                     </div>
@@ -1573,14 +1573,14 @@ export default function StudentLesson() {
           {/* MICRO CHECK */}
           {phase === "micro_check" && (
             <div>
-              <div className="atlas-card mb-6 border-atlas-cyan/30 bg-atlas-cyan/5">
+              <div className="edsync-card mb-6 border-edsync-cyan/30 bg-edsync-cyan/5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div>
-                      <h2 className="font-display font-bold text-xl text-atlas-text">
+                      <h2 className="font-display font-bold text-xl text-edsync-text">
                         Quick Check
                       </h2>
-                      <p className="text-atlas-subtle text-sm">
+                      <p className="text-edsync-subtle text-sm">
                         Short check before moving on
                       </p>
                     </div>
@@ -1611,20 +1611,20 @@ export default function StudentLesson() {
             (() => {
               return (
                 <div>
-                  <div className="atlas-card mb-6 border-atlas-amber/30 bg-atlas-amber/5">
+                  <div className="edsync-card mb-6 border-edsync-amber/30 bg-edsync-amber/5">
                     <div className="flex items-center gap-3 mb-1">
                       <div>
-                        <h2 className="font-display font-bold text-xl text-atlas-text">
+                        <h2 className="font-display font-bold text-xl text-edsync-text">
                           End-of-Lesson Quiz
                         </h2>
-                        <p className="text-atlas-subtle text-sm">
+                        <p className="text-edsync-subtle text-sm">
                           Show what you've learned! {finalQs.length} questions
                         </p>
                       </div>
                     </div>
                   </div>
                   {finalQs.length === 0 ? (
-                    <div className="atlas-card text-center py-10">
+                    <div className="edsync-card text-center py-10">
                       <button
                         onClick={() => finishLesson(100)}
                         className="btn-primary"
@@ -1653,11 +1653,11 @@ export default function StudentLesson() {
                           Submit Final Quiz →
                         </button>
                       ) : (
-                        <div className="atlas-card text-center py-6">
-                          <p className="text-atlas-emerald font-semibold text-lg">
+                        <div className="edsync-card text-center py-6">
+                          <p className="text-edsync-emerald font-semibold text-lg">
                             Quiz submitted!
                           </p>
-                          <p className="text-atlas-subtle text-sm mt-1">
+                          <p className="text-edsync-subtle text-sm mt-1">
                             Loading results...
                           </p>
                         </div>
@@ -1671,24 +1671,24 @@ export default function StudentLesson() {
           {/* REFLECTION */}
           {phase === "reflection" && finalScore !== null && (
             <div className="space-y-6">
-              <div className="atlas-card border-atlas-blue/30 bg-atlas-blue/5">
-                <h2 className="font-display font-bold text-xl text-atlas-text mb-2">
+              <div className="edsync-card border-edsync-blue/30 bg-edsync-blue/5">
+                <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
                   Reflect Before You Move On
                 </h2>
-                <p className="text-atlas-subtle text-sm">
-                  Share what you learned from this lecture and Atlas AI will
+                <p className="text-edsync-subtle text-sm">
+                  Share what you learned from this lecture and EdSync AI will
                   coach your next best step.
                 </p>
-                <p className="text-atlas-subtle text-sm mt-2">
+                <p className="text-edsync-subtle text-sm mt-2">
                   Current lesson score:{" "}
-                  <span className="font-semibold text-atlas-blue">
+                  <span className="font-semibold text-edsync-blue">
                     {finalScore}%
                   </span>
                 </p>
               </div>
 
-              <div className="atlas-card">
-                <label className="block text-sm font-medium text-atlas-text mb-2">
+              <div className="edsync-card">
+                <label className="block text-sm font-medium text-edsync-text mb-2">
                   What did you learn? Add your notes and mention anything still
                   confusing.
                 </label>
@@ -1696,12 +1696,12 @@ export default function StudentLesson() {
                   value={reflectionNotes}
                   onChange={(e) => setReflectionNotes(e.target.value)}
                   rows={7}
-                  className="atlas-textarea text-sm"
+                  className="edsync-textarea text-sm"
                   placeholder="Example: I now understand how X connects to Y, but I still get confused when..."
                 />
 
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-atlas-text mb-2">
+                  <p className="text-sm font-medium text-edsync-text mb-2">
                     Confidence right now (1 = low, 5 = high)
                   </p>
                   <div className="flex gap-2 flex-wrap">
@@ -1711,8 +1711,8 @@ export default function StudentLesson() {
                         onClick={() => setReflectionConfidence(score)}
                         className={`w-10 h-10 rounded-lg border text-sm font-semibold transition-all ${
                           reflectionConfidence === score
-                            ? "bg-atlas-blue border-atlas-blue text-white"
-                            : "bg-atlas-surface border-atlas-border text-atlas-subtle hover:border-atlas-blue hover:text-atlas-text"
+                            ? "bg-edsync-blue border-edsync-blue text-white"
+                            : "bg-edsync-surface border-edsync-border text-edsync-subtle hover:border-edsync-blue hover:text-edsync-text"
                         }`}
                       >
                         {score}
@@ -1743,40 +1743,40 @@ export default function StudentLesson() {
               </div>
 
               {reflectionAdvice && (
-                <div className="atlas-card border-atlas-emerald/30 bg-atlas-emerald/5">
-                  <h3 className="font-display font-semibold text-lg text-atlas-text mb-2">
+                <div className="edsync-card border-edsync-emerald/30 bg-edsync-emerald/5">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
                     Your AI Coaching Summary
                   </h3>
-                  <p className="text-sm text-atlas-subtle mb-4">
+                  <p className="text-sm text-edsync-subtle mb-4">
                     {reflectionAdvice.encouragement}
                   </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-3 rounded-xl border border-atlas-emerald/20 bg-atlas-surface">
-                      <p className="text-xs font-semibold text-atlas-emerald mb-2">
+                    <div className="p-3 rounded-xl border border-edsync-emerald/20 bg-edsync-surface">
+                      <p className="text-xs font-semibold text-edsync-emerald mb-2">
                         You Are Doing Well In
                       </p>
-                      <ul className="text-sm text-atlas-text space-y-1">
+                      <ul className="text-sm text-edsync-text space-y-1">
                         {reflectionAdvice.strengths.map((item, idx) => (
                           <li key={idx}>• {item}</li>
                         ))}
                       </ul>
                     </div>
-                    <div className="p-3 rounded-xl border border-atlas-amber/20 bg-atlas-surface">
-                      <p className="text-xs font-semibold text-atlas-amber mb-2">
+                    <div className="p-3 rounded-xl border border-edsync-amber/20 bg-edsync-surface">
+                      <p className="text-xs font-semibold text-edsync-amber mb-2">
                         Concepts To Revisit
                       </p>
-                      <ul className="text-sm text-atlas-text space-y-1">
+                      <ul className="text-sm text-edsync-text space-y-1">
                         {reflectionAdvice.likelyGaps.map((item, idx) => (
                           <li key={idx}>• {item}</li>
                         ))}
                       </ul>
                     </div>
-                    <div className="p-3 rounded-xl border border-atlas-blue/20 bg-atlas-surface">
-                      <p className="text-xs font-semibold text-atlas-blue mb-2">
+                    <div className="p-3 rounded-xl border border-edsync-blue/20 bg-edsync-surface">
+                      <p className="text-xs font-semibold text-edsync-blue mb-2">
                         Next 10 Minutes
                       </p>
-                      <ul className="text-sm text-atlas-text space-y-1">
+                      <ul className="text-sm text-edsync-text space-y-1">
                         {reflectionAdvice.nextSteps.map((item, idx) => (
                           <li key={idx}>• {item}</li>
                         ))}
@@ -1784,11 +1784,11 @@ export default function StudentLesson() {
                     </div>
                   </div>
 
-                  <div className="mt-4 p-4 rounded-xl border border-atlas-purple/20 bg-atlas-purple/5">
-                    <p className="text-xs font-semibold text-atlas-purple mb-1">
+                  <div className="mt-4 p-4 rounded-xl border border-edsync-purple/20 bg-edsync-purple/5">
+                    <p className="text-xs font-semibold text-edsync-purple mb-1">
                       Guiding Question
                     </p>
-                    <p className="text-sm text-atlas-text italic">
+                    <p className="text-sm text-edsync-text italic">
                       {reflectionAdvice.guidingQuestion}
                     </p>
                   </div>
@@ -1806,16 +1806,16 @@ export default function StudentLesson() {
 
           {/* CHOOSE PATH */}
           {phase === "choose_path" && finalScore !== null && (
-            <div className="atlas-card text-center py-8">
-              <div className="w-16 h-16 bg-atlas-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-atlas-blue text-2xl">🎯</span>
+            <div className="edsync-card text-center py-8">
+              <div className="w-16 h-16 bg-edsync-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-edsync-blue text-2xl">🎯</span>
               </div>
-              <h2 className="font-display font-bold text-2xl text-atlas-text mb-2">
+              <h2 className="font-display font-bold text-2xl text-edsync-text mb-2">
                 Lesson Complete!
               </h2>
-              <p className="text-atlas-subtle mb-6">
+              <p className="text-edsync-subtle mb-6">
                 Your final score:{" "}
-                <span className="font-semibold text-atlas-blue">
+                <span className="font-semibold text-edsync-blue">
                   {finalScore}%
                 </span>
               </p>
@@ -1836,7 +1836,7 @@ export default function StudentLesson() {
                   Extended Learning →
                 </button>
               </div>
-              <p className="text-xs text-atlas-subtle mt-4">
+              <p className="text-xs text-edsync-subtle mt-4">
                 "Extended Learning" generates AI-powered additional content to
                 deepen your understanding.
               </p>
@@ -1846,14 +1846,14 @@ export default function StudentLesson() {
           {/* EXTENDED LEARNING */}
           {phase === "extended_learning" && (
             <div>
-              <div className="atlas-card mb-6 border-atlas-purple/30 bg-atlas-purple/5">
+              <div className="edsync-card mb-6 border-edsync-purple/30 bg-edsync-purple/5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div>
-                      <h2 className="font-display font-bold text-xl text-atlas-text">
+                      <h2 className="font-display font-bold text-xl text-edsync-text">
                         Extended Learning
                       </h2>
-                      <p className="text-atlas-subtle text-sm">
+                      <p className="text-edsync-subtle text-sm">
                         AI-generated content to deepen your understanding
                       </p>
                     </div>
@@ -1868,20 +1868,20 @@ export default function StudentLesson() {
               </div>
 
               {extendedLoading ? (
-                <div className="atlas-card text-center py-12">
-                  <div className="w-16 h-16 border-4 border-atlas-blue/30 border-t-atlas-blue rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-atlas-subtle">
+                <div className="edsync-card text-center py-12">
+                  <div className="w-16 h-16 border-4 border-edsync-blue/30 border-t-edsync-blue rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-edsync-subtle">
                     Generating extended learning content...
                   </p>
-                  <p className="text-xs text-atlas-subtle mt-2">
+                  <p className="text-xs text-edsync-subtle mt-2">
                     This may take up to 30 seconds
                   </p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* Topic */}
-                  <div className="atlas-card">
-                    <h3 className="font-semibold text-atlas-text mb-3">
+                  <div className="edsync-card">
+                    <h3 className="font-semibold text-edsync-text mb-3">
                       {extendedTopic}
                     </h3>
                     <div className="lesson-prose">
@@ -1904,8 +1904,8 @@ export default function StudentLesson() {
 
                   {/* Quiz */}
                   {extendedQuiz && extendedQuiz.length > 0 && (
-                    <div className="atlas-card">
-                      <h3 className="font-semibold text-atlas-text mb-4">
+                    <div className="edsync-card">
+                      <h3 className="font-semibold text-edsync-text mb-4">
                         Knowledge Check
                       </h3>
                       <div className="space-y-4">
@@ -1926,9 +1926,9 @@ export default function StudentLesson() {
                           return (
                             <div
                               key={i}
-                              className="border border-atlas-border rounded-xl p-4"
+                              className="border border-edsync-border rounded-xl p-4"
                             >
-                              <p className="font-medium text-atlas-text mb-3">
+                              <p className="font-medium text-edsync-text mb-3">
                                 {q.question}
                               </p>
                               <div className="space-y-2">
@@ -1947,25 +1947,25 @@ export default function StudentLesson() {
                                       disabled={extendedQuizSubmitted}
                                       className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm flex items-center gap-3 ${
                                         showCorrect
-                                          ? "bg-atlas-emerald/10 border-atlas-emerald text-atlas-emerald"
+                                          ? "bg-edsync-emerald/10 border-edsync-emerald text-edsync-emerald"
                                           : showWrong
-                                            ? "bg-atlas-red/10 border-atlas-red text-atlas-red"
+                                            ? "bg-edsync-red/10 border-edsync-red text-edsync-red"
                                             : selected
-                                              ? "bg-atlas-blue/10 border-atlas-blue text-atlas-text"
+                                              ? "bg-edsync-blue/10 border-edsync-blue text-edsync-text"
                                               : extendedQuizSubmitted
-                                                ? "bg-atlas-surface border-atlas-border text-atlas-subtle cursor-default"
-                                                : "bg-atlas-surface border-atlas-border text-atlas-subtle hover:border-atlas-blue hover:text-atlas-text"
+                                                ? "bg-edsync-surface border-edsync-border text-edsync-subtle cursor-default"
+                                                : "bg-edsync-surface border-edsync-border text-edsync-subtle hover:border-edsync-blue hover:text-edsync-text"
                                       }`}
                                     >
                                       <span
                                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold ${
                                           showCorrect
-                                            ? "border-atlas-emerald bg-atlas-emerald text-white"
+                                            ? "border-edsync-emerald bg-edsync-emerald text-white"
                                             : showWrong
-                                              ? "border-atlas-red bg-atlas-red text-white"
+                                              ? "border-edsync-red bg-edsync-red text-white"
                                               : selected
-                                                ? "border-atlas-blue bg-atlas-blue text-white"
-                                                : "border-atlas-border"
+                                                ? "border-edsync-blue bg-edsync-blue text-white"
+                                                : "border-edsync-border"
                                         }`}
                                       >
                                         {showCorrect
@@ -1997,9 +1997,9 @@ export default function StudentLesson() {
                             Submit Answers →
                           </button>
                         ) : (
-                          <div className="atlas-card text-center py-6">
+                          <div className="edsync-card text-center py-6">
                             <p className="font-display font-bold text-3xl mb-2">
-                              <span className="text-atlas-emerald">
+                              <span className="text-edsync-emerald">
                                 {Math.round(
                                   (extendedQuiz.filter((q: any) => {
                                     const ans = extendedQuizAnswers[q.question];
@@ -2013,7 +2013,7 @@ export default function StudentLesson() {
                                 %
                               </span>
                             </p>
-                            <p className="text-atlas-subtle text-sm mb-4">
+                            <p className="text-edsync-subtle text-sm mb-4">
                               Great effort!
                             </p>
                           </div>
@@ -2029,13 +2029,13 @@ export default function StudentLesson() {
           {/* COMPLETE */}
           {phase === "complete" && (
             <div className="text-center py-12 animate-slide-up">
-              <div className="w-24 h-24 bg-atlas-emerald/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow-emerald">
-                <span className="text-atlas-emerald font-semibold">Done</span>
+              <div className="w-24 h-24 bg-edsync-emerald/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow-emerald">
+                <span className="text-edsync-emerald font-semibold">Done</span>
               </div>
-              <h2 className="font-display font-bold text-4xl text-atlas-text mb-3">
+              <h2 className="font-display font-bold text-4xl text-edsync-text mb-3">
                 Lesson Complete!
               </h2>
-              <p className="text-atlas-subtle text-lg mb-4">
+              <p className="text-edsync-subtle text-lg mb-4">
                 Amazing work finishing this lesson.
               </p>
               {progress?.final_quiz_score !== null &&
@@ -2044,10 +2044,10 @@ export default function StudentLesson() {
                     <span
                       className={
                         progress.final_quiz_score >= 80
-                          ? "text-atlas-emerald"
+                          ? "text-edsync-emerald"
                           : progress.final_quiz_score >= 60
-                            ? "text-atlas-amber"
-                            : "text-atlas-red"
+                            ? "text-edsync-amber"
+                            : "text-edsync-red"
                       }
                     >
                       {Math.round(progress.final_quiz_score)}%
@@ -2078,40 +2078,40 @@ export default function StudentLesson() {
         {/* ── SIDEBARS ── */}
         {showGlossary && !showChat && (
           <div className="w-72 flex-shrink-0 sticky top-28 self-start animate-fade-in">
-            <div className="atlas-card max-h-[calc(100vh-10rem)] flex flex-col">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-atlas-border">
+            <div className="edsync-card max-h-[calc(100vh-10rem)] flex flex-col">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-edsync-border">
                 <div>
-                  <h3 className="font-semibold text-atlas-text">Glossary</h3>
-                  <p className="text-xs text-atlas-subtle">
+                  <h3 className="font-semibold text-edsync-text">Glossary</h3>
+                  <p className="text-xs text-edsync-subtle">
                     {glossary.length} terms
                   </p>
                 </div>
                 <button
                   onClick={() => setShowGlossary(false)}
-                  className="text-atlas-subtle hover:text-atlas-text text-xl"
+                  className="text-edsync-subtle hover:text-edsync-text text-xl"
                 >
                   ×
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto space-y-3">
                 {glossary.length === 0 ? (
-                  <p className="text-atlas-subtle text-sm text-center py-6">
+                  <p className="text-edsync-subtle text-sm text-center py-6">
                     No glossary for this lesson
                   </p>
                 ) : (
                   glossary.map((t) => (
                     <div
                       key={t.id}
-                      className="p-3 bg-atlas-surface rounded-xl border border-atlas-border"
+                      className="p-3 bg-edsync-surface rounded-xl border border-edsync-border"
                     >
-                      <p className="font-semibold text-atlas-text text-sm">
+                      <p className="font-semibold text-edsync-text text-sm">
                         {t.term}
                       </p>
-                      <p className="text-xs text-atlas-subtle mt-1">
+                      <p className="text-xs text-edsync-subtle mt-1">
                         {t.definition}
                       </p>
                       {t.example && (
-                        <p className="text-xs text-atlas-cyan mt-1 italic">
+                        <p className="text-xs text-edsync-cyan mt-1 italic">
                           e.g. {t.example}
                         </p>
                       )}
@@ -2125,13 +2125,13 @@ export default function StudentLesson() {
 
         {showChat && (
           <div className="w-80 flex-shrink-0 sticky top-28 self-start animate-fade-in">
-            <div className="atlas-card max-h-[calc(100vh-10rem)] flex flex-col">
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-atlas-border">
+            <div className="edsync-card max-h-[calc(100vh-10rem)] flex flex-col">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-edsync-border">
                 <div>
-                  <h3 className="font-semibold text-atlas-text">
+                  <h3 className="font-semibold text-edsync-text">
                     Ask Socratic
                   </h3>
-                  <p className="text-xs text-atlas-subtle">
+                  <p className="text-xs text-edsync-subtle">
                     {[
                       "quiz_section",
                       "micro_check",
@@ -2144,7 +2144,7 @@ export default function StudentLesson() {
                 </div>
                 <button
                   onClick={() => setShowChat(false)}
-                  className="text-atlas-subtle hover:text-atlas-text text-xl"
+                  className="text-edsync-subtle hover:text-edsync-text text-xl"
                 >
                   ×
                 </button>
@@ -2152,10 +2152,10 @@ export default function StudentLesson() {
               <div className="flex-1 overflow-y-auto space-y-3 mb-3 min-h-[200px]">
                 {chatMessages.length === 0 && (
                   <div className="text-center py-6">
-                    <p className="text-atlas-subtle text-sm">
+                    <p className="text-edsync-subtle text-sm">
                       I help you think, not just give answers.
                     </p>
-                    <p className="text-xs text-atlas-subtle mt-1">
+                    <p className="text-xs text-edsync-subtle mt-1">
                       Ask me anything about this lesson!
                     </p>
                   </div>
@@ -2170,7 +2170,7 @@ export default function StudentLesson() {
                     }
                   >
                     {msg.role === "assistant" && (
-                      <p className="text-xs text-atlas-blue font-medium mb-1">
+                      <p className="text-xs text-edsync-blue font-medium mb-1">
                         Socratic
                       </p>
                     )}
@@ -2188,13 +2188,13 @@ export default function StudentLesson() {
                 )}
                 <div ref={chatEndRef} />
               </div>
-              <div className="flex gap-2 pt-2 border-t border-atlas-border">
+              <div className="flex gap-2 pt-2 border-t border-edsync-border">
                 <input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && sendSocratic()}
                   placeholder="What are you stuck on?"
-                  className="atlas-input flex-1 py-2 text-sm"
+                  className="edsync-input flex-1 py-2 text-sm"
                 />
                 <button
                   onClick={sendSocratic}
