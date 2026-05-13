@@ -2,12 +2,24 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 
+type GradebookScoreRow = {
+  category_id: string | null;
+  percent: number | null;
+  status: string;
+};
+
+type TeacherScoreRow = GradebookScoreRow & {
+  student_id: string;
+  full_name: string | null;
+  email: string;
+};
+
 function percent(pointsEarned: number, pointsPossible: number) {
   return pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 10000) / 100 : null;
 }
 
 function weightedAverage(
-  scores: Array<{ category_id: string | null; percent: number | null; status: string }>,
+  scores: GradebookScoreRow[],
   categories: Array<{ id: string; weight: number }>,
 ) {
   const byCategory = new Map(categories.map((category) => [category.id, Number(category.weight || 0)]));
@@ -21,8 +33,8 @@ function weightedAverage(
 
   let weightedTotal = 0;
   let weightTotal = 0;
-  for (const [categoryId, values] of grouped.entries()) {
-    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  for (const [categoryId, values] of Array.from(grouped.entries())) {
+    const average = values.reduce((sum: number, value: number) => sum + value, 0) / values.length;
     const weight = byCategory.get(categoryId) ?? 1;
     weightedTotal += average * weight;
     weightTotal += weight;
@@ -39,7 +51,7 @@ export async function GET(request: Request) {
   const classId = params.get("classId");
 
   if (user.user_metadata.role === "student") {
-    const scores = await d1Query(
+    const scores = await d1Query<GradebookScoreRow>(
       `SELECT gs.*, gc.name AS category_name
          FROM gradebook_scores gs
          LEFT JOIN gradebook_categories gc ON gc.id = gs.category_id
@@ -48,7 +60,7 @@ export async function GET(request: Request) {
       [user.id],
     );
     return NextResponse.json({
-      data: { scores, overall: weightedAverage(scores as any, []) },
+      data: { scores, overall: weightedAverage(scores, []) },
       error: null,
     });
   }
@@ -68,7 +80,7 @@ export async function GET(request: Request) {
   );
 
   const scoreParams = user.user_metadata.role === "admin" ? [] : [user.id];
-  const scores = await d1Query<any>(
+  const scores = await d1Query<TeacherScoreRow>(
     `SELECT gs.*, p.full_name, p.email, gc.name AS category_name
        FROM gradebook_scores gs
        JOIN profiles p ON p.id = gs.student_id
@@ -79,7 +91,10 @@ export async function GET(request: Request) {
     classId ? [...scoreParams, classId] : scoreParams,
   );
 
-  const byStudent = new Map<string, { studentId: string; name: string; email: string; overall: number | null; scores: any[] }>();
+  const byStudent = new Map<
+    string,
+    { studentId: string; name: string; email: string; overall: number | null; scores: TeacherScoreRow[] }
+  >();
   for (const score of scores) {
     const existing = byStudent.get(score.student_id) ?? {
       studentId: score.student_id,
