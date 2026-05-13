@@ -5,6 +5,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { MetricTile } from "@/components/WorkspacePrimitives";
+import OrganizationContextBanner from "@/components/OrganizationContextBanner";
 import type {
   LearningGoal,
   LearningReflection,
@@ -280,6 +281,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
+      <OrganizationContextBanner />
       <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
         <section className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-6">
           <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
