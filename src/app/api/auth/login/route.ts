@@ -40,11 +40,14 @@ export async function POST(request: Request) {
     email: string;
     password_hash: string;
     role: "teacher" | "student";
+    is_admin: number | null;
     full_name: string | null;
   }>(
-    `SELECT u.id, u.email, u.password_hash, p.role, p.full_name
+    `SELECT u.id, u.email, u.password_hash, p.role, p.full_name,
+            CASE WHEN au.user_id IS NULL THEN 0 ELSE 1 END AS is_admin
        FROM auth_users u
        JOIN profiles p ON p.id = u.id
+       LEFT JOIN admin_users au ON au.user_id = u.id
       WHERE lower(u.email) = lower(?)
       LIMIT 1`,
     [normalizedEmail],
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
   const user: SessionUser = {
     id: account.id,
     email: account.email,
-    user_metadata: { role: account.role, full_name: account.full_name },
+    user_metadata: { role: account.is_admin ? "admin" : account.role, full_name: account.full_name },
   };
   const session = await createSession(user);
   const response = NextResponse.json({
@@ -76,6 +79,6 @@ export async function POST(request: Request) {
     error: null,
   });
 
-  setSessionCookies(response, session.token, account.role, session.expires);
+  setSessionCookies(response, session.token, user.user_metadata.role, session.expires);
   return response;
 }
