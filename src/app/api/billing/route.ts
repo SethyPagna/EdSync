@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { createCheckout } from "@/lib/billing";
 import { d1Query } from "@/lib/db/d1";
+import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import { resolveTenantContext } from "@/lib/tenancy";
@@ -10,7 +11,7 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
-  const [products, prices, entitlements] = await Promise.all([
+  const [productRows, priceRows, entitlementRows] = await Promise.all([
     d1Query("SELECT * FROM billing_products WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]),
     d1Query("SELECT * FROM billing_prices WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]),
     d1Query("SELECT * FROM entitlements WHERE tenant_id = ? AND (? = 'admin' OR user_id = ?) ORDER BY updated_at DESC LIMIT 100", [
@@ -19,13 +20,17 @@ export async function GET() {
       user.id,
     ]),
   ]);
-  const [portals, links] = await Promise.all([
+  const [portalRows, links] = await Promise.all([
     d1Query("SELECT * FROM tenant_portals WHERE tenant_id = ? ORDER BY is_default DESC, name", [context.tenant.id]),
     d1Query(
       "SELECT portal_id, object_id FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products'",
       [context.tenant.id],
     ),
   ]);
+  const products = productRows.map((row) => deserializeRow("billing_products", row));
+  const prices = priceRows.map((row) => deserializeRow("billing_prices", row));
+  const entitlements = entitlementRows.map((row) => deserializeRow("entitlements", row));
+  const portals = portalRows.map((row) => deserializeRow("tenant_portals", row));
   return NextResponse.json({ data: { products, prices, entitlements, portals, links, context }, error: null });
 }
 
@@ -34,7 +39,15 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
   const body = (await request.json()) as {
-    action?: "create_product" | "create_price" | "checkout" | "update_catalog";
+    action?:
+      | "create_product"
+      | "create_price"
+      | "checkout"
+      | "update_catalog"
+      | "update_product"
+      | "delete_product"
+      | "update_price"
+      | "delete_price";
     title?: string;
     description?: string | null;
     productType?: string;
@@ -44,6 +57,7 @@ export async function POST(request: Request) {
     amountCents?: number;
     currency?: string;
     billingInterval?: "one_time" | "month" | "year" | "invoice";
+    active?: boolean;
     successUrl?: string;
     cancelUrl?: string;
     metadata?: Record<string, unknown>;
@@ -80,7 +94,60 @@ export async function POST(request: Request) {
          ON CONFLICT(object_table, object_id) DO UPDATE SET portal_id = excluded.portal_id`,
         [crypto.randomUUID(), context.tenant.id, body.portalId, body.productId],
       );
+    } else if (body.portalId === null) {
+      await d1Query(
+        "DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?",
+        [context.tenant.id, body.productId],
+      );
     }
+    return NextResponse.json({ data: { id: body.productId }, error: null });
+  }
+
+  if (body.action === "update_product") {
+    if (!body.productId || !body.title?.trim()) {
+      return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
+    }
+    const metadata = sanitizeCatalogMetadata(body.metadata);
+    const status = body.status === "active" || body.status === "archived" || body.status === "draft" ? body.status : "draft";
+    await d1Query(
+      `UPDATE billing_products
+       SET title = ?, description = ?, product_type = ?, course_id = ?, status = ?, metadata = ?, updated_at = datetime('now')
+       WHERE id = ? AND tenant_id = ?`,
+      [
+        body.title.trim(),
+        body.description ?? null,
+        ["course", "bundle", "membership", "subscription"].includes(body.productType || "") ? body.productType : "course",
+        body.courseId ?? null,
+        status,
+        metadata,
+        body.productId,
+        context.tenant.id,
+      ],
+    );
+    if (body.portalId) {
+      await d1Query(
+        `INSERT INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
+         VALUES (?, ?, ?, 'billing_products', ?, datetime('now'))
+         ON CONFLICT(object_table, object_id) DO UPDATE SET portal_id = excluded.portal_id`,
+        [crypto.randomUUID(), context.tenant.id, body.portalId, body.productId],
+      );
+    } else {
+      await d1Query(
+        "DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?",
+        [context.tenant.id, body.productId],
+      );
+    }
+    return NextResponse.json({ data: { id: body.productId }, error: null });
+  }
+
+  if (body.action === "delete_product") {
+    if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
+    await d1Query("DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?", [
+      context.tenant.id,
+      body.productId,
+    ]);
+    await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND product_id = ?", [context.tenant.id, body.productId]);
+    await d1Query("DELETE FROM billing_products WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.productId]);
     return NextResponse.json({ data: { id: body.productId }, error: null });
   }
 
@@ -104,6 +171,33 @@ export async function POST(request: Request) {
       ],
     );
     return NextResponse.json({ data: { id }, error: null });
+  }
+
+  if (body.action === "update_price") {
+    if (!body.priceId || !body.productId || body.amountCents === undefined) {
+      return NextResponse.json({ data: null, error: "Price, product, and amount are required." }, { status: 400 });
+    }
+    await d1Query(
+      `UPDATE billing_prices
+       SET product_id = ?, currency = ?, amount_cents = ?, billing_interval = ?, active = ?, updated_at = datetime('now')
+       WHERE id = ? AND tenant_id = ?`,
+      [
+        body.productId,
+        (body.currency || "usd").toLowerCase(),
+        Math.max(0, Number(body.amountCents)),
+        body.billingInterval || "one_time",
+        body.active === false ? 0 : 1,
+        body.priceId,
+        context.tenant.id,
+      ],
+    );
+    return NextResponse.json({ data: { id: body.priceId }, error: null });
+  }
+
+  if (body.action === "delete_price") {
+    if (!body.priceId) return NextResponse.json({ data: null, error: "Price is required." }, { status: 400 });
+    await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.priceId]);
+    return NextResponse.json({ data: { id: body.priceId }, error: null });
   }
 
   if (!body.title) return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
