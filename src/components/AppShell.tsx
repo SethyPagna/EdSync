@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import NotificationMenu from "@/components/NotificationMenu";
-import type { Profile } from "@/types";
+import type { Profile, UserPreferences } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
   BarChart3,
@@ -116,7 +116,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const next = !darkMode;
     setDarkMode(next);
     document.documentElement.classList.toggle("dark", next);
-    const theme = next ? "dark" : "light";
+    const theme: UserPreferences["theme"] = next ? "dark" : "light";
     window.localStorage.setItem("edsync-theme", theme);
     if (profile) {
       const preferences = { ...(profile.preferences ?? { text_size: "medium" }), theme };
