@@ -21,7 +21,9 @@
     "CLOUDFLARE_D1_DATABASE_NAME": "edsync-dev-d1",
     "CLOUDFLARE_D1_DATABASE_ID": "54bbff25-6efb-4210-8c3a-e9ac0e2a0a98",
     "R2_BUCKET": "edsync-assets-dev",
-    "R2_PUBLIC_BASE_URL": "",
+    "R2_PUBLIC_BASE_URL": "https://pub-648d4acbbaac4a3e96a5dea072706010.r2.dev",
+    "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-648d4acbbaac4a3e96a5dea072706010.r2.dev",
+    "NEXT_PUBLIC_APP_URL": "https://edsync-app.learn-learning-app.workers.dev",
     "CLOUDFLARE_QUEUE_NAME": "edsync-automation-dev",
     "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-dev",
     "CLOUDFLARE_PAGES_PROJECT": "edsync"
@@ -73,7 +75,9 @@
         "CLOUDFLARE_D1_DATABASE_NAME": "edsync-preview-d1",
         "CLOUDFLARE_D1_DATABASE_ID": "6ae1887c-2efb-4199-89c2-2d68ef7b3ce2",
         "R2_BUCKET": "edsync-assets-preview",
-        "R2_PUBLIC_BASE_URL": "",
+        "R2_PUBLIC_BASE_URL": "https://pub-83c176f255cf44ada09ff54097705245.r2.dev",
+        "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-83c176f255cf44ada09ff54097705245.r2.dev",
+        "NEXT_PUBLIC_APP_URL": "https://edsync-app-preview.learn-learning-app.workers.dev",
         "CLOUDFLARE_QUEUE_NAME": "edsync-automation-preview",
         "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-preview",
         "CLOUDFLARE_PAGES_PROJECT": "edsync"
@@ -125,7 +129,9 @@
         "CLOUDFLARE_D1_DATABASE_NAME": "edsync-prod-d1",
         "CLOUDFLARE_D1_DATABASE_ID": "cfa252cc-750f-4aaa-8e3a-624cbe56e6bd",
         "R2_BUCKET": "edsync-assets-prod",
-        "R2_PUBLIC_BASE_URL": "",
+        "R2_PUBLIC_BASE_URL": "https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev",
+        "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev",
+        "NEXT_PUBLIC_APP_URL": "https://edsync-app-production.learn-learning-app.workers.dev",
         "CLOUDFLARE_QUEUE_NAME": "edsync-automation-prod",
         "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-prod",
         "CLOUDFLARE_PAGES_PROJECT": "edsync"
