@@ -4,6 +4,29 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building2, Check, Edit3, Globe2, Home, MoreHorizontal, Save, Trash2, X } from "lucide-react";
 import { ActionMenu, GuidePanel } from "@/components/WorkspacePrimitives";
+import type { Tenant, TenantPortal } from "@/types";
+
+type PortalCatalogSettings = {
+  enabled?: boolean;
+  featuredOnly?: boolean;
+};
+
+type PortalRecord = TenantPortal & {
+  catalog_settings: PortalCatalogSettings;
+};
+
+type DomainRecord = {
+  id: string;
+  portal_id: string;
+  hostname: string;
+  status: "pending" | "active" | "failed";
+};
+
+type PortalsPayload = {
+  portals: PortalRecord[];
+  domains: DomainRecord[];
+  context: { tenant: Tenant; portal: TenantPortal | null };
+};
 
 type PortalDraft = {
   name: string;
@@ -27,11 +50,11 @@ function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function settingsOf(portal: any) {
+function settingsOf(portal: PortalRecord): PortalCatalogSettings {
   return typeof portal?.catalog_settings === "object" && portal.catalog_settings ? portal.catalog_settings : {};
 }
 
-function draftFrom(portal: any): PortalDraft {
+function draftFrom(portal: PortalRecord): PortalDraft {
   const settings = settingsOf(portal);
   return {
     name: portal.name ?? "",
@@ -44,7 +67,7 @@ function draftFrom(portal: any): PortalDraft {
 }
 
 export default function AdminPortalsPage() {
-  const [payload, setPayload] = useState<any>(null);
+  const [payload, setPayload] = useState<PortalsPayload | null>(null);
   const [form, setForm] = useState<PortalDraft>(emptyPortal);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PortalDraft>(emptyPortal);
@@ -54,14 +77,14 @@ export default function AdminPortalsPage() {
   const load = () =>
     fetch("/api/portals")
       .then((res) => res.json())
-      .then((json) => setPayload(json.data));
+      .then((json: { data: PortalsPayload | null }) => setPayload(json.data));
 
   useEffect(() => {
     load();
   }, []);
 
   const domainsByPortal = useMemo(() => {
-    const grouped = new Map<string, any[]>();
+    const grouped = new Map<string, DomainRecord[]>();
     for (const domain of payload?.domains ?? []) {
       const list = grouped.get(domain.portal_id) ?? [];
       list.push(domain);
@@ -98,12 +121,12 @@ export default function AdminPortalsPage() {
     if (ok) setForm(emptyPortal);
   };
 
-  const startEdit = (portal: any) => {
+  const startEdit = (portal: PortalRecord) => {
     setEditingId(portal.id);
     setDraft(draftFrom(portal));
   };
 
-  const savePortal = async (portal: any) => {
+  const savePortal = async (portal: PortalRecord) => {
     const ok = await run(
       {
         action: "update",
@@ -117,15 +140,15 @@ export default function AdminPortalsPage() {
     if (ok) setEditingId(null);
   };
 
-  const togglePublic = async (portal: any) => {
+  const togglePublic = async (portal: PortalRecord) => {
     await run({ action: "toggle_public", id: portal.id }, portal.audience === "public" ? "Portal moved to internal." : "Portal is now public.");
   };
 
-  const makeDefault = async (portal: any) => {
+  const makeDefault = async (portal: PortalRecord) => {
     await run({ action: "make_default", id: portal.id }, "Default portal updated.");
   };
 
-  const deletePortal = async (portal: any) => {
+  const deletePortal = async (portal: PortalRecord) => {
     if (portal.is_default) {
       setMessage("Default portal cannot be deleted. Make another portal default first.");
       return;
@@ -194,7 +217,7 @@ export default function AdminPortalsPage() {
           <p className="text-sm text-edsync-subtle">Edit, toggle, delete, and open public organization portals from one place.</p>
         </div>
         <div className="divide-y divide-edsync-border">
-          {(payload?.portals ?? []).map((portal: any) => {
+          {(payload?.portals ?? []).map((portal) => {
             const editing = editingId === portal.id;
             const settings = settingsOf(portal);
             const domains = domainsByPortal.get(portal.id) ?? [];
@@ -216,7 +239,7 @@ export default function AdminPortalsPage() {
                           <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{portal.audience}</span>
                           {settings.enabled === false && <span className="badge bg-slate-100 text-slate-500">Catalog off</span>}
                         </div>
-                        <p className="mt-1 text-edsync-subtle">/{portal.slug} · {portal.domain || "No custom domain"}</p>
+                        <p className="mt-1 text-edsync-subtle">/{portal.slug} / {portal.domain || "No custom domain"}</p>
                       </>
                     )}
                   </div>
