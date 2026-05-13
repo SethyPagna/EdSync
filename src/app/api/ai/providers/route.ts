@@ -11,6 +11,8 @@ import {
 } from "@/lib/ai/providers";
 import { DEFAULT_TENANT_ID } from "@/lib/tenancy";
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 type ProviderAction = "toggle" | "reset_status";
 
 type AIRunRow = {
