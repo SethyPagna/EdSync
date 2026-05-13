@@ -12,6 +12,7 @@
     "deploy:vercel": "node scripts/deploy-vercel.mjs",
     "db:migrate": "node scripts/d1-migrate.mjs",
     "db:seed": "node scripts/d1-migrate.mjs --seed",
+    "security:cloudflare": "node scripts/cloudflare-security.mjs",
     "db:local": "docker compose -f docker-compose.local.yml up -d",
     "db:local:down": "docker compose -f docker-compose.local.yml down"
   },
