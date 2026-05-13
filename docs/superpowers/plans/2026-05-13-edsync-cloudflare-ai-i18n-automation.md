@@ -14,8 +14,8 @@
   `edsync-assets-dev`, `edsync-assets-preview`, and `edsync-assets-prod`.
 - Auth: custom D1-backed users, password hashes, sessions, role cookies, and
   protected teacher/student routing.
-- AI: OpenRouter-compatible calls routed through Cloudflare AI Gateway when
-  `CLOUDFLARE_AI_GATEWAY_URL` is set, with audit rows in `ai_runs`.
+- AI: encrypted D1 provider configs for Groq, Google AI, Mistral AI, Cerebras,
+  and Cohere embeddings, with smart fallback and audit rows in `ai_runs`.
 - Automation: Cloudflare Queue/Worker profile for long-running learning jobs.
 
 ## Implementation Checklist
