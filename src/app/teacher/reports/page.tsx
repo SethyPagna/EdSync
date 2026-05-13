@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Lesson } from "@/types";
+import { createClient } from "@/lib/edsync/client";
+import type { Lesson, Profile, StudentProgress } from "@/types";
 import {
   AreaChart,
   Area,
@@ -30,15 +30,15 @@ export default function TeacherReports() {
   const [reports, setReports] = useState<StudentReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLessons, setLoadingLessons] = useState(true);
-  const supabase = createClient();
+  const edsync = createClient();
 
   useEffect(() => {
     const init = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await edsync.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
+      const { data } = await edsync
         .from("lessons")
         .select("*")
         .eq("teacher_id", user.id)
@@ -59,7 +59,7 @@ export default function TeacherReports() {
   const loadReport = async (lessonId: string) => {
     setLoading(true);
 
-    const { data: progressRows } = await supabase
+    const { data: progressRows } = await edsync
       .from("student_progress")
       .select("*")
       .eq("lesson_id", lessonId);
@@ -70,16 +70,21 @@ export default function TeacherReports() {
       return;
     }
 
-    const studentIds = progressRows.map((p) => p.student_id);
+    const progressList: StudentProgress[] = progressRows;
+    const studentIds = progressList.map((p: StudentProgress) => p.student_id);
 
-    const { data: profileRows } = await supabase
+    const { data: profileRows } = await edsync
       .from("profiles")
       .select("id, full_name, email")
       .in("id", studentIds);
 
-    const profileMap = new Map((profileRows || []).map((p) => [p.id, p]));
+    const profileMap = new Map(
+      ((profileRows || []) as Pick<Profile, "id" | "full_name" | "email">[]).map(
+        (p) => [p.id, p],
+      ),
+    );
 
-    const built: StudentReport[] = progressRows.map((p) => {
+    const built: StudentReport[] = progressList.map((p: StudentProgress) => {
       const profile = profileMap.get(p.student_id);
       return {
         id: p.student_id,
@@ -116,7 +121,7 @@ export default function TeacherReports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `atlas_report_${lessonTitle.replace(/\s+/g, "_")}.csv`;
+    a.download = `edsync_report_${lessonTitle.replace(/\s+/g, "_")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -141,10 +146,10 @@ export default function TeacherReports() {
     <div className="p-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display font-bold text-3xl text-atlas-text">
+          <h1 className="font-display font-bold text-3xl text-edsync-text">
             Reports
           </h1>
-          <p className="text-atlas-subtle">
+          <p className="text-edsync-subtle">
             Detailed insights for grading and parent conferences
           </p>
         </div>
@@ -160,16 +165,16 @@ export default function TeacherReports() {
       {/* Lesson selector */}
       <div className="mb-6">
         {loadingLessons ? (
-          <div className="h-10 w-64 bg-atlas-card rounded-xl shimmer" />
+          <div className="h-10 w-64 bg-edsync-card rounded-xl shimmer" />
         ) : lessons.length === 0 ? (
-          <p className="text-atlas-subtle">
+          <p className="text-edsync-subtle">
             No lessons yet. Create a lesson to see reports.
           </p>
         ) : (
           <select
             value={selectedLesson}
             onChange={(e) => setSelectedLesson(e.target.value)}
-            className="atlas-input max-w-sm py-2"
+            className="edsync-input max-w-sm py-2"
           >
             {lessons.map((l) => (
               <option key={l.id} value={l.id}>
@@ -183,15 +188,15 @@ export default function TeacherReports() {
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-atlas-card rounded-2xl shimmer" />
+            <div key={i} className="h-24 bg-edsync-card rounded-2xl shimmer" />
           ))}
         </div>
       ) : reports.length === 0 && selectedLesson ? (
-        <div className="atlas-card text-center py-16">
-          <h3 className="font-display font-bold text-xl text-atlas-text mb-2">
+        <div className="edsync-card text-center py-16">
+          <h3 className="font-display font-bold text-xl text-edsync-text mb-2">
             No student data yet
           </h3>
-          <p className="text-atlas-subtle">
+          <p className="text-edsync-subtle">
             Assign this lesson to a class and wait for students to start working
             on it.
           </p>
@@ -227,28 +232,28 @@ export default function TeacherReports() {
                   avgScore !== null && avgScore >= 70 ? "emerald" : "amber",
               },
             ].map((s, i) => (
-              <div key={i} className="atlas-card">
-                <span className="text-xs font-semibold tracking-wide text-atlas-subtle block mb-2">
+              <div key={i} className="edsync-card">
+                <span className="text-xs font-semibold tracking-wide text-edsync-subtle block mb-2">
                   {s.icon}
                 </span>
-                <p className="font-display font-bold text-2xl text-atlas-text">
+                <p className="font-display font-bold text-2xl text-edsync-text">
                   {s.value}
                 </p>
-                <p className="text-atlas-subtle text-xs mt-1">{s.label}</p>
+                <p className="text-edsync-subtle text-xs mt-1">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Student Report Table */}
-          <div className="atlas-card">
-            <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+          <div className="edsync-card">
+            <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
               {" "}
               Individual Student Report
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead>
-                  <tr className="border-b border-atlas-border">
+                  <tr className="border-b border-edsync-border">
                     {[
                       "Student",
                       "Status",
@@ -260,7 +265,7 @@ export default function TeacherReports() {
                     ].map((h) => (
                       <th
                         key={h}
-                        className="text-left text-xs text-atlas-subtle font-medium pb-3 pr-4"
+                        className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4"
                       >
                         {h}
                       </th>
@@ -271,22 +276,22 @@ export default function TeacherReports() {
                   {reports.map((r) => (
                     <tr
                       key={r.id}
-                      className="border-b border-atlas-border/50 hover:bg-atlas-surface/50"
+                      className="border-b border-edsync-border/50 hover:bg-edsync-surface/50"
                     >
                       <td className="py-3 pr-4">
-                        <p className="font-medium text-atlas-text text-sm">
+                        <p className="font-medium text-edsync-text text-sm">
                           {r.name}
                         </p>
-                        <p className="text-xs text-atlas-subtle">{r.email}</p>
+                        <p className="text-xs text-edsync-subtle">{r.email}</p>
                       </td>
                       <td className="py-3 pr-4">
                         <span
                           className={`badge text-xs ${
                             r.status === "completed"
-                              ? "bg-atlas-emerald/10 text-atlas-emerald border-atlas-emerald/20"
+                              ? "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20"
                               : r.status === "in_progress"
-                                ? "bg-atlas-blue/10 text-atlas-blue border-atlas-blue/20"
-                                : "bg-atlas-muted/30 text-atlas-subtle"
+                                ? "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20"
+                                : "bg-edsync-muted/30 text-edsync-subtle"
                           }`}
                         >
                           {r.status === "not_started"
@@ -299,30 +304,30 @@ export default function TeacherReports() {
                       <td className="py-3 pr-4">
                         {r.score !== null ? (
                           <span
-                            className={`font-bold text-sm ${r.score >= 80 ? "text-atlas-emerald" : r.score >= 60 ? "text-atlas-amber" : "text-atlas-red"}`}
+                            className={`font-bold text-sm ${r.score >= 80 ? "text-edsync-emerald" : r.score >= 60 ? "text-edsync-amber" : "text-edsync-red"}`}
                           >
                             {Math.round(r.score)}%
                           </span>
                         ) : (
-                          <span className="text-atlas-subtle text-xs">—</span>
+                          <span className="text-edsync-subtle text-xs">—</span>
                         )}
                       </td>
-                      <td className="py-3 pr-4 text-sm text-atlas-subtle">
+                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {r.diagnosticScore !== null
                           ? `${Math.round(r.diagnosticScore)}%`
                           : "—"}
                       </td>
-                      <td className="py-3 pr-4 text-sm text-atlas-subtle">
+                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {r.timeSpent > 0 ? Math.round(r.timeSpent / 60) : "—"}
                       </td>
-                      <td className="py-3 pr-4 text-sm text-atlas-subtle">
+                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {r.sectionsCompleted}
                       </td>
-                      <td className="py-3 pr-4 text-sm text-atlas-subtle">
+                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {r.knowledgeGaps.length > 0 ? (
                           r.knowledgeGaps.join(", ")
                         ) : (
-                          <span className="text-atlas-emerald/70">None</span>
+                          <span className="text-edsync-emerald/70">None</span>
                         )}
                       </td>
                     </tr>
