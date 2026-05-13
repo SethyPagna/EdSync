@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
 import { MetricTile } from "@/components/WorkspacePrimitives";
+import OrganizationContextBanner from "@/components/OrganizationContextBanner";
 import type { Class, Lesson, Profile, TeacherAlert } from "@/types";
 import { formatRelativeTime, getAlertColor, getStatusBadge } from "@/lib/utils";
 import {
@@ -144,6 +145,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
+      <OrganizationContextBanner />
       <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
         <div className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-6">
           <div className="mb-8 flex items-center justify-between gap-4">
