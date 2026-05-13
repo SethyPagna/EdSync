@@ -4,7 +4,7 @@ import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected =
-    pathname.startsWith("/teacher") || pathname.startsWith("/student");
+    pathname.startsWith("/admin") || pathname.startsWith("/teacher") || pathname.startsWith("/student");
   const isAuthPage =
     pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup");
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
@@ -19,8 +19,23 @@ export function middleware(request: NextRequest) {
 
   if (hasSession && isAuthPage) {
     const url = request.nextUrl.clone();
+    url.pathname =
+      role === "admin"
+        ? "/admin/dashboard"
+        : role === "teacher"
+          ? "/teacher/dashboard"
+          : "/student/dashboard";
+    return withSecurityHeaders(NextResponse.redirect(url));
+  }
+
+  if (hasSession && role !== "admin" && pathname.startsWith("/admin")) {
+    const url = request.nextUrl.clone();
     url.pathname = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
     return withSecurityHeaders(NextResponse.redirect(url));
+  }
+
+  if (hasSession && role === "admin" && (pathname.startsWith("/teacher") || pathname.startsWith("/student"))) {
+    return withSecurityHeaders(NextResponse.next());
   }
 
   if (hasSession && role === "teacher" && pathname.startsWith("/student")) {
