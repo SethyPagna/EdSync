@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm run build",
     "deploy:vercel": "node scripts/deploy-vercel.mjs",
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
     "db:migrate": "node scripts/d1-migrate.mjs",
     "db:seed": "node scripts/d1-migrate.mjs --seed",
     "admin:create": "node scripts/create-admin.mjs",
