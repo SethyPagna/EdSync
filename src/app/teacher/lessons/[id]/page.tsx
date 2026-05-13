@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type {
   Lesson,
   LessonSection,
@@ -66,16 +66,16 @@ function RichTextEditor({
         action();
       }}
       title={title || label}
-      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${active ? "bg-atlas-blue text-white" : "text-atlas-subtle hover:text-atlas-text hover:bg-atlas-muted/30"}`}
+      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${active ? "bg-edsync-blue text-white" : "text-edsync-subtle hover:text-edsync-text hover:bg-edsync-muted/30"}`}
     >
       {label}
     </button>
   );
 
   return (
-    <div className="border border-atlas-border rounded-xl overflow-hidden">
+    <div className="border border-edsync-border rounded-xl overflow-hidden">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-atlas-surface border-b border-atlas-border">
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-edsync-surface border-b border-edsync-border">
         {/* Format */}
         <select
           onMouseDown={(e) => e.preventDefault()}
@@ -85,7 +85,7 @@ function RichTextEditor({
             onChange(ref.current?.innerHTML || "");
             e.target.value = "p";
           }}
-          className="text-xs bg-atlas-card border border-atlas-border rounded px-1 py-1 text-atlas-subtle mr-1"
+          className="text-xs bg-edsync-card border border-edsync-border rounded px-1 py-1 text-edsync-subtle mr-1"
         >
           <option value="p">Paragraph</option>
           <option value="h1">Heading 1</option>
@@ -101,7 +101,7 @@ function RichTextEditor({
             exec("fontSize", e.target.value);
             e.target.value = "3";
           }}
-          className="text-xs bg-atlas-card border border-atlas-border rounded px-1 py-1 text-atlas-subtle mr-1"
+          className="text-xs bg-edsync-card border border-edsync-border rounded px-1 py-1 text-edsync-subtle mr-1"
         >
           <option value="1">Tiny</option>
           <option value="2">Small</option>
@@ -111,7 +111,7 @@ function RichTextEditor({
           <option value="6">XXL</option>
         </select>
 
-        <div className="w-px h-5 bg-atlas-border mx-1" />
+        <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Text style */}
         {toolbarBtn("B", () => exec("bold"), "Bold", false)}
@@ -119,14 +119,14 @@ function RichTextEditor({
         {toolbarBtn("U", () => exec("underline"), "Underline", false)}
         {toolbarBtn("S", () => exec("strikeThrough"), "Strikethrough", false)}
 
-        <div className="w-px h-5 bg-atlas-border mx-1" />
+        <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Alignment */}
         {toolbarBtn("≡L", () => exec("justifyLeft"), "Align Left")}
         {toolbarBtn("≡C", () => exec("justifyCenter"), "Center")}
         {toolbarBtn("≡R", () => exec("justifyRight"), "Align Right")}
 
-        <div className="w-px h-5 bg-atlas-border mx-1" />
+        <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Lists */}
         {toolbarBtn("• List", () => exec("insertUnorderedList"), "Bullet List")}
@@ -138,13 +138,13 @@ function RichTextEditor({
         {toolbarBtn("→", () => exec("indent"), "Indent")}
         {toolbarBtn("←", () => exec("outdent"), "Outdent")}
 
-        <div className="w-px h-5 bg-atlas-border mx-1" />
+        <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Colors */}
         <button
           onMouseDown={(e) => e.preventDefault()}
           title="Text color"
-          className="text-xs text-atlas-subtle hover:text-atlas-text px-2 py-1 rounded hover:bg-atlas-muted/30 flex items-center gap-1"
+          className="text-xs text-edsync-subtle hover:text-edsync-text px-2 py-1 rounded hover:bg-edsync-muted/30 flex items-center gap-1"
         >
           <input
             type="color"
@@ -154,7 +154,7 @@ function RichTextEditor({
           <span>Color</span>
         </button>
 
-        <div className="w-px h-5 bg-atlas-border mx-1" />
+        <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Misc */}
         {toolbarBtn(
@@ -179,7 +179,7 @@ function RichTextEditor({
         contentEditable
         suppressContentEditableWarning
         data-placeholder={placeholder}
-        className="rich-editor p-4 min-h-[260px] bg-atlas-card focus:outline-none text-sm"
+        className="rich-editor p-4 min-h-[260px] bg-edsync-card focus:outline-none text-sm"
         onInput={() => onChange(ref.current?.innerHTML || "")}
         onPaste={(e) => {
           // Paste as plain HTML but strip scripts
@@ -196,7 +196,7 @@ function RichTextEditor({
       />
 
       {/* Status bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-atlas-surface border-t border-atlas-border text-xs text-atlas-subtle">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-edsync-surface border-t border-edsync-border text-xs text-edsync-subtle">
         <span>Rich text editor — use toolbar or Markdown shortcuts</span>
         <span>{(ref.current?.innerText || "").length} chars</span>
       </div>
@@ -274,7 +274,7 @@ function QuestionBuilder({
   };
 
   return (
-    <div className="atlas-card border border-atlas-border space-y-4">
+    <div className="edsync-card border border-edsync-border space-y-4">
       {/* Header row */}
       <div className="flex items-center gap-3 flex-wrap">
         <select
@@ -297,7 +297,7 @@ function QuestionBuilder({
                     ];
             set({ question_type: t, options: opts });
           }}
-          className="atlas-input py-1.5 text-sm w-52"
+          className="edsync-input py-1.5 text-sm w-52"
         >
           {(Object.keys(typeLabel) as QType[]).map((k) => (
             <option key={k} value={k}>
@@ -311,7 +311,7 @@ function QuestionBuilder({
           onChange={(e) =>
             set({ difficulty: e.target.value as QDraft["difficulty"] })
           }
-          className="atlas-input py-1.5 text-sm w-36"
+          className="edsync-input py-1.5 text-sm w-36"
         >
           <option value="beginner">Beginner</option>
           <option value="intermediate">Intermediate</option>
@@ -329,9 +329,9 @@ function QuestionBuilder({
                   type="checkbox"
                   checked={!!q[k]}
                   onChange={(e) => set({ [k]: e.target.checked } as any)}
-                  className="rounded border-atlas-border"
+                  className="rounded border-edsync-border"
                 />
-                <span className="text-atlas-subtle">
+                <span className="text-edsync-subtle">
                   {k === "is_diagnostic"
                     ? "Pre-check"
                     : k === "is_micro_check"
@@ -345,7 +345,7 @@ function QuestionBuilder({
 
         <button
           onClick={onDelete}
-          className="text-atlas-subtle hover:text-atlas-red text-lg leading-none ml-2"
+          className="text-edsync-subtle hover:text-edsync-red text-lg leading-none ml-2"
         >
           ×
         </button>
@@ -353,14 +353,14 @@ function QuestionBuilder({
 
       {/* Question text */}
       <div>
-        <label className="block text-xs text-atlas-subtle mb-1">
+        <label className="block text-xs text-edsync-subtle mb-1">
           Question *
         </label>
         <textarea
           value={q.question_text}
           onChange={(e) => set({ question_text: e.target.value })}
           rows={2}
-          className="atlas-textarea text-sm"
+          className="edsync-textarea text-sm"
           placeholder="Enter your question..."
         />
       </div>
@@ -369,7 +369,7 @@ function QuestionBuilder({
       {(q.question_type === "multiple_choice" ||
         q.question_type === "true_false") && (
         <div>
-          <label className="block text-xs text-atlas-subtle mb-2">
+          <label className="block text-xs text-edsync-subtle mb-2">
             Options —{" "}
             {q.question_type === "true_false"
               ? "mark the correct one"
@@ -383,12 +383,12 @@ function QuestionBuilder({
                   name={`q-correct-${q.id || "new"}`}
                   checked={opt.is_correct}
                   onChange={() => setOption(i, "is_correct", true)}
-                  className="flex-shrink-0 accent-atlas-emerald"
+                  className="flex-shrink-0 accent-edsync-emerald"
                   title="Mark as correct"
                 />
                 {q.question_type === "true_false" ? (
                   <span
-                    className={`flex-1 py-2 px-3 rounded-xl border text-sm font-medium ${opt.is_correct ? "border-atlas-emerald/50 bg-atlas-emerald/10 text-atlas-emerald" : "border-atlas-border text-atlas-subtle"}`}
+                    className={`flex-1 py-2 px-3 rounded-xl border text-sm font-medium ${opt.is_correct ? "border-edsync-emerald/50 bg-edsync-emerald/10 text-edsync-emerald" : "border-edsync-border text-edsync-subtle"}`}
                   >
                     {opt.text}
                   </span>
@@ -396,7 +396,7 @@ function QuestionBuilder({
                   <input
                     value={opt.text}
                     onChange={(e) => setOption(i, "text", e.target.value)}
-                    className={`atlas-input py-2 flex-1 text-sm ${opt.is_correct ? "border-atlas-emerald/50 bg-atlas-emerald/5" : ""}`}
+                    className={`edsync-input py-2 flex-1 text-sm ${opt.is_correct ? "border-edsync-emerald/50 bg-edsync-emerald/5" : ""}`}
                     placeholder={`Option ${opt.id.toUpperCase()}`}
                   />
                 )}
@@ -406,7 +406,7 @@ function QuestionBuilder({
                       onClick={() =>
                         set({ options: q.options.filter((_, j) => j !== i) })
                       }
-                      className="text-atlas-subtle hover:text-atlas-red text-sm"
+                      className="text-edsync-subtle hover:text-edsync-red text-sm"
                     >
                       ×
                     </button>
@@ -427,7 +427,7 @@ function QuestionBuilder({
                     ],
                   })
                 }
-                className="text-atlas-blue text-xs hover:underline"
+                className="text-edsync-blue text-xs hover:underline"
               >
                 + Add option
               </button>
@@ -439,16 +439,16 @@ function QuestionBuilder({
       {/* Fill blank */}
       {q.question_type === "fill_blank" && (
         <div>
-          <label className="block text-xs text-atlas-subtle mb-1">
+          <label className="block text-xs text-edsync-subtle mb-1">
             Correct Answer (exact match, case-insensitive)
           </label>
           <input
             value={q.correct_answer}
             onChange={(e) => set({ correct_answer: e.target.value })}
-            className="atlas-input py-2 text-sm"
+            className="edsync-input py-2 text-sm"
             placeholder="e.g. photosynthesis"
           />
-          <p className="text-xs text-atlas-subtle mt-1">
+          <p className="text-xs text-edsync-subtle mt-1">
             Tip: use underscores in question text for blank: "Plants use ___ to
             make food"
           </p>
@@ -459,7 +459,7 @@ function QuestionBuilder({
       {(q.question_type === "short_answer" ||
         q.question_type === "long_answer") && (
         <div>
-          <label className="block text-xs text-atlas-subtle mb-1">
+          <label className="block text-xs text-edsync-subtle mb-1">
             {q.question_type === "short_answer"
               ? "Expected Answer / Key Points"
               : "Rubric / Grading Criteria"}
@@ -468,7 +468,7 @@ function QuestionBuilder({
             value={q.correct_answer}
             onChange={(e) => set({ correct_answer: e.target.value })}
             rows={q.question_type === "long_answer" ? 4 : 2}
-            className="atlas-textarea text-sm"
+            className="edsync-textarea text-sm"
             placeholder={
               q.question_type === "short_answer"
                 ? "Key points students should mention..."
@@ -480,14 +480,14 @@ function QuestionBuilder({
 
       {/* Explanation */}
       <div>
-        <label className="block text-xs text-atlas-subtle mb-1">
+        <label className="block text-xs text-edsync-subtle mb-1">
           Explanation (shown after student answers)
         </label>
         <textarea
           value={q.explanation}
           onChange={(e) => set({ explanation: e.target.value })}
           rows={2}
-          className="atlas-textarea text-sm"
+          className="edsync-textarea text-sm"
           placeholder="Why is this the correct answer?"
         />
       </div>
@@ -503,12 +503,12 @@ function QuestionBuilder({
 function ImageSectionEditor({
   section,
   onSave,
-  supabase,
+  edsync,
   lessonId,
 }: {
   section: LessonSection;
   onSave: (id: string, u: Partial<LessonSection>) => Promise<void>;
-  supabase: any;
+  edsync: any;
   lessonId: string;
 }) {
   const [caption, setCaption] = useState("");
@@ -529,14 +529,14 @@ function ImageSectionEditor({
     setUploading(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setUploading(false);
       return;
     }
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${lessonId}/${section.id}.${ext}`;
-    const { error } = await supabase.storage
+    const { data, error } = await edsync.storage
       .from("lesson-thumbnails")
       .upload(path, file, { upsert: true });
     if (error) {
@@ -544,10 +544,7 @@ function ImageSectionEditor({
       setUploading(false);
       return;
     }
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("lesson-thumbnails").getPublicUrl(path);
-    setImgUrl(publicUrl);
+    setImgUrl(data?.publicUrl || path);
     setUploading(false);
     toast.success("Image uploaded!");
     if (fileRef.current) fileRef.current.value = "";
@@ -563,14 +560,14 @@ function ImageSectionEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs text-atlas-subtle mb-2">
+        <label className="block text-xs text-edsync-subtle mb-2">
           Image URL
         </label>
         <div className="flex gap-2">
           <input
             value={imgUrl}
             onChange={(e) => setImgUrl(e.target.value)}
-            className="atlas-input py-2 flex-1 text-sm"
+            className="edsync-input py-2 flex-1 text-sm"
             placeholder="https://... or upload below"
           />
           <input
@@ -590,7 +587,7 @@ function ImageSectionEditor({
         </div>
       </div>
       {imgUrl && (
-        <div className="rounded-xl overflow-hidden border border-atlas-border">
+        <div className="rounded-xl overflow-hidden border border-edsync-border">
           <img
             src={imgUrl}
             alt={caption || "Section image"}
@@ -599,13 +596,13 @@ function ImageSectionEditor({
         </div>
       )}
       <div>
-        <label className="block text-xs text-atlas-subtle mb-1">
+        <label className="block text-xs text-edsync-subtle mb-1">
           Caption (optional)
         </label>
         <input
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          className="atlas-input py-2 text-sm"
+          className="edsync-input py-2 text-sm"
           placeholder="Describe this image..."
         />
       </div>
@@ -653,18 +650,18 @@ function VideoSectionEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs text-atlas-subtle mb-1">
+        <label className="block text-xs text-edsync-subtle mb-1">
           Video URL (YouTube, Vimeo, or direct link)
         </label>
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="atlas-input py-2 text-sm"
+          className="edsync-input py-2 text-sm"
           placeholder="https://youtube.com/watch?v=..."
         />
       </div>
       {url && isEmbeddable && (
-        <div className="rounded-xl overflow-hidden border border-atlas-border bg-black aspect-video">
+        <div className="rounded-xl overflow-hidden border border-edsync-border bg-black aspect-video">
           <iframe
             src={embed}
             className="w-full h-full"
@@ -674,20 +671,20 @@ function VideoSectionEditor({
         </div>
       )}
       {url && !isEmbeddable && (
-        <div className="p-4 bg-atlas-surface border border-atlas-border rounded-xl">
-          <p className="text-atlas-subtle text-sm">
+        <div className="p-4 bg-edsync-surface border border-edsync-border rounded-xl">
+          <p className="text-edsync-subtle text-sm">
             Video link set. Preview not available for this URL format.
           </p>
         </div>
       )}
       <div>
-        <label className="block text-xs text-atlas-subtle mb-1">
+        <label className="block text-xs text-edsync-subtle mb-1">
           Caption (optional)
         </label>
         <input
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          className="atlas-input py-2 text-sm"
+          className="edsync-input py-2 text-sm"
           placeholder="Describe this video..."
         />
       </div>
@@ -702,12 +699,12 @@ function VideoSectionEditor({
 function QuizSectionEditor({
   section,
   lessonId,
-  supabase,
+  edsync,
   onSave,
 }: {
   section: LessonSection;
   lessonId: string;
-  supabase: any;
+  edsync: any;
   onSave: (id: string, u: Partial<LessonSection>) => Promise<void>;
 }) {
   const [questions, setQuestions] = useState<QDraft[]>([]);
@@ -715,7 +712,7 @@ function QuizSectionEditor({
   const [title, setTitle] = useState(section.content || "Section Quiz");
 
   useEffect(() => {
-    supabase
+    edsync
       .from("quiz_questions")
       .select("*")
       .eq("lesson_id", lessonId)
@@ -740,7 +737,7 @@ function QuizSectionEditor({
 
       await onSave(section.id, { content: title });
 
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await edsync
         .from("quiz_questions")
         .delete()
         .eq("lesson_id", lessonId)
@@ -771,7 +768,7 @@ function QuizSectionEditor({
         order_index: i,
       }));
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await edsync
         .from("quiz_questions")
         .insert(rows);
       if (insertError) {
@@ -788,13 +785,13 @@ function QuizSectionEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs text-atlas-subtle mb-1">
+        <label className="block text-xs text-edsync-subtle mb-1">
           Quiz title / instructions
         </label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="atlas-input py-2 text-sm"
+          className="edsync-input py-2 text-sm"
           placeholder="e.g. Check your understanding"
         />
       </div>
@@ -868,7 +865,7 @@ function SectionEditor({
   onSave,
   onDelete,
   onCancel,
-  supabase,
+  edsync,
   lessonId,
 }: {
   section: LessonSection;
@@ -876,7 +873,7 @@ function SectionEditor({
   onSave: (id: string, u: Partial<LessonSection>) => Promise<void>;
   onDelete: (id: string) => void;
   onCancel: () => void;
-  supabase: any;
+  edsync: any;
   lessonId: string;
 }) {
   const [title, setTitle] = useState(section.title);
@@ -890,7 +887,7 @@ function SectionEditor({
   const handleTypeChange = async (t: ContentType) => {
     setContentType(t);
     // Save type immediately to DB
-    await supabase
+    await edsync
       .from("lesson_sections")
       .update({ content_type: t, title })
       .eq("id", section.id);
@@ -917,16 +914,16 @@ function SectionEditor({
   };
 
   return (
-    <div className="border-2 border-atlas-blue/40 rounded-2xl overflow-hidden">
+    <div className="border-2 border-edsync-blue/40 rounded-2xl overflow-hidden">
       {/* Section header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-atlas-blue/5 border-b border-atlas-blue/20">
-        <span className="w-7 h-7 rounded-lg bg-atlas-blue text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+      <div className="flex items-center gap-3 px-4 py-3 bg-edsync-blue/5 border-b border-edsync-blue/20">
+        <span className="w-7 h-7 rounded-lg bg-edsync-blue text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
           {index + 1}
         </span>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="atlas-input py-1.5 font-semibold flex-1 text-sm"
+          className="edsync-input py-1.5 font-semibold flex-1 text-sm"
           placeholder="Section title..."
         />
 
@@ -946,7 +943,7 @@ function SectionEditor({
               key={t}
               onClick={() => handleTypeChange(t)}
               title={t}
-              className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${contentType === t ? "bg-atlas-blue text-white" : "bg-atlas-card text-atlas-subtle hover:text-atlas-text border border-atlas-border"}`}
+              className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${contentType === t ? "bg-edsync-blue text-white" : "bg-edsync-card text-edsync-subtle hover:text-edsync-text border border-edsync-border"}`}
             >
               {TYPE_ICONS[t]}
             </button>
@@ -960,10 +957,10 @@ function SectionEditor({
             max={120}
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
-            className="atlas-input py-1.5 w-14 text-xs text-center"
+            className="edsync-input py-1.5 w-14 text-xs text-center"
             title="Duration (minutes)"
           />
-          <span className="text-xs text-atlas-subtle">min</span>
+          <span className="text-xs text-edsync-subtle">min</span>
         </div>
         <button
           onClick={onCancel}
@@ -990,7 +987,7 @@ function SectionEditor({
                 onClick={() => {
                   if (confirm("Delete this section?")) onDelete(section.id);
                 }}
-                className="btn-ghost text-sm py-2 text-atlas-red"
+                className="btn-ghost text-sm py-2 text-edsync-red"
               >
                 Delete
               </button>
@@ -1008,7 +1005,7 @@ function SectionEditor({
                 duration_minutes: duration,
               });
             }}
-            supabase={supabase}
+            edsync={edsync}
             lessonId={lessonId}
           />
         )}
@@ -1029,7 +1026,7 @@ function SectionEditor({
           <QuizSectionEditor
             section={{ ...section, content, content_type: contentType }}
             lessonId={lessonId}
-            supabase={supabase}
+            edsync={edsync}
             onSave={async (id, u) => {
               await onSave(id, {
                 ...u,
@@ -1055,12 +1052,12 @@ function SectionEditor({
           />
         )}
         {contentType !== "text" && contentType !== undefined && (
-          <div className="mt-3 pt-3 border-t border-atlas-border">
+          <div className="mt-3 pt-3 border-t border-edsync-border">
             <button
               onClick={() => {
                 if (confirm("Delete this section?")) onDelete(section.id);
               }}
-              className="btn-ghost text-sm py-2 text-atlas-red"
+              className="btn-ghost text-sm py-2 text-edsync-red"
             >
               Delete Section
             </button>
@@ -1078,7 +1075,7 @@ export default function TeacherLessonDetail() {
   const params = useParams();
   const router = useRouter();
   const lessonId = params.id as string;
-  const supabase = createClient();
+  const edsync = createClient();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [sections, setSections] = useState<LessonSection[]>([]);
@@ -1130,7 +1127,7 @@ export default function TeacherLessonDetail() {
   const loadAll = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
     const [
@@ -1141,29 +1138,29 @@ export default function TeacherLessonDetail() {
       classesRes,
       assignRes,
     ] = await Promise.all([
-      supabase.from("lessons").select("*").eq("id", lessonId).maybeSingle(),
-      supabase
+      edsync.from("lessons").select("*").eq("id", lessonId).maybeSingle(),
+      edsync
         .from("lesson_sections")
         .select("*")
         .eq("lesson_id", lessonId)
         .order("order_index"),
-      supabase
+      edsync
         .from("quiz_questions")
         .select("*")
         .eq("lesson_id", lessonId)
         .order("order_index"),
-      supabase
+      edsync
         .from("glossary_terms")
         .select("*")
         .eq("lesson_id", lessonId)
         .order("created_at"),
-      supabase
+      edsync
         .from("classes")
         .select("*")
         .eq("teacher_id", user.id)
         .eq("is_active", true)
         .order("name"),
-      supabase
+      edsync
         .from("lesson_assignments")
         .select("class_id, created_at, classes(name)")
         .eq("lesson_id", lessonId)
@@ -1217,7 +1214,7 @@ export default function TeacherLessonDetail() {
       pacing_slider: pacing,
       scaffolding_slider: scaffolding,
     };
-    const { error } = await supabase
+    const { error } = await edsync
       .from("lessons")
       .update(updates)
       .eq("id", lessonId);
@@ -1231,7 +1228,7 @@ export default function TeacherLessonDetail() {
   };
 
   const changeStatus = async (status: "draft" | "published" | "archived") => {
-    await supabase.from("lessons").update({ status }).eq("id", lessonId);
+    await edsync.from("lessons").update({ status }).eq("id", lessonId);
     setLesson((l) => (l ? { ...l, status } : l));
     toast.success(
       status === "published"
@@ -1246,7 +1243,7 @@ export default function TeacherLessonDetail() {
     sectionId: string,
     updates: Partial<LessonSection>,
   ) => {
-    const { error } = await supabase
+    const { error } = await edsync
       .from("lesson_sections")
       .update(updates)
       .eq("id", sectionId);
@@ -1262,7 +1259,7 @@ export default function TeacherLessonDetail() {
   };
 
   const addSection = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await edsync
       .from("lesson_sections")
       .insert({
         lesson_id: lessonId,
@@ -1283,7 +1280,7 @@ export default function TeacherLessonDetail() {
   };
 
   const deleteSection = async (id: string) => {
-    await supabase.from("lesson_sections").delete().eq("id", id);
+    await edsync.from("lesson_sections").delete().eq("id", id);
     setSections((s) => s.filter((sec) => sec.id !== id));
     setEditingSectionId(null);
     toast.success("Section deleted");
@@ -1295,7 +1292,7 @@ export default function TeacherLessonDetail() {
       toast.error("Term and definition required");
       return;
     }
-    const { data, error } = await supabase
+    const { data, error } = await edsync
       .from("glossary_terms")
       .insert({ lesson_id: lessonId, ...newTerm })
       .select()
@@ -1314,14 +1311,14 @@ export default function TeacherLessonDetail() {
     id: string,
     updates: Partial<GlossaryTerm>,
   ) => {
-    await supabase.from("glossary_terms").update(updates).eq("id", id);
+    await edsync.from("glossary_terms").update(updates).eq("id", id);
     setGlossary((g) => g.map((t) => (t.id === id ? { ...t, ...updates } : t)));
     setEditingGlossaryId(null);
     toast.success("Term updated");
   };
 
   const deleteGlossaryTerm = async (id: string) => {
-    await supabase.from("glossary_terms").delete().eq("id", id);
+    await edsync.from("glossary_terms").delete().eq("id", id);
     setGlossary((g) => g.filter((t) => t.id !== id));
     toast.success("Term removed");
   };
@@ -1330,7 +1327,7 @@ export default function TeacherLessonDetail() {
   const saveQuestions = async () => {
     setSavingQ(true);
     // Delete non-section questions, re-insert
-    await supabase
+    await edsync
       .from("quiz_questions")
       .delete()
       .eq("lesson_id", lessonId)
@@ -1356,7 +1353,7 @@ export default function TeacherLessonDetail() {
         order_index: i,
       }));
     if (toInsert.length > 0)
-      await supabase.from("quiz_questions").insert(toInsert);
+      await edsync.from("quiz_questions").insert(toInsert);
     await loadAll();
     setSavingQ(false);
     toast.success("Questions saved!");
@@ -1371,7 +1368,7 @@ export default function TeacherLessonDetail() {
     setAssigning(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setAssigning(false);
       return;
@@ -1381,7 +1378,7 @@ export default function TeacherLessonDetail() {
       setAssigning(false);
       return;
     }
-    const { error } = await supabase.from("lesson_assignments").insert({
+    const { error } = await edsync.from("lesson_assignments").insert({
       lesson_id: lessonId,
       class_id: assignClassId,
       assigned_by: user.id,
@@ -1410,7 +1407,7 @@ export default function TeacherLessonDetail() {
   };
 
   const unassign = async (classId: string) => {
-    await supabase
+    await edsync
       .from("lesson_assignments")
       .update({ is_active: false })
       .eq("lesson_id", lessonId)
@@ -1431,15 +1428,15 @@ export default function TeacherLessonDetail() {
   if (loading)
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <div className="h-10 w-64 bg-atlas-card rounded-xl shimmer mb-6" />
-        <div className="h-64 bg-atlas-card rounded-2xl shimmer" />
+        <div className="h-10 w-64 bg-edsync-card rounded-xl shimmer mb-6" />
+        <div className="h-64 bg-edsync-card rounded-2xl shimmer" />
       </div>
     );
 
   if (!lesson)
     return (
       <div className="p-6 text-center">
-        <p className="text-atlas-subtle">Lesson not found.</p>
+        <p className="text-edsync-subtle">Lesson not found.</p>
         <button
           onClick={() => router.push("/teacher/lessons")}
           className="btn-primary mt-4"
@@ -1466,15 +1463,15 @@ export default function TeacherLessonDetail() {
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`badge ${badge.className}`}>{badge.label}</span>
               {lesson.ai_generated && (
-                <span className="badge bg-atlas-purple/10 text-atlas-purple border-atlas-purple/20">
+                <span className="badge bg-edsync-purple/10 text-edsync-purple border-edsync-purple/20">
                   AI
                 </span>
               )}
             </div>
-            <h1 className="font-display font-bold text-2xl text-atlas-text">
+            <h1 className="font-display font-bold text-2xl text-edsync-text">
               {lesson.title}
             </h1>
-            <p className="text-atlas-subtle text-xs mt-0.5">
+            <p className="text-edsync-subtle text-xs mt-0.5">
               Updated {formatRelativeTime(lesson.updated_at)} ·{" "}
               {sections.length} sections ·{" "}
               {questions.filter((q: any) => !q.section_id).length} questions
@@ -1502,7 +1499,7 @@ export default function TeacherLessonDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-atlas-border mb-6 overflow-x-auto">
+      <div className="flex border-b border-edsync-border mb-6 overflow-x-auto">
         {[
           { key: "overview" as Tab, label: "Overview" },
           { key: "sections" as Tab, label: `Sections (${sections.length})` },
@@ -1519,7 +1516,7 @@ export default function TeacherLessonDetail() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-all ${tab === t.key ? "border-atlas-blue text-atlas-blue" : "border-transparent text-atlas-subtle hover:text-atlas-text"}`}
+            className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-all ${tab === t.key ? "border-edsync-blue text-edsync-blue" : "border-transparent text-edsync-subtle hover:text-edsync-text"}`}
           >
             {t.label}
           </button>
@@ -1530,8 +1527,8 @@ export default function TeacherLessonDetail() {
       {tab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
           <div className="lg:col-span-2 space-y-4">
-            <div className="atlas-card">
-              <label className="block text-xs font-medium text-atlas-subtle mb-1">
+            <div className="edsync-card">
+              <label className="block text-xs font-medium text-edsync-subtle mb-1">
                 Title
               </label>
               <input
@@ -1540,11 +1537,11 @@ export default function TeacherLessonDetail() {
                   setTitle(e.target.value);
                   setOverviewDirty(true);
                 }}
-                className="atlas-input font-display font-bold text-xl"
+                className="edsync-input font-display font-bold text-xl"
               />
             </div>
-            <div className="atlas-card">
-              <label className="block text-xs font-medium text-atlas-subtle mb-1">
+            <div className="edsync-card">
+              <label className="block text-xs font-medium text-edsync-subtle mb-1">
                 Description
               </label>
               <textarea
@@ -1554,13 +1551,13 @@ export default function TeacherLessonDetail() {
                   setOverviewDirty(true);
                 }}
                 rows={3}
-                className="atlas-textarea"
+                className="edsync-textarea"
                 placeholder="Overview for students..."
               />
             </div>
-            <div className="atlas-card">
+            <div className="edsync-card">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-atlas-text">
+                <h3 className="font-semibold text-edsync-text">
                   Learning Objectives
                 </h3>
                 <button
@@ -1568,7 +1565,7 @@ export default function TeacherLessonDetail() {
                     setObjectives((o) => [...o, ""]);
                     setOverviewDirty(true);
                   }}
-                  className="text-atlas-blue text-xs hover:underline"
+                  className="text-edsync-blue text-xs hover:underline"
                 >
                   + Add
                 </button>
@@ -1576,7 +1573,7 @@ export default function TeacherLessonDetail() {
               <div className="space-y-2">
                 {objectives.map((obj, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="text-atlas-blue font-bold text-sm w-5 flex-shrink-0">
+                    <span className="text-edsync-blue font-bold text-sm w-5 flex-shrink-0">
                       {i + 1}.
                     </span>
                     <input
@@ -1587,7 +1584,7 @@ export default function TeacherLessonDetail() {
                         setObjectives(o);
                         setOverviewDirty(true);
                       }}
-                      className="atlas-input py-2 flex-1"
+                      className="edsync-input py-2 flex-1"
                       placeholder={`Objective ${i + 1}...`}
                     />
                     <button
@@ -1595,14 +1592,14 @@ export default function TeacherLessonDetail() {
                         setObjectives((o) => o.filter((_, j) => j !== i));
                         setOverviewDirty(true);
                       }}
-                      className="text-atlas-subtle hover:text-atlas-red text-lg"
+                      className="text-edsync-subtle hover:text-edsync-red text-lg"
                     >
                       ×
                     </button>
                   </div>
                 ))}
                 {objectives.length === 0 && (
-                  <p className="text-xs text-atlas-subtle">
+                  <p className="text-xs text-edsync-subtle">
                     No objectives yet. Click + Add.
                   </p>
                 )}
@@ -1610,9 +1607,9 @@ export default function TeacherLessonDetail() {
             </div>
           </div>
           <div className="space-y-4">
-            <div className="atlas-card space-y-3">
+            <div className="edsync-card space-y-3">
               <div>
-                <label className="block text-xs text-atlas-subtle mb-1">
+                <label className="block text-xs text-edsync-subtle mb-1">
                   Subject
                 </label>
                 <input
@@ -1621,12 +1618,12 @@ export default function TeacherLessonDetail() {
                     setSubject(e.target.value);
                     setOverviewDirty(true);
                   }}
-                  className="atlas-input py-2"
+                  className="edsync-input py-2"
                   placeholder="e.g. Biology"
                 />
               </div>
               <div>
-                <label className="block text-xs text-atlas-subtle mb-1">
+                <label className="block text-xs text-edsync-subtle mb-1">
                   Duration (min)
                 </label>
                 <input
@@ -1636,11 +1633,11 @@ export default function TeacherLessonDetail() {
                     setDuration(Number(e.target.value));
                     setOverviewDirty(true);
                   }}
-                  className="atlas-input py-2"
+                  className="edsync-input py-2"
                 />
               </div>
               <div>
-                <label className="block text-xs text-atlas-subtle mb-1">
+                <label className="block text-xs text-edsync-subtle mb-1">
                   Difficulty
                 </label>
                 <select
@@ -1649,7 +1646,7 @@ export default function TeacherLessonDetail() {
                     setDifficulty(e.target.value as DifficultyLevel);
                     setOverviewDirty(true);
                   }}
-                  className="atlas-input py-2"
+                  className="edsync-input py-2"
                 >
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
@@ -1657,8 +1654,8 @@ export default function TeacherLessonDetail() {
                 </select>
               </div>
             </div>
-            <div className="atlas-card">
-              <h3 className="font-semibold text-atlas-text mb-3 text-sm">
+            <div className="edsync-card">
+              <h3 className="font-semibold text-edsync-text mb-3 text-sm">
                 Differentiation
               </h3>
               {[
@@ -1692,7 +1689,7 @@ export default function TeacherLessonDetail() {
               ].map((s) => (
                 <div key={s.label} className="mb-3 last:mb-0">
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className="text-atlas-subtle">{s.label}</span>
+                    <span className="text-edsync-subtle">{s.label}</span>
                     <span style={{ color: s.color }} className="font-bold">
                       {s.val}%
                     </span>
@@ -1726,7 +1723,7 @@ export default function TeacherLessonDetail() {
       {tab === "sections" && (
         <div className="animate-fade-in space-y-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-sm text-atlas-subtle">
+            <p className="text-sm text-edsync-subtle">
               Click Edit to expand the editor. Choose content type with the icon
               buttons.
             </p>
@@ -1736,8 +1733,8 @@ export default function TeacherLessonDetail() {
           </div>
 
           {sections.length === 0 && (
-            <div className="atlas-card text-center py-12">
-              <p className="text-atlas-text font-medium mb-4">
+            <div className="edsync-card text-center py-12">
+              <p className="text-edsync-text font-medium mb-4">
                 No sections yet
               </p>
               <button onClick={addSection} className="btn-primary">
@@ -1755,28 +1752,28 @@ export default function TeacherLessonDetail() {
                 onSave={saveSection}
                 onDelete={deleteSection}
                 onCancel={() => setEditingSectionId(null)}
-                supabase={supabase}
+                edsync={edsync}
                 lessonId={lessonId}
               />
             ) : (
               <div
                 key={sec.id}
-                className="atlas-card border border-atlas-border hover:border-atlas-blue/30 transition-colors"
+                className="edsync-card border border-edsync-border hover:border-edsync-blue/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-7 h-7 rounded-lg bg-atlas-muted/30 text-atlas-subtle text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  <span className="w-7 h-7 rounded-lg bg-edsync-muted/30 text-edsync-subtle text-xs font-bold flex items-center justify-center flex-shrink-0">
                     {i + 1}
                   </span>
                   <span className="text-lg flex-shrink-0">
                     {TYPE_INFO[sec.content_type]?.icon || ""}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-atlas-text text-sm">
+                    <p className="font-semibold text-edsync-text text-sm">
                       {sec.title}
                     </p>
-                    <p className="text-xs text-atlas-subtle mt-0.5">
+                    <p className="text-xs text-edsync-subtle mt-0.5">
                       <span
-                        className={`badge bg-atlas-${TYPE_INFO[sec.content_type]?.color || "blue"}/10 text-atlas-${TYPE_INFO[sec.content_type]?.color || "blue"} border-atlas-${TYPE_INFO[sec.content_type]?.color || "blue"}/20 mr-2`}
+                        className={`badge bg-edsync-${TYPE_INFO[sec.content_type]?.color || "blue"}/10 text-edsync-${TYPE_INFO[sec.content_type]?.color || "blue"} border-edsync-${TYPE_INFO[sec.content_type]?.color || "blue"}/20 mr-2`}
                       >
                         {sec.content_type}
                       </span>
@@ -1789,7 +1786,7 @@ export default function TeacherLessonDetail() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-atlas-subtle">
+                    <span className="text-xs text-edsync-subtle">
                       {sec.duration_minutes}m
                     </span>
                     <button
@@ -1807,7 +1804,7 @@ export default function TeacherLessonDetail() {
           {sections.length > 0 && editingSectionId === null && (
             <button
               onClick={addSection}
-              className="w-full py-4 border-2 border-dashed border-atlas-border rounded-2xl text-atlas-subtle hover:border-atlas-blue hover:text-atlas-blue transition-all text-sm"
+              className="w-full py-4 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
             >
               + Add Section
             </button>
@@ -1836,10 +1833,10 @@ export default function TeacherLessonDetail() {
                 color: "amber",
               },
             ].map((s, i) => (
-              <div key={i} className="atlas-card py-3 px-4">
-                <p className="text-xs text-atlas-subtle mb-1">{s.label}</p>
+              <div key={i} className="edsync-card py-3 px-4">
+                <p className="text-xs text-edsync-subtle mb-1">{s.label}</p>
                 <p
-                  className={`font-display font-bold text-2xl text-atlas-${s.color}`}
+                  className={`font-display font-bold text-2xl text-edsync-${s.color}`}
                 >
                   {s.count}
                 </p>
@@ -1847,8 +1844,8 @@ export default function TeacherLessonDetail() {
             ))}
           </div>
 
-          <div className="p-3 bg-atlas-blue/5 border border-atlas-blue/20 rounded-xl text-xs text-atlas-subtle">
-            <strong className="text-atlas-text">How it works:</strong> Pre-check
+          <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-subtle">
+            <strong className="text-edsync-text">How it works:</strong> Pre-check
             questions appear before the lesson starts. Micro-check questions
             appear after a specific section. Final quiz questions appear at the
             end. Quiz sections (created in Sections tab) appear inline during
@@ -1856,8 +1853,8 @@ export default function TeacherLessonDetail() {
           </div>
 
           {qDrafts.length === 0 && (
-            <div className="atlas-card text-center py-10">
-              <p className="text-atlas-text font-medium mb-4">
+            <div className="edsync-card text-center py-10">
+              <p className="text-edsync-text font-medium mb-4">
                 No questions yet. Add pre-checks, micro-checks, or final quiz
                 questions.
               </p>
@@ -1915,7 +1912,7 @@ export default function TeacherLessonDetail() {
       {tab === "glossary" && (
         <div className="animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-semibold text-lg text-atlas-text">
+            <h2 className="font-display font-semibold text-lg text-edsync-text">
               Glossary Terms
             </h2>
             <button
@@ -1928,12 +1925,12 @@ export default function TeacherLessonDetail() {
 
           {/* Add new term form */}
           {addingTerm && (
-            <div className="atlas-card border-2 border-atlas-blue/40 space-y-3">
-              <h3 className="font-semibold text-atlas-text text-sm">
+            <div className="edsync-card border-2 border-edsync-blue/40 space-y-3">
+              <h3 className="font-semibold text-edsync-text text-sm">
                 New Glossary Term
               </h3>
               <div>
-                <label className="block text-xs text-atlas-subtle mb-1">
+                <label className="block text-xs text-edsync-subtle mb-1">
                   Term *
                 </label>
                 <input
@@ -1941,13 +1938,13 @@ export default function TeacherLessonDetail() {
                   onChange={(e) =>
                     setNewTerm((t) => ({ ...t, term: e.target.value }))
                   }
-                  className="atlas-input py-2"
+                  className="edsync-input py-2"
                   placeholder="e.g. Photosynthesis"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs text-atlas-subtle mb-1">
+                <label className="block text-xs text-edsync-subtle mb-1">
                   Definition *
                 </label>
                 <textarea
@@ -1956,12 +1953,12 @@ export default function TeacherLessonDetail() {
                     setNewTerm((t) => ({ ...t, definition: e.target.value }))
                   }
                   rows={2}
-                  className="atlas-textarea"
+                  className="edsync-textarea"
                   placeholder="Clear, student-friendly definition..."
                 />
               </div>
               <div>
-                <label className="block text-xs text-atlas-subtle mb-1">
+                <label className="block text-xs text-edsync-subtle mb-1">
                   Example (optional)
                 </label>
                 <input
@@ -1969,7 +1966,7 @@ export default function TeacherLessonDetail() {
                   onChange={(e) =>
                     setNewTerm((t) => ({ ...t, example: e.target.value }))
                   }
-                  className="atlas-input py-2"
+                  className="edsync-input py-2"
                   placeholder="e.g. Plants use photosynthesis to turn sunlight into sugar"
                 />
               </div>
@@ -1994,8 +1991,8 @@ export default function TeacherLessonDetail() {
           )}
 
           {glossary.length === 0 && !addingTerm ? (
-            <div className="atlas-card text-center py-12">
-              <p className="text-atlas-text font-medium mb-4">
+            <div className="edsync-card text-center py-12">
+              <p className="text-edsync-text font-medium mb-4">
                 No glossary terms yet
               </p>
               <button
@@ -2016,7 +2013,7 @@ export default function TeacherLessonDetail() {
                     onCancel={() => setEditingGlossaryId(null)}
                   />
                 ) : (
-                  <div key={term.id} className="atlas-card group relative">
+                  <div key={term.id} className="edsync-card group relative">
                     <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => setEditingGlossaryId(term.id)}
@@ -2029,19 +2026,19 @@ export default function TeacherLessonDetail() {
                           if (confirm("Delete this term?"))
                             deleteGlossaryTerm(term.id);
                         }}
-                        className="btn-ghost text-xs py-1 px-2 text-atlas-red"
+                        className="btn-ghost text-xs py-1 px-2 text-edsync-red"
                       >
                         ×
                       </button>
                     </div>
-                    <p className="font-display font-bold text-atlas-text pr-14">
+                    <p className="font-display font-bold text-edsync-text pr-14">
                       {term.term}
                     </p>
-                    <p className="text-atlas-subtle text-sm mt-1">
+                    <p className="text-edsync-subtle text-sm mt-1">
                       {term.definition}
                     </p>
                     {term.example && (
-                      <p className="text-atlas-cyan text-xs mt-2 italic">
+                      <p className="text-edsync-cyan text-xs mt-2 italic">
                         e.g. {term.example}
                       </p>
                     )}
@@ -2057,22 +2054,22 @@ export default function TeacherLessonDetail() {
       {tab === "assign" && (
         <div className="animate-fade-in space-y-6">
           {assignments.length > 0 && (
-            <div className="atlas-card">
-              <h3 className="font-semibold text-atlas-text mb-4">
+            <div className="edsync-card">
+              <h3 className="font-semibold text-edsync-text mb-4">
                 Currently Assigned
               </h3>
               <div className="space-y-2">
                 {assignments.map((a) => (
                   <div
                     key={a.class_id}
-                    className="flex items-center justify-between p-3 bg-atlas-surface rounded-xl border border-atlas-border"
+                    className="flex items-center justify-between p-3 bg-edsync-surface rounded-xl border border-edsync-border"
                   >
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="font-medium text-atlas-text text-sm">
+                        <p className="font-medium text-edsync-text text-sm">
                           {a.class_name}
                         </p>
-                        <p className="text-xs text-atlas-subtle">
+                        <p className="text-xs text-edsync-subtle">
                           Assigned {formatRelativeTime(a.created_at)}
                         </p>
                       </div>
@@ -2081,7 +2078,7 @@ export default function TeacherLessonDetail() {
                       onClick={() => {
                         if (confirm("Remove?")) unassign(a.class_id);
                       }}
-                      className="text-atlas-subtle hover:text-atlas-red text-xs"
+                      className="text-edsync-subtle hover:text-edsync-red text-xs"
                     >
                       Remove
                     </button>
@@ -2090,14 +2087,14 @@ export default function TeacherLessonDetail() {
               </div>
             </div>
           )}
-          <div className="atlas-card">
-            <h3 className="font-semibold text-atlas-text mb-1">
+          <div className="edsync-card">
+            <h3 className="font-semibold text-edsync-text mb-1">
               Assign to Class
             </h3>
-            <p className="text-atlas-subtle text-sm mb-4">
+            <p className="text-edsync-subtle text-sm mb-4">
               Students in that class will see this lesson in their dashboard.
               {lesson.status !== "published" && (
-                <span className="text-atlas-amber">
+                <span className="text-edsync-amber">
                   {" "}
                   Lesson auto-publishes on assign.
                 </span>
@@ -2105,7 +2102,7 @@ export default function TeacherLessonDetail() {
             </p>
             {myClasses.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-atlas-subtle text-sm mb-3">
+                <p className="text-edsync-subtle text-sm mb-3">
                   No classes yet.
                 </p>
                 <button
@@ -2118,13 +2115,13 @@ export default function TeacherLessonDetail() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-atlas-subtle mb-1">
+                  <label className="block text-xs text-edsync-subtle mb-1">
                     Class *
                   </label>
                   <select
                     value={assignClassId}
                     onChange={(e) => setAssignClassId(e.target.value)}
-                    className="atlas-input py-2"
+                    className="edsync-input py-2"
                   >
                     <option value="">— Choose a class —</option>
                     {myClasses
@@ -2140,14 +2137,14 @@ export default function TeacherLessonDetail() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-atlas-subtle mb-1">
+                  <label className="block text-xs text-edsync-subtle mb-1">
                     Due Date (optional)
                   </label>
                   <input
                     type="date"
                     value={assignDueDate}
                     onChange={(e) => setAssignDueDate(e.target.value)}
-                    className="atlas-input py-2 w-48"
+                    className="edsync-input py-2 w-48"
                     min={new Date().toISOString().split("T")[0]}
                   />
                 </div>
@@ -2181,24 +2178,24 @@ function GlossaryEditCard({
   const [d, setD] = useState(term.definition);
   const [e, setE] = useState(term.example || "");
   return (
-    <div className="atlas-card border-2 border-atlas-blue/40 space-y-2">
+    <div className="edsync-card border-2 border-edsync-blue/40 space-y-2">
       <input
         value={t}
         onChange={(ev) => setT(ev.target.value)}
-        className="atlas-input py-1.5 font-bold text-sm"
+        className="edsync-input py-1.5 font-bold text-sm"
         placeholder="Term"
       />
       <textarea
         value={d}
         onChange={(ev) => setD(ev.target.value)}
         rows={2}
-        className="atlas-textarea text-sm"
+        className="edsync-textarea text-sm"
         placeholder="Definition..."
       />
       <input
         value={e}
         onChange={(ev) => setE(ev.target.value)}
-        className="atlas-input py-1.5 text-xs"
+        className="edsync-input py-1.5 text-xs"
         placeholder="Example..."
       />
       <div className="flex gap-2">
