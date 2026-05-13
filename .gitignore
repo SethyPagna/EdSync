@@ -9,6 +9,7 @@ dist
 coverage
 
 .vercel
+.wrangler
 *.tsbuildinfo
 
 npm-debug.log*
