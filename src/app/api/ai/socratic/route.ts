@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
-import { openRouterChat } from "@/lib/openrouter";
+import { generateAIChat } from "@/lib/ai/chat";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 type HistoryMsg = {
@@ -88,7 +88,7 @@ HARD RULES:
         content: message.content,
       }));
 
-    const hint = await openRouterChat({
+    const hint = await generateAIChat({
       messages: [
         { role: "system", content: systemPrompt },
         ...history,
