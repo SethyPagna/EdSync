@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat } from "@/lib/openrouter";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { loadAiUserContext } from "@/lib/ai/personalization";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { studentStats, lessonStats } = await request.json();
+    const aiContext = await loadAiUserContext(user.id);
 
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json({
@@ -36,6 +38,9 @@ export async function POST(request: NextRequest) {
 
     const context = `
 Class data:
+- Teacher profile:
+${aiContext.prompt}
+
 - Total students: ${(studentStats || []).length}
 - At risk (below 60%): ${atRisk.length} — names: ${atRisk.map((s: any) => s.name).join(", ") || "none"}
 - Advanced (80%+): ${advanced.length}
@@ -60,7 +65,7 @@ Class data:
         {
           role: "system",
           content:
-            "You are an expert instructional coach. Give specific, actionable intervention suggestions for a teacher. Reply ONLY with a JSON array of 5 suggestion strings. No markdown, no preamble.",
+            "You are an expert EdSync instructional coach. Give specific, actionable intervention suggestions for a teacher. Personalize recommendations to the teacher profile, grade level, subjects, and class evidence. Reply ONLY with a JSON array of 5 suggestion strings. No markdown, no preamble.",
         },
         {
           role: "user",
