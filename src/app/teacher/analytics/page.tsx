@@ -2,14 +2,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson } from "@/types";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { formatRelativeTime } from "@/lib/utils";
 
 interface StudentStat {
@@ -462,33 +454,35 @@ export default function TeacherAnalytics() {
                   Lesson Completion
                 </h3>
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={chartData}>
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fill: "#8B95A7", fontSize: 11 }}
-                      />
-                      <YAxis tick={{ fill: "#8B95A7", fontSize: 11 }} />
-                      <Tooltip
-                        contentStyle={{
-                          background: "#111827",
-                          border: "1px solid #1F2937",
-                          borderRadius: 8,
-                          color: "#E8EDF5",
-                        }}
-                      />
-                      <Bar
-                        dataKey="Started"
-                        fill="#4F86F7"
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="Completed"
-                        fill="#23D18B"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-4">
+                    {chartData.map((row) => {
+                      const max = Math.max(row.Started, row.Completed, 1);
+                      return (
+                        <div key={row.name} className="rounded-xl border border-edsync-border bg-edsync-surface p-3">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <p className="truncate text-sm font-semibold text-edsync-text">{row.name}</p>
+                            <p className="text-xs text-edsync-subtle">
+                              {row.Completed}/{row.Started} complete
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-2 rounded-full bg-edsync-muted/25">
+                              <div
+                                className="h-2 rounded-full bg-edsync-blue"
+                                style={{ width: `${(row.Started / max) * 100}%` }}
+                              />
+                            </div>
+                            <div className="h-2 rounded-full bg-edsync-muted/25">
+                              <div
+                                className="h-2 rounded-full bg-edsync-emerald"
+                                style={{ width: `${(row.Completed / max) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <p className="text-edsync-subtle text-sm text-center py-8">
                     No student progress recorded yet.
