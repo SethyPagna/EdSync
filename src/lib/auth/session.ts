@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { randomBytes, createHash } from "node:crypto";
 import { d1Query } from "@/lib/db/d1";
 import type { Profile } from "@/types";
+import type { UserRole } from "@/types";
 import { ROLE_COOKIE, SESSION_COOKIE } from "./constants";
 
 const SESSION_DAYS = 30;
@@ -10,7 +11,7 @@ const SESSION_DAYS = 30;
 export type SessionUser = {
   id: string;
   email: string;
-  user_metadata: { role: "teacher" | "student"; full_name?: string | null };
+  user_metadata: { role: UserRole; full_name?: string | null };
 };
 
 function hashToken(token: string) {
@@ -30,7 +31,13 @@ export async function createSession(user: SessionUser) {
   await d1Query(
     `INSERT INTO auth_sessions (id, user_id, token_hash, role, expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-    [crypto.randomUUID(), user.id, hashToken(token), user.user_metadata.role, expires.toISOString()],
+    [
+      crypto.randomUUID(),
+      user.id,
+      hashToken(token),
+      user.user_metadata.role === "admin" ? "teacher" : user.user_metadata.role,
+      expires.toISOString(),
+    ],
   );
 
   return { token, expires };
@@ -39,7 +46,7 @@ export async function createSession(user: SessionUser) {
 export function setSessionCookies(
   response: NextResponse,
   token: string,
-  role: "teacher" | "student",
+  role: UserRole,
   expires: Date,
 ) {
   response.cookies.set(SESSION_COOKIE, token, {
@@ -66,10 +73,11 @@ export function clearSessionCookies(response: NextResponse) {
 export async function getSessionUserFromToken(token?: string | null) {
   if (!token) return null;
 
-  const rows = await d1Query<Profile & { role: "teacher" | "student" }>(
-    `SELECT p.*
+  const rows = await d1Query<Profile & { is_admin: number | null }>(
+    `SELECT p.*, CASE WHEN au.user_id IS NULL THEN 0 ELSE 1 END AS is_admin
        FROM auth_sessions s
        JOIN profiles p ON p.id = s.user_id
+       LEFT JOIN admin_users au ON au.user_id = p.id
       WHERE s.token_hash = ?
         AND s.revoked_at IS NULL
         AND s.expires_at > datetime('now')
@@ -84,7 +92,7 @@ export async function getSessionUserFromToken(token?: string | null) {
     id: profile.id,
     email: profile.email,
     user_metadata: {
-      role: profile.role,
+      role: profile.is_admin ? "admin" : profile.role,
       full_name: profile.full_name,
     },
   } satisfies SessionUser;
