@@ -54,7 +54,6 @@ Required values:
 - `APP_ENCRYPTION_KEY`
 - `TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
-- `OPENROUTER_API_KEY`
 - `EMAIL_MODE=outbox|compose|provider`
 - `DEPLOYMENT_TARGET=local|vercel|cloudflare|docker`
 
@@ -145,7 +144,6 @@ Set Cloudflare Pages and Worker variables to match the active target:
 - `SESSION_SECRET`
 - `APP_ENCRYPTION_KEY`
 - `EMAIL_MODE`
-- `OPENROUTER_API_KEY`
 - `DEPLOYMENT_TARGET=cloudflare`
 
 ## Cloudflare Worker And Queue
