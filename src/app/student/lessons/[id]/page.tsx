@@ -948,10 +948,13 @@ export default function StudentLesson() {
   };
 
   const submitFinalQuiz = async () => {
-    let correct = 0;
+    let earnedPoints = 0;
+    let possiblePoints = 0;
     const incorrectQuestions: QuizQuestion[] = [];
 
     finalQs.forEach((q) => {
+      const points = Math.max(1, Number(q.points || 1));
+      possiblePoints += points;
       let isCorrect = false;
       if (
         q.question_type === "multiple_choice" ||
@@ -969,14 +972,14 @@ export default function StudentLesson() {
       }
 
       if (isCorrect) {
-        correct++;
+        earnedPoints += points;
       } else {
         incorrectQuestions.push(q);
       }
     });
 
     const score =
-      finalQs.length > 0 ? Math.round((correct / finalQs.length) * 100) : 100;
+      possiblePoints > 0 ? Math.round((earnedPoints / possiblePoints) * 100) : 100;
 
     setFinalScore(score);
     setFinalSubmitted(true);
