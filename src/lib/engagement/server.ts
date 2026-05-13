@@ -1,0 +1,109 @@
+import { d1Query } from "@/lib/db/d1";
+
+type NotificationInput = {
+  userId: string;
+  actorId?: string | null;
+  type: string;
+  title: string;
+  message: string;
+  actionUrl?: string | null;
+  priority?: "low" | "normal" | "high";
+  channels?: string[];
+  metadata?: Record<string, unknown>;
+};
+
+type EmailInput = {
+  recipientUserId?: string | null;
+  recipientEmail: string;
+  subject: string;
+  bodyText: string;
+  bodyHtml?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export async function createNotification(input: NotificationInput) {
+  const id = crypto.randomUUID();
+  await d1Query(
+    `INSERT INTO notifications (
+       id, user_id, actor_id, type, title, message, action_url, priority, channels, metadata, created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+    [
+      id,
+      input.userId,
+      input.actorId ?? null,
+      input.type,
+      input.title,
+      input.message,
+      input.actionUrl ?? null,
+      input.priority ?? "normal",
+      JSON.stringify(input.channels ?? ["in_app"]),
+      JSON.stringify(input.metadata ?? {}),
+    ],
+  );
+  return id;
+}
+
+async function sendViaResend(input: EmailInput) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM || "EdSync <notifications@edsync.app>";
+  if (!apiKey) return { status: "queued" as const, provider: "outbox", providerId: null, error: null };
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: input.recipientEmail,
+      subject: input.subject,
+      text: input.bodyText,
+      html: input.bodyHtml ?? input.bodyText.replace(/\n/g, "<br />"),
+    }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as { id?: string; message?: string };
+  if (!response.ok) {
+    return {
+      status: "failed" as const,
+      provider: "resend",
+      providerId: null,
+      error: payload.message ?? response.statusText,
+    };
+  }
+
+  return { status: "sent" as const, provider: "resend", providerId: payload.id ?? null, error: null };
+}
+
+export async function queueEmail(input: EmailInput) {
+  const result = await sendViaResend(input);
+  const id = crypto.randomUUID();
+  await d1Query(
+    `INSERT INTO email_messages (
+       id, recipient_user_id, recipient_email, subject, body_text, body_html,
+       status, provider, provider_message_id, error_message, metadata, created_at, sent_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`,
+    [
+      id,
+      input.recipientUserId ?? null,
+      input.recipientEmail,
+      input.subject,
+      input.bodyText,
+      input.bodyHtml ?? null,
+      result.status,
+      result.provider,
+      result.providerId,
+      result.error,
+      JSON.stringify(input.metadata ?? {}),
+      result.status === "sent" ? new Date().toISOString() : null,
+    ],
+  );
+  return { id, ...result };
+}
+
+export async function notifyAndEmail(input: NotificationInput & { email?: EmailInput | null }) {
+  const notificationId = await createNotification(input);
+  const emailResult = input.email ? await queueEmail(input.email) : null;
+  return { notificationId, email: emailResult };
+}
