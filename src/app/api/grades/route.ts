@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { recordGradeEvent } from "@/lib/learning-events";
+import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
 type GradebookScoreRow = {
   category_id: string | null;
@@ -13,10 +15,6 @@ type TeacherScoreRow = GradebookScoreRow & {
   full_name: string | null;
   email: string;
 };
-
-function percent(pointsEarned: number, pointsPossible: number) {
-  return pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 10000) / 100 : null;
-}
 
 function weightedAverage(
   scores: GradebookScoreRow[],
@@ -146,6 +144,8 @@ export async function POST(request: Request) {
        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [id, body.classId, user.id, body.name.trim(), Math.max(0, Number(body.weight ?? 1))],
     );
+    const context = await resolveTenantContext(user);
+    await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "gradebook_categories", objectId: id });
     return NextResponse.json({ data: { id }, error: null });
   }
 
@@ -156,26 +156,22 @@ export async function POST(request: Request) {
   const pointsEarned = Number(body.pointsEarned ?? 0);
   const pointsPossible = Number(body.pointsPossible ?? 0);
   const id = crypto.randomUUID();
-  await d1Query(
-    `INSERT OR REPLACE INTO gradebook_scores (
-       id, class_id, student_id, teacher_id, category_id, source_type, source_id, title,
-       points_earned, points_possible, percent, feedback, status, graded_at, metadata, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'graded', datetime('now'), '{}', datetime('now'), datetime('now'))`,
-    [
-      id,
-      body.classId ?? null,
-      body.studentId,
-      user.id,
-      body.categoryId ?? null,
-      body.sourceType ?? "manual",
-      body.sourceId ?? id,
-      body.title.trim(),
-      pointsEarned,
-      pointsPossible,
-      percent(pointsEarned, pointsPossible),
-      body.feedback ?? null,
-    ],
-  );
+  const context = await resolveTenantContext(user);
+  const result = await recordGradeEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    studentId: body.studentId,
+    classId: body.classId ?? null,
+    sourceType: body.sourceType ?? "manual",
+    sourceId: body.sourceId ?? id,
+    eventType: "grade.manual.recorded",
+    teacherId: user.id,
+    title: body.title.trim(),
+    pointsEarned,
+    pointsPossible,
+    feedback: body.feedback ?? null,
+    payload: { categoryId: body.categoryId ?? null },
+  });
 
-  return NextResponse.json({ data: { id }, error: null });
+  return NextResponse.json({ data: { id, eventId: result.eventId }, error: null });
 }
