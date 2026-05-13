@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type { Profile } from "@/types";
 import toast from "react-hot-toast";
 import { generateInitials } from "@/lib/utils";
@@ -201,23 +201,23 @@ export default function StudentProfile() {
   const [gradeLevel, setGradeLevel] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
+  const edsync = createClient();
 
   useEffect(() => {
     const loadProfileAndStats = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await edsync.auth.getUser();
 
       if (!user) return;
 
       const [profileRes, progressRes, socraticRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single(),
-        supabase
+        edsync.from("profiles").select("*").eq("id", user.id).single(),
+        edsync
           .from("student_progress")
           .select("status, score, final_quiz_score, knowledge_gaps, metadata")
           .eq("student_id", user.id),
-        supabase
+        edsync
           .from("socratic_interactions")
           .select("id", { count: "exact", head: true })
           .eq("student_id", user.id),
@@ -251,10 +251,10 @@ export default function StudentProfile() {
     setSaving(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
+    const { error } = await edsync
       .from("profiles")
       .update({
         full_name: fullName,
@@ -289,14 +289,14 @@ export default function StudentProfile() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto animate-fade-in">
-      <h1 className="font-display font-bold text-3xl text-atlas-text mb-6">
+      <h1 className="font-display font-bold text-3xl text-edsync-text mb-6">
         My Profile
       </h1>
 
       {/* Avatar & basic info */}
-      <div className="atlas-card mb-6">
+      <div className="edsync-card mb-6">
         <div className="flex items-start gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-atlas-emerald to-atlas-cyan flex items-center justify-center text-white text-3xl font-display font-bold flex-shrink-0">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan flex items-center justify-center text-white text-3xl font-display font-bold flex-shrink-0">
             {profile
               ? generateInitials(profile.full_name || profile.email)
               : "?"}
@@ -307,13 +307,13 @@ export default function StudentProfile() {
                 <input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="atlas-input font-display font-bold text-xl"
+                  className="edsync-input font-display font-bold text-xl"
                   placeholder="Full Name"
                 />
                 <select
                   value={gradeLevel}
                   onChange={(e) => setGradeLevel(e.target.value)}
-                  className="atlas-input"
+                  className="edsync-input"
                 >
                   <option value="">Select Grade Level</option>
                   {[
@@ -334,11 +334,11 @@ export default function StudentProfile() {
               </div>
             ) : (
               <>
-                <h2 className="font-display font-bold text-2xl text-atlas-text">
+                <h2 className="font-display font-bold text-2xl text-edsync-text">
                   {profile?.full_name || "Set your name"}
                 </h2>
-                <p className="text-atlas-subtle">{profile?.email}</p>
-                <p className="text-sm text-atlas-subtle mt-1">
+                <p className="text-edsync-subtle">{profile?.email}</p>
+                <p className="text-sm text-edsync-subtle mt-1">
                   {profile?.grade_level || "Grade level not set"}
                 </p>
               </>
@@ -355,11 +355,11 @@ export default function StudentProfile() {
       </div>
 
       {/* Interests */}
-      <div className="atlas-card mb-6">
-        <h3 className="font-display font-semibold text-lg text-atlas-text mb-2">
+      <div className="edsync-card mb-6">
+        <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
           My Interests
         </h3>
-        <p className="text-atlas-subtle text-sm mb-4">
+        <p className="text-edsync-subtle text-sm mb-4">
           We use these to personalize "Why This Matters" connections in your
           lessons
         </p>
@@ -372,8 +372,8 @@ export default function StudentProfile() {
                 onClick={() => toggleInterest(interest)}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                   selected
-                    ? "bg-atlas-blue text-white shadow-glow-blue"
-                    : "bg-atlas-card text-atlas-subtle border border-atlas-border hover:border-atlas-muted hover:text-atlas-text"
+                    ? "bg-edsync-blue text-white shadow-glow-blue"
+                    : "bg-edsync-card text-edsync-subtle border border-edsync-border hover:border-edsync-muted hover:text-edsync-text"
                 }`}
               >
                 {interest}
@@ -401,17 +401,17 @@ export default function StudentProfile() {
       </div>
 
       {/* Learning Stats Hexagon */}
-      <div className="atlas-card">
-        <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+      <div className="edsync-card">
+        <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
           Learning Stats Hexagon
         </h3>
-        <p className="text-atlas-subtle text-sm mb-4">
+        <p className="text-edsync-subtle text-sm mb-4">
           This chart shows your strengths and weak points across 6 learning
           dimensions.
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          <div className="bg-atlas-surface border border-atlas-border rounded-2xl p-4">
+          <div className="bg-edsync-surface border border-edsync-border rounded-2xl p-4">
             <svg viewBox="0 0 400 330" className="w-full max-w-[440px] mx-auto">
               {ringLevels.map((level) => {
                 const points = chartAngles
@@ -517,7 +517,7 @@ export default function StudentProfile() {
                       x={point.x}
                       y={point.y}
                       textAnchor={anchor}
-                      className="fill-atlas-text"
+                      className="fill-edsync-text"
                       style={{ fontSize: "11px", fontWeight: 600 }}
                     >
                       {metric.label}
@@ -526,7 +526,7 @@ export default function StudentProfile() {
                       x={point.x}
                       y={point.y + 14}
                       textAnchor={anchor}
-                      className="fill-atlas-subtle"
+                      className="fill-edsync-subtle"
                       style={{ fontSize: "11px" }}
                     >
                       {metric.value}%
@@ -538,35 +538,35 @@ export default function StudentProfile() {
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-medium text-atlas-text">
+            <p className="text-sm font-medium text-edsync-text">
               Where To Focus Next
             </p>
             {weakAreas.map((area) => (
               <div
                 key={area.key}
-                className="p-4 rounded-xl border border-atlas-border bg-atlas-surface"
+                className="p-4 rounded-xl border border-edsync-border bg-edsync-surface"
               >
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-atlas-text text-sm">
+                  <p className="font-semibold text-edsync-text text-sm">
                     {area.label}
                   </p>
-                  <span className="text-sm font-bold text-atlas-amber">
+                  <span className="text-sm font-bold text-edsync-amber">
                     {area.value}%
                   </span>
                 </div>
-                <p className="text-xs text-atlas-subtle">{area.tip}</p>
+                <p className="text-xs text-edsync-subtle">{area.tip}</p>
               </div>
             ))}
 
-            <div className="pt-2 border-t border-atlas-border">
+            <div className="pt-2 border-t border-edsync-border">
               <div className="grid grid-cols-2 gap-2">
                 {skillMetrics.map((metric) => (
                   <div
                     key={metric.key}
-                    className="px-3 py-2 rounded-lg border border-atlas-border bg-atlas-card"
+                    className="px-3 py-2 rounded-lg border border-edsync-border bg-edsync-card"
                   >
-                    <p className="text-xs text-atlas-subtle">{metric.label}</p>
-                    <p className="text-sm font-semibold text-atlas-text">
+                    <p className="text-xs text-edsync-subtle">{metric.label}</p>
+                    <p className="text-sm font-semibold text-edsync-text">
                       {metric.value}%
                     </p>
                   </div>
