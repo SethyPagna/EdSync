@@ -17,6 +17,14 @@ async function runAutomation(job: AutomationJob, env: Env) {
     return { handledBy: "cloudflare-worker", message: "Automation rule queued for future trigger evaluation." };
   }
 
+  if (job.job_type.startsWith("ai_provider.")) {
+    return {
+      handledBy: "cloudflare-worker",
+      providerJob: job.job_type,
+      message: "AI provider control-plane change recorded for audit and health automation.",
+    };
+  }
+
   if (job.job_type === "certification.expiry_check") {
     const tenantId = String(job.payload?.tenantId || "");
     if (!tenantId) return { handledBy: "cloudflare-worker", skipped: "missing tenant" };
