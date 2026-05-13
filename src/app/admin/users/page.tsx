@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { ShieldCheck } from "lucide-react";
+import { Search, ShieldCheck, UserCog, UsersRound } from "lucide-react";
 
 type AdminUser = {
   id: string;
@@ -13,9 +13,32 @@ type AdminUser = {
   last_active_at: string | null;
 };
 
+type UserGroupKey = "admins" | "teachers" | "students";
+
+const groupCopy: Record<UserGroupKey, { title: string; description: string }> = {
+  admins: {
+    title: "Platform Admins",
+    description: "Global EdSync operators with full application access.",
+  },
+  teachers: {
+    title: "Teachers",
+    description: "Course creators and class managers inside their tenant or workspace.",
+  },
+  students: {
+    title: "Students",
+    description: "Learners with access to assigned work, grades, notes, and discussions.",
+  },
+};
+
+function groupFor(user: AdminUser): UserGroupKey {
+  if (user.is_admin) return "admins";
+  return user.role === "teacher" ? "teachers" : "students";
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
+  const [activeGroup, setActiveGroup] = useState<UserGroupKey | "all">("all");
 
   const loadUsers = () => {
     fetch(`/api/admin/users?q=${encodeURIComponent(query)}`, { cache: "no-store" })
@@ -26,6 +49,19 @@ export default function AdminUsersPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  const grouped = useMemo(() => {
+    return users.reduce<Record<UserGroupKey, AdminUser[]>>(
+      (collection, user) => {
+        collection[groupFor(user)].push(user);
+        return collection;
+      },
+      { admins: [], teachers: [], students: [] },
+    );
+  }, [users]);
+
+  const visibleGroups: UserGroupKey[] =
+    activeGroup === "all" ? ["admins", "teachers", "students"] : [activeGroup];
 
   const toggleAdmin = async (userId: string, admin: boolean) => {
     const response = await fetch("/api/admin/users", {
@@ -38,7 +74,7 @@ export default function AdminUsersPage() {
       toast.error(payload.error || "Could not update admin access.");
       return;
     }
-    toast.success(admin ? "Admin access granted." : "Admin access removed.");
+    toast.success(admin ? "Platform admin access granted." : "Platform admin access removed.");
     loadUsers();
   };
 
@@ -46,55 +82,85 @@ export default function AdminUsersPage() {
     <div className="space-y-5 p-5 lg:p-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">People and access</p>
           <h1 className="font-display text-3xl font-bold">Users</h1>
-          <p className="mt-2 text-sm text-edsync-subtle">Review teachers, students, and admin access.</p>
+          <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
+            Platform admin is for the app owner. Organization owners and managers should use tenant-scoped role profiles, not global access.
+          </p>
         </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();
             loadUsers();
           }}
-          className="flex gap-2"
+          className="flex flex-col gap-2 sm:flex-row"
         >
-          <input className="edsync-input w-64" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search users" />
-          <button className="btn-secondary" type="submit">Search</button>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
+            <input
+              className="edsync-input w-full pl-9 sm:w-72"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search users"
+            />
+          </div>
+          <button className="btn-secondary justify-center" type="submit">Search</button>
         </form>
       </div>
 
-      <div className="edsync-card overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-edsync-border text-xs uppercase text-edsync-subtle">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Last active</th>
-              <th className="px-4 py-3 text-right">Admin</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-edsync-border">
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td className="px-4 py-3 font-semibold">{user.full_name || "Unnamed"}</td>
-                <td className="px-4 py-3 text-edsync-subtle">{user.email}</td>
-                <td className="px-4 py-3 capitalize">{user.is_admin ? "admin" : user.role}</td>
-                <td className="px-4 py-3 text-edsync-subtle">
-                  {user.last_active_at ? new Date(user.last_active_at).toLocaleDateString() : "Never"}
-                </td>
-                <td className="px-4 py-3 text-right">
+      <div className="grid gap-3 md:grid-cols-3">
+        {(["admins", "teachers", "students"] as UserGroupKey[]).map((group) => (
+          <button
+            key={group}
+            type="button"
+            onClick={() => setActiveGroup(activeGroup === group ? "all" : group)}
+            className={`edsync-card flex items-center justify-between p-4 text-left ${
+              activeGroup === group ? "border-edsync-blue bg-edsync-blue/10" : ""
+            }`}
+          >
+            <span>
+              <span className="block text-sm font-semibold text-edsync-subtle">{groupCopy[group].title}</span>
+              <span className="block text-3xl font-bold text-edsync-text">{grouped[group].length}</span>
+            </span>
+            {group === "admins" ? <UserCog className="h-5 w-5 text-edsync-blue" /> : <UsersRound className="h-5 w-5 text-edsync-subtle" />}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4">
+        {visibleGroups.map((group) => (
+          <section key={group} className="edsync-card overflow-hidden p-0">
+            <div className="border-b border-edsync-border px-4 py-3">
+              <h2 className="font-display text-xl font-bold">{groupCopy[group].title}</h2>
+              <p className="text-sm text-edsync-subtle">{groupCopy[group].description}</p>
+            </div>
+            <div className="divide-y divide-edsync-border">
+              {grouped[group].map((user) => (
+                <div key={user.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[minmax(0,1fr)_220px_150px_160px] lg:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{user.full_name || "Unnamed"}</p>
+                    <p className="truncate text-edsync-subtle">{user.email}</p>
+                  </div>
+                  <p className="capitalize text-edsync-subtle">{user.is_admin ? "platform admin" : user.role}</p>
+                  <p className="text-edsync-subtle">
+                    {user.last_active_at ? new Date(user.last_active_at).toLocaleDateString() : "Never active"}
+                  </p>
                   <button
                     type="button"
                     onClick={() => toggleAdmin(user.id, !user.is_admin)}
-                    className={user.is_admin ? "btn-primary" : "btn-secondary"}
+                    className={user.is_admin ? "btn-primary justify-center px-3 py-2" : "btn-secondary justify-center px-3 py-2"}
                   >
                     <ShieldCheck className="h-4 w-4" />
-                    {user.is_admin ? "Admin" : "Grant"}
+                    {user.is_admin ? "Global admin" : "Grant global"}
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              ))}
+              {grouped[group].length === 0 && (
+                <p className="px-4 py-5 text-sm text-edsync-subtle">No users in this group.</p>
+              )}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );
