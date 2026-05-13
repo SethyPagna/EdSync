@@ -9,6 +9,8 @@ import {
 } from "@/lib/ai/personalization";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 const MAX_SOURCE_CHARS = 5000;
 
 const FIXED_LESSON_SYSTEM_PROMPT = `You are EdSync AI, an expert educational content designer.
