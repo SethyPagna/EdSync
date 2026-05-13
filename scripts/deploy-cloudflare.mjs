@@ -25,17 +25,6 @@ function run(command, args, options = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-function tryRun(command, args) {
-  const result = spawnSync(command, args, {
-    encoding: "utf8",
-    shell: process.platform === "win32",
-  });
-  return {
-    ok: result.status === 0,
-    output: `${result.stdout || ""}\n${result.stderr || ""}`,
-  };
-}
-
 async function cf(method, path, body) {
   const token = process.env.CLOUDFLARE_API_TOKEN;
   const email = process.env.CLOUDFLARE_EMAIL;
@@ -96,15 +85,6 @@ async function ensurePagesProject(projectName) {
   }
 }
 
-function ensureR2Bucket(bucketName) {
-  if (!bucketName) return;
-  const result = tryRun("npx", ["wrangler", "r2", "bucket", "create", bucketName]);
-  if (!result.ok && !/already exists|exists/i.test(result.output)) {
-    process.stderr.write(result.output);
-    process.exit(1);
-  }
-}
-
 function putWorkerSecret(key, config, environment) {
   const value = process.env[key];
   if (!value) return;
@@ -128,15 +108,8 @@ if (!accountId || !hasCloudflareAuth) {
 const environment = process.argv.includes("--preview") ? "preview" : "production";
 const pagesProject = process.env.CLOUDFLARE_PAGES_PROJECT || "edsync";
 const envArgs = environment === "production" ? ["--env", "production"] : ["--env", "preview"];
-const cacheBucket =
-  environment === "production"
-    ? "edsync-cache-prod"
-    : environment === "preview"
-      ? "edsync-cache-preview"
-      : "edsync-cache-dev";
 
 await ensurePagesProject(pagesProject);
-ensureR2Bucket(cacheBucket);
 
 for (const key of [
   "APP_ENCRYPTION_KEY",
