@@ -211,6 +211,16 @@ export default function TeacherStudents() {
     if (error) {
       toast.error("Failed: " + error.message);
     } else {
+      await fetch("/api/notifications/lesson-assigned", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          lessonId: assignLessonId,
+          classId: selectedClass,
+          dueDate: assignDueDate || null,
+        }),
+      });
       toast.success("Lesson assigned!");
       await loadAssignments(selectedClass);
       setAssignLessonId("");
