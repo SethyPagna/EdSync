@@ -36,38 +36,38 @@ export function formatRelativeTime(dateString: string): string {
 }
 
 export function getMasteryColor(mastery: number): string {
-  if (mastery >= 0.8) return 'text-atlas-emerald'
-  if (mastery >= 0.6) return 'text-atlas-amber'
+  if (mastery >= 0.8) return 'text-edsync-emerald'
+  if (mastery >= 0.6) return 'text-edsync-amber'
   if (mastery >= 0.4) return 'text-yellow-400'
-  return 'text-atlas-red'
+  return 'text-edsync-red'
 }
 
 export function getMasteryBg(mastery: number): string {
-  if (mastery >= 0.8) return 'bg-atlas-emerald/20 border-atlas-emerald/30'
-  if (mastery >= 0.6) return 'bg-atlas-amber/20 border-atlas-amber/30'
+  if (mastery >= 0.8) return 'bg-edsync-emerald/20 border-edsync-emerald/30'
+  if (mastery >= 0.6) return 'bg-edsync-amber/20 border-edsync-amber/30'
   if (mastery >= 0.4) return 'bg-yellow-500/20 border-yellow-500/30'
-  return 'bg-atlas-red/20 border-atlas-red/30'
+  return 'bg-edsync-red/20 border-edsync-red/30'
 }
 
 export function getStatusBadge(status: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
-    draft: { label: 'Draft', className: 'bg-atlas-muted/50 text-atlas-subtle' },
-    published: { label: 'Published', className: 'bg-atlas-emerald/20 text-atlas-emerald border border-atlas-emerald/30' },
-    archived: { label: 'Archived', className: 'bg-atlas-muted/30 text-atlas-subtle/50' },
-    not_started: { label: 'Not Started', className: 'bg-atlas-muted/30 text-atlas-subtle' },
-    in_progress: { label: 'In Progress', className: 'bg-atlas-blue/20 text-atlas-blue border border-atlas-blue/30' },
-    completed: { label: 'Completed', className: 'bg-atlas-emerald/20 text-atlas-emerald border border-atlas-emerald/30' },
+    draft: { label: 'Draft', className: 'bg-edsync-muted/50 text-edsync-subtle' },
+    published: { label: 'Published', className: 'bg-edsync-emerald/20 text-edsync-emerald border border-edsync-emerald/30' },
+    archived: { label: 'Archived', className: 'bg-edsync-muted/30 text-edsync-subtle/50' },
+    not_started: { label: 'Not Started', className: 'bg-edsync-muted/30 text-edsync-subtle' },
+    in_progress: { label: 'In Progress', className: 'bg-edsync-blue/20 text-edsync-blue border border-edsync-blue/30' },
+    completed: { label: 'Completed', className: 'bg-edsync-emerald/20 text-edsync-emerald border border-edsync-emerald/30' },
   }
-  return map[status] || { label: status, className: 'bg-atlas-muted/30 text-atlas-subtle' }
+  return map[status] || { label: status, className: 'bg-edsync-muted/30 text-edsync-subtle' }
 }
 
 export function getDifficultyColor(difficulty: string): string {
   const map: Record<string, string> = {
-    beginner: 'text-atlas-emerald',
-    intermediate: 'text-atlas-amber',
-    advanced: 'text-atlas-red',
+    beginner: 'text-edsync-emerald',
+    intermediate: 'text-edsync-amber',
+    advanced: 'text-edsync-red',
   }
-  return map[difficulty] || 'text-atlas-subtle'
+  return map[difficulty] || 'text-edsync-subtle'
 }
 
 export function truncate(str: string, length: number): string {
@@ -86,10 +86,10 @@ export function generateInitials(name: string): string {
 
 export function getAlertColor(alertType: string): string {
   const map: Record<string, string> = {
-    struggling: 'text-atlas-red border-atlas-red/30 bg-atlas-red/10',
-    intervention: 'text-atlas-amber border-atlas-amber/30 bg-atlas-amber/10',
-    achievement: 'text-atlas-emerald border-atlas-emerald/30 bg-atlas-emerald/10',
-    completion: 'text-atlas-blue border-atlas-blue/30 bg-atlas-blue/10',
+    struggling: 'text-edsync-red border-edsync-red/30 bg-edsync-red/10',
+    intervention: 'text-edsync-amber border-edsync-amber/30 bg-edsync-amber/10',
+    achievement: 'text-edsync-emerald border-edsync-emerald/30 bg-edsync-emerald/10',
+    completion: 'text-edsync-blue border-edsync-blue/30 bg-edsync-blue/10',
   }
-  return map[alertType] || 'text-atlas-subtle border-atlas-border'
+  return map[alertType] || 'text-edsync-subtle border-edsync-border'
 }
