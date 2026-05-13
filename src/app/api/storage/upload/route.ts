@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { putR2Object } from "@/lib/storage/r2";
 import { d1Query } from "@/lib/db/d1";
 import { getSessionUser } from "@/lib/auth/session";
+import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
+import { sanitizeObjectPath, validateUploadFile } from "@/lib/security/upload";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -24,28 +26,47 @@ export async function POST(request: Request) {
     );
   }
 
-  if (file.size > 25 * 1024 * 1024) {
+  const rate = await enforceRateLimit({
+    request,
+    scope: "storage_upload",
+    limit: 40,
+    windowSeconds: 600,
+    userId: user.id,
+  });
+  if (!rate.allowed) {
     return NextResponse.json(
-      { data: null, error: { message: "Files must be 25MB or smaller." } },
-      { status: 413 },
+      { data: null, error: { message: "Too many uploads. Try again shortly." } },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+    );
+  }
+
+  let safeFile;
+  try {
+    safeFile = await validateUploadFile(file);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload blocked.";
+    await logSecurityEvent({
+      request,
+      userId: user.id,
+      eventType: "upload_blocked",
+      severity: "warning",
+      message,
+      metadata: { fileName: file.name, contentType: file.type, size: file.size },
+    });
+    return NextResponse.json(
+      { data: null, error: { message } },
+      { status: message.includes("25MB") ? 413 : 415 },
     );
   }
 
   const env = process.env.DEPLOYMENT_TARGET || "local";
-  const objectKey = `${env}/users/${user.id}/${bucketAlias}/${path}`.replace(/\/+/g, "/");
-  const assetType = file.type.startsWith("image/")
-    ? "image"
-    : file.type.startsWith("video/")
-      ? "video"
-      : file.type.startsWith("audio/")
-        ? "audio"
-        : file.type.includes("pdf") || file.type.includes("document") || file.type.startsWith("text/")
-          ? "document"
-          : "other";
+  const safeBucketAlias = sanitizeObjectPath(bucketAlias) || "uploads";
+  const safePath = sanitizeObjectPath(path) || safeFile.fileName;
+  const objectKey = `${env}/users/${user.id}/${safeBucketAlias}/${safePath}`.replace(/\/+/g, "/");
   const uploaded = await putR2Object({
     key: objectKey,
     body: Buffer.from(await file.arrayBuffer()),
-    contentType: file.type || "application/octet-stream",
+    contentType: safeFile.contentType,
   });
 
   const storageObjectId = crypto.randomUUID();
@@ -59,9 +80,9 @@ export async function POST(request: Request) {
       uploaded.bucket,
       uploaded.key,
       uploaded.publicUrl,
-      file.type || "application/octet-stream",
+      safeFile.contentType,
       file.size,
-      bucketAlias,
+      safeBucketAlias,
     ],
   );
 
@@ -73,15 +94,15 @@ export async function POST(request: Request) {
       crypto.randomUUID(),
       user.id,
       storageObjectId,
-      assetType,
-      file.name,
+      safeFile.assetType,
+      safeFile.fileName,
       uploaded.publicUrl,
-      JSON.stringify({ bucketAlias, objectKey: uploaded.key, contentType: file.type, sizeBytes: file.size }),
+      JSON.stringify({ bucketAlias: safeBucketAlias, objectKey: uploaded.key, contentType: safeFile.contentType, sizeBytes: file.size }),
     ],
   );
 
   return NextResponse.json({
-    data: { path: uploaded.key, publicUrl: uploaded.publicUrl, assetType },
+    data: { path: uploaded.key, publicUrl: uploaded.publicUrl, assetType: safeFile.assetType },
     error: null,
   });
 }
