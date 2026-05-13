@@ -8,15 +8,20 @@ import type {
   LearningGoal,
   LearningReflection,
   Lesson,
+  Announcement,
   Profile,
+  ScheduleEvent,
   StudentProgress,
 } from "@/types";
 import {
   ArrowRight,
   BookOpenCheck,
+  CalendarClock,
   CheckCircle2,
   Flame,
   GraduationCap,
+  Megaphone,
+  Plus,
   Sparkles,
   Target,
 } from "lucide-react";
@@ -26,14 +31,38 @@ type AssignedLesson = Lesson & {
   sectionCount?: number;
 };
 
+type StudentPlannerData = {
+  announcements: (Announcement & { class_name?: string | null })[];
+  events: (ScheduleEvent & { class_name?: string | null; lesson_title?: string | null })[];
+};
+
+function formatPlannerDate(value: string | null) {
+  if (!value) return "No time set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function StudentDashboard() {
   const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [lessons, setLessons] = useState<AssignedLesson[]>([]);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [reflections, setReflections] = useState<LearningReflection[]>([]);
+  const [planner, setPlanner] = useState<StudentPlannerData>({
+    announcements: [],
+    events: [],
+  });
+  const [studyTitle, setStudyTitle] = useState("Focused study block");
+  const [studyAt, setStudyAt] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joiningClass, setJoiningClass] = useState(false);
+  const [savingStudy, setSavingStudy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,7 +76,7 @@ export default function StudentDashboard() {
     } = await edsync.auth.getUser();
     if (!user) return;
 
-    const [profileRes, enrollmentsRes, goalsRes, reflectionsRes] =
+    const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes] =
       await Promise.all([
         edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
         edsync
@@ -67,11 +96,15 @@ export default function StudentDashboard() {
           .eq("student_id", user.id)
           .order("created_at", { ascending: false })
           .limit(4),
+        fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
+          res.json(),
+        ),
       ]);
 
     setProfile(profileRes.data);
     setGoals(goalsRes.data || []);
     setReflections(reflectionsRes.data || []);
+    setPlanner(plannerRes.data || { announcements: [], events: [] });
 
     const classIds = (enrollmentsRes.data || []).map((row: any) => row.class_id);
     if (classIds.length === 0) {
@@ -197,6 +230,34 @@ export default function StudentDashboard() {
     }
     setGoals((current) => [data, ...current]);
     toast.success("Learning goal created.");
+  };
+
+  const createStudyBlock = async () => {
+    if (!studyTitle.trim()) {
+      toast.error("Name the study block first.");
+      return;
+    }
+    setSavingStudy(true);
+    const response = await fetch("/api/planner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        title: studyTitle,
+        description: "Personal study time",
+        startsAt: studyAt || null,
+      }),
+    });
+    const payload = await response.json();
+    setSavingStudy(false);
+    if (!response.ok) {
+      toast.error(payload.error?.message || "Could not add study block.");
+      return;
+    }
+    toast.success("Study block added.");
+    setStudyTitle("Focused study block");
+    setStudyAt("");
+    await loadDashboard();
   };
 
   const completed = lessons.filter((lesson) => lesson.progress?.status === "completed");
@@ -379,6 +440,100 @@ export default function StudentDashboard() {
         </section>
 
         <aside className="space-y-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-xl font-bold">Announcements</h2>
+                <p className="text-sm text-edsync-subtle">Teacher updates.</p>
+              </div>
+              <Megaphone className="h-5 w-5 text-edsync-amber" />
+            </div>
+            <div className="space-y-3">
+              {planner.announcements.length === 0 ? (
+                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
+                  New class announcements will appear here.
+                </p>
+              ) : (
+                planner.announcements.slice(0, 3).map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-edsync-text">{item.title}</p>
+                      <span className="text-xs text-edsync-subtle">
+                        {item.class_name || "Class"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-xl font-bold">Schedule</h2>
+                <p className="text-sm text-edsync-subtle">Deadlines and study time.</p>
+              </div>
+              <CalendarClock className="h-5 w-5 text-edsync-blue" />
+            </div>
+            <div className="mb-4 grid gap-2">
+              <input
+                value={studyTitle}
+                onChange={(event) => setStudyTitle(event.target.value)}
+                className="edsync-input py-2"
+                placeholder="Study block title"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={studyAt}
+                  onChange={(event) => setStudyAt(event.target.value)}
+                  className="edsync-input py-2"
+                />
+                <button
+                  type="button"
+                  onClick={createStudyBlock}
+                  disabled={savingStudy}
+                  className="btn-secondary px-3"
+                  aria-label="Add study block"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {planner.events.length === 0 ? (
+                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
+                  Deadlines and personal study blocks will appear here.
+                </p>
+              ) : (
+                planner.events.slice(0, 5).map((event) => (
+                  <div
+                    key={event.id}
+                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-edsync-text">{event.title}</p>
+                        <p className="mt-1 text-xs text-edsync-subtle">
+                          {event.class_name || "Personal"} -{" "}
+                          {formatPlannerDate(event.due_at || event.starts_at)}
+                        </p>
+                      </div>
+                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                        {event.event_type.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
           <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
