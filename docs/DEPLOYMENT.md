@@ -118,8 +118,9 @@ only creates the project if it is missing. If creation races or fails because th
 project already exists, it re-lists and deploys to the existing project instead
 of creating a duplicate. It then builds with the OpenNext Cloudflare adapter,
 deploys `.open-next/assets` to Pages, deploys the full app Worker from
-`wrangler.app.jsonc`, deploys Pages through `wrangler.pages.jsonc`, and redeploys
-the queue Worker from `wrangler.toml`.
+`wrangler.app.jsonc`, deploys Pages from an isolated temporary directory so
+Wrangler does not read the Worker config, and redeploys the queue Worker from
+`wrangler.toml`.
 
 Before the first deployment, make sure `.env.local` contains the production
 values for app secrets. The deployment script writes them to the app Worker as
