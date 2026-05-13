@@ -7,6 +7,7 @@ import {
   loadAiUserContext,
   type GenerationStyle,
 } from "@/lib/ai/personalization";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const MAX_SOURCE_CHARS = 5000;
 const LESSON_MODEL = process.env.OPENROUTER_LESSON_MODEL?.trim() || undefined;
@@ -324,6 +325,20 @@ export async function POST(request: NextRequest) {
     const { user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rate = await enforceRateLimit({
+      request,
+      scope: "ai_create_lesson",
+      limit: 20,
+      windowSeconds: 900,
+      userId: user.id,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many lesson generation requests. Try again shortly." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+      );
     }
 
     const {
