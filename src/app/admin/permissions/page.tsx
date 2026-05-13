@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Building2, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { GuidePanel } from "@/components/WorkspacePrimitives";
 
 type PermissionItem = {
   id: string;
@@ -48,13 +49,25 @@ export default function AdminPermissionsPage() {
 
   return (
     <div className="space-y-6 p-5 lg:p-8">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Access model</p>
-        <h1 className="font-display text-3xl font-bold text-edsync-text">Permissions</h1>
-        <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
-          Global platform admin is reserved for the EdSync owner. Organization owners should manage their own tenant roles, features, layout,
-          and visible menus without affecting other organizations.
-        </p>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Access model</p>
+          <h1 className="font-display text-3xl font-bold text-edsync-text">Permissions</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
+            Global platform admin is reserved for the EdSync owner. Organization owners should manage tenant roles, feature visibility, layout,
+            and menus without affecting other organizations.
+          </p>
+        </div>
+        <GuidePanel
+          title="Admin does not mean the same thing everywhere"
+          description="Use platform admin for whole-application control. Use tenant role profiles for organization owners, managers, auditors, billing admins, and instructors."
+          icon={ShieldCheck}
+          items={[
+            "Platform owner: global AI, security, settings, and cross-tenant oversight.",
+            "Organization admin: tenant-only people, menus, features, and reports.",
+            "Teacher or learner: classroom and learning-work permissions only.",
+          ]}
+        />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
