@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { d1Query } from "@/lib/db/d1";
+import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
+import { validateUploadFile } from "@/lib/security/upload";
 
-const MAX_FILE_BYTES = 25_000_000;
 const MAX_EXTRACTED_CHARS = 12_000;
 
 function normalizeText(value: string) {
@@ -85,6 +86,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rate = await enforceRateLimit({
+    request,
+    scope: "content_extract",
+    limit: 30,
+    windowSeconds: 600,
+    userId: user.id,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many extraction requests. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+    );
+  }
+
   const form = await request.formData();
   const file = form.get("file");
 
@@ -92,15 +107,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A file upload is required." }, { status: 400 });
   }
 
-  if (file.size > MAX_FILE_BYTES) {
+  let safeFile;
+  try {
+    safeFile = await validateUploadFile(file);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "File blocked.";
+    await logSecurityEvent({
+      request,
+      userId: user.id,
+      eventType: "content_extract_blocked",
+      severity: "warning",
+      message,
+      metadata: { fileName: file.name, contentType: file.type, size: file.size },
+    });
     return NextResponse.json(
-      { error: "File is too large. Use a file under 25 MB or paste the key text." },
-      { status: 413 },
+      { error: message },
+      { status: message.includes("25MB") ? 413 : 415 },
     );
   }
 
   const buffer = await file.arrayBuffer();
-  const kind = fileKind(file);
+  const kind = safeFile.assetType === "document" ? fileKind(file) : safeFile.assetType;
   const mediaText = mediaPrompt(file, kind);
   if (mediaText) {
     const warning = "Media files are stored as lesson context. Add captions, timestamps, or alt text before publishing.";
