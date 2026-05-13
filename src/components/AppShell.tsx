@@ -129,7 +129,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-screen w-72 flex-col border-r border-edsync-border bg-edsync-surface/95 shadow-xl shadow-slate-200/60 backdrop-blur transition-all duration-300 dark:shadow-black/20`}
+      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-72 flex-col border-r border-edsync-border bg-edsync-surface/95 shadow-xl shadow-slate-200/60 backdrop-blur transition-all duration-300 dark:shadow-black/20`}
     >
       <div className="flex items-center gap-3 border-b border-edsync-border px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
@@ -274,8 +274,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         <NotificationMenu />
       </div>
 
-      <div className="flex">
-        <div className="sticky top-0 hidden h-screen flex-shrink-0 lg:block">
+      <div>
+        <div
+          className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}
+        >
           {sidebar}
         </div>
         {mobileOpen && (
@@ -289,7 +291,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             <div className="relative h-full w-72">{sidebar}</div>
           </div>
         )}
-        <main className="min-h-screen flex-1 overflow-x-hidden pt-16 lg:pt-0">
+        <main
+          className={`${collapsed ? "lg:ml-[76px]" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:pt-0`}
+        >
           <div className="sticky top-0 z-20 hidden justify-end border-b border-edsync-border bg-edsync-bg/80 px-6 py-3 backdrop-blur lg:flex">
             <NotificationMenu />
           </div>
