@@ -17,15 +17,45 @@ import {
   X,
 } from "lucide-react";
 import { ActionMenu, GuidePanel } from "@/components/WorkspacePrimitives";
+import type { BillingPrice, BillingProduct, Entitlement, Tenant, TenantPortal } from "@/types";
+
+type CatalogMetadata = {
+  visibility?: "private" | "public" | "portal";
+  enrollmentMode?: "closed" | "free" | "paid";
+  category?: string;
+  language?: string;
+  difficulty?: string;
+  thumbnailUrl?: string | null;
+  previewVideoUrl?: string | null;
+  featured?: boolean;
+};
+
+type ProductRecord = BillingProduct & {
+  metadata: CatalogMetadata;
+};
+
+type PortalLinkRecord = {
+  portal_id: string | null;
+  object_id: string;
+};
+
+type BillingPayload = {
+  products: ProductRecord[];
+  prices: BillingPrice[];
+  entitlements: Entitlement[];
+  portals: TenantPortal[];
+  links: PortalLinkRecord[];
+  context: { tenant: Tenant; portal: TenantPortal | null };
+};
 
 type ProductDraft = {
   title: string;
   description: string;
-  productType: string;
+  productType: BillingProduct["product_type"];
   portalId: string;
   status: "draft" | "active" | "archived";
-  visibility: string;
-  enrollmentMode: string;
+  visibility: "private" | "public" | "portal";
+  enrollmentMode: "closed" | "free" | "paid";
   category: string;
   language: string;
   difficulty: string;
@@ -38,7 +68,7 @@ type PriceDraft = {
   productId: string;
   amountCents: number;
   currency: string;
-  billingInterval: string;
+  billingInterval: BillingPrice["billing_interval"];
   active: boolean;
 };
 
@@ -66,11 +96,11 @@ const emptyPrice: PriceDraft = {
   active: true,
 };
 
-function metadataOf(item: any) {
+function metadataOf(item: ProductRecord): CatalogMetadata {
   return typeof item?.metadata === "object" && item.metadata ? item.metadata : {};
 }
 
-function productDraftFrom(item: any, portalId = ""): ProductDraft {
+function productDraftFrom(item: ProductRecord, portalId = ""): ProductDraft {
   const metadata = metadataOf(item);
   return {
     title: item.title ?? "",
@@ -89,7 +119,7 @@ function productDraftFrom(item: any, portalId = ""): ProductDraft {
   };
 }
 
-function priceDraftFrom(item: any): PriceDraft {
+function priceDraftFrom(item: BillingPrice): PriceDraft {
   return {
     productId: item.product_id ?? "",
     amountCents: Number(item.amount_cents ?? 0),
@@ -104,7 +134,7 @@ function money(amountCents?: number, currency = "usd") {
 }
 
 export default function AdminBillingPage() {
-  const [payload, setPayload] = useState<any>(null);
+  const [payload, setPayload] = useState<BillingPayload | null>(null);
   const [product, setProduct] = useState<ProductDraft>(emptyProduct);
   const [price, setPrice] = useState<PriceDraft>(emptyPrice);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -117,16 +147,19 @@ export default function AdminBillingPage() {
   const load = () =>
     fetch("/api/billing")
       .then((res) => res.json())
-      .then((json) => setPayload(json.data));
+      .then((json: { data: BillingPayload | null }) => setPayload(json.data));
 
   useEffect(() => {
     load();
   }, []);
 
-  const portalById = useMemo(() => new Map<string, any>((payload?.portals ?? []).map((item: any) => [item.id, item])), [payload]);
-  const linksByProduct = useMemo(() => new Map<string, string>((payload?.links ?? []).map((item: any) => [item.object_id, item.portal_id])), [payload]);
+  const portalById = useMemo(() => new Map<string, TenantPortal>((payload?.portals ?? []).map((item) => [item.id, item])), [payload]);
+  const linksByProduct = useMemo(
+    () => new Map<string, string>((payload?.links ?? []).flatMap((item) => (item.portal_id ? [[item.object_id, item.portal_id]] : []))),
+    [payload],
+  );
   const pricesByProduct = useMemo(() => {
-    const grouped = new Map<string, any[]>();
+    const grouped = new Map<string, BillingPrice[]>();
     for (const item of payload?.prices ?? []) {
       const list = grouped.get(item.product_id) ?? [];
       list.push(item);
@@ -148,10 +181,10 @@ export default function AdminBillingPage() {
       if (!response.ok || json.error) throw new Error(json.error || "Request failed.");
       setMessage(success);
       await load();
-      return true;
+      return json.data ?? true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Request failed.");
-      return false;
+      return null;
     } finally {
       setBusy(false);
     }
@@ -190,7 +223,12 @@ export default function AdminBillingPage() {
     if (ok) setPrice({ ...emptyPrice, amountCents: 4900 });
   };
 
-  const updateCatalog = async (item: any, metadata: Record<string, unknown>, status = item.status, portalId?: string | null) => {
+  const updateCatalog = async (
+    item: ProductRecord,
+    metadata: Record<string, unknown>,
+    status = item.status,
+    portalId?: string | null,
+  ) => {
     await run(
       {
         action: "update_catalog",
@@ -203,13 +241,13 @@ export default function AdminBillingPage() {
     );
   };
 
-  const startProductEdit = (item: any) => {
+  const startProductEdit = (item: ProductRecord) => {
     const portalId = linksByProduct.get(item.id) || "";
     setEditingProductId(item.id);
     setProductDraft(productDraftFrom(item, portalId));
   };
 
-  const saveProduct = async (item: any) => {
+  const saveProduct = async (item: ProductRecord) => {
     const ok = await run(
       {
         action: "update_product",
@@ -226,28 +264,34 @@ export default function AdminBillingPage() {
     if (ok) setEditingProductId(null);
   };
 
-  const deleteProduct = async (item: any) => {
-    if (!window.confirm(`Delete "${item.title}" and its prices? Existing access records may be removed.`)) return;
-    await run({ action: "delete_product", productId: item.id }, "Product deleted.");
+  const deleteProduct = async (item: ProductRecord) => {
+    if (!window.confirm(`Remove "${item.title}" from the catalog? Products with access history will be archived instead of permanently deleted.`)) return;
+    const result = await run({ action: "delete_product", productId: item.id }, "Product removed.");
+    if (result && typeof result === "object" && "mode" in result && result.mode === "archived") {
+      setMessage("Product archived and hidden because learners or transactions are already attached.");
+    }
   };
 
-  const startPriceEdit = (item: any) => {
+  const startPriceEdit = (item: BillingPrice) => {
     setEditingPriceId(item.id);
     setPriceDraft(priceDraftFrom(item));
   };
 
-  const savePrice = async (item: any) => {
+  const savePrice = async (item: BillingPrice) => {
     const ok = await run({ action: "update_price", priceId: item.id, ...priceDraft }, "Price saved.");
     if (ok) setEditingPriceId(null);
   };
 
-  const togglePrice = async (item: any) => {
+  const togglePrice = async (item: BillingPrice) => {
     await run({ action: "update_price", priceId: item.id, ...priceDraftFrom(item), active: item.active === false }, "Price status updated.");
   };
 
-  const deletePrice = async (item: any) => {
-    if (!window.confirm("Delete this price?")) return;
-    await run({ action: "delete_price", priceId: item.id }, "Price deleted.");
+  const deletePrice = async (item: BillingPrice) => {
+    if (!window.confirm("Remove this price? Prices with transaction history will be deactivated instead of permanently deleted.")) return;
+    const result = await run({ action: "delete_price", priceId: item.id }, "Price removed.");
+    if (result && typeof result === "object" && "mode" in result && result.mode === "deactivated") {
+      setMessage("Price deactivated because transactions or subscriptions already reference it.");
+    }
   };
 
   return (
@@ -287,18 +331,18 @@ export default function AdminBillingPage() {
             <input className="edsync-input" value={product.title} onChange={(event) => setProduct({ ...product, title: event.target.value })} placeholder="Product title" required />
             <textarea className="edsync-input min-h-24" value={product.description} onChange={(event) => setProduct({ ...product, description: event.target.value })} placeholder="Public summary" />
             <div className="grid gap-3 md:grid-cols-3">
-              <select className="edsync-input" value={product.productType} onChange={(event) => setProduct({ ...product, productType: event.target.value })}>
+              <select className="edsync-input" value={product.productType} onChange={(event) => setProduct({ ...product, productType: event.target.value as ProductDraft["productType"] })}>
                 <option value="course">Course</option>
                 <option value="bundle">Bundle</option>
                 <option value="membership">Membership</option>
                 <option value="subscription">Subscription</option>
               </select>
-              <select className="edsync-input" value={product.visibility} onChange={(event) => setProduct({ ...product, visibility: event.target.value })}>
+              <select className="edsync-input" value={product.visibility} onChange={(event) => setProduct({ ...product, visibility: event.target.value as ProductDraft["visibility"] })}>
                 <option value="private">Hidden draft</option>
                 <option value="public">Global catalog</option>
                 <option value="portal">Portal catalog</option>
               </select>
-              <select className="edsync-input" value={product.enrollmentMode} onChange={(event) => setProduct({ ...product, enrollmentMode: event.target.value })}>
+              <select className="edsync-input" value={product.enrollmentMode} onChange={(event) => setProduct({ ...product, enrollmentMode: event.target.value as ProductDraft["enrollmentMode"] })}>
                 <option value="closed">Closed</option>
                 <option value="free">Free enrollment</option>
                 <option value="paid">Paid checkout</option>
@@ -307,7 +351,7 @@ export default function AdminBillingPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <select className="edsync-input" value={product.portalId} onChange={(event) => setProduct({ ...product, portalId: event.target.value })}>
                 <option value="">Default portal</option>
-                {(payload?.portals ?? []).map((portal: any) => <option key={portal.id} value={portal.id}>{portal.name}</option>)}
+                {(payload?.portals ?? []).map((portal) => <option key={portal.id} value={portal.id}>{portal.name}</option>)}
               </select>
               <input className="edsync-input" value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })} placeholder="Category" />
               <input className="edsync-input" value={product.difficulty} onChange={(event) => setProduct({ ...product, difficulty: event.target.value })} placeholder="Difficulty" />
@@ -335,12 +379,12 @@ export default function AdminBillingPage() {
           <form onSubmit={createPrice} className="grid gap-3 border-t border-edsync-border p-4">
             <select className="edsync-input" value={price.productId} onChange={(event) => setPrice({ ...price, productId: event.target.value })} required>
               <option value="">Select product</option>
-              {(payload?.products ?? []).map((item: any) => <option key={item.id} value={item.id}>{item.title}</option>)}
+              {(payload?.products ?? []).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
             </select>
             <div className="grid gap-3 md:grid-cols-3">
               <input className="edsync-input" type="number" min="0" value={price.amountCents} onChange={(event) => setPrice({ ...price, amountCents: Number(event.target.value) })} />
               <input className="edsync-input" value={price.currency} onChange={(event) => setPrice({ ...price, currency: event.target.value })} placeholder="usd" />
-              <select className="edsync-input" value={price.billingInterval} onChange={(event) => setPrice({ ...price, billingInterval: event.target.value })}>
+              <select className="edsync-input" value={price.billingInterval} onChange={(event) => setPrice({ ...price, billingInterval: event.target.value as PriceDraft["billingInterval"] })}>
                 <option value="one_time">One time</option>
                 <option value="month">Monthly</option>
                 <option value="year">Yearly</option>
@@ -358,7 +402,7 @@ export default function AdminBillingPage() {
           <p className="text-sm text-edsync-subtle">Edit, toggle, archive, or delete catalog records from one compact list.</p>
         </div>
         <div className="divide-y divide-edsync-border">
-          {(payload?.products ?? []).map((item: any) => {
+          {(payload?.products ?? []).map((item) => {
             const metadata = metadataOf(item);
             const productPrices = pricesByProduct.get(item.id) ?? [];
             const portalId = linksByProduct.get(item.id) || "";
@@ -389,7 +433,7 @@ export default function AdminBillingPage() {
                   <div className="grid gap-1 text-edsync-subtle">
                     {editing ? (
                       <>
-                        <select className="edsync-input" value={productDraft.productType} onChange={(event) => setProductDraft({ ...productDraft, productType: event.target.value })}>
+                        <select className="edsync-input" value={productDraft.productType} onChange={(event) => setProductDraft({ ...productDraft, productType: event.target.value as ProductDraft["productType"] })}>
                           <option value="course">Course</option>
                           <option value="bundle">Bundle</option>
                           <option value="membership">Membership</option>
@@ -405,7 +449,7 @@ export default function AdminBillingPage() {
                       <>
                         <p className="capitalize">{item.product_type}</p>
                         <p>{portal?.name || "Default portal"}</p>
-                        <p>{metadata.category || "Uncategorized"} · {metadata.difficulty || "All levels"}</p>
+                        <p>{metadata.category || "Uncategorized"} / {metadata.difficulty || "All levels"}</p>
                       </>
                     )}
                   </div>
@@ -452,19 +496,19 @@ export default function AdminBillingPage() {
 
                 {editing && (
                   <div className="grid gap-3 rounded-lg border border-edsync-border bg-edsync-card p-3 md:grid-cols-3">
-                    <select className="edsync-input" value={productDraft.visibility} onChange={(event) => setProductDraft({ ...productDraft, visibility: event.target.value })}>
+                    <select className="edsync-input" value={productDraft.visibility} onChange={(event) => setProductDraft({ ...productDraft, visibility: event.target.value as ProductDraft["visibility"] })}>
                       <option value="private">Hidden draft</option>
                       <option value="public">Global catalog</option>
                       <option value="portal">Portal catalog</option>
                     </select>
-                    <select className="edsync-input" value={productDraft.enrollmentMode} onChange={(event) => setProductDraft({ ...productDraft, enrollmentMode: event.target.value })}>
+                    <select className="edsync-input" value={productDraft.enrollmentMode} onChange={(event) => setProductDraft({ ...productDraft, enrollmentMode: event.target.value as ProductDraft["enrollmentMode"] })}>
                       <option value="closed">Closed</option>
                       <option value="free">Free enrollment</option>
                       <option value="paid">Paid checkout</option>
                     </select>
                     <select className="edsync-input" value={productDraft.portalId} onChange={(event) => setProductDraft({ ...productDraft, portalId: event.target.value })}>
                       <option value="">Default portal</option>
-                      {(payload?.portals ?? []).map((portalOption: any) => <option key={portalOption.id} value={portalOption.id}>{portalOption.name}</option>)}
+                      {(payload?.portals ?? []).map((portalOption) => <option key={portalOption.id} value={portalOption.id}>{portalOption.name}</option>)}
                     </select>
                     <input className="edsync-input" value={productDraft.category} onChange={(event) => setProductDraft({ ...productDraft, category: event.target.value })} placeholder="Category" />
                     <input className="edsync-input" value={productDraft.language} onChange={(event) => setProductDraft({ ...productDraft, language: event.target.value })} placeholder="Language" />
@@ -487,7 +531,7 @@ export default function AdminBillingPage() {
                           <div className="grid gap-2 md:grid-cols-4">
                             <input className="edsync-input" type="number" min="0" value={priceDraft.amountCents} onChange={(event) => setPriceDraft({ ...priceDraft, amountCents: Number(event.target.value) })} />
                             <input className="edsync-input" value={priceDraft.currency} onChange={(event) => setPriceDraft({ ...priceDraft, currency: event.target.value })} />
-                            <select className="edsync-input" value={priceDraft.billingInterval} onChange={(event) => setPriceDraft({ ...priceDraft, billingInterval: event.target.value })}>
+                            <select className="edsync-input" value={priceDraft.billingInterval} onChange={(event) => setPriceDraft({ ...priceDraft, billingInterval: event.target.value as PriceDraft["billingInterval"] })}>
                               <option value="one_time">One time</option>
                               <option value="month">Monthly</option>
                               <option value="year">Yearly</option>
