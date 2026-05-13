@@ -36,6 +36,8 @@ export type ShellNavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  permission?: string;
+  plan?: "solo" | "team" | "enterprise";
 };
 
 type AppShellProps = {
@@ -90,8 +92,14 @@ export const studentNavItems: ShellNavItem[] = [
 
 export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/portals", label: "Portals", icon: GraduationCap, permission: "portals.manage", plan: "team" },
+  { href: "/admin/permissions", label: "Permissions", icon: ShieldCheck, permission: "users.manage", plan: "enterprise" },
   { href: "/admin/users", label: "Users", icon: UsersRound },
   { href: "/admin/ai", label: "AI Providers", icon: Brain },
+  { href: "/admin/standards", label: "Standards", icon: FileCheck2, permission: "courses.author", plan: "team" },
+  { href: "/admin/certifications", label: "Certifications", icon: ClipboardList, permission: "courses.publish", plan: "team" },
+  { href: "/admin/automation", label: "Automation", icon: Sparkles, permission: "courses.publish", plan: "team" },
+  { href: "/admin/billing", label: "Billing", icon: CalendarClock, permission: "billing.manage", plan: "team" },
   { href: "/admin/email", label: "Email Outbox", icon: MessageSquareText },
   { href: "/admin/security", label: "Security", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
@@ -107,6 +115,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const copy = roleCopy[role];
 
   useEffect(() => {
@@ -136,6 +146,20 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         });
     });
   }, [edsync]);
+
+  useEffect(() => {
+    fetch("/api/permissions")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!payload?.data) return;
+        setPermissions(payload.data.granted ?? []);
+        const tier = payload.data.context?.tenant?.plan_tier;
+        if (tier === "team" || tier === "enterprise") setPlanTier(tier);
+      })
+      .catch(() => {
+        setPermissions([]);
+      });
+  }, []);
 
   const handleLogout = async () => {
     await edsync.auth.signOut();
@@ -233,7 +257,13 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {navItems.map((item) => {
+        {navItems.filter((item) => {
+          if (role === "admin") return true;
+          if (item.permission && !permissions.includes(item.permission)) return false;
+          if (item.plan === "team" && planTier === "solo") return false;
+          if (item.plan === "enterprise" && planTier !== "enterprise") return false;
+          return true;
+        }).map((item) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
