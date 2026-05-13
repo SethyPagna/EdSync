@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
+import { sanitizeHtml } from "@/lib/security/html";
 import type {
   Lesson,
   LessonSection,
@@ -186,9 +187,7 @@ function RichTextEditor({
           const html = e.clipboardData.getData("text/html");
           if (html) {
             e.preventDefault();
-            const clean = html
-              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-              .replace(/on\w+="[^"]*"/gi, "");
+            const clean = sanitizeHtml(html);
             document.execCommand("insertHTML", false, clean);
             onChange(ref.current?.innerHTML || "");
           }
