@@ -188,7 +188,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-72 flex-col border-r border-edsync-border bg-edsync-surface/95 shadow-xl shadow-slate-200/60 backdrop-blur transition-all duration-300 dark:shadow-black/20`}
+      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-72 flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/60 transition-all duration-300 dark:shadow-black/20`}
     >
       <div className="flex items-center gap-3 border-b border-edsync-border px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
@@ -341,7 +341,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-edsync-bg text-edsync-text">
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg/90 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg px-4 py-3 shadow-sm lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -377,7 +377,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         <main
           className={`${collapsed ? "lg:ml-[76px]" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:pt-0`}
         >
-          <div className="sticky top-0 z-20 hidden justify-end border-b border-edsync-border bg-edsync-bg/80 px-6 py-3 backdrop-blur lg:flex">
+          <div className="sticky top-0 z-20 hidden justify-end border-b border-edsync-border bg-edsync-bg px-6 py-3 shadow-sm lg:flex">
             <NotificationMenu />
           </div>
           {isAdminViewMode && (
