@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
+import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   const { email, password, options } = (await request.json()) as {
@@ -21,11 +22,35 @@ export async function POST(request: Request) {
     });
   }
 
+  const rate = await enforceRateLimit({
+    request,
+    scope: "auth_signup",
+    limit: 5,
+    windowSeconds: 900,
+    subject: normalizedEmail,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        data: { user: null, session: null },
+        error: { message: "Too many signup attempts. Try again shortly.", status: 429 },
+      },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+    );
+  }
+
   const existing = await d1Query<{ id: string }>("SELECT id FROM auth_users WHERE lower(email) = lower(?) LIMIT 1", [
     normalizedEmail,
   ]);
 
   if (existing[0]) {
+    await logSecurityEvent({
+      request,
+      eventType: "signup_duplicate",
+      severity: "info",
+      subject: normalizedEmail,
+      message: "Signup attempted for an existing email.",
+    });
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "This email is already registered. Try signing in.", status: 409 },
