@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
  ? lessonObjectives.join(", ")
  : (lessonObjectives ?? "Not specified");
 
- const systemPrompt = `You are Socrates, an AI tutor in the Atlas adaptive learning platform.
+ const systemPrompt = `You are Socrates, an AI tutor in the EdSync adaptive learning platform.
 
 Your ONLY rule: never directly answer questions or give away answers. Instead, guide students to discover answers themselves through strategic questioning and hints.
 
