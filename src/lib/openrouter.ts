@@ -5,6 +5,8 @@
  * Docs: https://openrouter.ai/docs
  */
 
+import { aiGatewayChat } from "@/lib/ai/gateway";
+
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const MODEL = process.env.OPENROUTER_DEFAULT_MODEL || "openai/gpt-oss-120b:free";
 
@@ -90,6 +92,19 @@ function extractTextFromChoice(choice?: OpenRouterChoice): string {
  * Throws on non-200 responses with a descriptive error.
  */
 export async function openRouterChat(opts: OpenRouterOptions): Promise<string> {
+  try {
+    return await aiGatewayChat({
+      messages: opts.messages,
+      maxTokens: opts.maxTokens,
+      temperature: opts.temperature,
+      model: opts.model,
+      feature: "chat",
+    });
+  } catch (gatewayError) {
+    const hasLegacyKey = Boolean(process.env.OPENROUTER_API_KEY);
+    if (!hasLegacyKey) throw gatewayError;
+  }
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set in .env.local");
   const started = Date.now();
