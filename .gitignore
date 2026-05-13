@@ -4,6 +4,7 @@
 
 node_modules
 .next
+.open-next
 out
 dist
 coverage
