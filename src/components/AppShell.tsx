@@ -10,6 +10,7 @@ import { generateInitials } from "@/lib/utils";
 import {
   BarChart3,
   BookOpenCheck,
+  CalendarClock,
   Brain,
   ClipboardList,
   GraduationCap,
@@ -57,6 +58,7 @@ const roleCopy = {
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
+  { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/teacher/reports", label: "Reports", icon: ClipboardList },
