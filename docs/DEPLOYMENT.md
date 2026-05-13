@@ -46,9 +46,13 @@ Required values:
 - `CLOUDFLARE_VECTORIZE_INDEX`
 - `CLOUDFLARE_QUEUE_NAME`
 - `SESSION_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_INITIAL_PASSWORD`
+- `APP_ENCRYPTION_KEY`
 - `TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
 - `OPENROUTER_API_KEY`
+- `EMAIL_MODE=outbox|compose|provider`
 - `DEPLOYMENT_TARGET=local|vercel|cloudflare|docker`
 
 Keep real token values in `.env.local`, Vercel env, Cloudflare secrets, or CI
@@ -89,6 +93,43 @@ npm.cmd run deploy:vercel -- --prod
 The script validates required env keys, runs typecheck/build unless
 `--skip-build` is provided, pulls Vercel environment settings, builds, and
 deploys the prebuilt output.
+
+## Cloudflare Pages
+
+Use the short EdSync Pages project name `edsync` unless the account already has a
+different EdSync Pages project configured in `CLOUDFLARE_PAGES_PROJECT`.
+
+```powershell
+npm.cmd run deploy:cloudflare
+npm.cmd run deploy:cloudflare -- --preview
+```
+
+The script lists existing Pages projects first, reuses `edsync` if present, and
+only creates the project if it is missing. If creation races or fails because the
+project already exists, it re-lists and deploys to the existing project instead
+of creating a duplicate. It also deploys the existing Worker environment from
+`wrangler.toml`.
+
+Set Cloudflare Pages project variables to match the active target:
+
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_THEME_DEFAULT`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_D1_DATABASE_ID`
+- `CLOUDFLARE_D1_DATABASE_NAME`
+- `R2_BUCKET`
+- `R2_PUBLIC_BASE_URL`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_AI_GATEWAY_URL`
+- `CLOUDFLARE_VECTORIZE_INDEX`
+- `CLOUDFLARE_QUEUE_NAME`
+- `SESSION_SECRET`
+- `APP_ENCRYPTION_KEY`
+- `EMAIL_MODE`
+- `OPENROUTER_API_KEY`
+- `DEPLOYMENT_TARGET=cloudflare`
 
 ## Cloudflare Worker And Queue
 
