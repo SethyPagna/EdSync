@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, auditAdminAction } from "@/lib/admin";
+import { enqueueAutomationJob } from "@/lib/automation";
 import { d1Query } from "@/lib/db/d1";
 import { getProviderRow, serializeProvider } from "@/lib/ai/providers";
 import { testAIProvider } from "@/lib/ai/gateway";
+import { DEFAULT_TENANT_ID } from "@/lib/tenancy";
+
+async function enqueueProviderTest(providerId: string, provider: string, status: "ok" | "error", message?: string) {
+  try {
+    await enqueueAutomationJob({
+      tenantId: DEFAULT_TENANT_ID,
+      jobType: "ai_provider.tested",
+      payload: { providerId, provider, status, message },
+    });
+  } catch {
+    // Health tests should report their direct result even if the queue is unavailable.
+  }
+}
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireAdmin();
@@ -26,6 +40,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
       entityId: params.id,
       metadata: { status: "ok" },
     });
+    await enqueueProviderTest(params.id, row.provider, "ok", message);
     const updated = await getProviderRow(params.id);
     return NextResponse.json({
       data: { success: true, message, provider: updated ? serializeProvider(updated) : null },
@@ -46,6 +61,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
       entityId: params.id,
       metadata: { status: "error", message },
     });
+    await enqueueProviderTest(params.id, row.provider, "error", message);
     const updated = await getProviderRow(params.id);
     return NextResponse.json({
       data: { success: false, provider: updated ? serializeProvider(updated) : null },
