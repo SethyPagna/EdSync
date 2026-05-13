@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat } from "@/lib/openrouter";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { loadAiUserContext } from "@/lib/ai/personalization";
 
 type ReflectionAdvice = {
   strengths: string[];
@@ -125,10 +126,14 @@ export async function POST(request: NextRequest) {
       typeof lectureContext === "string"
         ? lectureContext.slice(0, 6000)
         : "No lecture context provided.";
+    const aiContext = await loadAiUserContext(user.id);
 
-    const systemPrompt = `You are an expert learning coach for the ATLAS platform.
+    const systemPrompt = `You are an expert learning coach for EdSync.
 
 Given a student's reflection and lecture context, provide concise coaching advice.
+
+Student profile:
+${aiContext.prompt}
 
 Return ONLY one valid JSON object with this exact shape:
 {
@@ -141,6 +146,7 @@ Return ONLY one valid JSON object with this exact shape:
 
 Rules:
 - Keep each item practical and specific.
+- Match the student's grade, interests, confidence, and preferred detail level.
 - Do not provide direct answers to quiz questions.
 - Keep guidingQuestion as exactly one question.
 - Keep encouragement to one sentence.
