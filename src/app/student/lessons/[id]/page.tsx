@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
+import { sanitizeHtml } from "@/lib/security/html";
 import type {
   Lesson,
   LessonSection,
@@ -49,12 +50,7 @@ function stripHtmlTags(content: string) {
 }
 
 function sanitizeLessonHtml(content: string) {
-  return content
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
-    .replace(/javascript:/gi, "");
+  return sanitizeHtml(content);
 }
 
 // ── Content renderers ──────────────────────────────────────────
