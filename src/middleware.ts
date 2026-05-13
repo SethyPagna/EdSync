@@ -14,28 +14,53 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   if (hasSession && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
-    return NextResponse.redirect(url);
+    return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   if (hasSession && role === "teacher" && pathname.startsWith("/student")) {
     const url = request.nextUrl.clone();
     url.pathname = "/teacher/dashboard";
-    return NextResponse.redirect(url);
+    return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   if (hasSession && role === "student" && pathname.startsWith("/teacher")) {
     const url = request.nextUrl.clone();
     url.pathname = "/student/dashboard";
-    return NextResponse.redirect(url);
+    return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next());
+}
+
+function withSecurityHeaders(response: NextResponse) {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  response.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
+      "frame-src https://www.youtube.com https://player.vimeo.com",
+      "connect-src 'self' https://api.cloudflare.com https://*.r2.cloudflarestorage.com",
+      "form-action 'self'",
+    ].join("; "),
+  );
+  return response;
 }
 
 export const config = {
