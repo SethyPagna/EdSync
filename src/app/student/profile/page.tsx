@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/edsync/client";
-import type { Profile } from "@/types";
+import { GRADE_LEVELS } from "@/lib/grades";
+import type { Profile, UserPreferences } from "@/types";
 import toast from "react-hot-toast";
 import { generateInitials } from "@/lib/utils";
 
@@ -191,6 +192,14 @@ const INTEREST_OPTIONS = [
   "Business",
 ];
 
+const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: "light",
+  text_size: "medium",
+  email_notifications: true,
+  assignment_notifications: true,
+  weekly_digest: true,
+};
+
 export default function StudentProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [skillMetrics, setSkillMetrics] = useState<SkillMetric[]>(
@@ -200,7 +209,9 @@ export default function StudentProfile() {
   const [fullName, setFullName] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
+  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const edsync = createClient();
 
   useEffect(() => {
@@ -229,6 +240,7 @@ export default function StudentProfile() {
         setFullName(data.full_name || "");
         setGradeLevel(data.grade_level || "");
         setInterests(data.interests || []);
+        setPreferences({ ...DEFAULT_PREFERENCES, ...(data.preferences || {}) });
       }
 
       const progressRows = (progressRes.data || []) as ProgressRow[];
@@ -260,6 +272,7 @@ export default function StudentProfile() {
         full_name: fullName,
         grade_level: gradeLevel,
         interests,
+        preferences,
       })
       .eq("id", user.id);
 
@@ -267,12 +280,30 @@ export default function StudentProfile() {
       toast.success("Profile saved!");
       setProfile((prev) =>
         prev
-          ? { ...prev, full_name: fullName, grade_level: gradeLevel, interests }
+          ? { ...prev, full_name: fullName, grade_level: gradeLevel, interests, preferences }
           : null,
       );
       setEditing(false);
     }
     setSaving(false);
+  };
+
+  const uploadAvatar = async (file: File | undefined) => {
+    if (!file || !profile) return;
+    setUploadingAvatar(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const { data, error } = await edsync.storage
+      .from("avatars")
+      .upload(`avatar-${Date.now()}.${ext}`, file, { upsert: true });
+    if (error || !data) {
+      toast.error(error?.message || "Avatar upload failed");
+      setUploadingAvatar(false);
+      return;
+    }
+    await edsync.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", profile.id);
+    setProfile({ ...profile, avatar_url: data.publicUrl });
+    setUploadingAvatar(false);
+    toast.success("Avatar updated");
   };
 
   const chartCenterX = 200;
@@ -296,10 +327,14 @@ export default function StudentProfile() {
       {/* Avatar & basic info */}
       <div className="edsync-card mb-6">
         <div className="flex items-start gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan flex items-center justify-center text-white text-3xl font-display font-bold flex-shrink-0">
-            {profile
-              ? generateInitials(profile.full_name || profile.email)
-              : "?"}
+          <div className="w-20 h-20 overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan flex items-center justify-center text-white text-3xl font-display font-bold flex-shrink-0">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+            ) : profile ? (
+              generateInitials(profile.full_name || profile.email)
+            ) : (
+              "?"
+            )}
           </div>
           <div className="flex-1">
             {editing ? (
@@ -316,16 +351,7 @@ export default function StudentProfile() {
                   className="edsync-input"
                 >
                   <option value="">Select Grade Level</option>
-                  {[
-                    "Grade 6",
-                    "Grade 7",
-                    "Grade 8",
-                    "Grade 9",
-                    "Grade 10",
-                    "Grade 11",
-                    "Grade 12",
-                    "College",
-                  ].map((g) => (
+                  {GRADE_LEVELS.map((g) => (
                     <option key={g} value={g}>
                       {g}
                     </option>
@@ -352,6 +378,78 @@ export default function StudentProfile() {
             {saving ? "..." : editing ? "Save" : "Edit"}
           </button>
         </div>
+        <label className="btn-secondary mt-4 inline-flex cursor-pointer py-2 text-sm">
+          {uploadingAvatar ? "Uploading..." : "Upload avatar"}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={(event) => uploadAvatar(event.target.files?.[0])}
+          />
+        </label>
+      </div>
+
+      <div className="edsync-card mb-6">
+        <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
+          Preferences
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-edsync-subtle">Theme</span>
+            <select
+              value={preferences.theme}
+              onChange={(event) =>
+                setPreferences({
+                  ...preferences,
+                  theme: event.target.value as UserPreferences["theme"],
+                })
+              }
+              className="edsync-input"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="system">System</option>
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-edsync-subtle">Text size</span>
+            <select
+              value={preferences.text_size}
+              onChange={(event) =>
+                setPreferences({
+                  ...preferences,
+                  text_size: event.target.value as UserPreferences["text_size"],
+                })
+              }
+              className="edsync-input"
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </label>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {[
+            ["email_notifications", "Email updates"],
+            ["assignment_notifications", "Assignment notices"],
+            ["weekly_digest", "Weekly digest"],
+          ].map(([key, label]) => (
+            <label key={key} className="flex items-center justify-between rounded-lg border border-edsync-border p-3">
+              <span className="text-sm font-semibold text-edsync-text">{label}</span>
+              <input
+                type="checkbox"
+                checked={Boolean(preferences[key as keyof UserPreferences])}
+                onChange={(event) =>
+                  setPreferences({ ...preferences, [key]: event.target.checked })
+                }
+              />
+            </label>
+          ))}
+        </div>
+        <button onClick={save} disabled={saving} className="btn-primary mt-4 text-sm py-2">
+          Save Preferences
+        </button>
       </div>
 
       {/* Interests */}
