@@ -8,12 +8,22 @@ runtime.
 
 Create EdSync-specific resources so AllChess and LEARN remain isolated:
 
-- D1 databases: `edsync-dev-d1`, `edsync-preview-d1`, `edsync-prod-d1`
-- R2 buckets: `edsync-assets-dev`, `edsync-assets-preview`, `edsync-assets-prod`
-- Queue: `edsync-automation-*`
-- Vectorize index: `edsync-learning-*`
-- AI Gateway route dedicated to EdSync
-- Turnstile site dedicated to EdSync auth and high-volume actions
+- D1 databases:
+  - `edsync-dev-d1` (`54bbff25-6efb-4210-8c3a-e9ac0e2a0a98`)
+  - `edsync-preview-d1` (`6ae1887c-2efb-4199-89c2-2d68ef7b3ce2`)
+  - `edsync-prod-d1` (`cfa252cc-750f-4aaa-8e3a-624cbe56e6bd`)
+- R2 buckets:
+  - `edsync-assets-dev` (`https://pub-648d4acbbaac4a3e96a5dea072706010.r2.dev`)
+  - `edsync-assets-preview` (`https://pub-83c176f255cf44ada09ff54097705245.r2.dev`)
+  - `edsync-assets-prod` (`https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev`)
+- Queues: `edsync-automation-dev`, `edsync-automation-preview`, `edsync-automation-prod`
+- Vectorize indexes: `edsync-learning-dev`, `edsync-learning-preview`, `edsync-learning-prod`
+- AI Gateways: `edsync-dev`, `edsync-preview`, `edsync-prod`
+- Turnstile site: `EdSync app`
+- Workers:
+  - `edsync-learning-os`
+  - `edsync-learning-os-preview`
+  - `edsync-learning-os-production`
 
 Object keys must still include environment and owner scope, for example
 `prod/users/{userId}/lesson-assets/{fileName}`.
@@ -71,10 +81,12 @@ deploys the prebuilt output.
 ## Cloudflare Worker And Queue
 
 `wrangler.toml` defines the EdSync D1, R2, Queue, and Vectorize bindings. Deploy
-the automation worker after filling real IDs:
+the automation worker with the environment that matches the target:
 
 ```powershell
-npx wrangler deploy cloudflare/workers/automation.ts
+npx wrangler deploy --env=""
+npx wrangler deploy --env preview
+npx wrangler deploy --env production
 ```
 
 ## Deployment Matrix
