@@ -14,10 +14,17 @@
   --text: #142033;
   --subtle: #627089;
   --blue: #2563eb;
+  --blue-rgb: 37 99 235;
   --amber: #b7791f;
+  --amber-rgb: 183 121 31;
   --emerald: #108765;
+  --emerald-rgb: 16 135 101;
   --red: #dc2626;
+  --red-rgb: 220 38 38;
   --cyan: #0891b2;
+  --cyan-rgb: 8 145 178;
+  --purple: #7c3aed;
+  --purple-rgb: 124 58 237;
 }
 
 .dark {
@@ -30,10 +37,17 @@
   --text: #e8edf5;
   --subtle: #8b95a7;
   --blue: #4f86f7;
+  --blue-rgb: 79 134 247;
   --amber: #f5a623;
+  --amber-rgb: 245 166 35;
   --emerald: #23d18b;
+  --emerald-rgb: 35 209 139;
   --red: #f14c4c;
+  --red-rgb: 241 76 76;
   --cyan: #22d3ee;
+  --cyan-rgb: 34 211 238;
+  --purple: #a78bfa;
+  --purple-rgb: 167 139 250;
 }
 
 * {
