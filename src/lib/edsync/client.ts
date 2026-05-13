@@ -185,7 +185,7 @@ export function createClient() {
     storage: {
       from(bucket: string) {
         return {
-          async upload(path: string, file: File) {
+          async upload(path: string, file: File, _options: { upsert?: boolean } = {}) {
             const form = new FormData();
             form.set("bucket", bucket);
             form.set("path", path);
