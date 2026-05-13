@@ -50,6 +50,9 @@ export default function LandingPage() {
           </div>
         </Link>
         <nav className="flex items-center gap-3">
+          <Link href="/catalog" className="btn-ghost text-sm">
+            Catalog
+          </Link>
           <Link href="/auth/login" className="btn-ghost text-sm">
             Sign in
           </Link>
@@ -76,11 +79,17 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/auth/signup?role=teacher"
+              href="/catalog"
               className="btn-primary justify-center py-3.5"
             >
-              Continue as teacher
+              Browse catalog
               <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/auth/signup?role=teacher"
+              className="btn-secondary justify-center py-3.5"
+            >
+              Continue as teacher
             </Link>
             <Link
               href="/auth/signup?role=student"
