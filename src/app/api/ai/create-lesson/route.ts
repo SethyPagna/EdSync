@@ -6,7 +6,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 const MAX_SOURCE_CHARS = 5000;
 const LESSON_MODEL = process.env.OPENROUTER_LESSON_MODEL?.trim() || undefined;
 
-const FIXED_LESSON_SYSTEM_PROMPT = `You are Atlas AI, an expert educational content designer.
+const FIXED_LESSON_SYSTEM_PROMPT = `You are EdSync AI, an expert educational content designer.
 Return ONLY one valid JSON object with the exact schema below. Do not use markdown, code fences, preamble, or trailing text.
 
 Schema:
