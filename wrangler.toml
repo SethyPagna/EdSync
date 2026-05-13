@@ -1,0 +1,23 @@
+name = "edsync-learning-os"
+compatibility_date = "2026-05-12"
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "EDSYNC_DB"
+database_name = "edsync-dev-d1"
+database_id = "replace-with-cloudflare-d1-database-id"
+
+[[r2_buckets]]
+binding = "EDSYNC_ASSETS"
+bucket_name = "edsync-assets-dev"
+
+[[queues.producers]]
+binding = "EDSYNC_QUEUE"
+queue = "edsync-automation-dev"
+
+[[queues.consumers]]
+queue = "edsync-automation-dev"
+
+[[vectorize]]
+binding = "EDSYNC_VECTORIZE"
+index_name = "edsync-learning-dev"
