@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { d1Query } from "@/lib/db/d1";
+import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateUploadFile } from "@/lib/security/upload";
 
@@ -127,6 +128,31 @@ export async function POST(request: NextRequest) {
   }
 
   const buffer = await file.arrayBuffer();
+  const malwareScan = await scanUploadBuffer({
+    buffer: Buffer.from(buffer),
+    fileName: safeFile.fileName,
+    contentType: safeFile.contentType,
+  });
+  if (malwareScan.status === "failed") {
+    await logSecurityEvent({
+      request,
+      userId: user.id,
+      eventType: "malware_extract_blocked",
+      severity: "critical",
+      message: "Content extraction blocked by malware scan.",
+      metadata: {
+        fileName: safeFile.fileName,
+        contentType: safeFile.contentType,
+        size: file.size,
+        scan: malwareScan,
+      },
+    });
+    return NextResponse.json(
+      { error: "Extraction blocked because the file looks unsafe." },
+      { status: 422 },
+    );
+  }
+
   const kind = safeFile.assetType === "document" ? fileKind(file) : safeFile.assetType;
   const mediaText = mediaPrompt(file, kind);
   if (mediaText) {
