@@ -10,6 +10,7 @@ type CatalogRow = BillingProduct & {
   portal_slug: string | null;
   portal_name: string | null;
   portal_audience: string | null;
+  portal_catalog_settings: Record<string, unknown> | string | null;
   lesson_title: string | null;
   lesson_subject: string | null;
   lesson_grade_level: string | null;
@@ -50,6 +51,17 @@ function priceLabel(price?: BillingPrice | null) {
     currency: price.currency || "usd",
   }).format(price.amount_cents / 100);
   return price.billing_interval === "one_time" ? amount : `${amount}/${price.billing_interval}`;
+}
+
+function portalCatalogSettings(row: CatalogRow) {
+  const value = row.portal_catalog_settings;
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
 }
 
 async function activePrices(productIds: string[]) {
@@ -117,6 +129,7 @@ export async function listPublicCatalog(input: {
 
   if (input.portalSlug) {
     where.push("tp.slug = ?");
+    where.push("tp.audience IN ('public', 'customer', 'partner')");
     params.push(input.portalSlug);
   }
 
@@ -134,6 +147,7 @@ export async function listPublicCatalog(input: {
   const rows = await d1Query<CatalogRow>(
     `SELECT bp.*, t.name AS tenant_name, t.slug AS tenant_slug,
             tp.id AS portal_id, tp.slug AS portal_slug, tp.name AS portal_name, tp.audience AS portal_audience,
+            tp.catalog_settings AS portal_catalog_settings,
             l.title AS lesson_title, l.subject AS lesson_subject, l.grade_level AS lesson_grade_level,
             l.estimated_duration AS lesson_duration, l.thumbnail_url AS lesson_thumbnail_url
        FROM billing_products bp
@@ -149,21 +163,25 @@ export async function listPublicCatalog(input: {
 
   const prices = await activePrices(rows.map((row) => row.id));
   return rows
-    .map((row) => toPublicItem(row, prices.get(row.id)))
-    .filter((item) => {
+    .map((row) => ({ row, item: toPublicItem(row, prices.get(row.id)) }))
+    .filter(({ row, item }) => {
+      const portalSettings = portalCatalogSettings(row);
+      if (input.portalSlug && portalSettings.enabled === false) return false;
       const visible = input.portalSlug
         ? item.metadata.visibility === "public" || item.metadata.visibility === "portal"
         : item.metadata.visibility === "public";
       if (!visible) return false;
-      if (input.featuredOnly && !item.metadata.featured) return false;
+      if ((input.featuredOnly || portalSettings.featuredOnly) && !item.metadata.featured) return false;
       return true;
-    });
+    })
+    .map(({ item }) => item);
 }
 
 export async function getPublicCatalogItem(id: string) {
   const rows = await d1Query<CatalogRow>(
     `SELECT bp.*, t.name AS tenant_name, t.slug AS tenant_slug,
             tp.id AS portal_id, tp.slug AS portal_slug, tp.name AS portal_name, tp.audience AS portal_audience,
+            tp.catalog_settings AS portal_catalog_settings,
             l.title AS lesson_title, l.subject AS lesson_subject, l.grade_level AS lesson_grade_level,
             l.estimated_duration AS lesson_duration, l.thumbnail_url AS lesson_thumbnail_url
        FROM billing_products bp
@@ -179,7 +197,12 @@ export async function getPublicCatalogItem(id: string) {
   if (!row) return null;
   const prices = await activePrices([row.id]);
   const item = toPublicItem(row, prices.get(row.id));
-  const visible = item.metadata.visibility === "public" || item.metadata.visibility === "portal";
+  const portalSettings = portalCatalogSettings(row);
+  const portalVisible =
+    item.metadata.visibility === "portal" &&
+    ["public", "customer", "partner"].includes(row.portal_audience || "") &&
+    portalSettings.enabled !== false;
+  const visible = item.metadata.visibility === "public" || portalVisible;
   return visible ? item : null;
 }
 
