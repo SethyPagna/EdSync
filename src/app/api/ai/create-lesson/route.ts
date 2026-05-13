@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openRouterChat, parseJsonResponse } from "@/lib/openrouter";
+import { generateAIChat, parseJsonResponse } from "@/lib/ai/chat";
 import type { AILessonDraft } from "@/types";
 import { getAuthenticatedUser } from "@/lib/auth";
 import {
@@ -10,7 +10,6 @@ import {
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const MAX_SOURCE_CHARS = 5000;
-const LESSON_MODEL = process.env.OPENROUTER_LESSON_MODEL?.trim() || undefined;
 
 const FIXED_LESSON_SYSTEM_PROMPT = `You are EdSync AI, an expert educational content designer.
 Return ONLY one valid JSON object with the exact schema below. Do not use markdown, code fences, preamble, or trailing text.
@@ -429,7 +428,7 @@ export async function POST(request: NextRequest) {
     ];
 
     const generateRawLesson = async (prompt: string, extraInstruction?: string) =>
-      openRouterChat({
+      generateAIChat({
         messages: [
           { role: "system" as const, content: FIXED_LESSON_SYSTEM_PROMPT },
           {
@@ -437,7 +436,6 @@ export async function POST(request: NextRequest) {
             content: extraInstruction ? `${prompt}\n\n${extraInstruction}` : prompt,
           },
         ],
-        model: LESSON_MODEL,
         maxTokens: 2200,
         temperature: 0.2,
       });
@@ -474,11 +472,10 @@ export async function POST(request: NextRequest) {
       lesson = parseJsonResponse(raw);
     } catch (initialParseError) {
       try {
-        const regeneratedRaw = await openRouterChat({
+        const regeneratedRaw = await generateAIChat({
           messages: buildMessages(
             "Your previous output was malformed or incomplete. Regenerate the full JSON from scratch in compact mode, and return only JSON.",
           ),
-          model: LESSON_MODEL,
           maxTokens: 1500,
           temperature: 0,
         });
@@ -500,7 +497,7 @@ export async function POST(request: NextRequest) {
         // Ask the model to repair malformed JSON so generation does not fail on minor syntax issues.
         let repairedRaw: string;
         try {
-          repairedRaw = await openRouterChat({
+          repairedRaw = await generateAIChat({
             messages: [
               {
                 role: "system",
@@ -512,7 +509,6 @@ export async function POST(request: NextRequest) {
                 content: `Repair this JSON so it is strictly valid (RFC 8259):\n\n${raw}`,
               },
             ],
-            model: LESSON_MODEL,
             maxTokens: 3000,
             temperature: 0,
           });
