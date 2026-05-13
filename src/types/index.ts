@@ -292,6 +292,45 @@ export interface MediaAsset {
   created_at: string;
 }
 
+export interface Announcement {
+  id: string;
+  teacher_id: string;
+  class_id: string | null;
+  title: string;
+  body: string;
+  priority: "low" | "normal" | "high";
+  audience: "class" | "all";
+  publish_at: string | null;
+  expires_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScheduleEvent {
+  id: string;
+  owner_id: string;
+  class_id: string | null;
+  lesson_id: string | null;
+  title: string;
+  description: string | null;
+  event_type:
+    | "deadline"
+    | "class"
+    | "office_hours"
+    | "study"
+    | "announcement"
+    | "other";
+  starts_at: string | null;
+  ends_at: string | null;
+  due_at: string | null;
+  location: string | null;
+  visibility: "teacher" | "student" | "class";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 // AI Generation Types
 export interface AILessonDraft {
   title: string;
