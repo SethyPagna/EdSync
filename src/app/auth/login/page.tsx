@@ -40,7 +40,12 @@ function LoginForm() {
     const role = (data.user?.user_metadata?.role as string) || "student";
     const next = searchParams.get("next");
     const safeNext =
-      next && (next.startsWith("/admin") || next.startsWith("/teacher") || next.startsWith("/student"))
+      next &&
+      (next.startsWith("/admin") ||
+        next.startsWith("/teacher") ||
+        next.startsWith("/student") ||
+        next.startsWith("/catalog") ||
+        next.startsWith("/org"))
         ? next
         : role === "admin"
           ? "/admin/dashboard"
