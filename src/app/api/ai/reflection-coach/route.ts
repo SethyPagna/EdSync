@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openRouterChat } from "@/lib/openrouter";
+import { generateAIChat } from "@/lib/ai/chat";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -167,7 +167,7 @@ Rules:
 - Keep encouragement to one sentence.
 - No markdown or extra text.`;
 
-    const raw = await openRouterChat({
+    const raw = await generateAIChat({
       messages: [
         { role: "system", content: systemPrompt },
         {
