@@ -6,7 +6,10 @@ import { getSessionUser } from "@/lib/auth/session";
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) {
-    return NextResponse.json({ data: null, error: { message: "Authentication required." } });
+    return NextResponse.json(
+      { data: null, error: { message: "Authentication required." } },
+      { status: 401 },
+    );
   }
 
   const form = await request.formData();
@@ -15,11 +18,17 @@ export async function POST(request: Request) {
   const bucketAlias = String(form.get("bucket") ?? "uploads");
 
   if (!(file instanceof File) || !path) {
-    return NextResponse.json({ data: null, error: { message: "File and path are required." } });
+    return NextResponse.json(
+      { data: null, error: { message: "File and path are required." } },
+      { status: 400 },
+    );
   }
 
-  if (file.size > 10 * 1024 * 1024) {
-    return NextResponse.json({ data: null, error: { message: "Files must be 10MB or smaller." } });
+  if (file.size > 25 * 1024 * 1024) {
+    return NextResponse.json(
+      { data: null, error: { message: "Files must be 25MB or smaller." } },
+      { status: 413 },
+    );
   }
 
   const env = process.env.DEPLOYMENT_TARGET || "local";
