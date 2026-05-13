@@ -77,7 +77,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: checkout, error: null });
   }
 
-  await requirePermission(user, context, PERMISSIONS.billingManage);
+  try {
+    await requirePermission(user, context, PERMISSIONS.billingManage);
+  } catch {
+    return NextResponse.json({ data: null, error: "Missing billing management permission." }, { status: 403 });
+  }
 
   if (body.action === "update_catalog") {
     if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
@@ -142,13 +146,34 @@ export async function POST(request: Request) {
 
   if (body.action === "delete_product") {
     if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
+    const [usage] = await d1Query<{ entitlement_count: number; transaction_count: number }>(
+      `SELECT
+         (SELECT COUNT(*) FROM entitlements WHERE tenant_id = ? AND product_id = ?) AS entitlement_count,
+         (SELECT COUNT(*) FROM billing_transactions WHERE tenant_id = ? AND product_id = ?) AS transaction_count`,
+      [context.tenant.id, body.productId, context.tenant.id, body.productId],
+    );
     await d1Query("DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?", [
       context.tenant.id,
       body.productId,
     ]);
+    if ((usage?.entitlement_count ?? 0) > 0 || (usage?.transaction_count ?? 0) > 0) {
+      await d1Query(
+        "UPDATE billing_prices SET active = 0, updated_at = datetime('now') WHERE tenant_id = ? AND product_id = ?",
+        [context.tenant.id, body.productId],
+      );
+      await d1Query(
+        "UPDATE billing_products SET status = 'archived', metadata = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?",
+        [
+          sanitizeCatalogMetadata({ visibility: "private", enrollmentMode: "closed" }),
+          context.tenant.id,
+          body.productId,
+        ],
+      );
+      return NextResponse.json({ data: { id: body.productId, mode: "archived" }, error: null });
+    }
     await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND product_id = ?", [context.tenant.id, body.productId]);
     await d1Query("DELETE FROM billing_products WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.productId]);
-    return NextResponse.json({ data: { id: body.productId }, error: null });
+    return NextResponse.json({ data: { id: body.productId, mode: "deleted" }, error: null });
   }
 
   if (body.action === "create_price") {
@@ -196,8 +221,21 @@ export async function POST(request: Request) {
 
   if (body.action === "delete_price") {
     if (!body.priceId) return NextResponse.json({ data: null, error: "Price is required." }, { status: 400 });
+    const [usage] = await d1Query<{ transaction_count: number; subscription_count: number }>(
+      `SELECT
+         (SELECT COUNT(*) FROM billing_transactions WHERE tenant_id = ? AND price_id = ?) AS transaction_count,
+         (SELECT COUNT(*) FROM billing_subscriptions WHERE tenant_id = ? AND price_id = ?) AS subscription_count`,
+      [context.tenant.id, body.priceId, context.tenant.id, body.priceId],
+    );
+    if ((usage?.transaction_count ?? 0) > 0 || (usage?.subscription_count ?? 0) > 0) {
+      await d1Query("UPDATE billing_prices SET active = 0, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?", [
+        context.tenant.id,
+        body.priceId,
+      ]);
+      return NextResponse.json({ data: { id: body.priceId, mode: "deactivated" }, error: null });
+    }
     await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.priceId]);
-    return NextResponse.json({ data: { id: body.priceId }, error: null });
+    return NextResponse.json({ data: { id: body.priceId, mode: "deleted" }, error: null });
   }
 
   if (!body.title) return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
