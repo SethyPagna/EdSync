@@ -9,6 +9,8 @@ import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
 type CreationMode = "ai_collab" | "ai_full" | "manual";
 type ImportMode = "objectives" | "text" | "url" | "file";
 type Step = "choose" | "import" | "generating" | "edit";
+type GenerationDepth = "quick" | "standard" | "zero_to_expert";
+type LanguageStyle = "student_friendly" | "professional" | "speaking" | "simple";
 
 type DraftSection = {
   title: string;
@@ -98,6 +100,12 @@ export default function CreateLesson() {
   const [complexity, setComplexity] = useState(50);
   const [pacing, setPacing] = useState(50);
   const [scaffolding, setScaffolding] = useState(50);
+  const [generationDepth, setGenerationDepth] = useState<GenerationDepth>("standard");
+  const [languageStyle, setLanguageStyle] = useState<LanguageStyle>("student_friendly");
+  const [audienceLanguage, setAudienceLanguage] = useState("English");
+  const [versionCount, setVersionCount] = useState(1);
+  const [variants, setVariants] = useState<AILessonDraft[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState(0);
   const [genStep, setGenStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -110,6 +118,22 @@ export default function CreateLesson() {
     key_concepts?: string[];
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const applyAiDraft = (ai: AILessonDraft) => {
+    setDraft({
+      title: ai.title || "",
+      description: ai.description || "",
+      objectives: ai.objectives?.length ? ai.objectives : ["", "", ""],
+      estimated_duration: ai.estimated_duration || 45,
+      prerequisites: ai.prerequisites || [],
+      tags: ai.tags || [],
+      sections: ai.sections?.length ? ai.sections : emptyDraft().sections,
+      quiz_questions: ai.quiz_questions || [],
+      glossary_terms: ai.glossary_terms || [],
+      difficulty: "intermediate",
+      subject: "",
+    });
+  };
 
   // ── File Upload ──────────────────────────────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,6 +195,10 @@ export default function CreateLesson() {
           complexity,
           pacing,
           scaffolding,
+          depth: generationDepth,
+          languageStyle,
+          audienceLanguage,
+          versionCount,
         }),
       });
       const data = await res.json();
@@ -190,21 +218,14 @@ export default function CreateLesson() {
       // Store analysis metadata for display
       if (data.analysis) setAnalysisInfo(data.analysis);
 
-      const ai = data.lesson as AILessonDraft;
+      const generatedVariants = Array.isArray(data.variants)
+        ? (data.variants as AILessonDraft[])
+        : [data.lesson as AILessonDraft];
+      setVariants(generatedVariants);
+      setSelectedVariant(0);
+      const ai = generatedVariants[0] || (data.lesson as AILessonDraft);
       setTimeout(() => {
-        setDraft({
-          title: ai.title || "",
-          description: ai.description || "",
-          objectives: ai.objectives?.length ? ai.objectives : ["", "", ""],
-          estimated_duration: ai.estimated_duration || 45,
-          prerequisites: ai.prerequisites || [],
-          tags: ai.tags || [],
-          sections: ai.sections?.length ? ai.sections : emptyDraft().sections,
-          quiz_questions: ai.quiz_questions || [],
-          glossary_terms: ai.glossary_terms || [],
-          difficulty: "intermediate",
-          subject: "",
-        });
+        applyAiDraft(ai);
         setStep("edit");
       }, 400);
     } catch (err) {
@@ -250,6 +271,12 @@ export default function CreateLesson() {
         complexity_slider: complexity,
         pacing_slider: pacing,
         scaffolding_slider: scaffolding,
+        personalization: {
+          generationDepth,
+          languageStyle,
+          audienceLanguage,
+          versionCount,
+        },
       })
       .select()
       .single();
@@ -619,6 +646,72 @@ export default function CreateLesson() {
             </div>
           </div>
 
+          <div className="edsync-card">
+            <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
+              Teaching Style
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
+                  Depth
+                </span>
+                <select
+                  value={generationDepth}
+                  onChange={(event) =>
+                    setGenerationDepth(event.target.value as GenerationDepth)
+                  }
+                  className="edsync-input py-2"
+                >
+                  <option value="quick">Quick classroom draft</option>
+                  <option value="standard">Balanced lesson</option>
+                  <option value="zero_to_expert">Zero to expert</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
+                  Language
+                </span>
+                <select
+                  value={languageStyle}
+                  onChange={(event) =>
+                    setLanguageStyle(event.target.value as LanguageStyle)
+                  }
+                  className="edsync-input py-2"
+                >
+                  <option value="student_friendly">Student-friendly</option>
+                  <option value="professional">Professional</option>
+                  <option value="speaking">Speaking script</option>
+                  <option value="simple">Simple language</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
+                  Response language
+                </span>
+                <input
+                  value={audienceLanguage}
+                  onChange={(event) => setAudienceLanguage(event.target.value)}
+                  className="edsync-input py-2"
+                  placeholder="English, Khmer, Korean..."
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
+                  Versions
+                </span>
+                <select
+                  value={versionCount}
+                  onChange={(event) => setVersionCount(Number(event.target.value))}
+                  className="edsync-input py-2"
+                >
+                  <option value={1}>1 version</option>
+                  <option value={2}>2 versions</option>
+                  <option value={3}>3 versions</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
           <button
             onClick={handleGenerate}
             disabled={!inputText.trim() && !uploadedFile}
@@ -677,6 +770,44 @@ export default function CreateLesson() {
       {/* ── STEP: EDIT ── */}
       {step === "edit" && (
         <div className="animate-slide-up space-y-6">
+          {variants.length > 1 && (
+            <div className="edsync-card">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-lg font-bold text-edsync-text">
+                    Generated versions
+                  </h2>
+                  <p className="text-sm text-edsync-subtle">
+                    Switch drafts before saving. Each version keeps the same schema.
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {variants.map((variant, index) => (
+                  <button
+                    key={`${variant.title}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedVariant(index);
+                      applyAiDraft(variant);
+                    }}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      selectedVariant === index
+                        ? "border-edsync-blue bg-edsync-blue/10"
+                        : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/50"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-edsync-text">
+                      Version {index + 1}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-xs text-edsync-subtle">
+                      {variant.title}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {creationMode !== "manual" && (
             <div className="p-3 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl text-sm text-edsync-emerald flex items-start gap-2">
               <div className="flex-1">
