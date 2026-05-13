@@ -14,7 +14,7 @@
     "build:cloudflare": "opennextjs-cloudflare build --config wrangler.app.jsonc",
     "preview:cloudflare": "opennextjs-cloudflare build --config wrangler.app.jsonc && opennextjs-cloudflare preview --config wrangler.app.jsonc",
     "deploy:cloudflare:app": "opennextjs-cloudflare build --config wrangler.app.jsonc && opennextjs-cloudflare deploy --config wrangler.app.jsonc -- --keep-vars",
-    "deploy:cloudflare:worker": "wrangler deploy",
+    "deploy:cloudflare:worker": "wrangler deploy --config wrangler.toml",
     "db:migrate": "node scripts/d1-migrate.mjs",
     "db:seed": "node scripts/d1-migrate.mjs --seed",
     "admin:create": "node scripts/create-admin.mjs",
