@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type { Class, Lesson, Profile, TeacherAlert } from "@/types";
 import { formatRelativeTime, getAlertColor, getStatusBadge } from "@/lib/utils";
 import {
@@ -25,7 +25,7 @@ type DashboardStats = {
 };
 
 export default function TeacherDashboard() {
-  const supabase = useMemo(() => createClient(), []);
+  const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
   const [recentLessons, setRecentLessons] = useState<Lesson[]>([]);
@@ -41,30 +41,30 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     loadDashboard();
-  }, [supabase]);
+  }, [edsync]);
 
   const loadDashboard = async () => {
     setLoading(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
     const [profileRes, classesRes, lessonsRes, alertsRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-      supabase
+      edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      edsync
         .from("classes")
         .select("*")
         .eq("teacher_id", user.id)
         .eq("is_active", true)
         .order("created_at", { ascending: false }),
-      supabase
+      edsync
         .from("lessons")
         .select("*")
         .eq("teacher_id", user.id)
         .order("updated_at", { ascending: false })
         .limit(6),
-      supabase
+      edsync
         .from("teacher_alerts")
         .select("*")
         .eq("teacher_id", user.id)
@@ -73,35 +73,35 @@ export default function TeacherDashboard() {
         .limit(6),
     ]);
 
-    const classRows = classesRes.data || [];
-    const lessonRows = lessonsRes.data || [];
-    const lessonIds = lessonRows.map((lesson) => lesson.id);
-    const classIds = classRows.map((cls) => cls.id);
+    const classRows: Class[] = classesRes.data || [];
+    const lessonRows: Lesson[] = lessonsRes.data || [];
+    const lessonIds = lessonRows.map((lesson: Lesson) => lesson.id);
+    const classIds = classRows.map((cls: Class) => cls.id);
 
     const [enrollmentRes, progressRes, interactionRes, reflectionRes] =
       await Promise.all([
         classIds.length
-          ? supabase
+          ? edsync
               .from("class_enrollments")
               .select("id", { count: "exact", head: true })
               .in("class_id", classIds)
               .eq("is_active", true)
           : Promise.resolve({ count: 0 }),
         lessonIds.length
-          ? supabase
+          ? edsync
               .from("student_progress")
               .select("score")
               .in("lesson_id", lessonIds)
               .not("score", "is", null)
           : Promise.resolve({ data: [] }),
         lessonIds.length
-          ? supabase
+          ? edsync
               .from("socratic_interactions")
               .select("id", { count: "exact", head: true })
               .in("lesson_id", lessonIds)
           : Promise.resolve({ count: 0 }),
         lessonIds.length
-          ? supabase
+          ? edsync
               .from("learning_reflections")
               .select("confidence")
               .in("lesson_id", lessonIds)
@@ -119,11 +119,11 @@ export default function TeacherDashboard() {
     setAlerts(alertsRes.data || []);
     setStats({
       totalStudents: enrollmentRes.count || 0,
-      activeLessons: lessonRows.filter((lesson) => lesson.status === "published")
+      activeLessons: lessonRows.filter((lesson: Lesson) => lesson.status === "published")
         .length,
       avgScore:
         scores.length > 0
-          ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+          ? Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length)
           : 0,
       interactions: interactionRes.count || 0,
       lowConfidence: reflectionRes.data?.length || 0,
@@ -132,7 +132,7 @@ export default function TeacherDashboard() {
   };
 
   const dismissAlert = async (alertId: string) => {
-    await supabase
+    await edsync
       .from("teacher_alerts")
       .update({ is_dismissed: true })
       .eq("id", alertId);
@@ -144,16 +144,16 @@ export default function TeacherDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
       <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+        <div className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <div className="mb-8 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-atlas-amber">
+              <p className="text-sm font-semibold text-edsync-amber">
                 Teacher command center
               </p>
               <h1 className="mt-2 font-display text-4xl font-bold">
                 Good to see you, {firstName}
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-atlas-subtle">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-edsync-subtle">
                 Review class health, act on learning evidence, and create the
                 next lesson from one focused workspace.
               </p>
@@ -170,88 +170,88 @@ export default function TeacherDashboard() {
                 label: "Students",
                 value: stats.totalStudents,
                 icon: UsersRound,
-                tone: "text-atlas-blue",
+                tone: "text-edsync-blue",
               },
               {
                 label: "Published lessons",
                 value: stats.activeLessons,
                 icon: BookOpenCheck,
-                tone: "text-atlas-emerald",
+                tone: "text-edsync-emerald",
               },
               {
                 label: "Average score",
                 value: stats.avgScore ? `${stats.avgScore}%` : "N/A",
                 icon: TrendingUp,
-                tone: "text-atlas-amber",
+                tone: "text-edsync-amber",
               },
               {
                 label: "AI tutor chats",
                 value: stats.interactions,
                 icon: Sparkles,
-                tone: "text-atlas-cyan",
+                tone: "text-edsync-cyan",
               },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                  className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
                 >
                   <Icon className={`mb-4 h-5 w-5 ${item.tone}`} />
-                  <p className="font-display text-3xl font-bold text-atlas-text">
+                  <p className="font-display text-3xl font-bold text-edsync-text">
                     {loading ? "..." : item.value}
                   </p>
-                  <p className="text-xs text-atlas-subtle">{item.label}</p>
+                  <p className="text-xs text-edsync-subtle">{item.label}</p>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <div className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+        <div className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="font-display text-xl font-bold">Today&apos;s queue</p>
-              <p className="text-sm text-atlas-subtle">Highest signal actions</p>
+              <p className="text-sm text-edsync-subtle">Highest signal actions</p>
             </div>
-            <AlertTriangle className="h-5 w-5 text-atlas-amber" />
+            <AlertTriangle className="h-5 w-5 text-edsync-amber" />
           </div>
           <div className="space-y-3">
             <Link
               href="/teacher/analytics"
-              className="block rounded-lg border border-atlas-border bg-atlas-surface p-4 hover:border-atlas-blue/50"
+              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 hover:border-edsync-blue/50"
             >
               <div className="flex justify-between gap-4">
-                <p className="text-sm font-semibold text-atlas-text">
+                <p className="text-sm font-semibold text-edsync-text">
                   Review interventions
                 </p>
-                <span className="text-sm font-bold text-atlas-amber">
+                <span className="text-sm font-bold text-edsync-amber">
                   {stats.lowConfidence}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-atlas-subtle">
+              <p className="mt-1 text-xs text-edsync-subtle">
                 Low-confidence reflections need teacher attention.
               </p>
             </Link>
             <Link
               href="/teacher/students"
-              className="block rounded-lg border border-atlas-border bg-atlas-surface p-4 hover:border-atlas-blue/50"
+              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 hover:border-edsync-blue/50"
             >
-              <p className="text-sm font-semibold text-atlas-text">
+              <p className="text-sm font-semibold text-edsync-text">
                 Manage classes and assignments
               </p>
-              <p className="mt-1 text-xs text-atlas-subtle">
+              <p className="mt-1 text-xs text-edsync-subtle">
                 Share join codes, assign lessons, and check enrollment.
               </p>
             </Link>
             <Link
               href="/teacher/reports"
-              className="block rounded-lg border border-atlas-border bg-atlas-surface p-4 hover:border-atlas-blue/50"
+              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 hover:border-edsync-blue/50"
             >
-              <p className="text-sm font-semibold text-atlas-text">
+              <p className="text-sm font-semibold text-edsync-text">
                 Export learning evidence
               </p>
-              <p className="mt-1 text-xs text-atlas-subtle">
+              <p className="mt-1 text-xs text-edsync-subtle">
                 Prepare class reports for grading and parent updates.
               </p>
             </Link>
@@ -260,11 +260,11 @@ export default function TeacherDashboard() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Recent lessons</h2>
-              <p className="text-sm text-atlas-subtle">
+              <p className="text-sm text-edsync-subtle">
                 Drafts, published lessons, and recent updates.
               </p>
             </div>
@@ -278,14 +278,14 @@ export default function TeacherDashboard() {
               [...Array(4)].map((_, index) => (
                 <div
                   key={index}
-                  className="h-20 animate-pulse rounded-lg bg-atlas-surface"
+                  className="h-20 animate-pulse rounded-lg bg-edsync-surface"
                 />
               ))
             ) : recentLessons.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-atlas-border bg-atlas-surface p-8 text-center">
-                <ClipboardList className="mx-auto mb-3 h-8 w-8 text-atlas-subtle" />
-                <p className="font-semibold text-atlas-text">No lessons yet</p>
-                <p className="mt-1 text-sm text-atlas-subtle">
+              <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
+                <ClipboardList className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
+                <p className="font-semibold text-edsync-text">No lessons yet</p>
+                <p className="mt-1 text-sm text-edsync-subtle">
                   Start with AI-assisted lesson creation.
                 </p>
                 <Link
@@ -302,23 +302,23 @@ export default function TeacherDashboard() {
                   <Link
                     key={lesson.id}
                     href={`/teacher/lessons/${lesson.id}`}
-                    className="flex items-center gap-4 rounded-lg border border-atlas-border bg-atlas-surface p-4 transition hover:border-atlas-blue/50"
+                    className="flex items-center gap-4 rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
                   >
-                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-blue/10 text-atlas-blue">
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
                       <BookOpenCheck className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="truncate font-semibold text-atlas-text">
+                        <p className="truncate font-semibold text-edsync-text">
                           {lesson.title}
                         </p>
                         {lesson.ai_generated && (
-                          <span className="badge bg-atlas-purple/10 text-atlas-purple">
+                          <span className="badge bg-edsync-purple/10 text-edsync-purple">
                             AI
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-atlas-subtle">
+                      <p className="mt-1 text-xs text-edsync-subtle">
                         {lesson.subject || "General"} - {lesson.estimated_duration} min -
                         Updated {formatRelativeTime(lesson.updated_at)}
                       </p>
@@ -334,11 +334,11 @@ export default function TeacherDashboard() {
         </section>
 
         <aside className="space-y-6">
-          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold">Alerts</h2>
               {alerts.length > 0 && (
-                <span className="badge bg-atlas-red/10 text-atlas-red">
+                <span className="badge bg-edsync-red/10 text-edsync-red">
                   {alerts.length} active
                 </span>
               )}
@@ -348,11 +348,11 @@ export default function TeacherDashboard() {
                 [...Array(3)].map((_, index) => (
                   <div
                     key={index}
-                    className="h-20 animate-pulse rounded-lg bg-atlas-surface"
+                    className="h-20 animate-pulse rounded-lg bg-edsync-surface"
                   />
                 ))
               ) : alerts.length === 0 ? (
-                <p className="rounded-lg border border-atlas-border bg-atlas-surface p-4 text-sm text-atlas-subtle">
+                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   No urgent alerts. Your class queue is clear.
                 </p>
               ) : (
@@ -388,9 +388,9 @@ export default function TeacherDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
             <h2 className="font-display text-xl font-bold">Classes</h2>
-            <p className="mt-1 text-sm text-atlas-subtle">
+            <p className="mt-1 text-sm text-edsync-subtle">
               Share join codes with students.
             </p>
             <div className="mt-4 space-y-3">
@@ -402,18 +402,18 @@ export default function TeacherDashboard() {
                 classes.slice(0, 4).map((cls) => (
                   <div
                     key={cls.id}
-                    className="rounded-lg border border-atlas-border bg-atlas-surface p-3"
+                    className="rounded-lg border border-edsync-border bg-edsync-surface p-3"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-atlas-text">
+                        <p className="truncate text-sm font-semibold text-edsync-text">
                           {cls.name}
                         </p>
-                        <p className="text-xs text-atlas-subtle">
+                        <p className="text-xs text-edsync-subtle">
                           {cls.subject || "General"}
                         </p>
                       </div>
-                      <span className="font-mono text-sm font-bold text-atlas-amber">
+                      <span className="font-mono text-sm font-bold text-edsync-amber">
                         {cls.join_code}
                       </span>
                     </div>
