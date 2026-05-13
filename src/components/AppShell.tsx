@@ -12,6 +12,7 @@ import {
   BookOpenCheck,
   CalendarClock,
   Brain,
+  ChevronDown,
   ClipboardList,
   FileCheck2,
   GraduationCap,
@@ -21,6 +22,7 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
   Sparkles,
   Sun,
   ShieldCheck,
@@ -38,6 +40,11 @@ export type ShellNavItem = {
   icon: LucideIcon;
   permission?: string;
   plan?: "solo" | "team" | "enterprise";
+};
+
+export type ShellNavGroup = {
+  label: string;
+  items: ShellNavItem[];
 };
 
 type AppShellProps = {
@@ -70,6 +77,7 @@ const roleCopy = {
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
+  { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus },
   { href: "/teacher/work", label: "Work", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
@@ -92,9 +100,10 @@ export const studentNavItems: ShellNavItem[] = [
 
 export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/users", label: "Users", icon: UsersRound },
   { href: "/admin/portals", label: "Portals", icon: GraduationCap, permission: "portals.manage", plan: "team" },
   { href: "/admin/permissions", label: "Permissions", icon: ShieldCheck, permission: "users.manage", plan: "enterprise" },
-  { href: "/admin/users", label: "Users", icon: UsersRound },
+  { href: "/admin/governance", label: "Governance Hub", icon: ShieldCheck },
   { href: "/admin/ai", label: "AI Providers", icon: Brain },
   { href: "/admin/standards", label: "Standards", icon: FileCheck2, permission: "courses.author", plan: "team" },
   { href: "/admin/certifications", label: "Certifications", icon: ClipboardList, permission: "courses.publish", plan: "team" },
@@ -107,6 +116,40 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/view/student", label: "Student View", icon: BookOpenCheck },
 ];
 
+function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
+  const byHref = new Map(navItems.map((item) => [item.href, item]));
+  const pick = (hrefs: string[]) => hrefs.map((href) => byHref.get(href)).filter(Boolean) as ShellNavItem[];
+
+  if (role === "admin") {
+    return [
+      { label: "Home", items: pick(["/admin/dashboard"]) },
+      { label: "Platform", items: pick(["/admin/users", "/admin/portals", "/admin/permissions"]) },
+      { label: "Learning Ops", items: pick(["/admin/standards", "/admin/certifications", "/admin/automation", "/admin/email"]) },
+      { label: "Intelligence", items: pick(["/admin/ai"]) },
+      { label: "Governance", items: pick(["/admin/governance", "/admin/security"]) },
+      { label: "System", items: pick(["/admin/billing", "/admin/settings"]) },
+      { label: "View As", items: pick(["/admin/view/teacher", "/admin/view/student"]) },
+    ];
+  }
+
+  if (role === "teacher") {
+    return [
+      { label: "Home", items: pick(["/teacher/dashboard"]) },
+      { label: "Create", items: pick(["/teacher/lessons", "/teacher/lessons/create"]) },
+      { label: "Classroom", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
+      { label: "Insights", items: pick(["/teacher/analytics", "/teacher/reports"]) },
+      { label: "Account", items: pick(["/teacher/profile"]) },
+    ];
+  }
+
+  return [
+    { label: "Home", items: pick(["/student/dashboard"]) },
+    { label: "Learning", items: pick(["/student/work", "/student/grades"]) },
+    { label: "Support", items: pick(["/student/notes", "/student/discussions"]) },
+    { label: "Account", items: pick(["/student/profile"]) },
+  ];
+}
+
 export default function AppShell({ role, children, navItems }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -118,6 +161,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
 
@@ -184,6 +228,42 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       setProfile({ ...profile, preferences });
       edsync.from("profiles").update({ preferences }).eq("id", profile.id);
     }
+  };
+
+  const visibleNavGroups = navGroupsForRole(role, navItems)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (role === "admin") return true;
+        if (item.permission && !permissions.includes(item.permission)) return false;
+        if (item.plan === "team" && planTier === "solo") return false;
+        if (item.plan === "enterprise" && planTier !== "enterprise") return false;
+        return true;
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const isGroupOpen = (label: string) => openGroups[label] ?? true;
+
+  const renderNavItem = (item: ShellNavItem) => {
+    const Icon = item.icon;
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setMobileOpen(false)}
+        title={collapsed ? item.label : undefined}
+        className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
+          isActive
+            ? "bg-edsync-blue/12 text-edsync-blue ring-1 ring-edsync-blue/25"
+            : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+        } ${collapsed ? "justify-center" : ""}`}
+      >
+        <Icon className="h-5 w-5 flex-shrink-0" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </Link>
+    );
   };
 
   const sidebar = (
@@ -262,7 +342,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-3 overflow-y-auto p-3">
         {isAdminViewMode && (
           <Link
             href="/admin/dashboard"
@@ -276,31 +356,25 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             {!collapsed && <span>Back to Admin</span>}
           </Link>
         )}
-        {navItems.filter((item) => {
-          if (role === "admin") return true;
-          if (item.permission && !permissions.includes(item.permission)) return false;
-          if (item.plan === "team" && planTier === "solo") return false;
-          if (item.plan === "enterprise" && planTier !== "enterprise") return false;
-          return true;
-        }).map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+        {visibleNavGroups.map((group) => {
+          const groupActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+          const open = isGroupOpen(group.label);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              title={collapsed ? item.label : undefined}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all ${
-                isActive
-                  ? "bg-edsync-blue/12 text-edsync-blue ring-1 ring-edsync-blue/25"
-                  : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
-              } ${collapsed ? "justify-center" : ""}`}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
+            <div key={group.label} className={collapsed ? "space-y-1" : "space-y-1.5"}>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !open }))}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${
+                    groupActive ? "text-edsync-blue" : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+                  }`}
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
+                </button>
+              )}
+              {(collapsed || open) && <div className="space-y-1">{group.items.map(renderNavItem)}</div>}
+            </div>
           );
         })}
       </nav>
