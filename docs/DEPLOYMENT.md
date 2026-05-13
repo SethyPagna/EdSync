@@ -21,6 +21,9 @@ Create EdSync-specific resources so AllChess and LEARN remain isolated:
 - AI Gateways: `edsync-dev`, `edsync-preview`, `edsync-prod`
 - Turnstile site: `EdSync app`
 - Workers:
+  - `edsync-app`
+  - `edsync-app-preview`
+  - `edsync-app-production`
   - `edsync-learning-os`
   - `edsync-learning-os-preview`
   - `edsync-learning-os-production`
@@ -94,23 +97,35 @@ The script validates required env keys, runs typecheck/build unless
 `--skip-build` is provided, pulls Vercel environment settings, builds, and
 deploys the prebuilt output.
 
-## Cloudflare Pages
+## Cloudflare Workers And Pages
 
-Use the short EdSync Pages project name `edsync` unless the account already has a
-different EdSync Pages project configured in `CLOUDFLARE_PAGES_PROJECT`.
+Use the short EdSync Pages project name `edsync` and the full app Worker
+`edsync-app-production` unless the account already has a different EdSync Pages
+project configured in `CLOUDFLARE_PAGES_PROJECT`.
 
 ```powershell
 npm.cmd run deploy:cloudflare
 npm.cmd run deploy:cloudflare -- --preview
 ```
 
+Cloudflare currently recommends Workers for full-stack/SSR Next.js apps and
+Pages for static exports or static assets. EdSync keeps both ready: Workers serve
+the full app/API runtime, while Pages holds the short `edsync.pages.dev` static
+project and branch assets.
+
 The script lists existing Pages projects first, reuses `edsync` if present, and
 only creates the project if it is missing. If creation races or fails because the
 project already exists, it re-lists and deploys to the existing project instead
-of creating a duplicate. It also deploys the existing Worker environment from
-`wrangler.toml`.
+of creating a duplicate. It then builds with the OpenNext Cloudflare adapter,
+deploys `.open-next/assets` to Pages, deploys the full app Worker from
+`wrangler.app.jsonc`, and redeploys the queue Worker from `wrangler.toml`.
 
-Set Cloudflare Pages project variables to match the active target:
+Before the first deployment, make sure `.env.local` contains the production
+values for app secrets. The deployment script writes them to the app Worker as
+Cloudflare secrets and deploys with `--keep-vars` so dashboard-managed values are
+not removed.
+
+Set Cloudflare Pages and Worker variables to match the active target:
 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_THEME_DEFAULT`
