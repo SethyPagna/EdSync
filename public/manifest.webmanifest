@@ -1,0 +1,16 @@
+{
+  "name": "EdSync Learning OS",
+  "short_name": "EdSync",
+  "description": "Adaptive Cloudflare-first learning workspace for teachers, learners, and organizations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
