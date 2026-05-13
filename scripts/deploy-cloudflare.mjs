@@ -158,6 +158,8 @@ run("npx", [
   "pages",
   "deploy",
   ".open-next/assets",
+  "--config",
+  "wrangler.pages.jsonc",
   "--project-name",
   pagesProject,
   "--branch",
