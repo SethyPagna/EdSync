@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import { sanitizeHtml } from "@/lib/security/html";
+import { safePublicUrl, safeVideoEmbedUrl } from "@/lib/security/media";
 import type {
   Lesson,
   LessonSection,
@@ -629,21 +630,16 @@ function VideoSectionEditor({
     setCaption(parts[1] || "");
   }, [section.id]);
 
-  const embedUrl = (raw: string) => {
-    const ytMatch = raw.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/,
-    );
-    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-    const vmMatch = raw.match(/vimeo\.com\/(\d+)/);
-    if (vmMatch) return `https://player.vimeo.com/video/${vmMatch[1]}`;
-    return raw;
-  };
-  const embed = embedUrl(url);
-  const isEmbeddable =
-    embed.includes("youtube.com/embed") || embed.includes("vimeo.com/video");
+  const safeUrl = safePublicUrl(url);
+  const embed = safeVideoEmbedUrl(url);
+  const isEmbeddable = Boolean(embed);
 
   const save = async () => {
-    await onSave(section.id, { content: `${url}|||${caption}` });
+    if (!safeUrl) {
+      toast.error("Use a valid HTTPS video or reference link.");
+      return;
+    }
+    await onSave(section.id, { content: `${safeUrl}|||${caption}` });
   };
 
   return (
@@ -659,7 +655,7 @@ function VideoSectionEditor({
           placeholder="https://youtube.com/watch?v=..."
         />
       </div>
-      {url && isEmbeddable && (
+      {url && isEmbeddable && embed && (
         <div className="rounded-xl overflow-hidden border border-edsync-border bg-black aspect-video">
           <iframe
             src={embed}
@@ -669,10 +665,17 @@ function VideoSectionEditor({
           />
         </div>
       )}
-      {url && !isEmbeddable && (
+      {url && safeUrl && !isEmbeddable && (
         <div className="p-4 bg-edsync-surface border border-edsync-border rounded-xl">
           <p className="text-edsync-subtle text-sm">
-            Video link set. Preview not available for this URL format.
+            Safe HTTPS link set. Embed previews are only available for YouTube and Vimeo.
+          </p>
+        </div>
+      )}
+      {url && !safeUrl && (
+        <div className="p-4 bg-edsync-red/10 border border-edsync-red/30 rounded-xl">
+          <p className="text-edsync-red text-sm">
+            This link is blocked. Use HTTPS links only.
           </p>
         </div>
       )}
