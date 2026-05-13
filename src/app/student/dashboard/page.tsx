@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type {
   LearningGoal,
   LearningReflection,
@@ -27,7 +27,7 @@ type AssignedLesson = Lesson & {
 };
 
 export default function StudentDashboard() {
-  const supabase = useMemo(() => createClient(), []);
+  const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [lessons, setLessons] = useState<AssignedLesson[]>([]);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
@@ -38,30 +38,30 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     loadDashboard();
-  }, [supabase]);
+  }, [edsync]);
 
   const loadDashboard = async () => {
     setLoading(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
     const [profileRes, enrollmentsRes, goalsRes, reflectionsRes] =
       await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase
+        edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        edsync
           .from("class_enrollments")
           .select("class_id")
           .eq("student_id", user.id)
           .eq("is_active", true),
-        supabase
+        edsync
           .from("learning_goals")
           .select("*")
           .eq("student_id", user.id)
           .order("created_at", { ascending: false })
           .limit(4),
-        supabase
+        edsync
           .from("learning_reflections")
           .select("*")
           .eq("student_id", user.id)
@@ -80,7 +80,7 @@ export default function StudentDashboard() {
       return;
     }
 
-    const { data: assignments } = await supabase
+    const { data: assignments } = await edsync
       .from("lesson_assignments")
       .select("lesson_id")
       .in("class_id", classIds)
@@ -97,14 +97,14 @@ export default function StudentDashboard() {
     }
 
     const [lessonRes, sectionRes, progressRes] = await Promise.all([
-      supabase
+      edsync
         .from("lessons")
         .select("*")
         .in("id", lessonIds)
         .eq("status", "published")
         .order("updated_at", { ascending: false }),
-      supabase.from("lesson_sections").select("lesson_id").in("lesson_id", lessonIds),
-      supabase
+      edsync.from("lesson_sections").select("lesson_id").in("lesson_id", lessonIds),
+      edsync
         .from("student_progress")
         .select("*")
         .eq("student_id", user.id)
@@ -133,13 +133,13 @@ export default function StudentDashboard() {
     setJoiningClass(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setJoiningClass(false);
       return;
     }
 
-    const { data: cls, error: clsError } = await supabase
+    const { data: cls, error: clsError } = await edsync
       .from("classes")
       .select("id, name")
       .eq("join_code", joinCode.trim().toUpperCase())
@@ -157,7 +157,7 @@ export default function StudentDashboard() {
       return;
     }
 
-    const { error } = await supabase.from("class_enrollments").upsert(
+    const { error } = await edsync.from("class_enrollments").upsert(
       { class_id: cls.id, student_id: user.id, is_active: true },
       { onConflict: "class_id,student_id" },
     );
@@ -175,9 +175,9 @@ export default function StudentDashboard() {
   const createGoal = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
-    const { data, error } = await supabase
+    const { data, error } = await edsync
       .from("learning_goals")
       .insert({
         student_id: user.id,
@@ -219,28 +219,28 @@ export default function StudentDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
       <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-atlas-emerald">
+              <p className="text-sm font-semibold text-edsync-emerald">
                 Student learning cockpit
               </p>
               <h1 className="mt-2 font-display text-4xl font-bold">
                 Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-atlas-subtle">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-edsync-subtle">
                 Continue assigned lessons, track mastery, and use AI guidance
                 when a concept feels unclear.
               </p>
             </div>
-            <div className="rounded-lg border border-atlas-border bg-atlas-surface p-4">
+            <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4">
               <div className="flex items-center gap-3">
-                <Flame className="h-5 w-5 text-atlas-amber" />
+                <Flame className="h-5 w-5 text-edsync-amber" />
                 <div>
                   <p className="font-display text-2xl font-bold">
                     {profile?.streak_days ?? 0}
                   </p>
-                  <p className="text-xs text-atlas-subtle">day streak</p>
+                  <p className="text-xs text-edsync-subtle">day streak</p>
                 </div>
               </div>
             </div>
@@ -252,47 +252,47 @@ export default function StudentDashboard() {
                 label: "Total XP",
                 value: profile?.total_xp ?? 0,
                 icon: Sparkles,
-                tone: "text-atlas-cyan",
+                tone: "text-edsync-cyan",
               },
               {
                 label: "In progress",
                 value: active.length,
                 icon: BookOpenCheck,
-                tone: "text-atlas-blue",
+                tone: "text-edsync-blue",
               },
               {
                 label: "Completed",
                 value: completed.length,
                 icon: CheckCircle2,
-                tone: "text-atlas-emerald",
+                tone: "text-edsync-emerald",
               },
               {
                 label: "Average score",
                 value: avgScore ? `${avgScore}%` : "N/A",
                 icon: GraduationCap,
-                tone: "text-atlas-amber",
+                tone: "text-edsync-amber",
               },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                  className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
                 >
                   <Icon className={`mb-4 h-5 w-5 ${item.tone}`} />
-                  <p className="font-display text-3xl font-bold text-atlas-text">
+                  <p className="font-display text-3xl font-bold text-edsync-text">
                     {loading ? "..." : item.value}
                   </p>
-                  <p className="text-xs text-atlas-subtle">{item.label}</p>
+                  <p className="text-xs text-edsync-subtle">{item.label}</p>
                 </div>
               );
             })}
           </div>
         </section>
 
-        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <h2 className="font-display text-xl font-bold">Join a class</h2>
-          <p className="mt-1 text-sm text-atlas-subtle">
+          <p className="mt-1 text-sm text-edsync-subtle">
             Enter the join code your teacher shared.
           </p>
           <div className="mt-5 flex gap-2">
@@ -301,7 +301,7 @@ export default function StudentDashboard() {
               onChange={(event) => setJoinCode(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && joinClass()}
               placeholder="EDSYNC8"
-              className="atlas-input font-mono uppercase"
+              className="edsync-input font-mono uppercase"
             />
             <button
               type="button"
@@ -312,13 +312,13 @@ export default function StudentDashboard() {
               Join
             </button>
           </div>
-          <div className="mt-5 rounded-lg border border-atlas-border bg-atlas-surface p-4">
-            <p className="text-sm font-semibold text-atlas-text">
+          <div className="mt-5 rounded-lg border border-edsync-border bg-edsync-surface p-4">
+            <p className="text-sm font-semibold text-edsync-text">
               Recommended next step
             </p>
             {recommendation ? (
               <>
-                <p className="mt-1 text-sm text-atlas-subtle">
+                <p className="mt-1 text-sm text-edsync-subtle">
                   {recommendation.progress?.status === "completed"
                     ? "Review your strongest completed lesson."
                     : "Continue the lesson that best matches your current path."}
@@ -332,7 +332,7 @@ export default function StudentDashboard() {
                 </Link>
               </>
             ) : (
-              <p className="mt-1 text-sm text-atlas-subtle">
+              <p className="mt-1 text-sm text-edsync-subtle">
                 Join a class to receive your first lesson.
               </p>
             )}
@@ -341,11 +341,11 @@ export default function StudentDashboard() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Learning path</h2>
-              <p className="text-sm text-atlas-subtle">
+              <p className="text-sm text-edsync-subtle">
                 Assigned lessons sorted by what needs attention.
               </p>
             </div>
@@ -354,14 +354,14 @@ export default function StudentDashboard() {
           {loading ? (
             <div className="space-y-3">
               {[...Array(4)].map((_, index) => (
-                <div key={index} className="h-24 animate-pulse rounded-lg bg-atlas-surface" />
+                <div key={index} className="h-24 animate-pulse rounded-lg bg-edsync-surface" />
               ))}
             </div>
           ) : lessons.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-atlas-border bg-atlas-surface p-10 text-center">
-              <Target className="mx-auto mb-4 h-9 w-9 text-atlas-subtle" />
-              <p className="font-semibold text-atlas-text">No lessons yet</p>
-              <p className="mt-1 text-sm text-atlas-subtle">
+            <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-10 text-center">
+              <Target className="mx-auto mb-4 h-9 w-9 text-edsync-subtle" />
+              <p className="font-semibold text-edsync-text">No lessons yet</p>
+              <p className="mt-1 text-sm text-edsync-subtle">
                 Join a class or ask your teacher to assign a lesson.
               </p>
             </div>
@@ -379,23 +379,23 @@ export default function StudentDashboard() {
         </section>
 
         <aside className="space-y-6">
-          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-xl font-bold">Goals</h2>
-                <p className="text-sm text-atlas-subtle">Small weekly targets.</p>
+                <p className="text-sm text-edsync-subtle">Small weekly targets.</p>
               </div>
               <button
                 type="button"
                 onClick={createGoal}
-                className="rounded-lg border border-atlas-border bg-atlas-surface px-3 py-2 text-sm font-semibold text-atlas-text hover:border-atlas-blue/50"
+                className="rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-sm font-semibold text-edsync-text hover:border-edsync-blue/50"
               >
                 New
               </button>
             </div>
             <div className="space-y-3">
               {goals.length === 0 ? (
-                <p className="rounded-lg border border-atlas-border bg-atlas-surface p-4 text-sm text-atlas-subtle">
+                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   Create a goal to make your next study session concrete.
                 </p>
               ) : (
@@ -407,13 +407,13 @@ export default function StudentDashboard() {
                   return (
                     <div
                       key={goal.id}
-                      className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                      className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-semibold text-atlas-text">
+                        <p className="text-sm font-semibold text-edsync-text">
                           {goal.title}
                         </p>
-                        <span className="text-xs font-semibold text-atlas-emerald">
+                        <span className="text-xs font-semibold text-edsync-emerald">
                           {pct}%
                         </span>
                       </div>
@@ -421,7 +421,7 @@ export default function StudentDashboard() {
                         <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
                       </div>
                       {goal.due_date && (
-                        <p className="mt-2 text-xs text-atlas-subtle">
+                        <p className="mt-2 text-xs text-edsync-subtle">
                           Due {new Date(goal.due_date).toLocaleDateString()}
                         </p>
                       )}
@@ -432,35 +432,35 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-atlas-border bg-atlas-card p-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
             <h2 className="font-display text-xl font-bold">Recent reflections</h2>
-            <p className="mt-1 text-sm text-atlas-subtle">
+            <p className="mt-1 text-sm text-edsync-subtle">
               Confidence notes and AI next steps.
             </p>
             <div className="mt-4 space-y-3">
               {reflections.length === 0 ? (
-                <p className="rounded-lg border border-atlas-border bg-atlas-surface p-4 text-sm text-atlas-subtle">
+                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   Reflection notes will appear after lessons.
                 </p>
               ) : (
                 reflections.map((reflection) => (
                   <div
                     key={reflection.id}
-                    className="rounded-lg border border-atlas-border bg-atlas-surface p-4"
+                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-atlas-blue">
+                      <span className="text-xs font-semibold text-edsync-blue">
                         Confidence {reflection.confidence ?? "N/A"}/5
                       </span>
-                      <span className="text-xs text-atlas-subtle">
+                      <span className="text-xs text-edsync-subtle">
                         {new Date(reflection.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-sm leading-6 text-atlas-text">
+                    <p className="text-sm leading-6 text-edsync-text">
                       {reflection.reflection}
                     </p>
                     {reflection.next_step && (
-                      <p className="mt-3 text-xs leading-5 text-atlas-subtle">
+                      <p className="mt-3 text-xs leading-5 text-edsync-subtle">
                         Next: {reflection.next_step}
                       </p>
                     )}
@@ -484,7 +484,7 @@ function LessonGroup({
 }) {
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-atlas-subtle">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-edsync-subtle">
         {title}
       </h3>
       <div className="space-y-3">
@@ -512,28 +512,28 @@ function LessonCard({ lesson }: { lesson: AssignedLesson }) {
   return (
     <Link
       href={`/student/lessons/${lesson.id}`}
-      className="flex items-center gap-4 rounded-lg border border-atlas-border bg-atlas-surface p-4 transition hover:border-atlas-blue/50"
+      className="flex items-center gap-4 rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
     >
-      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-blue/10 text-atlas-blue">
+      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
         <BookOpenCheck className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-atlas-text">{lesson.title}</p>
-        <p className="mt-1 text-xs text-atlas-subtle">
+        <p className="truncate font-semibold text-edsync-text">{lesson.title}</p>
+        <p className="mt-1 text-xs text-edsync-subtle">
           {lesson.subject || "General"} - {lesson.estimated_duration} min -
           {lesson.difficulty}
         </p>
         <div className="mt-3">
-          <div className="mb-1 flex justify-between text-xs text-atlas-subtle">
+          <div className="mb-1 flex justify-between text-xs text-edsync-subtle">
             <span>{progress?.status?.replace("_", " ") || "not started"}</span>
-            <span className="font-semibold text-atlas-blue">{pct}%</span>
+            <span className="font-semibold text-edsync-blue">{pct}%</span>
           </div>
           <div className="progress-bar">
             <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
           </div>
         </div>
       </div>
-      <ArrowRight className="h-4 w-4 flex-shrink-0 text-atlas-subtle" />
+      <ArrowRight className="h-4 w-4 flex-shrink-0 text-edsync-subtle" />
     </Link>
   );
 }
