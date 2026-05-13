@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
+import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   const { email, password } = (await request.json()) as {
@@ -16,6 +17,24 @@ export async function POST(request: Request) {
     });
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+  const rate = await enforceRateLimit({
+    request,
+    scope: "auth_login",
+    limit: 8,
+    windowSeconds: 300,
+    subject: normalizedEmail,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        data: { user: null, session: null },
+        error: { message: "Too many login attempts. Try again shortly.", status: 429 },
+      },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+    );
+  }
+
   const rows = await d1Query<{
     id: string;
     email: string;
@@ -28,11 +47,18 @@ export async function POST(request: Request) {
        JOIN profiles p ON p.id = u.id
       WHERE lower(u.email) = lower(?)
       LIMIT 1`,
-    [email.trim()],
+    [normalizedEmail],
   );
 
   const account = rows[0];
   if (!account || !(await verifyPassword(password, account.password_hash))) {
+    await logSecurityEvent({
+      request,
+      eventType: "login_failed",
+      severity: "warning",
+      subject: normalizedEmail,
+      message: "Invalid login credentials.",
+    });
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Invalid login credentials.", status: 401 },
