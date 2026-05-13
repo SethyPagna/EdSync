@@ -5,6 +5,8 @@ import { appendLearningEvent } from "@/lib/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
