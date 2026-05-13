@@ -92,6 +92,8 @@ function extractTextFromChoice(choice?: OpenRouterChoice): string {
 export async function openRouterChat(opts: OpenRouterOptions): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set in .env.local");
+  const started = Date.now();
+  const baseUrl = process.env.CLOUDFLARE_AI_GATEWAY_URL || OPENROUTER_BASE;
 
   const baseMaxTokens = opts.maxTokens ?? 1000;
   const baseTemperature = opts.temperature ?? 0.7;
@@ -102,7 +104,7 @@ export async function openRouterChat(opts: OpenRouterOptions): Promise<string> {
   let lastFinishReason = "unknown";
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -136,7 +138,16 @@ export async function openRouterChat(opts: OpenRouterOptions): Promise<string> {
 
     const choice = data.choices?.[0];
     const text = extractTextFromChoice(choice);
-    if (text) return text;
+    if (text) {
+      await auditAiRun({
+        feature: "chat",
+        provider: process.env.CLOUDFLARE_AI_GATEWAY_URL ? "cloudflare-ai-gateway/openrouter" : "openrouter",
+        model: opts.model ?? MODEL,
+        success: true,
+        latencyMs: Date.now() - started,
+      });
+      return text;
+    }
 
     const finishReason = choice?.finish_reason ?? "unknown";
     lastFinishReason = finishReason;
@@ -165,6 +176,34 @@ export async function openRouterChat(opts: OpenRouterOptions): Promise<string> {
   throw new Error(
     `OpenRouter returned an empty response (finish_reason: ${lastFinishReason})`,
   );
+}
+
+async function auditAiRun(input: {
+  feature: string;
+  provider: string;
+  model: string;
+  success: boolean;
+  latencyMs: number;
+  errorMessage?: string;
+}) {
+  try {
+    const { d1Query } = await import("@/lib/db/d1");
+    await d1Query(
+      `INSERT INTO ai_runs (id, feature, provider, model, success, latency_ms, error_message, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        crypto.randomUUID(),
+        input.feature,
+        input.provider,
+        input.model,
+        input.success ? 1 : 0,
+        input.latencyMs,
+        input.errorMessage ?? null,
+      ],
+    );
+  } catch {
+    // AI audit logging should not break the user-facing generation path.
+  }
 }
 
 /**
