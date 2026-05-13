@@ -4,6 +4,8 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 export async function POST(request: NextRequest) {
   try {
     const { user } = await getAuthenticatedUser();
