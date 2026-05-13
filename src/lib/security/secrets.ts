@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 const PREFIX = "enc:v1";
+const LEGACY_PREFIX = "v1";
 
 function normalizeEncryptionKey(rawValue = process.env.APP_ENCRYPTION_KEY) {
   const value = String(rawValue || "").trim();
@@ -45,18 +46,21 @@ export function encryptSecret(plainText: string) {
 export function decryptSecret(cipherText: string) {
   const text = String(cipherText || "");
   if (!text) return "";
-  if (!text.startsWith(`${PREFIX}:`)) return "";
 
   const key = normalizeEncryptionKey();
   if (!key) return "";
 
   const parts = text.split(":");
-  if (parts.length !== 5) return "";
+  const usesCurrentFormat = text.startsWith(`${PREFIX}:`) && parts.length === 5;
+  const usesLegacyFormat = parts[0] === LEGACY_PREFIX && parts.length === 4;
+  if (!usesCurrentFormat && !usesLegacyFormat) return "";
 
   try {
-    const iv = Buffer.from(parts[2], "base64url");
-    const tag = Buffer.from(parts[3], "base64url");
-    const encrypted = Buffer.from(parts[4], "base64url");
+    const offset = usesCurrentFormat ? 1 : 0;
+    const encoding = usesCurrentFormat ? "base64url" : "base64";
+    const iv = Buffer.from(parts[1 + offset], encoding);
+    const tag = Buffer.from(parts[2 + offset], encoding);
+    const encrypted = Buffer.from(parts[3 + offset], encoding);
     const decipher = createDecipheriv("aes-256-gcm", key, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
