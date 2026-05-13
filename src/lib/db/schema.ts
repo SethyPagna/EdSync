@@ -19,6 +19,10 @@ export const TABLES = [
   "auth_sessions",
   "auth_tokens",
   "storage_objects",
+  "notifications",
+  "email_messages",
+  "media_assets",
+  "content_extractions",
   "ai_runs",
   "automation_jobs",
 ] as const;
@@ -34,6 +38,10 @@ export const JSON_COLUMNS: Record<string, string[]> = {
   student_progress: ["sections_completed", "knowledge_gaps", "metadata"],
   socratic_interactions: ["conversation_history"],
   teacher_alerts: ["metadata"],
+  notifications: ["channels", "metadata"],
+  email_messages: ["metadata"],
+  media_assets: ["metadata"],
+  content_extractions: ["metadata"],
   lesson_analytics: [
     "concept_mastery",
     "common_mistakes",
@@ -57,6 +65,8 @@ export const DATE_COLUMNS = new Set([
   "computed_at",
   "expires_at",
   "revoked_at",
+  "read_at",
+  "sent_at",
 ]);
 
 export function assertTableName(table: string): asserts table is TableName {
