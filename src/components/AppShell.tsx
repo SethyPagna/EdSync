@@ -103,8 +103,8 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/email", label: "Email Outbox", icon: MessageSquareText },
   { href: "/admin/security", label: "Security", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
-  { href: "/teacher/dashboard", label: "Teacher View", icon: GraduationCap },
-  { href: "/student/dashboard", label: "Student View", icon: BookOpenCheck },
+  { href: "/admin/view/teacher", label: "Teacher View", icon: GraduationCap },
+  { href: "/admin/view/student", label: "Student View", icon: BookOpenCheck },
 ];
 
 export default function AppShell({ role, children, navItems }: AppShellProps) {
@@ -117,7 +117,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [darkMode, setDarkMode] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
+  const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
   const copy = roleCopy[role];
+  const isAdminViewMode = sessionRole === "admin" && role !== "admin";
 
   useEffect(() => {
     const stored = window.localStorage.getItem("edsync-theme");
@@ -129,6 +131,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   useEffect(() => {
     edsync.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
+      const actualRole = user.user_metadata?.role;
+      if (actualRole === "admin" || actualRole === "teacher" || actualRole === "student") {
+        setSessionRole(actualRole);
+      }
       edsync
         .from("profiles")
         .select("*")
@@ -257,6 +263,19 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        {isAdminViewMode && (
+          <Link
+            href="/admin/dashboard"
+            onClick={() => setMobileOpen(false)}
+            title={collapsed ? "Back to Admin" : undefined}
+            className={`mb-2 flex items-center gap-3 rounded-xl border border-edsync-blue/25 bg-edsync-blue/10 px-3 py-3 text-sm font-bold text-edsync-blue transition-all hover:bg-edsync-blue/15 ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && <span>Back to Admin</span>}
+          </Link>
+        )}
         {navItems.filter((item) => {
           if (role === "admin") return true;
           if (item.permission && !permissions.includes(item.permission)) return false;
@@ -361,6 +380,24 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           <div className="sticky top-0 z-20 hidden justify-end border-b border-edsync-border bg-edsync-bg/80 px-6 py-3 backdrop-blur lg:flex">
             <NotificationMenu />
           </div>
+          {isAdminViewMode && (
+            <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-[57px] lg:px-6">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3 text-sm text-edsync-blue">
+                  <ShieldCheck className="h-5 w-5 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold">Admin view mode</p>
+                    <p className="text-xs text-edsync-subtle">
+                      You are previewing the {role === "teacher" ? "teacher" : "student"} workspace with admin access.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/admin/dashboard" className="btn-primary w-fit px-4 py-2 text-sm">
+                  Back to Admin Console
+                </Link>
+              </div>
+            </div>
+          )}
           {children}
         </main>
       </div>
