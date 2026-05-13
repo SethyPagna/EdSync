@@ -6,6 +6,8 @@ import { getProviderRow, serializeProvider } from "@/lib/ai/providers";
 import { testAIProvider } from "@/lib/ai/gateway";
 import { DEFAULT_TENANT_ID } from "@/lib/tenancy";
 
+export const preferredRegion = ["hkg1", "sin1"];
+
 async function enqueueProviderTest(providerId: string, provider: string, status: "ok" | "error", message?: string) {
   try {
     await enqueueAutomationJob({
