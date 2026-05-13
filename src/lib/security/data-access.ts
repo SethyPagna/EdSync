@@ -10,6 +10,19 @@ const SERVER_ONLY_TABLES = new Set([
   "email_messages",
   "rate_limits",
   "security_events",
+  "admin_users",
+  "admin_audit_logs",
+  "feature_flags",
+  "ai_provider_configs",
+  "gradebook_categories",
+  "gradebook_scores",
+  "learning_work_items",
+  "learning_work_questions",
+  "learning_submissions",
+  "discussion_threads",
+  "discussion_posts",
+  "student_notes",
+  "email_outbox_events",
 ]);
 
 function hasFilter(request: DataRequest, column: string, value: unknown) {
