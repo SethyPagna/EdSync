@@ -10,6 +10,7 @@
   --surface: #ffffff;
   --card: #ffffff;
   --border: #d9e2ef;
+  --muted: #e8eef7;
   --text: #142033;
   --subtle: #627089;
   --blue: #2563eb;
@@ -25,6 +26,7 @@
   --surface: #0d1117;
   --card: #111827;
   --border: #263244;
+  --muted: #172033;
   --text: #e8edf5;
   --subtle: #8b95a7;
   --blue: #4f86f7;
@@ -51,6 +53,12 @@ body {
   font-family: "Instrument Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark body {
+  background:
+    linear-gradient(180deg, rgba(79, 134, 247, 0.12) 0%, rgba(7, 9, 15, 0) 380px),
+    var(--bg);
 }
 
 h1,
