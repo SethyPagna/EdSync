@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
+import { safeVideoEmbedUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -1167,10 +1168,7 @@ export default function CreateLesson() {
                       const [vidUrl, vidCaption] = (sec.content || "").split(
                         "|||",
                       );
-                      const ytMatch = (vidUrl || "").match(
-                        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/,
-                      );
-                      const ytId = ytMatch?.[1];
+                      const embed = safeVideoEmbedUrl(vidUrl);
                       return (
                         <div className="space-y-2">
                           <div className="p-3 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl text-xs text-edsync-purple">
@@ -1203,17 +1201,17 @@ export default function CreateLesson() {
                             className="edsync-input py-2 text-sm"
                             placeholder="What this video covers..."
                           />
-                          {ytId && (
+                          {embed && (
                             <div className="aspect-video rounded-xl overflow-hidden border border-edsync-border bg-black mt-1">
                               <iframe
-                                src={`https://www.youtube.com/embed/${ytId}`}
+                                src={embed}
                                 className="w-full h-full"
                                 allowFullScreen
                               />
                             </div>
                           )}
                           {vidUrl &&
-                            !ytId &&
+                            !embed &&
                             vidUrl.includes("youtube.com/results") && (
                               <a
                                 href={vidUrl}
