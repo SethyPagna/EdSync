@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
   title: "EdSync - AI Learning OS",
   description:
     "A mature AI-assisted education workspace for teachers and students.",
   icons: { icon: "/favicon.svg" },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -21,6 +23,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <PwaRegister />
         <Toaster
           position="top-right"
           toastOptions={{
