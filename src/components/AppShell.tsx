@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
@@ -15,9 +15,11 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
+  Sun,
   UserRound,
   UsersRound,
   X,
@@ -39,15 +41,15 @@ type AppShellProps = {
 const roleCopy = {
   teacher: {
     label: "Teacher Workspace",
-    accent: "text-atlas-amber",
-    badge: "bg-atlas-amber/10 border-atlas-amber/25 text-atlas-amber",
-    gradient: "from-atlas-amber to-atlas-blue",
+    accent: "text-edsync-amber",
+    badge: "bg-edsync-amber/10 border-edsync-amber/25 text-edsync-amber",
+    gradient: "from-edsync-amber to-edsync-blue",
   },
   student: {
     label: "Student Learning OS",
-    accent: "text-atlas-emerald",
-    badge: "bg-atlas-emerald/10 border-atlas-emerald/25 text-atlas-emerald",
-    gradient: "from-atlas-emerald to-atlas-cyan",
+    accent: "text-edsync-emerald",
+    badge: "bg-edsync-emerald/10 border-edsync-emerald/25 text-edsync-emerald",
+    gradient: "from-edsync-emerald to-edsync-cyan",
   },
 };
 
@@ -67,35 +69,50 @@ export const studentNavItems: ShellNavItem[] = [
 export default function AppShell({ role, children, navItems }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const copy = roleCopy[role];
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const stored = window.localStorage.getItem("edsync-theme");
+    const useDark = stored === "dark";
+    document.documentElement.classList.toggle("dark", useDark);
+    setDarkMode(useDark);
+  }, []);
+
+  useEffect(() => {
+    edsync.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      supabase
+      edsync
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .maybeSingle()
         .then(({ data }) => setProfile(data));
     });
-  }, [supabase]);
+  }, [edsync]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await edsync.auth.signOut();
     router.push("/auth/login");
     router.refresh();
   };
 
+  const toggleTheme = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    document.documentElement.classList.toggle("dark", next);
+    window.localStorage.setItem("edsync-theme", next ? "dark" : "light");
+  };
+
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-screen w-72 flex-col border-r border-atlas-border bg-[#0b1018]/95 shadow-2xl shadow-black/20 backdrop-blur transition-all duration-300`}
+      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-screen w-72 flex-col border-r border-edsync-border bg-edsync-surface/95 shadow-xl shadow-slate-200/60 backdrop-blur transition-all duration-300 dark:shadow-black/20`}
     >
-      <div className="flex items-center gap-3 border-b border-atlas-border px-4 py-4">
+      <div className="flex items-center gap-3 border-b border-edsync-border px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
           <div
             className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${copy.gradient}`}
@@ -104,17 +121,17 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="font-display text-lg font-bold text-atlas-text">
+              <p className="font-display text-lg font-bold text-edsync-text">
                 EdSync
               </p>
-              <p className="text-xs text-atlas-subtle">{copy.label}</p>
+              <p className="text-xs text-edsync-subtle">{copy.label}</p>
             </div>
           )}
         </Link>
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="rounded-lg p-2 text-atlas-subtle hover:bg-atlas-card hover:text-atlas-text lg:hidden"
+          className="rounded-lg p-2 text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:hidden"
           aria-label="Close menu"
         >
           <X className="h-5 w-5" />
@@ -122,23 +139,23 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </div>
 
       {!collapsed && (
-        <div className="mx-4 mt-4 rounded-xl border border-atlas-border bg-atlas-card/70 p-3">
+        <div className="mx-4 mt-4 rounded-xl border border-edsync-border bg-edsync-card/70 p-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-atlas-surface text-sm font-bold text-atlas-text">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-edsync-surface text-sm font-bold text-edsync-text">
               {generateInitials(profile?.full_name || profile?.email || role)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-atlas-text">
+              <p className="truncate text-sm font-semibold text-edsync-text">
                 {profile?.full_name || "Getting ready"}
               </p>
-              <p className="truncate text-xs text-atlas-subtle">
-                {profile?.email || "Connect Supabase to personalize"}
+              <p className="truncate text-xs text-edsync-subtle">
+                {profile?.email || "Connect edsync to personalize"}
               </p>
             </div>
           </div>
           {role === "student" && (
             <div className="mt-3">
-              <div className="mb-1 flex justify-between text-xs text-atlas-subtle">
+              <div className="mb-1 flex justify-between text-xs text-edsync-subtle">
                 <span>{profile?.total_xp ?? 0} XP</span>
                 <span>{profile?.streak_days ?? 0} day streak</span>
               </div>
@@ -175,8 +192,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
               title={collapsed ? item.label : undefined}
               className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all ${
                 isActive
-                  ? "bg-atlas-blue/12 text-atlas-blue ring-1 ring-atlas-blue/25"
-                  : "text-atlas-subtle hover:bg-atlas-card hover:text-atlas-text"
+                  ? "bg-edsync-blue/12 text-edsync-blue ring-1 ring-edsync-blue/25"
+                  : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
               } ${collapsed ? "justify-center" : ""}`}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
@@ -186,11 +203,20 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         })}
       </nav>
 
-      <div className="border-t border-atlas-border p-3">
+      <div className="border-t border-edsync-border p-3">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text ${collapsed ? "justify-center" : ""}`}
+          aria-label="Toggle theme"
+        >
+          {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {!collapsed && (darkMode ? "Light theme" : "Dark theme")}
+        </button>
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
-          className="hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-atlas-subtle hover:bg-atlas-card hover:text-atlas-text lg:flex"
+          className="hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:flex"
         >
           {collapsed ? (
             <PanelLeftOpen className="h-5 w-5" />
@@ -202,7 +228,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         <button
           type="button"
           onClick={handleLogout}
-          className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-atlas-red hover:bg-atlas-red/10 ${collapsed ? "justify-center" : ""}`}
+          className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-red hover:bg-edsync-red/10 ${collapsed ? "justify-center" : ""}`}
         >
           <LogOut className="h-5 w-5" />
           {!collapsed && "Sign out"}
@@ -212,12 +238,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   );
 
   return (
-    <div className="min-h-screen bg-atlas-bg text-atlas-text">
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-atlas-border bg-atlas-bg/90 px-4 py-3 backdrop-blur lg:hidden">
+    <div className="min-h-screen bg-edsync-bg text-edsync-text">
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg/90 px-4 py-3 backdrop-blur lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="rounded-lg border border-atlas-border bg-atlas-card p-2 text-atlas-text"
+          className="rounded-lg border border-edsync-border bg-edsync-card p-2 text-edsync-text"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
