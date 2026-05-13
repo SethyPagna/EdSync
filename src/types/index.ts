@@ -25,13 +25,21 @@ export interface Profile {
   grade_level: string | null;
   subjects: string[] | null;
   interests: string[] | null;
-  preferences: { theme: string; text_size: string };
+  preferences: UserPreferences;
   achievements: Achievement[];
   total_xp: number;
   streak_days?: number;
   last_active_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface UserPreferences {
+  theme: "light" | "dark" | "system";
+  text_size: "small" | "medium" | "large";
+  email_notifications?: boolean;
+  assignment_notifications?: boolean;
+  weekly_digest?: boolean;
 }
 
 export interface Achievement {
@@ -233,6 +241,54 @@ export interface GlossaryTerm {
   term: string;
   definition: string;
   example: string | null;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  actor_id: string | null;
+  type: string;
+  title: string;
+  message: string;
+  action_url: string | null;
+  priority: "low" | "normal" | "high";
+  channels: string[];
+  metadata: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface EmailMessage {
+  id: string;
+  recipient_user_id: string | null;
+  recipient_email: string;
+  subject: string;
+  body_text: string;
+  body_html: string | null;
+  status: "queued" | "sent" | "failed" | "skipped";
+  provider: string;
+  provider_message_id: string | null;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  sent_at: string | null;
+}
+
+export interface MediaAsset {
+  id: string;
+  owner_id: string | null;
+  storage_object_id: string | null;
+  asset_type: "image" | "video" | "audio" | "document" | "other";
+  title: string | null;
+  description: string | null;
+  public_url: string | null;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  width: number | null;
+  height: number | null;
+  source: string;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
