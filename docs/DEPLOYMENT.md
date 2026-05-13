@@ -54,6 +54,11 @@ Required values:
 - `APP_ENCRYPTION_KEY`
 - `TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
+- `TENANT_ROUTING_MODE=hybrid`
+- `DEFAULT_TENANT_SLUG=edsync`
+- `NEXT_PUBLIC_PWA_ENABLED=true`
+- `PAYMENT_PROVIDER=manual|stripe`
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` when Stripe checkout is enabled
 - `EMAIL_MODE=outbox|compose|provider`
 - `DEPLOYMENT_TARGET=local|vercel|cloudflare|docker`
 
@@ -144,6 +149,10 @@ Set Cloudflare Pages and Worker variables to match the active target:
 - `SESSION_SECRET`
 - `APP_ENCRYPTION_KEY`
 - `EMAIL_MODE`
+- `PAYMENT_PROVIDER`
+- `TENANT_ROUTING_MODE`
+- `DEFAULT_TENANT_SLUG`
+- `NEXT_PUBLIC_PWA_ENABLED`
 - `DEPLOYMENT_TARGET=cloudflare`
 
 ## Cloudflare Worker And Queue
