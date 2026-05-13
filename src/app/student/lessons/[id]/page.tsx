@@ -790,6 +790,13 @@ export default function StudentLesson() {
         completed_at: new Date().toISOString(),
       })
       .eq("id", progress.id);
+    if (lesson?.id) {
+      await fetch("/api/grades/lesson-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: lesson.id, score }),
+      }).catch(() => null);
+    }
     const xp = Math.max(10, Math.round(score / 10));
     const { error } = await edsync.rpc("increment_xp", {
       user_id: user.id,
