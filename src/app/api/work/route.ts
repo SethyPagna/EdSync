@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { appendLearningEvent } from "@/lib/learning-events";
+import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
 const WORK_TYPES = new Set(["quiz", "test", "task", "discussion", "activity"]);
 
@@ -87,6 +89,7 @@ export async function POST(request: Request) {
 
   const id = crypto.randomUUID();
   const pointsPossible = Math.max(0, Number(body.pointsPossible ?? 100));
+  const context = await resolveTenantContext(user);
   await d1Query(
     `INSERT INTO learning_work_items (
        id, teacher_id, class_id, lesson_id, category_id, title, description, work_type,
@@ -138,6 +141,17 @@ export async function POST(request: Request) {
       [crypto.randomUUID(), id, body.classId ?? null, user.id, body.title.trim(), body.instructions ?? body.description ?? ""],
     );
   }
+
+  await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "learning_work_items", objectId: id });
+  await appendLearningEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    classId: body.classId ?? null,
+    sourceType: "learning_work_item",
+    sourceId: id,
+    eventType: `work.${workType}.created`,
+    payload: { title: body.title.trim(), status: body.status ?? "draft", pointsPossible },
+  });
 
   return NextResponse.json({ data: { id }, error: null });
 }
