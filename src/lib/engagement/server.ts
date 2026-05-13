@@ -18,8 +18,18 @@ type EmailInput = {
   subject: string;
   bodyText: string;
   bodyHtml?: string | null;
+  senderDisplay?: string | null;
+  replyTo?: string | null;
   metadata?: Record<string, unknown>;
 };
+
+function composeMailto(input: EmailInput) {
+  const query = new URLSearchParams({
+    subject: input.subject,
+    body: input.bodyText,
+  });
+  return `mailto:${encodeURIComponent(input.recipientEmail)}?${query.toString()}`;
+}
 
 export async function createNotification(input: NotificationInput) {
   const id = crypto.randomUUID();
@@ -44,6 +54,11 @@ export async function createNotification(input: NotificationInput) {
 }
 
 async function sendViaResend(input: EmailInput) {
+  const mode = process.env.EMAIL_MODE || "outbox";
+  if (mode !== "provider") {
+    return { status: "queued" as const, provider: "outbox", providerId: null, error: null };
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "EdSync <notifications@edsync.app>";
   if (!apiKey) return { status: "queued" as const, provider: "outbox", providerId: null, error: null };
@@ -60,6 +75,7 @@ async function sendViaResend(input: EmailInput) {
       subject: input.subject,
       text: input.bodyText,
       html: input.bodyHtml ?? input.bodyText.replace(/\n/g, "<br />"),
+      reply_to: input.replyTo || undefined,
     }),
   });
 
@@ -78,6 +94,7 @@ async function sendViaResend(input: EmailInput) {
 
 export async function queueEmail(input: EmailInput) {
   const result = await sendViaResend(input);
+  const composeUrl = composeMailto(input);
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO email_messages (
@@ -95,11 +112,16 @@ export async function queueEmail(input: EmailInput) {
       result.provider,
       result.providerId,
       result.error,
-      JSON.stringify(input.metadata ?? {}),
+      JSON.stringify({
+        composeUrl,
+        senderDisplay: input.senderDisplay ?? null,
+        replyTo: input.replyTo ?? null,
+        ...(input.metadata ?? {}),
+      }),
       result.status === "sent" ? new Date().toISOString() : null,
     ],
   );
-  return { id, ...result };
+  return { id, composeUrl, ...result };
 }
 
 export async function notifyAndEmail(input: NotificationInput & { email?: EmailInput | null }) {
