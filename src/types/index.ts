@@ -360,7 +360,7 @@ export interface FeatureFlag {
 export interface AIProviderConfig {
   id: string;
   name: string;
-  provider: "openrouter" | "groq" | "mistral" | "cerebras" | "google" | "cohere" | "cloudflare";
+  provider: "groq" | "mistral" | "cerebras" | "google" | "cohere";
   provider_type: "chat" | "embed";
   account_email: string | null;
   project_name: string | null;
