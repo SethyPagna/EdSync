@@ -1,113 +1,714 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Bot, TestTube2 } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  KeyRound,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  TestTube2,
+  Trash2,
+  X,
+} from "lucide-react";
+
+type ProviderMetaEntry = {
+  label: string;
+  providerType: "chat" | "embed";
+  defaultEndpoint: string;
+  defaultModel: string;
+  defaultPriority: number;
+  safeRequestsPerMinute: number;
+  safeMaxInputChars: number;
+  safeMaxCompletionTokens: number;
+  safeTimeoutMs: number;
+  safeCooldownSeconds: number;
+};
 
 type Provider = {
   id: string;
   name: string;
+  label: string;
   provider: string;
-  default_model: string;
+  provider_type: "chat" | "embed";
+  account_email: string | null;
+  project_name: string | null;
+  default_model: string | null;
+  supported_models: string[];
+  endpoint_override: string | null;
+  endpoint_effective: string;
+  notes: string | null;
   enabled: boolean;
   priority: number;
-  last_status: string;
+  requests_per_minute: number;
+  max_input_chars: number;
+  max_completion_tokens: number;
+  timeout_ms: number;
+  cooldown_seconds: number;
+  last_status: "untested" | "ok" | "error";
   last_error: string | null;
+  last_checked_at: string | null;
+  has_key: boolean;
   key_masked?: string;
 };
 
-const providerOptions = ["groq", "google", "mistral", "cerebras", "cohere"];
+type ProviderSummary = {
+  total: number;
+  enabled: number;
+  healthy: number;
+  errors: number;
+  chat: number;
+  embed: number;
+  recent_runs: number;
+  recent_failures: number;
+  average_latency_ms: number | null;
+};
+
+type AIRun = {
+  id: string;
+  feature: string;
+  provider: string | null;
+  model: string | null;
+  success: number;
+  latency_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+};
+
+type ProviderForm = {
+  name: string;
+  provider: string;
+  provider_type: "chat" | "embed";
+  account_email: string;
+  project_name: string;
+  api_key: string;
+  default_model: string;
+  supported_models: string;
+  endpoint_override: string;
+  notes: string;
+  enabled: boolean;
+  priority: string;
+  requests_per_minute: string;
+  max_input_chars: string;
+  max_completion_tokens: string;
+  timeout_ms: string;
+  cooldown_seconds: string;
+};
+
+const FALLBACK_META: Record<string, ProviderMetaEntry> = {
+  groq: {
+    label: "Groq",
+    providerType: "chat",
+    defaultEndpoint: "https://api.groq.com/openai/v1/chat/completions",
+    defaultModel: "groq/compound",
+    defaultPriority: 10,
+    safeRequestsPerMinute: 18,
+    safeMaxInputChars: 3000,
+    safeMaxCompletionTokens: 2200,
+    safeTimeoutMs: 18000,
+    safeCooldownSeconds: 20,
+  },
+  google: {
+    label: "Google AI",
+    providerType: "chat",
+    defaultEndpoint: "https://generativelanguage.googleapis.com/v1beta/models",
+    defaultModel: "gemini-flash-latest",
+    defaultPriority: 20,
+    safeRequestsPerMinute: 14,
+    safeMaxInputChars: 3200,
+    safeMaxCompletionTokens: 2200,
+    safeTimeoutMs: 17000,
+    safeCooldownSeconds: 20,
+  },
+  mistral: {
+    label: "Mistral AI",
+    providerType: "chat",
+    defaultEndpoint: "https://api.mistral.ai/v1/chat/completions",
+    defaultModel: "mistral-small-latest",
+    defaultPriority: 30,
+    safeRequestsPerMinute: 10,
+    safeMaxInputChars: 3000,
+    safeMaxCompletionTokens: 1800,
+    safeTimeoutMs: 18000,
+    safeCooldownSeconds: 25,
+  },
+  cerebras: {
+    label: "Cerebras",
+    providerType: "chat",
+    defaultEndpoint: "https://api.cerebras.ai/v1/chat/completions",
+    defaultModel: "llama3.1-8b",
+    defaultPriority: 40,
+    safeRequestsPerMinute: 12,
+    safeMaxInputChars: 2500,
+    safeMaxCompletionTokens: 1600,
+    safeTimeoutMs: 14000,
+    safeCooldownSeconds: 25,
+  },
+  cohere: {
+    label: "Cohere",
+    providerType: "embed",
+    defaultEndpoint: "https://api.cohere.com/v2/embed",
+    defaultModel: "embed-english-v3.0",
+    defaultPriority: 90,
+    safeRequestsPerMinute: 20,
+    safeMaxInputChars: 2000,
+    safeMaxCompletionTokens: 0,
+    safeTimeoutMs: 12000,
+    safeCooldownSeconds: 20,
+  },
+};
+
+const EMPTY_SUMMARY: ProviderSummary = {
+  total: 0,
+  enabled: 0,
+  healthy: 0,
+  errors: 0,
+  chat: 0,
+  embed: 0,
+  recent_runs: 0,
+  recent_failures: 0,
+  average_latency_ms: null,
+};
+
+function blankForm(provider = "groq", meta: Record<string, ProviderMetaEntry> = FALLBACK_META): ProviderForm {
+  const selected = meta[provider] ?? FALLBACK_META.groq;
+  return {
+    name: selected.label,
+    provider,
+    provider_type: selected.providerType,
+    account_email: "",
+    project_name: "",
+    api_key: "",
+    default_model: selected.defaultModel,
+    supported_models: selected.defaultModel,
+    endpoint_override: "",
+    notes: "",
+    enabled: true,
+    priority: String(selected.defaultPriority),
+    requests_per_minute: String(selected.safeRequestsPerMinute),
+    max_input_chars: String(selected.safeMaxInputChars),
+    max_completion_tokens: String(selected.safeMaxCompletionTokens),
+    timeout_ms: String(selected.safeTimeoutMs),
+    cooldown_seconds: String(selected.safeCooldownSeconds),
+  };
+}
+
+function formFromProvider(provider: Provider): ProviderForm {
+  return {
+    name: provider.name,
+    provider: provider.provider,
+    provider_type: provider.provider_type,
+    account_email: provider.account_email ?? "",
+    project_name: provider.project_name ?? "",
+    api_key: "",
+    default_model: provider.default_model ?? "",
+    supported_models: provider.supported_models.join("\n"),
+    endpoint_override: provider.endpoint_override ?? "",
+    notes: provider.notes ?? "",
+    enabled: provider.enabled,
+    priority: String(provider.priority),
+    requests_per_minute: String(provider.requests_per_minute),
+    max_input_chars: String(provider.max_input_chars),
+    max_completion_tokens: String(provider.max_completion_tokens),
+    timeout_ms: String(provider.timeout_ms),
+    cooldown_seconds: String(provider.cooldown_seconds),
+  };
+}
+
+function statusClasses(status: Provider["last_status"]) {
+  if (status === "ok") return "bg-edsync-emerald/10 text-edsync-emerald";
+  if (status === "error") return "bg-edsync-red/10 text-edsync-red";
+  return "bg-edsync-amber/10 text-edsync-amber";
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">{children}</label>;
+}
 
 export default function AdminAIPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [form, setForm] = useState({
-    name: "Groq",
-    provider: "groq",
-    api_key: "",
-    default_model: "groq/compound",
-    priority: 10,
-  });
+  const [providerMeta, setProviderMeta] = useState<Record<string, ProviderMetaEntry>>(FALLBACK_META);
+  const [summary, setSummary] = useState<ProviderSummary>(EMPTY_SUMMARY);
+  const [recentRuns, setRecentRuns] = useState<AIRun[]>([]);
+  const [form, setForm] = useState<ProviderForm>(() => blankForm());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const loadProviders = () => {
-    fetch("/api/ai/providers", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => setProviders(payload.data?.providers ?? []));
+  const providerOptions = useMemo(() => Object.keys(providerMeta), [providerMeta]);
+  const editingProvider = providers.find((provider) => provider.id === editingId) ?? null;
+
+  const loadProviders = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/ai/providers", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Provider settings could not be loaded.");
+      setProviders(payload.data?.providers ?? []);
+      setProviderMeta(payload.data?.providerMeta ?? FALLBACK_META);
+      setSummary(payload.data?.summary ?? EMPTY_SUMMARY);
+      setRecentRuns(payload.data?.recentRuns ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Provider settings could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadProviders();
   }, []);
 
-  const saveProvider = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const response = await fetch("/api/ai/providers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      toast.error(payload.error || "Provider was not saved. Check APP_ENCRYPTION_KEY.");
-      return;
-    }
-    toast.success("Provider saved.");
-    setForm((current) => ({ ...current, api_key: "" }));
-    loadProviders();
+  const applyProviderPreset = (provider: string) => {
+    const selected = providerMeta[provider] ?? FALLBACK_META[provider] ?? FALLBACK_META.groq;
+    setForm((current) => ({
+      ...current,
+      name: current.name === providerMeta[current.provider]?.label || current.name === FALLBACK_META[current.provider]?.label ? selected.label : current.name,
+      provider,
+      provider_type: selected.providerType,
+      default_model: selected.defaultModel,
+      supported_models: selected.defaultModel,
+      priority: String(selected.defaultPriority),
+      requests_per_minute: String(selected.safeRequestsPerMinute),
+      max_input_chars: String(selected.safeMaxInputChars),
+      max_completion_tokens: String(selected.safeMaxCompletionTokens),
+      timeout_ms: String(selected.safeTimeoutMs),
+      cooldown_seconds: String(selected.safeCooldownSeconds),
+    }));
   };
 
-  const testProvider = async (id: string) => {
-    const response = await fetch(`/api/ai/providers/${id}/test`, { method: "POST" });
-    const payload = await response.json();
-    if (!response.ok) toast.error(payload.error || "Provider test failed.");
-    else toast.success(payload.data?.message || "Provider responded.");
-    loadProviders();
+  const resetForm = () => {
+    setEditingId(null);
+    setForm(blankForm(providerOptions[0] ?? "groq", providerMeta));
+  };
+
+  const editProvider = (provider: Provider) => {
+    setEditingId(provider.id);
+    setForm(formFromProvider(provider));
+  };
+
+  const providerPayload = () => ({
+    ...form,
+    priority: Number(form.priority),
+    requests_per_minute: Number(form.requests_per_minute),
+    max_input_chars: Number(form.max_input_chars),
+    max_completion_tokens: Number(form.max_completion_tokens),
+    timeout_ms: Number(form.timeout_ms),
+    cooldown_seconds: Number(form.cooldown_seconds),
+  });
+
+  const saveProvider = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await fetch("/api/ai/providers", {
+        method: editingId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingId ? { id: editingId, ...providerPayload() } : providerPayload()),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Provider was not saved.");
+      toast.success(editingId ? "Provider updated." : "Provider added.");
+      resetForm();
+      await loadProviders();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Provider was not saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const patchProviderAction = async (provider: Provider, action: "toggle" | "reset_status", enabled?: boolean) => {
+    setBusyId(provider.id);
+    try {
+      const response = await fetch("/api/ai/providers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: provider.id, action, enabled }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Provider action failed.");
+      toast.success(action === "toggle" ? "Provider availability updated." : "Provider health reset.");
+      await loadProviders();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Provider action failed.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const deleteProvider = async (provider: Provider) => {
+    if (!window.confirm(`Delete ${provider.name}? The encrypted key will be removed from EdSync.`)) return;
+    setBusyId(provider.id);
+    try {
+      const response = await fetch(`/api/ai/providers?id=${encodeURIComponent(provider.id)}`, { method: "DELETE" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Provider was not deleted.");
+      toast.success("Provider deleted.");
+      if (editingId === provider.id) resetForm();
+      await loadProviders();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Provider was not deleted.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const testProvider = async (provider: Provider) => {
+    setTestingId(provider.id);
+    try {
+      const response = await fetch(`/api/ai/providers/${provider.id}/test`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Provider test failed.");
+      toast.success(payload.data?.message || "Provider responded.");
+      await loadProviders();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Provider test failed.");
+      await loadProviders();
+    } finally {
+      setTestingId(null);
+    }
   };
 
   return (
     <div className="space-y-6 p-5 lg:p-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold">AI providers</h1>
-        <p className="mt-2 text-sm text-edsync-subtle">
-          Add providers once, test them, and EdSync will automatically choose healthy providers by priority.
-        </p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">AI command center</p>
+          <h1 className="font-display text-3xl font-bold text-edsync-text">AI Providers</h1>
+          <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
+            Manage encrypted provider keys, routing priority, cooldowns, limits, health tests, and automatic fallback from one admin page.
+          </p>
+        </div>
+        <button type="button" onClick={loadProviders} className="btn-secondary w-fit" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
       </div>
 
-      <form onSubmit={saveProvider} className="edsync-card grid gap-3 p-4 md:grid-cols-5">
-        <input className="edsync-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Name" />
-        <select className="edsync-input" value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })}>
-          {providerOptions.map((provider) => <option key={provider}>{provider}</option>)}
-        </select>
-        <input className="edsync-input" value={form.default_model} onChange={(event) => setForm({ ...form, default_model: event.target.value })} placeholder="Default model" />
-        <input className="edsync-input" type="password" value={form.api_key} onChange={(event) => setForm({ ...form, api_key: event.target.value })} placeholder="API key" />
-        <button className="btn-primary justify-center" type="submit">
-          <Bot className="h-4 w-4" />
-          Add
-        </button>
-      </form>
-
-      <div className="grid gap-3">
-        {providers.map((provider) => (
-          <div key={provider.id} className="edsync-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-display text-lg font-bold">{provider.name}</h2>
-                <span className="rounded-md border border-edsync-border px-2 py-1 text-xs text-edsync-subtle">{provider.provider}</span>
-                <span className={provider.last_status === "ok" ? "text-xs font-semibold text-edsync-emerald" : "text-xs font-semibold text-edsync-amber"}>
-                  {provider.last_status}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-edsync-subtle">
-                {provider.default_model} · priority {provider.priority} · key {provider.key_masked || "not visible"}
-              </p>
-              {provider.last_error && <p className="mt-1 text-xs text-edsync-red">{provider.last_error}</p>}
-            </div>
-            <button type="button" onClick={() => testProvider(provider.id)} className="btn-secondary">
-              <TestTube2 className="h-4 w-4" />
-              Test
-            </button>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="edsync-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-edsync-subtle">Enabled routes</p>
+            <ShieldCheck className="h-4 w-4 text-edsync-blue" />
           </div>
-        ))}
-        {providers.length === 0 && <p className="edsync-card p-4 text-sm text-edsync-subtle">No stored providers yet. Add Groq, Google, Mistral, Cerebras, or Cohere to enable smart fallback.</p>}
+          <p className="mt-2 text-3xl font-bold">{summary.enabled}</p>
+          <p className="text-xs text-edsync-subtle">{summary.total} stored providers</p>
+        </div>
+        <div className="edsync-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-edsync-subtle">Healthy</p>
+            <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
+          </div>
+          <p className="mt-2 text-3xl font-bold">{summary.healthy}</p>
+          <p className="text-xs text-edsync-subtle">{summary.errors} provider errors</p>
+        </div>
+        <div className="edsync-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-edsync-subtle">Capabilities</p>
+            <Bot className="h-4 w-4 text-edsync-cyan" />
+          </div>
+          <p className="mt-2 text-3xl font-bold">{summary.chat}</p>
+          <p className="text-xs text-edsync-subtle">{summary.embed} embedding route</p>
+        </div>
+        <div className="edsync-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-edsync-subtle">Recent runs</p>
+            <Activity className="h-4 w-4 text-edsync-amber" />
+          </div>
+          <p className="mt-2 text-3xl font-bold">{summary.recent_runs}</p>
+          <p className="text-xs text-edsync-subtle">
+            {summary.average_latency_ms ? `${summary.average_latency_ms} ms avg` : "No latency sample"}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <section className="space-y-4">
+          <div className="edsync-card overflow-hidden p-0">
+            <div className="border-b border-edsync-border px-4 py-3">
+              <h2 className="font-display text-xl font-bold">Routing Stack</h2>
+              <p className="text-sm text-edsync-subtle">Lower priority numbers are tried first; failed providers cool down automatically.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[920px] text-left text-sm">
+                <thead className="border-b border-edsync-border text-xs uppercase tracking-wide text-edsync-subtle">
+                  <tr>
+                    <th className="px-4 py-3">Provider</th>
+                    <th className="px-4 py-3">Mode</th>
+                    <th className="px-4 py-3">Priority</th>
+                    <th className="px-4 py-3">Limits</th>
+                    <th className="px-4 py-3">Health</th>
+                    <th className="px-4 py-3">Key</th>
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {providers.map((provider) => (
+                    <tr key={provider.id} className="border-b border-edsync-border align-top last:border-0">
+                      <td className="px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <span className={`mt-1 h-2.5 w-2.5 rounded-full ${provider.enabled ? "bg-edsync-emerald" : "bg-edsync-subtle"}`} />
+                          <div>
+                            <p className="font-semibold text-edsync-text">{provider.name}</p>
+                            <p className="text-xs text-edsync-subtle">{provider.provider} - {provider.default_model}</p>
+                            <p className="mt-1 max-w-[260px] truncate text-xs text-edsync-subtle">{provider.endpoint_effective}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="badge bg-edsync-blue/10 text-edsync-blue">{provider.provider_type}</span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold">{provider.priority}</td>
+                      <td className="px-4 py-3 text-xs text-edsync-subtle">
+                        <p>{provider.requests_per_minute}/min</p>
+                        <p>{provider.timeout_ms} ms</p>
+                        <p>{provider.cooldown_seconds}s cooldown</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`badge ${statusClasses(provider.last_status)}`}>{provider.last_status}</span>
+                        {provider.last_checked_at && <p className="mt-1 text-xs text-edsync-subtle">{new Date(provider.last_checked_at).toLocaleString()}</p>}
+                        {provider.last_error && <p className="mt-1 max-w-[220px] text-xs text-edsync-red">{provider.last_error}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-edsync-subtle">
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="h-4 w-4" />
+                          {provider.key_masked || (provider.has_key ? "stored" : "missing")}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => editProvider(provider)} className="btn-secondary px-3 py-2">
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => testProvider(provider)}
+                            className="btn-secondary px-3 py-2"
+                            disabled={testingId === provider.id}
+                          >
+                            <TestTube2 className="h-4 w-4" />
+                            {testingId === provider.id ? "Testing" : "Test"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => patchProviderAction(provider, "toggle", !provider.enabled)}
+                            className={provider.enabled ? "btn-secondary px-3 py-2" : "btn-primary px-3 py-2"}
+                            disabled={busyId === provider.id}
+                          >
+                            {provider.enabled ? "Pause" : "Enable"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => patchProviderAction(provider, "reset_status")}
+                            className="btn-secondary px-3 py-2"
+                            disabled={busyId === provider.id}
+                          >
+                            Reset
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteProvider(provider)}
+                            className="btn-danger px-3 py-2"
+                            disabled={busyId === provider.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!loading && providers.length === 0 && (
+                <div className="p-6 text-sm text-edsync-subtle">No providers are configured yet. Add Groq, Google, Mistral, Cerebras, or Cohere to enable smart fallback.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="edsync-card p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl font-bold">Recent AI Runs</h2>
+                <p className="text-sm text-edsync-subtle">Audited attempts from the smart fallback layer.</p>
+              </div>
+              {summary.recent_failures > 0 && (
+                <span className="badge bg-edsync-red/10 text-edsync-red">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {summary.recent_failures} failed
+                </span>
+              )}
+            </div>
+            <div className="grid gap-2">
+              {recentRuns.slice(0, 8).map((run) => (
+                <div key={run.id} className="grid gap-2 rounded-lg border border-edsync-border px-3 py-2 text-sm md:grid-cols-[140px_1fr_120px_120px]">
+                  <span className={run.success ? "font-semibold text-edsync-emerald" : "font-semibold text-edsync-red"}>
+                    {run.success ? "Success" : "Failed"}
+                  </span>
+                  <span className="text-edsync-text">{run.feature} via {run.provider || "unknown"}</span>
+                  <span className="text-edsync-subtle">{run.latency_ms ? `${run.latency_ms} ms` : "n/a"}</span>
+                  <span className="text-edsync-subtle">{new Date(run.created_at).toLocaleString()}</span>
+                  {run.error_message && <p className="md:col-span-4 text-xs text-edsync-red">{run.error_message}</p>}
+                </div>
+              ))}
+              {recentRuns.length === 0 && <p className="text-sm text-edsync-subtle">No AI run audit rows yet.</p>}
+            </div>
+          </div>
+        </section>
+
+        <aside className="edsync-card h-fit p-4 xl:sticky xl:top-6">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold">{editingId ? "Edit Provider" : "Add Provider"}</h2>
+              <p className="text-sm text-edsync-subtle">
+                {editingProvider ? `Editing ${editingProvider.name}. Leave API key blank to keep the encrypted key.` : "Keys are encrypted before storage."}
+              </p>
+            </div>
+            {editingId ? (
+              <button type="button" onClick={resetForm} className="btn-ghost px-2 py-2">
+                <X className="h-4 w-4" />
+              </button>
+            ) : (
+              <Plus className="mt-1 h-5 w-5 text-edsync-blue" />
+            )}
+          </div>
+
+          <form onSubmit={saveProvider} className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <FieldLabel>Name</FieldLabel>
+                <input className="edsync-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>Provider</FieldLabel>
+                <select className="edsync-input" value={form.provider} onChange={(event) => applyProviderPreset(event.target.value)}>
+                  {providerOptions.map((provider) => (
+                    <option key={provider} value={provider}>
+                      {providerMeta[provider]?.label ?? provider}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <FieldLabel>Account email</FieldLabel>
+                <input className="edsync-input" value={form.account_email} onChange={(event) => setForm({ ...form, account_email: event.target.value })} placeholder="optional" />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>Project name</FieldLabel>
+                <input className="edsync-input" value={form.project_name} onChange={(event) => setForm({ ...form, project_name: event.target.value })} placeholder="optional" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>API key</FieldLabel>
+              <input
+                className="edsync-input"
+                type="password"
+                value={form.api_key}
+                onChange={(event) => setForm({ ...form, api_key: event.target.value })}
+                placeholder={editingId ? "Leave blank to keep encrypted key" : "Paste provider key"}
+                required={!editingId}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>Default model</FieldLabel>
+              <input className="edsync-input" value={form.default_model} onChange={(event) => setForm({ ...form, default_model: event.target.value })} required />
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>Supported models</FieldLabel>
+              <textarea
+                className="edsync-textarea min-h-24"
+                value={form.supported_models}
+                onChange={(event) => setForm({ ...form, supported_models: event.target.value })}
+                placeholder="One model per line"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel>Endpoint override</FieldLabel>
+              <input
+                className="edsync-input"
+                value={form.endpoint_override}
+                onChange={(event) => setForm({ ...form, endpoint_override: event.target.value })}
+                placeholder={providerMeta[form.provider]?.defaultEndpoint ?? "https://"}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <FieldLabel>Priority</FieldLabel>
+                <input className="edsync-input" type="number" min="1" value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>RPM</FieldLabel>
+                <input className="edsync-input" type="number" min="1" value={form.requests_per_minute} onChange={(event) => setForm({ ...form, requests_per_minute: event.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>Timeout</FieldLabel>
+                <input className="edsync-input" type="number" min="3000" value={form.timeout_ms} onChange={(event) => setForm({ ...form, timeout_ms: event.target.value })} />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <FieldLabel>Input chars</FieldLabel>
+                <input className="edsync-input" type="number" min="200" value={form.max_input_chars} onChange={(event) => setForm({ ...form, max_input_chars: event.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>Max tokens</FieldLabel>
+                <input className="edsync-input" type="number" min="0" value={form.max_completion_tokens} onChange={(event) => setForm({ ...form, max_completion_tokens: event.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel>Cooldown</FieldLabel>
+                <input className="edsync-input" type="number" min="5" value={form.cooldown_seconds} onChange={(event) => setForm({ ...form, cooldown_seconds: event.target.value })} />
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between gap-4 rounded-lg border border-edsync-border px-4 py-3">
+              <span>
+                <span className="block text-sm font-semibold">Enabled for fallback</span>
+                <span className="block text-xs text-edsync-subtle">Disabled providers remain stored but are skipped at runtime.</span>
+              </span>
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-edsync-blue"
+                checked={form.enabled}
+                onChange={(event) => setForm({ ...form, enabled: event.target.checked })}
+              />
+            </label>
+
+            <div className="space-y-1.5">
+              <FieldLabel>Admin notes</FieldLabel>
+              <textarea className="edsync-textarea min-h-20" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Usage notes, key owner, limits, renewal notes" />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button type="submit" className="btn-primary flex-1 justify-center" disabled={saving}>
+                <Save className="h-4 w-4" />
+                {saving ? "Saving" : editingId ? "Save changes" : "Add provider"}
+              </button>
+              {editingId && (
+                <button type="button" onClick={resetForm} className="btn-secondary justify-center">
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </aside>
       </div>
     </div>
   );
