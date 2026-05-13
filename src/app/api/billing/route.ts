@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { createCheckout } from "@/lib/billing";
 import { d1Query } from "@/lib/db/d1";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 export async function GET() {
@@ -18,7 +19,14 @@ export async function GET() {
       user.id,
     ]),
   ]);
-  return NextResponse.json({ data: { products, prices, entitlements, context }, error: null });
+  const [portals, links] = await Promise.all([
+    d1Query("SELECT * FROM tenant_portals WHERE tenant_id = ? ORDER BY is_default DESC, name", [context.tenant.id]),
+    d1Query(
+      "SELECT portal_id, object_id FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products'",
+      [context.tenant.id],
+    ),
+  ]);
+  return NextResponse.json({ data: { products, prices, entitlements, portals, links, context }, error: null });
 }
 
 export async function POST(request: Request) {
@@ -26,7 +34,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
   const body = (await request.json()) as {
-    action?: "create_product" | "create_price" | "checkout";
+    action?: "create_product" | "create_price" | "checkout" | "update_catalog";
     title?: string;
     description?: string | null;
     productType?: string;
@@ -38,6 +46,9 @@ export async function POST(request: Request) {
     billingInterval?: "one_time" | "month" | "year" | "invoice";
     successUrl?: string;
     cancelUrl?: string;
+    metadata?: Record<string, unknown>;
+    status?: "draft" | "active" | "archived";
+    portalId?: string | null;
   };
 
   if (body.action === "checkout") {
@@ -53,6 +64,26 @@ export async function POST(request: Request) {
   }
 
   await requirePermission(user, context, PERMISSIONS.billingManage);
+
+  if (body.action === "update_catalog") {
+    if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
+    const metadata = sanitizeCatalogMetadata(body.metadata);
+    const status = body.status === "active" || body.status === "archived" || body.status === "draft" ? body.status : "draft";
+    await d1Query(
+      "UPDATE billing_products SET status = ?, metadata = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?",
+      [status, metadata, body.productId, context.tenant.id],
+    );
+    if (body.portalId) {
+      await d1Query(
+        `INSERT INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
+         VALUES (?, ?, ?, 'billing_products', ?, datetime('now'))
+         ON CONFLICT(object_table, object_id) DO UPDATE SET portal_id = excluded.portal_id`,
+        [crypto.randomUUID(), context.tenant.id, body.portalId, body.productId],
+      );
+    }
+    return NextResponse.json({ data: { id: body.productId }, error: null });
+  }
+
   if (body.action === "create_price") {
     if (!body.productId || body.amountCents === undefined) {
       return NextResponse.json({ data: null, error: "Product and amount are required." }, { status: 400 });
@@ -80,7 +111,7 @@ export async function POST(request: Request) {
   await d1Query(
     `INSERT INTO billing_products (
        id, tenant_id, title, description, product_type, course_id, status, metadata, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, 'active', '{}', datetime('now'), datetime('now'))`,
+     ) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, datetime('now'), datetime('now'))`,
     [
       id,
       context.tenant.id,
@@ -88,7 +119,15 @@ export async function POST(request: Request) {
       body.description ?? null,
       ["course", "bundle", "membership", "subscription"].includes(body.productType || "") ? body.productType : "course",
       body.courseId ?? null,
+      sanitizeCatalogMetadata(body.metadata),
     ],
   );
+  if (body.portalId) {
+    await d1Query(
+      `INSERT INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
+       VALUES (?, ?, ?, 'billing_products', ?, datetime('now'))`,
+      [crypto.randomUUID(), context.tenant.id, body.portalId, id],
+    );
+  }
   return NextResponse.json({ data: { id }, error: null });
 }
