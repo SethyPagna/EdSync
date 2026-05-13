@@ -35,7 +35,6 @@ type ProviderResult = {
   raw: unknown;
 };
 
-const OPENROUTER_BASE = "https://openrouter.ai/api/v1/chat/completions";
 const ONE_MINUTE_MS = 60_000;
 const PROVIDER_RUNTIME = new Map<string, RuntimeState>();
 
@@ -70,7 +69,6 @@ function prune(providerId: string, now = Date.now()) {
 function endpointFor(row: AIProviderRow) {
   const provider = row.provider as AIProviderKey;
   if (row.endpoint_override) return row.endpoint_override;
-  if (provider === "cloudflare") return process.env.CLOUDFLARE_AI_GATEWAY_URL || "";
   return PROVIDER_META[provider]?.defaultEndpoint || "";
 }
 
@@ -78,41 +76,6 @@ function assertHttpsEndpoint(endpoint: string) {
   const url = new URL(endpoint);
   if (url.protocol !== "https:") throw new Error("AI provider endpoint must use HTTPS.");
   return url.toString();
-}
-
-function envOpenRouterProvider(): RuntimeProvider | null {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
-
-  const endpoint = process.env.CLOUDFLARE_AI_GATEWAY_URL || OPENROUTER_BASE;
-  return {
-    id: "env-openrouter",
-    name: process.env.CLOUDFLARE_AI_GATEWAY_URL ? "Cloudflare AI Gateway" : "OpenRouter",
-    provider: process.env.CLOUDFLARE_AI_GATEWAY_URL ? "cloudflare" : "openrouter",
-    provider_type: "chat",
-    account_email: null,
-    project_name: null,
-    api_key_encrypted: "",
-    apiKey,
-    default_model: process.env.OPENROUTER_DEFAULT_MODEL || "openai/gpt-oss-120b:free",
-    supported_models: "[]",
-    endpoint_override: endpoint,
-    endpoint,
-    notes: null,
-    enabled: 1,
-    priority: 999,
-    requests_per_minute: 12,
-    max_input_chars: 4000,
-    max_completion_tokens: 3000,
-    timeout_ms: 25000,
-    cooldown_seconds: 20,
-    last_status: "untested",
-    last_error: null,
-    last_checked_at: null,
-    created_by: null,
-    created_at: new Date(0).toISOString(),
-    updated_at: new Date(0).toISOString(),
-  };
 }
 
 async function loadRuntimeProviders() {
@@ -136,8 +99,7 @@ async function loadRuntimeProviders() {
     })
     .filter((row): row is RuntimeProvider => Boolean(row));
 
-  const fallback = envOpenRouterProvider();
-  return fallback ? [...runtimeRows, fallback] : runtimeRows;
+  return runtimeRows;
 }
 
 function pickProvider(providers: RuntimeProvider[], now = Date.now()) {
