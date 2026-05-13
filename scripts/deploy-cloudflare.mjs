@@ -174,6 +174,9 @@ run("npx", [
   environment === "production" ? "main" : "preview",
 ], { cwd: pagesDeployCwd, env: pagesDeployEnv });
 run("npx", ["opennextjs-cloudflare", "deploy", "--config", "wrangler.app.jsonc", ...envArgs, "--", "--keep-vars"]);
-run("npx", ["wrangler", "deploy", ...envArgs]);
+const automationDeployCwd = mkdtempSync(join(tmpdir(), "edsync-worker-"));
+run("npx", ["wrangler", "deploy", "--config", resolve("wrangler.toml"), ...envArgs], {
+  cwd: automationDeployCwd,
+});
 
 console.log(`Cloudflare Pages and Worker deployed for ${pagesProject} (${environment}).`);
