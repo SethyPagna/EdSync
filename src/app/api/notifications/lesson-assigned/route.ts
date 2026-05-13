@@ -12,7 +12,7 @@ type AssignmentPayload = {
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user || user.role !== "teacher") {
+  if (!user || user.user_metadata.role !== "teacher") {
     return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
   }
 
