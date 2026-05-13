@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
+import { MetricTile } from "@/components/WorkspacePrimitives";
 import type {
   LearningGoal,
   LearningReflection,
@@ -280,7 +281,7 @@ export default function StudentDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
       <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-6">
           <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-edsync-emerald">
@@ -333,21 +334,15 @@ export default function StudentDashboard() {
                 icon: GraduationCap,
                 tone: "text-edsync-amber",
               },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
-                >
-                  <Icon className={`mb-4 h-5 w-5 ${item.tone}`} />
-                  <p className="font-display text-3xl font-bold text-edsync-text">
-                    {loading ? "..." : item.value}
-                  </p>
-                  <p className="text-xs text-edsync-subtle">{item.label}</p>
-                </div>
-              );
-            })}
+            ].map((item) => (
+              <MetricTile
+                key={item.label}
+                label={item.label}
+                value={loading ? "..." : item.value}
+                icon={item.icon}
+                tone={item.tone}
+              />
+            ))}
           </div>
         </section>
 
@@ -356,7 +351,7 @@ export default function StudentDashboard() {
           <p className="mt-1 text-sm text-edsync-subtle">
             Enter the join code your teacher shared.
           </p>
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
             <input
               value={joinCode}
               onChange={(event) => setJoinCode(event.target.value)}
@@ -368,7 +363,7 @@ export default function StudentDashboard() {
               type="button"
               onClick={joinClass}
               disabled={joiningClass || !joinCode.trim()}
-              className="btn-primary px-4"
+              className="btn-primary justify-center px-4"
             >
               Join
             </button>
