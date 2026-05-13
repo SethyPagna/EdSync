@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ const GENERATION_STEPS = [
 // ─── Main Component ───────────────────────────────────────────
 export default function CreateLesson() {
   const router = useRouter();
-  const supabase = createClient();
+  const edsync = createClient();
 
   const [creationMode, setCreationMode] = useState<CreationMode>("ai_collab");
   const [importMode, setImportMode] = useState<ImportMode>("objectives");
@@ -214,7 +214,7 @@ export default function CreateLesson() {
     }
   };
 
-  // ── Save to Supabase ─────────────────────────────────────────
+  // ── Save to edsync ─────────────────────────────────────────
   const save = async (status: "draft" | "published") => {
     if (!draft.title.trim()) {
       toast.error("Please add a title");
@@ -224,13 +224,13 @@ export default function CreateLesson() {
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setSaving(false);
       return;
     }
 
-    const { data: lesson, error } = await supabase
+    const { data: lesson, error } = await edsync
       .from("lessons")
       .insert({
         teacher_id: user.id,
@@ -258,7 +258,7 @@ export default function CreateLesson() {
     }
 
     if (draft.sections.length > 0) {
-      await supabase.from("lesson_sections").insert(
+      await edsync.from("lesson_sections").insert(
         draft.sections
           .filter((s) => s.title.trim())
           .map((s, idx) => ({
@@ -272,7 +272,7 @@ export default function CreateLesson() {
       );
     }
     if (draft.quiz_questions.length > 0) {
-      await supabase.from("quiz_questions").insert(
+      await edsync.from("quiz_questions").insert(
         draft.quiz_questions.map((q, idx) => ({
           lesson_id: lesson.id,
           question_text: q.question_text,
@@ -288,7 +288,7 @@ export default function CreateLesson() {
       );
     }
     if (draft.glossary_terms.length > 0) {
-      await supabase.from("glossary_terms").insert(
+      await edsync.from("glossary_terms").insert(
         draft.glossary_terms.map((t) => ({
           lesson_id: lesson.id,
           term: t.term,
@@ -326,10 +326,10 @@ export default function CreateLesson() {
           ← Back
         </button>
         <div className="min-w-0">
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-atlas-text">
+          <h1 className="font-display font-bold text-2xl sm:text-3xl text-edsync-text">
             Lesson Creation Studio
           </h1>
-          <p className="text-atlas-subtle text-sm">
+          <p className="text-edsync-subtle text-sm">
             {step === "choose"
               ? "Choose how you want to create your lesson"
               : step === "import"
@@ -365,8 +365,8 @@ export default function CreateLesson() {
                 (step === "import" && i <= 1) ||
                 (step === "edit" && i <= 2) ||
                 (step === "generating" && i === 1)
-                  ? "bg-atlas-blue text-white"
-                  : "bg-atlas-card text-atlas-subtle border border-atlas-border"
+                  ? "bg-edsync-blue text-white"
+                  : "bg-edsync-card text-edsync-subtle border border-edsync-border"
               }`}
             >
               {pill.label}
@@ -378,7 +378,7 @@ export default function CreateLesson() {
       {/* ── STEP: CHOOSE MODE ── */}
       {step === "choose" && (
         <div className="space-y-4 animate-slide-up">
-          <p className="text-atlas-text font-medium mb-6">
+          <p className="text-edsync-text font-medium mb-6">
             How would you like to create this lesson?
           </p>
           {[
@@ -388,7 +388,7 @@ export default function CreateLesson() {
               desc: "AI generates a structured lesson draft. You review, edit, and refine every section to make it yours.",
               badge: "Recommended",
               badgeColor:
-                "bg-atlas-blue/10 text-atlas-blue border-atlas-blue/20",
+                "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20",
             },
             {
               mode: "ai_full" as const,
@@ -396,7 +396,7 @@ export default function CreateLesson() {
               desc: "AI creates a complete, ready-to-publish lesson. Review and approve before going live.",
               badge: "Fastest",
               badgeColor:
-                "bg-atlas-purple/10 text-atlas-purple border-atlas-purple/20",
+                "bg-edsync-purple/10 text-edsync-purple border-edsync-purple/20",
             },
             {
               mode: "manual" as const,
@@ -404,7 +404,7 @@ export default function CreateLesson() {
               desc: "Build your lesson entirely yourself. Full creative control with no AI involvement.",
               badge: "Full Control",
               badgeColor:
-                "bg-atlas-emerald/10 text-atlas-emerald border-atlas-emerald/20",
+                "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20",
             },
           ].map((opt) => (
             <button
@@ -418,23 +418,23 @@ export default function CreateLesson() {
               }}
               className={`w-full p-5 rounded-2xl border-2 text-left transition-all hover:shadow-card-hover hover:-translate-y-0.5 ${
                 creationMode === opt.mode
-                  ? "border-atlas-blue bg-atlas-blue/5"
-                  : "border-atlas-border bg-atlas-card hover:border-atlas-muted"
+                  ? "border-edsync-blue bg-edsync-blue/5"
+                  : "border-edsync-border bg-edsync-card hover:border-edsync-muted"
               }`}
             >
               <div className="flex items-start gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-display font-bold text-atlas-text">
+                    <span className="font-display font-bold text-edsync-text">
                       {opt.title}
                     </span>
                     <span className={`badge text-xs ${opt.badgeColor}`}>
                       {opt.badge}
                     </span>
                   </div>
-                  <p className="text-atlas-subtle text-sm">{opt.desc}</p>
+                  <p className="text-edsync-subtle text-sm">{opt.desc}</p>
                 </div>
-                <span className="text-atlas-blue text-lg mt-1">→</span>
+                <span className="text-edsync-blue text-lg mt-1">→</span>
               </div>
             </button>
           ))}
@@ -445,13 +445,13 @@ export default function CreateLesson() {
       {step === "import" && (
         <div className="animate-slide-up space-y-6">
           {/* Source type picker */}
-          <div className="atlas-card">
-            <h2 className="font-display font-bold text-xl text-atlas-text mb-2">
+          <div className="edsync-card">
+            <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
               {creationMode === "ai_collab"
                 ? "Give AI a starting point"
                 : "What should the AI base your lesson on?"}
             </h2>
-            <p className="text-atlas-subtle text-sm mb-5">
+            <p className="text-edsync-subtle text-sm mb-5">
               AI will use this to generate your lesson structure.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
@@ -485,14 +485,14 @@ export default function CreateLesson() {
                   }}
                   className={`p-3 rounded-xl border-2 transition-all text-left ${
                     importMode === opt.mode
-                      ? "border-atlas-blue bg-atlas-blue/10"
-                      : "border-atlas-border bg-atlas-surface hover:border-atlas-muted"
+                      ? "border-edsync-blue bg-edsync-blue/10"
+                      : "border-edsync-border bg-edsync-surface hover:border-edsync-muted"
                   }`}
                 >
-                  <p className="font-semibold text-sm text-atlas-text">
+                  <p className="font-semibold text-sm text-edsync-text">
                     {opt.label}
                   </p>
-                  <p className="text-xs text-atlas-subtle">{opt.desc}</p>
+                  <p className="text-xs text-edsync-subtle">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -507,12 +507,12 @@ export default function CreateLesson() {
             />
 
             {uploadedFile && (
-              <div className="flex items-center gap-3 p-3 bg-atlas-emerald/5 border border-atlas-emerald/20 rounded-xl mb-4">
+              <div className="flex items-center gap-3 p-3 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl mb-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-atlas-text truncate">
+                  <p className="text-sm font-medium text-edsync-text truncate">
                     {uploadedFile.name}
                   </p>
-                  <p className="text-xs text-atlas-subtle">
+                  <p className="text-xs text-edsync-subtle">
                     {(uploadedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -521,7 +521,7 @@ export default function CreateLesson() {
                     setUploadedFile(null);
                     setInputText("");
                   }}
-                  className="text-atlas-subtle hover:text-atlas-red text-lg"
+                  className="text-edsync-subtle hover:text-edsync-red text-lg"
                 >
                   ×
                 </button>
@@ -541,9 +541,9 @@ export default function CreateLesson() {
                         : "https://example.com/article-to-use-as-lesson-basis"
                   }
                   rows={8}
-                  className="atlas-textarea"
+                  className="edsync-textarea"
                 />
-                <p className="text-xs text-atlas-subtle mt-1">
+                <p className="text-xs text-edsync-subtle mt-1">
                   {inputText.length} characters
                 </p>
               </>
@@ -551,8 +551,8 @@ export default function CreateLesson() {
           </div>
 
           {/* Differentiation sliders */}
-          <div className="atlas-card">
-            <h3 className="font-display font-semibold text-lg text-atlas-text mb-4">
+          <div className="edsync-card">
+            <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
               Differentiation Settings
             </h3>
             <div className="space-y-5">
@@ -587,7 +587,7 @@ export default function CreateLesson() {
               ].map((s) => (
                 <div key={s.key}>
                   <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium text-atlas-text">
+                    <span className="text-sm font-medium text-edsync-text">
                       {s.label}
                     </span>
                     <span
@@ -606,7 +606,7 @@ export default function CreateLesson() {
                     style={{ accentColor: s.color }}
                     className="w-full"
                   />
-                  <div className="flex justify-between text-xs text-atlas-subtle">
+                  <div className="flex justify-between text-xs text-edsync-subtle">
                     <span>{s.left}</span>
                     <span>{s.right}</span>
                   </div>
@@ -628,11 +628,11 @@ export default function CreateLesson() {
       {/* ── STEP: GENERATING ── */}
       {step === "generating" && (
         <div className="flex items-center justify-center min-h-64 animate-fade-in">
-          <div className="atlas-card p-6 sm:p-12 text-center max-w-sm w-full">
-            <h2 className="font-display font-bold text-2xl text-atlas-text mb-2">
+          <div className="edsync-card p-6 sm:p-12 text-center max-w-sm w-full">
+            <h2 className="font-display font-bold text-2xl text-edsync-text mb-2">
               Building Your Lesson
             </h2>
-            <p className="text-atlas-subtle text-xs mb-6">
+            <p className="text-edsync-subtle text-xs mb-6">
               AI is running in two passes — extracting knowledge, then
               generating rich content
             </p>
@@ -640,15 +640,15 @@ export default function CreateLesson() {
               {GENERATION_STEPS.map((s, i) => (
                 <div
                   key={i}
-                  className={`flex items-start gap-3 text-sm transition-all ${i <= genStep ? "text-atlas-text" : "text-atlas-subtle/30"}`}
+                  className={`flex items-start gap-3 text-sm transition-all ${i <= genStep ? "text-edsync-text" : "text-edsync-subtle/30"}`}
                 >
                   <span
                     className={`w-5 h-5 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
                       i < genStep
-                        ? "bg-atlas-emerald/20 text-atlas-emerald"
+                        ? "bg-edsync-emerald/20 text-edsync-emerald"
                         : i === genStep
-                          ? "bg-atlas-blue/20 text-atlas-blue animate-pulse"
-                          : "bg-atlas-card"
+                          ? "bg-edsync-blue/20 text-edsync-blue animate-pulse"
+                          : "bg-edsync-card"
                     }`}
                   >
                     {i < genStep ? "✓" : i === genStep ? "●" : "○"}
@@ -658,8 +658,8 @@ export default function CreateLesson() {
               ))}
             </div>
             {genStep >= 2 && (
-              <div className="mt-5 pt-4 border-t border-atlas-border">
-                <p className="text-xs text-atlas-subtle">
+              <div className="mt-5 pt-4 border-t border-edsync-border">
+                <p className="text-xs text-edsync-subtle">
                   {genStep < 4
                     ? "Phase 1: Content analysis complete, generating sections..."
                     : "Phase 2: Writing quiz questions and glossary..."}
@@ -674,12 +674,12 @@ export default function CreateLesson() {
       {step === "edit" && (
         <div className="animate-slide-up space-y-6">
           {creationMode !== "manual" && (
-            <div className="p-3 bg-atlas-emerald/5 border border-atlas-emerald/20 rounded-xl text-sm text-atlas-emerald flex items-start gap-2">
+            <div className="p-3 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl text-sm text-edsync-emerald flex items-start gap-2">
               <div className="flex-1">
                 <span className="font-medium">Lesson generated!</span> Review
                 and customize below, then save or publish.
                 {analysisInfo?.main_topic && (
-                  <p className="text-atlas-emerald/70 text-xs mt-1 break-words">
+                  <p className="text-edsync-emerald/70 text-xs mt-1 break-words">
                     Topic detected: <strong>{analysisInfo.main_topic}</strong>
                     {analysisInfo.key_concepts?.length
                       ? ` · Key concepts: ${analysisInfo.key_concepts.slice(0, 4).join(", ")}`
@@ -691,7 +691,7 @@ export default function CreateLesson() {
           )}
 
           {/* Tabs */}
-          <div className="flex gap-2 border-b border-atlas-border pb-0 overflow-x-auto -mx-1 px-1">
+          <div className="flex gap-2 border-b border-edsync-border pb-0 overflow-x-auto -mx-1 px-1">
             {[
               { key: "overview" as const, label: "Overview" },
               {
@@ -712,8 +712,8 @@ export default function CreateLesson() {
                 onClick={() => setActiveTab(t.key)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-all ${
                   activeTab === t.key
-                    ? "border-atlas-blue text-atlas-blue"
-                    : "border-transparent text-atlas-subtle hover:text-atlas-text"
+                    ? "border-edsync-blue text-edsync-blue"
+                    : "border-transparent text-edsync-subtle hover:text-edsync-text"
                 }`}
               >
                 {t.label}
@@ -725,8 +725,8 @@ export default function CreateLesson() {
           {activeTab === "overview" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2 space-y-4">
-                <div className="atlas-card">
-                  <label className="block text-xs text-atlas-subtle mb-1 font-medium">
+                <div className="edsync-card">
+                  <label className="block text-xs text-edsync-subtle mb-1 font-medium">
                     Lesson Title *
                   </label>
                   <input
@@ -734,12 +734,12 @@ export default function CreateLesson() {
                     onChange={(e) =>
                       setDraft({ ...draft, title: e.target.value })
                     }
-                    className="atlas-input font-display font-bold text-lg"
+                    className="edsync-input font-display font-bold text-lg"
                     placeholder="Enter lesson title..."
                   />
                 </div>
-                <div className="atlas-card">
-                  <label className="block text-xs text-atlas-subtle mb-1 font-medium">
+                <div className="edsync-card">
+                  <label className="block text-xs text-edsync-subtle mb-1 font-medium">
                     Description
                   </label>
                   <textarea
@@ -748,18 +748,18 @@ export default function CreateLesson() {
                       setDraft({ ...draft, description: e.target.value })
                     }
                     rows={3}
-                    className="atlas-textarea"
+                    className="edsync-textarea"
                     placeholder="Brief overview for students..."
                   />
                 </div>
-                <div className="atlas-card">
-                  <h3 className="font-semibold text-atlas-text mb-3">
+                <div className="edsync-card">
+                  <h3 className="font-semibold text-edsync-text mb-3">
                     Learning Objectives
                   </h3>
                   <div className="space-y-2">
                     {draft.objectives.map((obj, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="text-atlas-blue font-bold text-sm w-5">
+                        <span className="text-edsync-blue font-bold text-sm w-5">
                           {i + 1}.
                         </span>
                         <input
@@ -769,7 +769,7 @@ export default function CreateLesson() {
                             o[i] = e.target.value;
                             setDraft({ ...draft, objectives: o });
                           }}
-                          className="atlas-input py-2 flex-1"
+                          className="edsync-input py-2 flex-1"
                           placeholder={`Objective ${i + 1}...`}
                         />
                         <button
@@ -781,7 +781,7 @@ export default function CreateLesson() {
                               ),
                             })
                           }
-                          className="text-atlas-subtle hover:text-atlas-red text-lg flex-shrink-0"
+                          className="text-edsync-subtle hover:text-edsync-red text-lg flex-shrink-0"
                         >
                           ×
                         </button>
@@ -794,7 +794,7 @@ export default function CreateLesson() {
                           objectives: [...draft.objectives, ""],
                         })
                       }
-                      className="text-atlas-blue text-sm hover:underline"
+                      className="text-edsync-blue text-sm hover:underline"
                     >
                       + Add objective
                     </button>
@@ -802,9 +802,9 @@ export default function CreateLesson() {
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="atlas-card space-y-3">
+                <div className="edsync-card space-y-3">
                   <div>
-                    <label className="block text-xs text-atlas-subtle mb-1">
+                    <label className="block text-xs text-edsync-subtle mb-1">
                       Subject
                     </label>
                     <input
@@ -812,12 +812,12 @@ export default function CreateLesson() {
                       onChange={(e) =>
                         setDraft({ ...draft, subject: e.target.value })
                       }
-                      className="atlas-input py-2"
+                      className="edsync-input py-2"
                       placeholder="e.g. Biology"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-atlas-subtle mb-1">
+                    <label className="block text-xs text-edsync-subtle mb-1">
                       Duration (minutes)
                     </label>
                     <input
@@ -829,11 +829,11 @@ export default function CreateLesson() {
                           estimated_duration: Number(e.target.value),
                         })
                       }
-                      className="atlas-input py-2"
+                      className="edsync-input py-2"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-atlas-subtle mb-1">
+                    <label className="block text-xs text-edsync-subtle mb-1">
                       Difficulty
                     </label>
                     <select
@@ -844,7 +844,7 @@ export default function CreateLesson() {
                           difficulty: e.target.value as DifficultyLevel,
                         })
                       }
-                      className="atlas-input py-2"
+                      className="edsync-input py-2"
                     >
                       <option value="beginner">Beginner</option>
                       <option value="intermediate">Intermediate</option>
@@ -852,7 +852,7 @@ export default function CreateLesson() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-atlas-subtle mb-1">
+                    <label className="block text-xs text-edsync-subtle mb-1">
                       Tags (comma-separated)
                     </label>
                     <input
@@ -866,15 +866,15 @@ export default function CreateLesson() {
                             .filter(Boolean),
                         })
                       }
-                      className="atlas-input py-2"
+                      className="edsync-input py-2"
                       placeholder="biology, cells, photosynthesis"
                     />
                   </div>
                 </div>
                 {/* Differentiation sliders (read-only preview) */}
                 {creationMode !== "manual" && (
-                  <div className="atlas-card">
-                    <h3 className="font-semibold text-atlas-text mb-3 text-sm">
+                  <div className="edsync-card">
+                    <h3 className="font-semibold text-edsync-text mb-3 text-sm">
                       Differentiation
                     </h3>
                     {[
@@ -892,10 +892,10 @@ export default function CreateLesson() {
                     ].map((s) => (
                       <div key={s.label} className="mb-2">
                         <div className="flex justify-between text-xs mb-0.5">
-                          <span className="text-atlas-subtle">{s.label}</span>
+                          <span className="text-edsync-subtle">{s.label}</span>
                           <span style={{ color: s.color }}>{s.val}%</span>
                         </div>
-                        <div className="h-1.5 bg-atlas-muted/20 rounded-full">
+                        <div className="h-1.5 bg-edsync-muted/20 rounded-full">
                           <div
                             className="h-full rounded-full"
                             style={{ width: `${s.val}%`, background: s.color }}
@@ -913,9 +913,9 @@ export default function CreateLesson() {
           {activeTab === "sections" && (
             <div className="space-y-4">
               {draft.sections.map((sec, i) => (
-                <div key={i} className="atlas-card">
+                <div key={i} className="edsync-card">
                   <div className="flex flex-wrap items-center gap-3 mb-3">
-                    <span className="w-7 h-7 rounded-lg bg-atlas-blue/20 text-atlas-blue text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <span className="w-7 h-7 rounded-lg bg-edsync-blue/20 text-edsync-blue text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {i + 1}
                     </span>
                     <input
@@ -925,7 +925,7 @@ export default function CreateLesson() {
                         ss[i] = { ...ss[i], title: e.target.value };
                         setDraft({ ...draft, sections: ss });
                       }}
-                      className="atlas-input py-2 flex-1 min-w-[12rem] font-semibold"
+                      className="edsync-input py-2 flex-1 min-w-[12rem] font-semibold"
                       placeholder="Section title..."
                     />
                     <select
@@ -938,7 +938,7 @@ export default function CreateLesson() {
                         };
                         setDraft({ ...draft, sections: ss });
                       }}
-                      className="atlas-input py-2 w-full sm:w-36 text-sm sm:flex-shrink-0"
+                      className="edsync-input py-2 w-full sm:w-36 text-sm sm:flex-shrink-0"
                     >
                       <option value="text">Text</option>
                       <option value="image">Image</option>
@@ -959,7 +959,7 @@ export default function CreateLesson() {
                         };
                         setDraft({ ...draft, sections: ss });
                       }}
-                      className="atlas-input py-2 w-full sm:w-24 text-sm sm:flex-shrink-0"
+                      className="edsync-input py-2 w-full sm:w-24 text-sm sm:flex-shrink-0"
                       placeholder="min"
                       title="Duration (minutes)"
                     />
@@ -970,7 +970,7 @@ export default function CreateLesson() {
                           sections: draft.sections.filter((_, j) => j !== i),
                         })
                       }
-                      className="text-atlas-subtle hover:text-atlas-red text-sm sm:text-lg sm:flex-shrink-0 sm:ml-auto"
+                      className="text-edsync-subtle hover:text-edsync-red text-sm sm:text-lg sm:flex-shrink-0 sm:ml-auto"
                     >
                       ×
                     </button>
@@ -983,7 +983,7 @@ export default function CreateLesson() {
                       );
                       return (
                         <div className="space-y-2">
-                          <div className="p-3 bg-atlas-blue/5 border border-atlas-blue/20 rounded-xl text-xs text-atlas-blue">
+                          <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-blue">
                             <strong>Image Section</strong> — Paste an image URL,
                             or use the search term below to find one
                           </div>
@@ -997,7 +997,7 @@ export default function CreateLesson() {
                               };
                               setDraft({ ...draft, sections: ss });
                             }}
-                            className="atlas-input py-2 text-sm"
+                            className="edsync-input py-2 text-sm"
                             placeholder="https://... (image URL)"
                           />
                           <input
@@ -1010,14 +1010,14 @@ export default function CreateLesson() {
                               };
                               setDraft({ ...draft, sections: ss });
                             }}
-                            className="atlas-input py-2 text-sm"
+                            className="edsync-input py-2 text-sm"
                             placeholder="Caption / description for students..."
                           />
                           {imgUrl && imgUrl.startsWith("http") && (
                             <img
                               src={imgUrl}
                               alt="Preview"
-                              className="w-full max-h-48 object-contain rounded-xl border border-atlas-border mt-1"
+                              className="w-full max-h-48 object-contain rounded-xl border border-edsync-border mt-1"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display =
                                   "none";
@@ -1038,7 +1038,7 @@ export default function CreateLesson() {
                       const ytId = ytMatch?.[1];
                       return (
                         <div className="space-y-2">
-                          <div className="p-3 bg-atlas-purple/5 border border-atlas-purple/20 rounded-xl text-xs text-atlas-purple">
+                          <div className="p-3 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl text-xs text-edsync-purple">
                             <strong>Video Section</strong> — Paste a
                             YouTube/Vimeo URL
                           </div>
@@ -1052,7 +1052,7 @@ export default function CreateLesson() {
                               };
                               setDraft({ ...draft, sections: ss });
                             }}
-                            className="atlas-input py-2 text-sm"
+                            className="edsync-input py-2 text-sm"
                             placeholder="https://youtube.com/watch?v=..."
                           />
                           <input
@@ -1065,11 +1065,11 @@ export default function CreateLesson() {
                               };
                               setDraft({ ...draft, sections: ss });
                             }}
-                            className="atlas-input py-2 text-sm"
+                            className="edsync-input py-2 text-sm"
                             placeholder="What this video covers..."
                           />
                           {ytId && (
-                            <div className="aspect-video rounded-xl overflow-hidden border border-atlas-border bg-black mt-1">
+                            <div className="aspect-video rounded-xl overflow-hidden border border-edsync-border bg-black mt-1">
                               <iframe
                                 src={`https://www.youtube.com/embed/${ytId}`}
                                 className="w-full h-full"
@@ -1084,7 +1084,7 @@ export default function CreateLesson() {
                                 href={vidUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-atlas-blue hover:underline block mt-1"
+                                className="text-xs text-edsync-blue hover:underline block mt-1"
                               >
                                 Search YouTube for this topic →
                               </a>
@@ -1101,7 +1101,7 @@ export default function CreateLesson() {
                         setDraft({ ...draft, sections: ss });
                       }}
                       rows={6}
-                      className="atlas-textarea text-sm"
+                      className="edsync-textarea text-sm"
                       placeholder={
                         sec.content_type === "quiz"
                           ? "Quiz title (questions are managed in the Questions tab)..."
@@ -1130,7 +1130,7 @@ export default function CreateLesson() {
                     ],
                   })
                 }
-                className="w-full py-4 border-2 border-dashed border-atlas-border rounded-2xl text-atlas-subtle hover:border-atlas-blue hover:text-atlas-blue transition-all text-sm"
+                className="w-full py-4 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
               >
                 + Add Section
               </button>
@@ -1161,10 +1161,10 @@ export default function CreateLesson() {
                     color: "amber",
                   },
                 ].map((stat, i) => (
-                  <div key={i} className="atlas-card py-3 px-4">
-                    <p className="text-xs text-atlas-subtle">{stat.label}</p>
+                  <div key={i} className="edsync-card py-3 px-4">
+                    <p className="text-xs text-edsync-subtle">{stat.label}</p>
                     <p
-                      className={`font-display font-bold text-2xl text-atlas-${stat.color}`}
+                      className={`font-display font-bold text-2xl text-edsync-${stat.color}`}
                     >
                       {stat.count}
                     </p>
@@ -1172,21 +1172,21 @@ export default function CreateLesson() {
                 ))}
               </div>
               {draft.quiz_questions.map((q, i) => (
-                <div key={i} className="atlas-card">
+                <div key={i} className="edsync-card">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex gap-2 flex-wrap">
                       {q.is_diagnostic && (
-                        <span className="badge bg-atlas-purple/10 text-atlas-purple border-atlas-purple/20 text-xs">
+                        <span className="badge bg-edsync-purple/10 text-edsync-purple border-edsync-purple/20 text-xs">
                           Diagnostic
                         </span>
                       )}
                       {q.is_micro_check && (
-                        <span className="badge bg-atlas-cyan/10 text-atlas-cyan border-atlas-cyan/20 text-xs">
+                        <span className="badge bg-edsync-cyan/10 text-edsync-cyan border-edsync-cyan/20 text-xs">
                           Micro-Check
                         </span>
                       )}
                       {q.is_final_quiz && (
-                        <span className="badge bg-atlas-amber/10 text-atlas-amber border-atlas-amber/20 text-xs">
+                        <span className="badge bg-edsync-amber/10 text-edsync-amber border-edsync-amber/20 text-xs">
                           Final Quiz
                         </span>
                       )}
@@ -1202,12 +1202,12 @@ export default function CreateLesson() {
                       }
                       aria-label={`Remove question ${i + 1}`}
                       title="Remove question"
-                      className="text-atlas-subtle hover:text-atlas-red text-lg leading-none px-2"
+                      className="text-edsync-subtle hover:text-edsync-red text-lg leading-none px-2"
                     >
                       ×
                     </button>
                   </div>
-                  <p className="font-medium text-atlas-text text-sm mb-3">
+                  <p className="font-medium text-edsync-text text-sm mb-3">
                     {i + 1}. {q.question_text}
                   </p>
                   {q.options && (
@@ -1215,7 +1215,7 @@ export default function CreateLesson() {
                       {q.options.map((opt) => (
                         <div
                           key={opt.id}
-                          className={`text-xs px-3 py-2 rounded-lg break-words ${opt.is_correct ? "bg-atlas-emerald/10 text-atlas-emerald border border-atlas-emerald/20" : "bg-atlas-muted/20 text-atlas-subtle"}`}
+                          className={`text-xs px-3 py-2 rounded-lg break-words ${opt.is_correct ? "bg-edsync-emerald/10 text-edsync-emerald border border-edsync-emerald/20" : "bg-edsync-muted/20 text-edsync-subtle"}`}
                         >
                           {opt.is_correct && "✓ "}
                           {opt.text}
@@ -1224,15 +1224,15 @@ export default function CreateLesson() {
                     </div>
                   )}
                   {q.explanation && (
-                    <p className="text-xs text-atlas-subtle mt-2 italic">
+                    <p className="text-xs text-edsync-subtle mt-2 italic">
                       {q.explanation}
                     </p>
                   )}
                 </div>
               ))}
               {draft.quiz_questions.length === 0 && (
-                <div className="atlas-card text-center py-8">
-                  <p className="text-atlas-subtle text-sm">
+                <div className="edsync-card text-center py-8">
+                  <p className="text-edsync-subtle text-sm">
                     No questions yet.{" "}
                     {creationMode !== "manual"
                       ? "Re-generate with AI or add manually."
@@ -1268,7 +1268,7 @@ export default function CreateLesson() {
                     ],
                   })
                 }
-                className="w-full py-3 border-2 border-dashed border-atlas-border rounded-2xl text-atlas-subtle hover:border-atlas-blue hover:text-atlas-blue transition-all text-sm"
+                className="w-full py-3 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
               >
                 + Add Question
               </button>
@@ -1280,7 +1280,7 @@ export default function CreateLesson() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {draft.glossary_terms.map((term, i) => (
-                  <div key={i} className="atlas-card">
+                  <div key={i} className="edsync-card">
                     <div className="flex items-start justify-between mb-2">
                       <input
                         value={term.term}
@@ -1289,7 +1289,7 @@ export default function CreateLesson() {
                           gt[i] = { ...gt[i], term: e.target.value };
                           setDraft({ ...draft, glossary_terms: gt });
                         }}
-                        className="atlas-input py-1.5 font-bold text-atlas-text flex-1 mr-2"
+                        className="edsync-input py-1.5 font-bold text-edsync-text flex-1 mr-2"
                         placeholder="Term..."
                       />
                       <button
@@ -1301,7 +1301,7 @@ export default function CreateLesson() {
                             ),
                           })
                         }
-                        className="text-atlas-subtle hover:text-atlas-red text-lg flex-shrink-0"
+                        className="text-edsync-subtle hover:text-edsync-red text-lg flex-shrink-0"
                       >
                         ×
                       </button>
@@ -1314,7 +1314,7 @@ export default function CreateLesson() {
                         setDraft({ ...draft, glossary_terms: gt });
                       }}
                       rows={2}
-                      className="atlas-textarea text-xs mb-2"
+                      className="edsync-textarea text-xs mb-2"
                       placeholder="Definition..."
                     />
                     <input
@@ -1324,7 +1324,7 @@ export default function CreateLesson() {
                         gt[i] = { ...gt[i], example: e.target.value };
                         setDraft({ ...draft, glossary_terms: gt });
                       }}
-                      className="atlas-input py-1.5 text-xs"
+                      className="edsync-input py-1.5 text-xs"
                       placeholder="Example usage..."
                     />
                   </div>
@@ -1340,7 +1340,7 @@ export default function CreateLesson() {
                     ],
                   })
                 }
-                className="w-full py-3 border-2 border-dashed border-atlas-border rounded-2xl text-atlas-subtle hover:border-atlas-blue hover:text-atlas-blue transition-all text-sm"
+                className="w-full py-3 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
               >
                 + Add Term
               </button>
@@ -1348,7 +1348,7 @@ export default function CreateLesson() {
           )}
 
           {/* Save Actions — sticky bottom */}
-          <div className="sticky bottom-3 pt-4 border-t border-atlas-border bg-atlas-bg">
+          <div className="sticky bottom-3 pt-4 border-t border-edsync-border bg-edsync-bg">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button
                 onClick={() => save("draft")}
