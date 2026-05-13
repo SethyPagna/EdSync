@@ -59,10 +59,12 @@ Optional security integrations:
 - `MALWARE_SCAN_ENDPOINT`
 - `MALWARE_SCAN_TOKEN`
 - `MALWARE_SCAN_FAIL_CLOSED=false|true`
+- `CLOUDFLARE_ENABLE_CONTENT_SCAN_RULES=false|true`
 
 EdSync always runs local upload signature checks. When `MALWARE_SCAN_ENDPOINT`
 is configured, uploads and content extraction also call the scanner before files
-are stored or parsed.
+are stored or parsed. Set `CLOUDFLARE_ENABLE_CONTENT_SCAN_RULES=true` only for
+a Cloudflare zone with WAF malicious upload detection enabled.
 
 ## D1 Migration
 
@@ -115,6 +117,9 @@ The script manages only rules with `edsync-edge-*` refs and preserves unrelated
 zone rules. It installs hostname-scoped blocks for secret/legacy probes,
 executable path probes, unexpected HTTP methods, high-threat API challenges, and
 edge rate limits for auth, uploads/extraction, AI routes, and the data API.
+When `CLOUDFLARE_ENABLE_CONTENT_SCAN_RULES=true`, it also adds a
+Cloudflare-content-scanning rule for `/api/storage/upload` and
+`/api/content/extract`.
 
 ## Deployment Matrix
 
