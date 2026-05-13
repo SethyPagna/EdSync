@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import type { Profile, Class, Lesson } from "@/types";
 import { generateInitials, formatRelativeTime } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -35,7 +35,7 @@ export default function TeacherStudents() {
   const [assignDueDate, setAssignDueDate] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  const supabase = createClient();
+  const edsync = createClient();
 
   useEffect(() => {
     loadData();
@@ -45,10 +45,10 @@ export default function TeacherStudents() {
     setLoading(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) return;
 
-    const { data: cls, error: clsErr } = await supabase
+    const { data: cls, error: clsErr } = await edsync
       .from("classes")
       .select("*")
       .eq("teacher_id", user.id)
@@ -64,7 +64,7 @@ export default function TeacherStudents() {
     const myClasses: Class[] = cls || [];
     setClasses(myClasses);
 
-    const { data: lessonsData } = await supabase
+    const { data: lessonsData } = await edsync
       .from("lessons")
       .select("id, title, status")
       .eq("teacher_id", user.id)
@@ -77,7 +77,7 @@ export default function TeacherStudents() {
     }
     const classIds = myClasses.map((c) => c.id);
 
-    const { data: enrollments } = await supabase
+    const { data: enrollments } = await edsync
       .from("class_enrollments")
       .select("student_id, class_id")
       .in("class_id", classIds)
@@ -87,7 +87,7 @@ export default function TeacherStudents() {
       new Set((enrollments || []).map((e: any) => e.student_id)),
     );
     if (studentIds.length > 0) {
-      const { data: profileData } = await supabase
+      const { data: profileData } = await edsync
         .from("profiles")
         .select("*")
         .in("id", studentIds);
@@ -98,7 +98,7 @@ export default function TeacherStudents() {
   };
 
   const loadAssignments = async (classId: string) => {
-    const { data } = await supabase
+    const { data } = await edsync
       .from("lesson_assignments")
       .select("id, lesson_id, created_at, due_date, lessons(title)")
       .eq("class_id", classId)
@@ -123,7 +123,7 @@ export default function TeacherStudents() {
       setAssignments([]);
       return;
     }
-    const { data } = await supabase
+    const { data } = await edsync
       .from("class_enrollments")
       .select("student_id")
       .eq("class_id", classId)
@@ -141,13 +141,13 @@ export default function TeacherStudents() {
     setCreating(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setCreating(false);
       return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await edsync
       .from("classes")
       .insert({
         teacher_id: user.id,
@@ -187,7 +187,7 @@ export default function TeacherStudents() {
     setAssigning(true);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await edsync.auth.getUser();
     if (!user) {
       setAssigning(false);
       return;
@@ -200,7 +200,7 @@ export default function TeacherStudents() {
       return;
     }
 
-    const { error } = await supabase.from("lesson_assignments").insert({
+    const { error } = await edsync.from("lesson_assignments").insert({
       lesson_id: assignLessonId,
       class_id: selectedClass,
       assigned_by: user.id,
@@ -222,7 +222,7 @@ export default function TeacherStudents() {
 
   const removeAssignment = async (id: string) => {
     if (!confirm("Remove this assignment from the class?")) return;
-    await supabase
+    await edsync
       .from("lesson_assignments")
       .update({ is_active: false })
       .eq("id", id);
@@ -235,7 +235,7 @@ export default function TeacherStudents() {
       !confirm("Delete this class? Students will lose access to its lessons.")
     )
       return;
-    await supabase
+    await edsync
       .from("classes")
       .update({ is_active: false })
       .eq("id", classId);
@@ -261,10 +261,10 @@ export default function TeacherStudents() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display font-bold text-3xl text-atlas-text">
+          <h1 className="font-display font-bold text-3xl text-edsync-text">
             Student Management
           </h1>
-          <p className="text-atlas-subtle">
+          <p className="text-edsync-subtle">
             {allStudents.length} enrolled · {classes.length} class
             {classes.length !== 1 ? "es" : ""}
           </p>
@@ -277,33 +277,33 @@ export default function TeacherStudents() {
       {/* Create Class Modal */}
       {showAddClass && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="atlas-card w-full max-w-md animate-slide-up p-8">
-            <h2 className="font-display font-bold text-xl text-atlas-text mb-6">
+          <div className="edsync-card w-full max-w-md animate-slide-up p-8">
+            <h2 className="font-display font-bold text-xl text-edsync-text mb-6">
               Create New Class
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-atlas-subtle mb-2">
+                <label className="block text-sm font-medium text-edsync-subtle mb-2">
                   Class Name *
                 </label>
                 <input
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
                   placeholder="e.g. Biology 10A"
-                  className="atlas-input"
+                  className="edsync-input"
                   onKeyDown={(e) => e.key === "Enter" && createClass()}
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-atlas-subtle mb-2">
+                <label className="block text-sm font-medium text-edsync-subtle mb-2">
                   Subject (optional)
                 </label>
                 <input
                   value={newSubject}
                   onChange={(e) => setNewSubject(e.target.value)}
                   placeholder="e.g. Biology"
-                  className="atlas-input"
+                  className="edsync-input"
                 />
               </div>
             </div>
@@ -334,25 +334,25 @@ export default function TeacherStudents() {
       {/* Assign Lesson Modal */}
       {showAssign && selectedClass !== "all" && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="atlas-card w-full max-w-md animate-slide-up p-8">
-            <h2 className="font-display font-bold text-xl text-atlas-text mb-1">
+          <div className="edsync-card w-full max-w-md animate-slide-up p-8">
+            <h2 className="font-display font-bold text-xl text-edsync-text mb-1">
               Assign a Lesson
             </h2>
-            <p className="text-atlas-subtle text-sm mb-6">
+            <p className="text-edsync-subtle text-sm mb-6">
               To:{" "}
-              <span className="text-atlas-text font-medium">
+              <span className="text-edsync-text font-medium">
                 {activeClass?.name}
               </span>
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-atlas-subtle mb-2">
+                <label className="block text-sm font-medium text-edsync-subtle mb-2">
                   Lesson *
                 </label>
                 <select
                   value={assignLessonId}
                   onChange={(e) => setAssignLessonId(e.target.value)}
-                  className="atlas-input"
+                  className="edsync-input"
                 >
                   <option value="">— Choose a lesson —</option>
                   {myLessons
@@ -369,20 +369,20 @@ export default function TeacherStudents() {
                 {myLessons.filter(
                   (l) => !assignments.find((a) => a.lesson_id === l.id),
                 ).length === 0 && (
-                  <p className="text-xs text-atlas-subtle mt-1">
+                  <p className="text-xs text-edsync-subtle mt-1">
                     All your lessons are already assigned to this class.
                   </p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-atlas-subtle mb-2">
+                <label className="block text-sm font-medium text-edsync-subtle mb-2">
                   Due Date (optional)
                 </label>
                 <input
                   type="date"
                   value={assignDueDate}
                   onChange={(e) => setAssignDueDate(e.target.value)}
-                  className="atlas-input"
+                  className="edsync-input"
                   min={new Date().toISOString().split("T")[0]}
                 />
               </div>
@@ -415,7 +415,7 @@ export default function TeacherStudents() {
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-36 bg-atlas-card rounded-2xl shimmer" />
+            <div key={i} className="h-36 bg-edsync-card rounded-2xl shimmer" />
           ))}
         </div>
       ) : (
@@ -423,15 +423,15 @@ export default function TeacherStudents() {
           {/* All Classes card */}
           <div
             onClick={() => selectClass("all")}
-            className={`atlas-card cursor-pointer transition-all border-dashed ${selectedClass === "all" ? "border-atlas-blue shadow-glow-blue" : "hover:border-atlas-muted"}`}
+            className={`edsync-card cursor-pointer transition-all border-dashed ${selectedClass === "all" ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
           >
-            <div className="w-12 h-12 rounded-2xl bg-atlas-blue/10 flex items-center justify-center text-2xl mb-3">
-              <span className="text-xs font-semibold text-atlas-blue">ALL</span>
+            <div className="w-12 h-12 rounded-2xl bg-edsync-blue/10 flex items-center justify-center text-2xl mb-3">
+              <span className="text-xs font-semibold text-edsync-blue">ALL</span>
             </div>
-            <h3 className="font-display font-bold text-atlas-text">
+            <h3 className="font-display font-bold text-edsync-text">
               All Classes
             </h3>
-            <p className="text-xs text-atlas-subtle">
+            <p className="text-xs text-edsync-subtle">
               {allStudents.length} students total
             </p>
           </div>
@@ -440,7 +440,7 @@ export default function TeacherStudents() {
             <div
               key={cls.id}
               onClick={() => selectClass(cls.id)}
-              className={`atlas-card cursor-pointer transition-all relative group ${selectedClass === cls.id ? "border-atlas-blue shadow-glow-blue" : "hover:border-atlas-muted"}`}
+              className={`edsync-card cursor-pointer transition-all relative group ${selectedClass === cls.id ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
             >
               <div
                 className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${COLORS[i % COLORS.length]} flex items-center justify-center text-2xl mb-3`}
@@ -455,15 +455,15 @@ export default function TeacherStudents() {
                     .toUpperCase() || "CL"}
                 </span>
               </div>
-              <h3 className="font-display font-bold text-atlas-text truncate">
+              <h3 className="font-display font-bold text-edsync-text truncate">
                 {cls.name}
               </h3>
-              <p className="text-xs text-atlas-subtle">
+              <p className="text-xs text-edsync-subtle">
                 {cls.subject || "No subject"}
               </p>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-atlas-border">
-                <span className="text-xs text-atlas-subtle">Join Code:</span>
-                <span className="font-mono text-atlas-amber font-bold text-sm">
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-edsync-border">
+                <span className="text-xs text-edsync-subtle">Join Code:</span>
+                <span className="font-mono text-edsync-amber font-bold text-sm">
                   {cls.join_code}
                 </span>
               </div>
@@ -473,7 +473,7 @@ export default function TeacherStudents() {
                   e.stopPropagation();
                   deleteClass(cls.id);
                 }}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-atlas-subtle hover:text-atlas-red text-sm"
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-edsync-subtle hover:text-edsync-red text-sm"
                 title="Delete class"
               >
                 ×
@@ -485,14 +485,14 @@ export default function TeacherStudents() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Students table */}
-        <div className="lg:col-span-2 atlas-card">
+        <div className="lg:col-span-2 edsync-card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-semibold text-lg text-atlas-text">
+            <h2 className="font-display font-semibold text-lg text-edsync-text">
               {selectedClass === "all"
                 ? "All Students"
                 : activeClass?.name || "Class"}
             </h2>
-            <span className="badge bg-atlas-blue/10 text-atlas-blue border-atlas-blue/20">
+            <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20">
               {students.length} students
             </span>
           </div>
@@ -502,16 +502,16 @@ export default function TeacherStudents() {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="h-16 bg-atlas-surface rounded-xl shimmer"
+                  className="h-16 bg-edsync-surface rounded-xl shimmer"
                 />
               ))}
             </div>
           ) : students.length === 0 ? (
             <div className="text-center py-12">
-              <p className="font-semibold text-atlas-text mb-1">
+              <p className="font-semibold text-edsync-text mb-1">
                 No students yet
               </p>
-              <p className="text-atlas-subtle text-sm">
+              <p className="text-edsync-subtle text-sm">
                 {selectedClass === "all"
                   ? "Share a class join code with your students so they can enroll."
                   : `Share the join code ${activeClass ? `"${activeClass.join_code}"` : ""} with your students.`}
@@ -521,17 +521,17 @@ export default function TeacherStudents() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-atlas-border">
-                    <th className="text-left text-xs text-atlas-subtle font-medium pb-3 pr-4">
+                  <tr className="border-b border-edsync-border">
+                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
                       Student
                     </th>
-                    <th className="text-left text-xs text-atlas-subtle font-medium pb-3 pr-4">
+                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
                       Grade
                     </th>
-                    <th className="text-left text-xs text-atlas-subtle font-medium pb-3 pr-4">
+                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
                       Interests
                     </th>
-                    <th className="text-left text-xs text-atlas-subtle font-medium pb-3">
+                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3">
                       Joined
                     </th>
                   </tr>
@@ -540,26 +540,26 @@ export default function TeacherStudents() {
                   {students.map((student) => (
                     <tr
                       key={student.id}
-                      className="border-b border-atlas-border/50 hover:bg-atlas-surface/50 transition-colors"
+                      className="border-b border-edsync-border/50 hover:bg-edsync-surface/50 transition-colors"
                     >
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-atlas-blue to-atlas-purple flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-edsync-blue to-edsync-purple flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                             {generateInitials(
                               student.full_name || student.email,
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-atlas-text text-sm">
+                            <p className="font-medium text-edsync-text text-sm">
                               {student.full_name || "—"}
                             </p>
-                            <p className="text-xs text-atlas-subtle">
+                            <p className="text-xs text-edsync-subtle">
                               {student.email}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 pr-4 text-sm text-atlas-subtle">
+                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {student.grade_level || "—"}
                       </td>
                       <td className="py-3 pr-4">
@@ -569,19 +569,19 @@ export default function TeacherStudents() {
                             .map((int, ii) => (
                               <span
                                 key={ii}
-                                className="badge bg-atlas-muted/30 text-atlas-subtle text-xs"
+                                className="badge bg-edsync-muted/30 text-edsync-subtle text-xs"
                               >
                                 {int}
                               </span>
                             ))}
                           {!student.interests?.length && (
-                            <span className="text-xs text-atlas-subtle/50">
+                            <span className="text-xs text-edsync-subtle/50">
                               Not set
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 text-xs text-atlas-subtle">
+                      <td className="py-3 text-xs text-edsync-subtle">
                         {formatRelativeTime(student.created_at)}
                       </td>
                     </tr>
@@ -598,37 +598,37 @@ export default function TeacherStudents() {
             <>
               {/* Class info */}
               {activeClass && (
-                <div className="atlas-card">
-                  <h3 className="font-semibold text-atlas-text mb-3">
+                <div className="edsync-card">
+                  <h3 className="font-semibold text-edsync-text mb-3">
                     Class Info
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-atlas-subtle">Join Code</span>
-                      <span className="font-mono font-bold text-atlas-amber">
+                      <span className="text-edsync-subtle">Join Code</span>
+                      <span className="font-mono font-bold text-edsync-amber">
                         {activeClass.join_code}
                       </span>
                     </div>
                     {activeClass.subject && (
                       <div className="flex justify-between">
-                        <span className="text-atlas-subtle">Subject</span>
-                        <span className="text-atlas-text">
+                        <span className="text-edsync-subtle">Subject</span>
+                        <span className="text-edsync-text">
                           {activeClass.subject}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-atlas-subtle">Students</span>
-                      <span className="text-atlas-text">{students.length}</span>
+                      <span className="text-edsync-subtle">Students</span>
+                      <span className="text-edsync-text">{students.length}</span>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Lesson assignments */}
-              <div className="atlas-card">
+              <div className="edsync-card">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-atlas-text">
+                  <h3 className="font-semibold text-edsync-text">
                     Assigned Lessons
                   </h3>
                   <button
@@ -640,7 +640,7 @@ export default function TeacherStudents() {
                 </div>
                 {assignments.length === 0 ? (
                   <div className="text-center py-6">
-                    <p className="text-atlas-subtle text-sm mb-3">
+                    <p className="text-edsync-subtle text-sm mb-3">
                       No lessons assigned yet.
                     </p>
                     <button
@@ -655,27 +655,27 @@ export default function TeacherStudents() {
                     {assignments.map((a) => (
                       <div
                         key={a.id}
-                        className="flex items-start justify-between gap-2 p-3 bg-atlas-surface rounded-xl border border-atlas-border"
+                        className="flex items-start justify-between gap-2 p-3 bg-edsync-surface rounded-xl border border-edsync-border"
                       >
                         <div className="min-w-0 flex-1">
                           <Link
                             href={`/teacher/lessons/${a.lesson_id}`}
-                            className="text-sm font-medium text-atlas-text hover:text-atlas-blue truncate block"
+                            className="text-sm font-medium text-edsync-text hover:text-edsync-blue truncate block"
                           >
                             {a.lesson_title}
                           </Link>
                           {a.due_date && (
-                            <p className="text-xs text-atlas-amber mt-0.5">
+                            <p className="text-xs text-edsync-amber mt-0.5">
                               Due {new Date(a.due_date).toLocaleDateString()}
                             </p>
                           )}
-                          <p className="text-xs text-atlas-subtle">
+                          <p className="text-xs text-edsync-subtle">
                             Assigned {formatRelativeTime(a.created_at)}
                           </p>
                         </div>
                         <button
                           onClick={() => removeAssignment(a.id)}
-                          className="text-atlas-subtle hover:text-atlas-red text-sm flex-shrink-0"
+                          className="text-edsync-subtle hover:text-edsync-red text-sm flex-shrink-0"
                           title="Remove"
                         >
                           ×
@@ -687,9 +687,9 @@ export default function TeacherStudents() {
               </div>
             </>
           ) : (
-            <div className="atlas-card text-center py-8">
-              <p className="font-medium text-atlas-text mb-1">Select a class</p>
-              <p className="text-atlas-subtle text-sm">
+            <div className="edsync-card text-center py-8">
+              <p className="font-medium text-edsync-text mb-1">Select a class</p>
+              <p className="text-edsync-subtle text-sm">
                 Click a class card to see its details, students, and manage
                 lesson assignments.
               </p>
