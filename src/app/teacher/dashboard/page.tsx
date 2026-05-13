@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
+import { MetricTile } from "@/components/WorkspacePrimitives";
 import type { Class, Lesson, Profile, TeacherAlert } from "@/types";
 import { formatRelativeTime, getAlertColor, getStatusBadge } from "@/lib/utils";
 import {
@@ -144,7 +145,7 @@ export default function TeacherDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
       <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+        <div className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-6">
           <div className="mb-8 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-edsync-amber">
@@ -190,21 +191,15 @@ export default function TeacherDashboard() {
                 icon: Sparkles,
                 tone: "text-edsync-cyan",
               },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
-                >
-                  <Icon className={`mb-4 h-5 w-5 ${item.tone}`} />
-                  <p className="font-display text-3xl font-bold text-edsync-text">
-                    {loading ? "..." : item.value}
-                  </p>
-                  <p className="text-xs text-edsync-subtle">{item.label}</p>
-                </div>
-              );
-            })}
+            ].map((item) => (
+              <MetricTile
+                key={item.label}
+                label={item.label}
+                value={loading ? "..." : item.value}
+                icon={item.icon}
+                tone={item.tone}
+              />
+            ))}
           </div>
         </div>
 
@@ -219,7 +214,7 @@ export default function TeacherDashboard() {
           <div className="space-y-3">
             <Link
               href="/teacher/analytics"
-              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 hover:border-edsync-blue/50"
+              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
             >
               <div className="flex justify-between gap-4">
                 <p className="text-sm font-semibold text-edsync-text">
@@ -235,7 +230,7 @@ export default function TeacherDashboard() {
             </Link>
             <Link
               href="/teacher/students"
-              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 hover:border-edsync-blue/50"
+              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
             >
               <p className="text-sm font-semibold text-edsync-text">
                 Manage classes and assignments
@@ -246,7 +241,7 @@ export default function TeacherDashboard() {
             </Link>
             <Link
               href="/teacher/reports"
-              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 hover:border-edsync-blue/50"
+              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
             >
               <p className="text-sm font-semibold text-edsync-text">
                 Export learning evidence
