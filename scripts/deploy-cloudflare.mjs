@@ -1,5 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
 
@@ -14,6 +16,7 @@ function loadEnvFile(path) {
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
+    cwd: options.cwd,
     input: options.input,
     stdio: options.input ? ["pipe", "inherit", "inherit"] : "inherit",
     shell: process.platform === "win32",
@@ -153,18 +156,17 @@ for (const key of [
 }
 
 run("npx", ["opennextjs-cloudflare", "build", "--config", "wrangler.app.jsonc", ...envArgs]);
+const pagesDeployCwd = mkdtempSync(join(tmpdir(), "edsync-pages-"));
 run("npx", [
   "wrangler",
   "pages",
   "deploy",
-  ".open-next/assets",
-  "--config",
-  "wrangler.pages.jsonc",
+  resolve(".open-next/assets"),
   "--project-name",
   pagesProject,
   "--branch",
   environment === "production" ? "main" : "preview",
-]);
+], { cwd: pagesDeployCwd });
 run("npx", ["opennextjs-cloudflare", "deploy", "--config", "wrangler.app.jsonc", ...envArgs, "--", "--keep-vars"]);
 run("npx", ["wrangler", "deploy", ...envArgs]);
 
