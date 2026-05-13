@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "EdSync - AI Learning OS",
   description:
     "A mature AI-assisted education workspace for teachers and students.",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({
