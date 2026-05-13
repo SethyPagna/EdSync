@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { openRouterChat } from "@/lib/openrouter";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { loadAiUserContext } from "@/lib/ai/personalization";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 type ReflectionAdvice = {
   strengths: string[];
@@ -98,6 +99,20 @@ export async function POST(request: NextRequest) {
     const { user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rate = await enforceRateLimit({
+      request,
+      scope: "ai_reflection",
+      limit: 50,
+      windowSeconds: 900,
+      userId: user.id,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many reflection coaching requests. Try again shortly." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+      );
     }
 
     const {
