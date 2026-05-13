@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/edsync/client";
 import { ArrowRight, BookOpenCheck, GraduationCap, UsersRound } from "lucide-react";
 
 type Role = "teacher" | "student";
@@ -27,7 +27,7 @@ function SignupForm() {
   const preset = searchParams.get("role");
   const initialRole: Role = preset === "teacher" ? "teacher" : "student";
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  const edsync = useMemo(() => createClient(), []);
   const [role, setRole] = useState<Role>(initialRole);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,7 +49,7 @@ function SignupForm() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await edsync.auth.signUp({
       email,
       password,
       options: {
@@ -65,7 +65,7 @@ function SignupForm() {
         message.includes("invalid api key") ||
         message.includes("apikey")
       ) {
-        toast.error("Supabase anon key is invalid. Check .env.local.", {
+        toast.error("edsync anon key is invalid. Check .env.local.", {
           duration: 9000,
         });
       } else if (message.includes("already registered")) {
@@ -84,7 +84,7 @@ function SignupForm() {
     }
 
     if (data.session && data.user) {
-      await supabase.from("profiles").upsert(
+      await edsync.from("profiles").upsert(
         {
           id: data.user.id,
           email,
@@ -106,9 +106,9 @@ function SignupForm() {
     return (
       <div className="space-y-5 text-center">
         <h2 className="font-display text-3xl font-bold">Check your email</h2>
-        <p className="text-sm leading-6 text-atlas-subtle">
+        <p className="text-sm leading-6 text-edsync-subtle">
           We sent a confirmation link to{" "}
-          <span className="font-semibold text-atlas-blue">{email}</span>.
+          <span className="font-semibold text-edsync-blue">{email}</span>.
         </p>
         <Link href="/auth/login" className="btn-secondary inline-flex">
           Back to sign in
@@ -130,8 +130,8 @@ function SignupForm() {
               onClick={() => setRole(item)}
               className={`rounded-lg border p-4 text-left transition ${
                 selected
-                  ? "border-atlas-blue bg-atlas-blue/10 text-atlas-text"
-                  : "border-atlas-border bg-atlas-surface text-atlas-subtle hover:border-atlas-blue/50"
+                  ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
+                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
               }`}
             >
               <Icon className="mb-3 h-5 w-5" />
@@ -145,7 +145,7 @@ function SignupForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+        <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
           Full name
         </label>
         <input
@@ -154,11 +154,11 @@ function SignupForm() {
           onChange={(event) => setFullName(event.target.value)}
           placeholder="Your full name"
           required
-          className="atlas-input"
+          className="edsync-input"
         />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+        <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
           Email
         </label>
         <input
@@ -167,11 +167,11 @@ function SignupForm() {
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@school.edu"
           required
-          className="atlas-input"
+          className="edsync-input"
         />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-semibold text-atlas-subtle">
+        <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
           Password
         </label>
         <input
@@ -181,7 +181,7 @@ function SignupForm() {
           placeholder="Minimum 8 characters"
           minLength={8}
           required
-          className="atlas-input"
+          className="edsync-input"
         />
       </div>
       <button
@@ -198,28 +198,28 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <main className="grid min-h-screen bg-atlas-bg lg:grid-cols-[1fr_560px]">
-      <section className="hidden border-r border-atlas-border bg-atlas-surface/40 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
+    <main className="grid min-h-screen bg-edsync-bg lg:grid-cols-[1fr_560px]">
+      <section className="hidden border-r border-edsync-border bg-edsync-surface/40 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <span className="font-display text-xl font-bold">EdSync</span>
         </Link>
         <div>
-          <p className="mb-4 inline-flex rounded-lg border border-atlas-border bg-atlas-card px-3 py-2 text-sm text-atlas-subtle">
+          <p className="mb-4 inline-flex rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
             Personalized learning from the first session
           </p>
           <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
             Build a workspace around the way your class learns.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-atlas-subtle">
+          <p className="mt-5 max-w-xl text-lg leading-8 text-edsync-subtle">
             Teachers get planning and intervention tools. Students get a clear
             path through lessons, practice, reflection, and next steps.
           </p>
         </div>
-        <p className="text-sm text-atlas-subtle">
-          Configure Supabase Auth and EdSync handles role routing automatically.
+        <p className="text-sm text-edsync-subtle">
+          Configure edsync Auth and EdSync handles role routing automatically.
         </p>
       </section>
 
@@ -227,31 +227,31 @@ export default function SignupPage() {
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-atlas-blue to-atlas-emerald">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <span className="font-display text-xl font-bold">EdSync</span>
             </Link>
           </div>
-          <div className="atlas-card p-7">
+          <div className="edsync-card p-7">
             <h2 className="font-display text-3xl font-bold">Create account</h2>
-            <p className="mt-2 text-sm leading-6 text-atlas-subtle">
+            <p className="mt-2 text-sm leading-6 text-edsync-subtle">
               Choose the workspace type that matches your role.
             </p>
             <div className="mt-7">
               <Suspense
                 fallback={
-                  <div className="h-72 animate-pulse rounded-lg bg-atlas-surface" />
+                  <div className="h-72 animate-pulse rounded-lg bg-edsync-surface" />
                 }
               >
                 <SignupForm />
               </Suspense>
             </div>
-            <p className="mt-6 text-center text-sm text-atlas-subtle">
+            <p className="mt-6 text-center text-sm text-edsync-subtle">
               Already have an account?{" "}
               <Link
                 href="/auth/login"
-                className="font-semibold text-atlas-blue hover:underline"
+                className="font-semibold text-edsync-blue hover:underline"
               >
                 Sign in
               </Link>
