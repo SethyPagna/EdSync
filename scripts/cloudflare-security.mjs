@@ -4,6 +4,7 @@ const API_BASE = "https://api.cloudflare.com/client/v4";
 const MANAGED_REFS = new Set([
   "edsync-edge-sensitive-paths",
   "edsync-edge-dangerous-extensions",
+  "edsync-edge-malicious-uploads",
   "edsync-edge-high-threat-api",
   "edsync-edge-method-guard",
   "edsync-edge-auth-rate-limit",
@@ -115,6 +116,19 @@ const customRules = [
     action: "block",
     enabled: true,
   },
+  ...(process.env.CLOUDFLARE_ENABLE_CONTENT_SCAN_RULES === "true"
+    ? [
+        {
+          ref: "edsync-edge-malicious-uploads",
+          description: "EdSync: block malicious upload detections",
+          expression: scoped(
+            '(cf.waf.content_scan.has_malicious_obj and http.request.uri.path in {"/api/storage/upload" "/api/content/extract"})',
+          ),
+          action: "block",
+          enabled: true,
+        },
+      ]
+    : []),
   {
     ref: "edsync-edge-dangerous-extensions",
     description: "EdSync: block executable/script path probes",
