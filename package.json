@@ -11,6 +11,10 @@
     "verify": "npm run typecheck && npm run lint && npm run build",
     "deploy:vercel": "node scripts/deploy-vercel.mjs",
     "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
+    "build:cloudflare": "opennextjs-cloudflare build --config wrangler.app.jsonc",
+    "preview:cloudflare": "opennextjs-cloudflare build --config wrangler.app.jsonc && opennextjs-cloudflare preview --config wrangler.app.jsonc",
+    "deploy:cloudflare:app": "opennextjs-cloudflare build --config wrangler.app.jsonc && opennextjs-cloudflare deploy --config wrangler.app.jsonc -- --keep-vars",
+    "deploy:cloudflare:worker": "wrangler deploy",
     "db:migrate": "node scripts/d1-migrate.mjs",
     "db:seed": "node scripts/d1-migrate.mjs --seed",
     "admin:create": "node scripts/create-admin.mjs",
@@ -33,6 +37,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260511.1",
+    "@opennextjs/cloudflare": "^1.14.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
