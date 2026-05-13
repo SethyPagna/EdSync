@@ -524,6 +524,191 @@ export interface EmailOutboxEvent {
   created_at: string;
 }
 
+export type TenantPlanTier = "solo" | "team" | "enterprise";
+export type TenantIsolationMode = "shared_d1" | "dedicated_d1";
+export type PaymentProvider = "manual" | "stripe";
+
+export interface Tenant {
+  id: string;
+  slug: string;
+  name: string;
+  owner_id: string | null;
+  plan_tier: TenantPlanTier;
+  isolation_mode: TenantIsolationMode;
+  status: "active" | "paused" | "archived";
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantPortal {
+  id: string;
+  tenant_id: string;
+  slug: string;
+  name: string;
+  audience: "internal" | "customer" | "partner" | "public";
+  domain: string | null;
+  theme: Record<string, unknown>;
+  catalog_settings: Record<string, unknown>;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantMembership {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  role_profile_id: string | null;
+  status: "active" | "invited" | "suspended";
+  permissions: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Permission {
+  id: string;
+  permission_key: string;
+  label: string;
+  description: string | null;
+  category: string;
+  created_at: string;
+}
+
+export interface RoleProfile {
+  id: string;
+  tenant_id: string | null;
+  profile_key: string;
+  label: string;
+  description: string | null;
+  permissions: string[];
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningEvent {
+  id: string;
+  tenant_id: string;
+  actor_id: string | null;
+  student_id: string | null;
+  class_id: string | null;
+  source_type: string;
+  source_id: string | null;
+  event_type: string;
+  event_version: number;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ContentBlock {
+  id: string;
+  tenant_id: string;
+  owner_id: string | null;
+  block_type: string;
+  title: string;
+  data: Record<string, unknown>;
+  version: number;
+  status: "draft" | "published" | "archived";
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScormPackage {
+  id: string;
+  tenant_id: string;
+  owner_id: string | null;
+  package_type: "scorm_1_2" | "scorm_2004" | "xapi" | "cmi5";
+  title: string;
+  storage_object_id: string | null;
+  manifest: Record<string, unknown>;
+  launch_path: string | null;
+  status: "uploaded" | "parsed" | "error" | "archived";
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface XapiStatement {
+  id: string;
+  tenant_id: string;
+  actor_id: string | null;
+  package_id: string | null;
+  verb: string;
+  object_id: string;
+  statement: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface CertificationRule {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description: string | null;
+  course_id: string | null;
+  expires_after_days: number | null;
+  notify_before_days: number;
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutomationRule {
+  id: string;
+  tenant_id: string;
+  title: string;
+  trigger_key: string;
+  conditions: Record<string, unknown>;
+  actions: Array<Record<string, unknown>>;
+  enabled: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BillingProduct {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description: string | null;
+  product_type: "course" | "bundle" | "membership" | "subscription";
+  course_id: string | null;
+  status: "draft" | "active" | "archived";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BillingPrice {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  provider: PaymentProvider;
+  provider_price_id: string | null;
+  currency: string;
+  amount_cents: number;
+  billing_interval: "one_time" | "month" | "year" | "invoice";
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Entitlement {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  product_id: string | null;
+  source_type: string;
+  source_id: string | null;
+  status: "active" | "expired" | "revoked";
+  starts_at: string;
+  ends_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 // AI Generation Types
 export interface AILessonDraft {
   title: string;
