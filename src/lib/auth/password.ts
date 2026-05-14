@@ -1,4 +1,4 @@
-const ITERATIONS = 210_000;
+const ITERATIONS = 60_000;
 const KEY_LENGTH = 32;
 const DIGEST = "sha256";
 
