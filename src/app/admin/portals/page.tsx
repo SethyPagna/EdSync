@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Building2, Check, Edit3, Globe2, Home, MoreHorizontal, Save, Trash2, X } from "lucide-react";
-import { ActionMenu, GuidePanel } from "@/components/WorkspacePrimitives";
+import { Check, Edit3, Globe2, Home, Save, Trash2, X } from "lucide-react";
+import { ActionMenu } from "@/components/WorkspacePrimitives";
 import type { Tenant, TenantPortal } from "@/types";
 
 type PortalCatalogSettings = {
@@ -159,7 +159,7 @@ export default function AdminPortalsPage() {
 
   return (
     <div className="page-shell space-y-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Tenant command</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Organizations & Portals</h1>
@@ -167,13 +167,10 @@ export default function AdminPortalsPage() {
             Portals work like branded academies: one organization can run internal training, partner learning, customer education, or a public course catalog.
           </p>
         </div>
-        <GuidePanel
-          title="Scoped organization control"
-          description="Platform admin controls the whole app. Organization owners and managers should only control their own portal branding, catalog visibility, users, and roles."
-          icon={Building2}
-          items={["Public portals are discoverable at /org/[slug].", "Internal portals stay private for enrolled users.", "Custom domains start pending until DNS is verified."]}
-        />
-      </div>
+        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
+          Public portals are discoverable at /org/[slug]. Organization managers remain tenant-scoped.
+        </div>
+      </header>
 
       {message && (
         <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">
@@ -181,14 +178,13 @@ export default function AdminPortalsPage() {
         </div>
       )}
 
-      <details className="edsync-card p-0" open>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+      <section className="edsync-card p-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
           <span>
             <span className="font-display text-xl font-bold">Add organization portal</span>
             <span className="block text-sm text-edsync-subtle">Create a branded public, internal, customer, or partner space.</span>
           </span>
-          <MoreHorizontal className="h-5 w-5 text-edsync-subtle" />
-        </summary>
+        </div>
         <form onSubmit={createPortal} className="grid gap-3 border-t border-edsync-border p-4 lg:grid-cols-6">
           <input className="edsync-input lg:col-span-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, slug: form.slug || slugify(event.target.value) })} placeholder="Portal name" required />
           <input className="edsync-input" value={form.slug} onChange={(event) => setForm({ ...form, slug: slugify(event.target.value) })} placeholder="slug" />
@@ -209,7 +205,7 @@ export default function AdminPortalsPage() {
           </label>
           <button className="btn-primary w-fit lg:col-span-2" type="submit" disabled={busy}>Create portal</button>
         </form>
-      </details>
+      </section>
 
       <div className="edsync-card overflow-visible p-0">
         <div className="border-b border-edsync-border px-4 py-3">
