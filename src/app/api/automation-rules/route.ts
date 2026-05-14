@@ -2,15 +2,62 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enqueueAutomationJob } from "@/lib/automation";
 import { d1Query } from "@/lib/db/d1";
+import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
+
+const DEFAULT_AUTOMATIONS = [
+  {
+    title: "Inactive learner nudge",
+    triggerKey: "learner.inactive",
+    conditions: { inactiveDays: 5 },
+    actions: [{ type: "notify", channel: "in_app", template: "gentle_nudge" }],
+  },
+  {
+    title: "Mastery unlock",
+    triggerKey: "score.mastery",
+    conditions: { scoreGte: 90 },
+    actions: [{ type: "unlock", target: "optional_work" }, { type: "award_badge", badge: "mastery" }],
+  },
+  {
+    title: "Deadline reminder",
+    triggerKey: "deadline.upcoming",
+    conditions: { hoursBeforeDue: 24 },
+    actions: [{ type: "notify", channel: "in_app", template: "deadline_reminder" }],
+  },
+];
+
+async function seedDefaultAutomations(tenantId: string, userId: string) {
+  for (const rule of DEFAULT_AUTOMATIONS) {
+    await d1Query(
+      `INSERT OR IGNORE INTO automation_rules (
+         id, tenant_id, title, trigger_key, conditions, actions, enabled, created_by, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, datetime('now'), datetime('now'))`,
+      [
+        `automation_${tenantId}_${rule.triggerKey.replace(/[^a-z0-9]+/gi, "_")}`,
+        tenantId,
+        rule.title,
+        rule.triggerKey,
+        rule.conditions,
+        rule.actions,
+        userId,
+      ],
+    );
+  }
+}
 
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
-  await requirePermission(user, context, PERMISSIONS.reportsView);
-  const rules = await d1Query("SELECT * FROM automation_rules WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]);
+  try {
+    await requirePermission(user, context, PERMISSIONS.reportsView);
+  } catch {
+    return NextResponse.json({ data: null, error: "Missing reports permission." }, { status: 403 });
+  }
+  await seedDefaultAutomations(context.tenant.id, user.id);
+  const rows = await d1Query("SELECT * FROM automation_rules WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]);
+  const rules = rows.map((row) => deserializeRow("automation_rules", row));
   return NextResponse.json({ data: { rules, context }, error: null });
 }
 
@@ -18,11 +65,62 @@ export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
-  await requirePermission(user, context, PERMISSIONS.coursesPublish);
-  const body = (await request.json()) as { title?: string; triggerKey?: string; conditions?: Record<string, unknown>; actions?: Array<Record<string, unknown>>; enabled?: boolean };
+  try {
+    await requirePermission(user, context, PERMISSIONS.coursesPublish);
+  } catch {
+    return NextResponse.json({ data: null, error: "Missing publish permission." }, { status: 403 });
+  }
+  const body = (await request.json()) as {
+    action?: "create" | "update" | "delete" | "toggle";
+    id?: string;
+    title?: string;
+    triggerKey?: string;
+    conditions?: Record<string, unknown>;
+    actions?: Array<Record<string, unknown>>;
+    enabled?: boolean;
+  };
+
+  if (body.action === "delete") {
+    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
+    await d1Query("DELETE FROM automation_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.id]);
+    return NextResponse.json({ data: { id: body.id }, error: null });
+  }
+
+  if (body.action === "toggle") {
+    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
+    await d1Query("UPDATE automation_rules SET enabled = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?", [
+      body.enabled === false ? 0 : 1,
+      context.tenant.id,
+      body.id,
+    ]);
+    const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.toggled", payload: { ruleId: body.id } });
+    return NextResponse.json({ data: { id: body.id, jobId }, error: null });
+  }
+
   if (!body.title || !body.triggerKey) {
     return NextResponse.json({ data: null, error: "Title and trigger are required." }, { status: 400 });
   }
+
+  if (body.action === "update") {
+    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
+    await d1Query(
+      `UPDATE automation_rules
+       SET title = ?, trigger_key = ?, conditions = ?, actions = ?, enabled = ?, updated_at = datetime('now')
+       WHERE tenant_id = ? AND id = ?`,
+      [
+        body.title.trim(),
+        body.triggerKey,
+        body.conditions ?? {},
+        body.actions ?? [],
+        body.enabled === false ? 0 : 1,
+        context.tenant.id,
+        body.id,
+      ],
+    );
+    const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.updated", payload: { ruleId: body.id } });
+    return NextResponse.json({ data: { id: body.id, jobId }, error: null });
+  }
+
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO automation_rules (id, tenant_id, title, trigger_key, conditions, actions, enabled, created_by, created_at, updated_at)
@@ -32,8 +130,8 @@ export async function POST(request: Request) {
       context.tenant.id,
       body.title.trim(),
       body.triggerKey,
-      JSON.stringify(body.conditions ?? {}),
-      JSON.stringify(body.actions ?? []),
+      body.conditions ?? {},
+      body.actions ?? [],
       body.enabled === false ? 0 : 1,
       user.id,
     ],
