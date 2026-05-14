@@ -1,42 +1,54 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, ShieldCheck, SlidersHorizontal } from "lucide-react";
-import { GuidePanel } from "@/components/WorkspacePrimitives";
-
-type PermissionItem = {
-  id: string;
-  permission_key: string;
-  label: string;
-  description: string | null;
-  category: string | null;
-};
-
-type RoleProfile = {
-  id: string;
-  label: string;
-  description: string | null;
-  tenant_id: string | null;
-  is_system: number | boolean;
-};
+import { Edit3, Save, ShieldCheck, Trash2, X } from "lucide-react";
+import type { Permission, RoleProfile } from "@/types";
 
 type PermissionsPayload = {
-  catalog: PermissionItem[];
+  catalog: Permission[];
   roleProfiles: RoleProfile[];
   granted: string[];
 };
 
+type ProfileDraft = {
+  label: string;
+  description: string;
+  permissions: string[];
+};
+
+const emptyDraft: ProfileDraft = {
+  label: "",
+  description: "",
+  permissions: [],
+};
+
+function draftFrom(profile: RoleProfile): ProfileDraft {
+  return {
+    label: profile.label,
+    description: profile.description ?? "",
+    permissions: profile.permissions ?? [],
+  };
+}
+
 export default function AdminPermissionsPage() {
   const [payload, setPayload] = useState<PermissionsPayload>({ catalog: [], roleProfiles: [], granted: [] });
+  const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<ProfileDraft>(emptyDraft);
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
+  const load = () => {
     fetch("/api/permissions", { cache: "no-store" })
       .then((res) => res.json())
-      .then((json) => setPayload(json.data ?? { catalog: [], roleProfiles: [], granted: [] }));
+      .then((json: { data?: PermissionsPayload }) => setPayload(json.data ?? { catalog: [], roleProfiles: [], granted: [] }));
+  };
+
+  useEffect(() => {
+    load();
   }, []);
 
   const catalogByCategory = useMemo(() => {
-    return payload.catalog.reduce<Record<string, PermissionItem[]>>((collection, item) => {
+    return payload.catalog.reduce<Record<string, Permission[]>>((collection, item) => {
       const key = item.category || "General";
       collection[key] = collection[key] || [];
       collection[key].push(item);
@@ -44,79 +56,165 @@ export default function AdminPermissionsPage() {
     }, {});
   }, [payload.catalog]);
 
-  const platformProfiles = payload.roleProfiles.filter((role) => role.is_system);
+  const systemProfiles = payload.roleProfiles.filter((role) => role.is_system);
   const tenantProfiles = payload.roleProfiles.filter((role) => !role.is_system);
 
+  const togglePermission = (permission: string, target: ProfileDraft, update: (next: ProfileDraft) => void) => {
+    const exists = target.permissions.includes(permission);
+    update({
+      ...target,
+      permissions: exists ? target.permissions.filter((item) => item !== permission) : [...target.permissions, permission],
+    });
+  };
+
+  const run = async (body: Record<string, unknown>, success: string) => {
+    setMessage("");
+    const response = await fetch("/api/permissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json();
+    if (!response.ok || json.error) {
+      setMessage(json.error || "Request failed.");
+      return false;
+    }
+    setMessage(success);
+    load();
+    return true;
+  };
+
+  const createProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const ok = await run({ action: "create_profile", ...draft }, "Role profile created.");
+    if (ok) setDraft(emptyDraft);
+  };
+
+  const startEdit = (profile: RoleProfile) => {
+    setEditingId(profile.id);
+    setEditDraft(draftFrom(profile));
+  };
+
+  const saveProfile = async (profile: RoleProfile) => {
+    const ok = await run({ action: "update_profile", id: profile.id, ...editDraft }, "Role profile saved.");
+    if (ok) setEditingId(null);
+  };
+
+  const deleteProfile = async (profile: RoleProfile) => {
+    if (!window.confirm(`Delete "${profile.label}"? Members using it will keep their account but lose this profile assignment.`)) return;
+    await run({ action: "delete_profile", id: profile.id }, "Role profile deleted.");
+  };
+
   return (
-    <div className="space-y-6 p-5 lg:p-8">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="space-y-5 p-5 lg:p-8">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Access model</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Permissions</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Global platform admin is reserved for the EdSync owner. Organization owners should manage tenant roles, feature visibility, layout,
-            and menus without affecting other organizations.
+            Create tenant-scoped role profiles for organization owners, managers, auditors, billing admins, instructors, and learners.
           </p>
         </div>
-        <GuidePanel
-          title="Admin does not mean the same thing everywhere"
-          description="Use platform admin for whole-application control. Use tenant role profiles for organization owners, managers, auditors, billing admins, and instructors."
-          icon={ShieldCheck}
-          items={[
-            "Platform owner: global AI, security, settings, and cross-tenant oversight.",
-            "Organization admin: tenant-only people, menus, features, and reports.",
-            "Teacher or learner: classroom and learning-work permissions only.",
-          ]}
-        />
-      </div>
+        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
+          Platform owner access stays global. Profiles created here only apply inside the selected tenant.
+        </div>
+      </header>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="edsync-card p-4">
-          <ShieldCheck className="mb-3 h-5 w-5 text-edsync-blue" />
-          <p className="font-semibold">Platform owner</p>
-          <p className="mt-1 text-sm text-edsync-subtle">Full application control, global security, AI providers, and cross-tenant oversight.</p>
-        </div>
-        <div className="edsync-card p-4">
-          <Building2 className="mb-3 h-5 w-5 text-edsync-emerald" />
-          <p className="font-semibold">Organization admin</p>
-          <p className="mt-1 text-sm text-edsync-subtle">Tenant-scoped control over users, feature visibility, role profiles, and workspace layout.</p>
-        </div>
-        <div className="edsync-card p-4">
-          <SlidersHorizontal className="mb-3 h-5 w-5 text-edsync-amber" />
-          <p className="font-semibold">Role profiles</p>
-          <p className="mt-1 text-sm text-edsync-subtle">Reusable permission bundles for instructors, managers, auditors, billing, and learners.</p>
-        </div>
-      </div>
+      {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <section className="edsync-card overflow-hidden p-0">
-          <h2 className="border-b border-edsync-border px-4 py-3 font-display text-xl font-bold">Permission Catalog</h2>
-          <div className="divide-y divide-edsync-border">
-            {Object.entries(catalogByCategory).map(([category, items]) => (
-              <details key={category} className="group">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-semibold">
-                  {category}
-                  <span className="rounded-md bg-edsync-blue/10 px-2 py-1 text-xs text-edsync-blue">{items.length}</span>
-                </summary>
-                <div className="grid gap-2 border-t border-edsync-border p-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
-                      <p className="font-semibold">{item.label}</p>
-                      <p className="mt-1 break-all text-xs text-edsync-subtle">{item.permission_key}</p>
-                      {item.description && <p className="mt-1 text-sm text-edsync-subtle">{item.description}</p>}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ))}
+      <form onSubmit={createProfile} className="edsync-card grid gap-4 p-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
+        <div className="grid gap-3">
+          <input className="edsync-input" value={draft.label} onChange={(event) => setDraft({ ...draft, label: event.target.value })} placeholder="Role profile name" required />
+          <textarea className="edsync-input min-h-24" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="What this role can manage" />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {payload.catalog.map((permission) => (
+            <label key={permission.id} className="flex items-start gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
+              <input
+                type="checkbox"
+                checked={draft.permissions.includes(permission.permission_key)}
+                onChange={() => togglePermission(permission.permission_key, draft, setDraft)}
+              />
+              <span>
+                <span className="block font-semibold text-edsync-text">{permission.label}</span>
+                <span className="block text-xs text-edsync-subtle">{permission.permission_key}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <button className="btn-primary h-fit justify-center" type="submit">Add profile</button>
+      </form>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="edsync-card overflow-hidden p-0">
+          <div className="border-b border-edsync-border px-4 py-3">
+            <h2 className="font-display text-xl font-bold">Tenant role profiles</h2>
+            <p className="text-sm text-edsync-subtle">Edit, delete, or adjust permissions without changing platform-owner access.</p>
           </div>
-        </section>
+          <div className="divide-y divide-edsync-border">
+            {tenantProfiles.map((profile) => {
+              const editing = editingId === profile.id;
+              return (
+                <div key={profile.id} className="grid gap-3 px-4 py-4 text-sm">
+                  {editing ? (
+                    <div className="grid gap-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <input className="edsync-input" value={editDraft.label} onChange={(event) => setEditDraft({ ...editDraft, label: event.target.value })} />
+                        <input className="edsync-input" value={editDraft.description} onChange={(event) => setEditDraft({ ...editDraft, description: event.target.value })} />
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {payload.catalog.map((permission) => (
+                          <label key={permission.id} className="flex items-start gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                            <input
+                              type="checkbox"
+                              checked={editDraft.permissions.includes(permission.permission_key)}
+                              onChange={() => togglePermission(permission.permission_key, editDraft, setEditDraft)}
+                            />
+                            <span>
+                              <span className="block font-semibold">{permission.label}</span>
+                              <span className="block text-xs text-edsync-subtle">{permission.permission_key}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-semibold text-edsync-text">{profile.label}</p>
+                      <p className="mt-1 text-edsync-subtle">{profile.description || "Tenant role profile"}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(profile.permissions ?? []).map((permission) => (
+                          <span key={permission} className="badge bg-edsync-blue/10 text-edsync-blue">{permission}</span>
+                        ))}
+                        {(profile.permissions ?? []).length === 0 && <span className="text-sm text-edsync-subtle">No permissions selected.</span>}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {editing ? (
+                      <>
+                        <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => saveProfile(profile)}><Save className="h-4 w-4" /> Save</button>
+                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startEdit(profile)}><Edit3 className="h-4 w-4" /> Edit</button>
+                        <button type="button" className="btn-ghost px-3 py-2 text-sm text-rose-600" onClick={() => deleteProfile(profile)}><Trash2 className="h-4 w-4" /> Delete</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {tenantProfiles.length === 0 && <p className="px-4 py-5 text-sm text-edsync-subtle">No tenant profiles yet.</p>}
+          </div>
+        </div>
 
-        <section className="space-y-4">
+        <aside className="grid gap-4">
           <div className="edsync-card p-4">
-            <h2 className="font-display text-xl font-bold">System Profiles</h2>
+            <h2 className="font-display text-xl font-bold">System profiles</h2>
             <div className="mt-3 grid gap-2">
-              {platformProfiles.map((role) => (
+              {systemProfiles.map((role) => (
                 <div key={role.id} className="rounded-lg border border-edsync-border p-3 text-sm">
                   <p className="font-semibold">{role.label}</p>
                   <p className="text-edsync-subtle">{role.description || "System role profile"}</p>
@@ -125,20 +223,21 @@ export default function AdminPermissionsPage() {
             </div>
           </div>
           <div className="edsync-card p-4">
-            <h2 className="font-display text-xl font-bold">Tenant Profiles</h2>
-            <p className="mt-1 text-sm text-edsync-subtle">These are the profiles organization owners and managers should customize.</p>
-            <div className="mt-3 grid gap-2">
-              {tenantProfiles.map((role) => (
-                <div key={role.id} className="rounded-lg border border-edsync-border p-3 text-sm">
-                  <p className="font-semibold">{role.label}</p>
-                  <p className="text-edsync-subtle">{role.description || "Tenant role profile"}</p>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-edsync-blue" />
+              <h2 className="font-display text-xl font-bold">Permission catalog</h2>
+            </div>
+            <div className="mt-3 grid gap-3">
+              {Object.entries(catalogByCategory).map(([category, items]) => (
+                <div key={category}>
+                  <p className="text-sm font-semibold text-edsync-text">{category}</p>
+                  <p className="text-sm text-edsync-subtle">{items.length} permissions</p>
                 </div>
               ))}
-              {tenantProfiles.length === 0 && <p className="text-sm text-edsync-subtle">No tenant-specific profiles yet.</p>}
             </div>
           </div>
-        </section>
-      </div>
+        </aside>
+      </section>
     </div>
   );
 }
