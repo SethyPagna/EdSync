@@ -52,3 +52,71 @@ export async function PATCH(request: Request) {
   });
   return NextResponse.json({ data: { updated: true }, error: null });
 }
+
+export async function POST(request: Request) {
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+
+  const body = (await request.json()) as {
+    action?: "create_flag" | "update_flag" | "delete_flag";
+    id?: string;
+    flagKey?: string;
+    label?: string;
+    description?: string | null;
+    enabled?: boolean;
+    audience?: "all" | "admin" | "teacher" | "student";
+  };
+
+  await seedDefaults();
+
+  if (body.action === "delete_flag") {
+    if (!body.id) return NextResponse.json({ data: null, error: "Flag is required." }, { status: 400 });
+    await d1Query("DELETE FROM feature_flags WHERE id = ?", [body.id]);
+    await auditAdminAction({
+      adminId: auth.user.id,
+      action: "delete_flag",
+      entityType: "feature_flag",
+      entityId: body.id,
+      metadata: {},
+    });
+    return NextResponse.json({ data: { id: body.id }, error: null });
+  }
+
+  if (!body.flagKey?.trim() || !body.label?.trim()) {
+    return NextResponse.json({ data: null, error: "Flag key and label are required." }, { status: 400 });
+  }
+
+  const flagKey = body.flagKey.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  const audience = ["all", "admin", "teacher", "student"].includes(body.audience || "") ? body.audience : "all";
+
+  if (body.action === "update_flag") {
+    if (!body.id) return NextResponse.json({ data: null, error: "Flag is required." }, { status: 400 });
+    await d1Query(
+      "UPDATE feature_flags SET flag_key = ?, label = ?, description = ?, enabled = ?, audience = ?, updated_at = datetime('now') WHERE id = ?",
+      [flagKey, body.label.trim(), body.description ?? null, body.enabled ? 1 : 0, audience, body.id],
+    );
+    await auditAdminAction({
+      adminId: auth.user.id,
+      action: "update_flag",
+      entityType: "feature_flag",
+      entityId: body.id,
+      metadata: { flagKey, enabled: Boolean(body.enabled), audience },
+    });
+    return NextResponse.json({ data: { id: body.id }, error: null });
+  }
+
+  const id = crypto.randomUUID();
+  await d1Query(
+    `INSERT INTO feature_flags (id, flag_key, label, description, enabled, audience, metadata, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, '{}', datetime('now'), datetime('now'))`,
+    [id, flagKey, body.label.trim(), body.description ?? null, body.enabled ? 1 : 0, audience],
+  );
+  await auditAdminAction({
+    adminId: auth.user.id,
+    action: "create_flag",
+    entityType: "feature_flag",
+    entityId: id,
+    metadata: { flagKey, enabled: Boolean(body.enabled), audience },
+  });
+  return NextResponse.json({ data: { id }, error: null });
+}
