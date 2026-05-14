@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import { existsSync, readFileSync } from "node:fs";
 
 const pbkdf2Async = promisify(pbkdf2);
-const ITERATIONS = 210_000;
+const ITERATIONS = 60_000;
 const KEY_LENGTH = 32;
 const DIGEST = "sha256";
 
@@ -78,6 +78,10 @@ if (!existing[0]) {
     [id, email, fullName],
   );
 } else {
+  await d1Query("UPDATE auth_users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", [
+    await hashPassword(password),
+    id,
+  ]);
   await d1Query("UPDATE profiles SET full_name = COALESCE(full_name, ?), updated_at = datetime('now') WHERE id = ?", [
     fullName,
     id,
