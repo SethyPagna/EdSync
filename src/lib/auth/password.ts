@@ -3,11 +3,21 @@ const KEY_LENGTH = 32;
 const DIGEST = "sha256";
 
 function base64Url(bytes: Uint8Array) {
-  return Buffer.from(bytes).toString("base64url");
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function fromBase64Url(value: string) {
-  return new Uint8Array(Buffer.from(value, "base64url"));
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }
 
 function randomSalt() {
