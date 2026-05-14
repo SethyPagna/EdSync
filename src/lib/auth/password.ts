@@ -1,15 +1,55 @@
-import { pbkdf2, randomBytes, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
-
-const pbkdf2Async = promisify(pbkdf2);
 const ITERATIONS = 210_000;
 const KEY_LENGTH = 32;
 const DIGEST = "sha256";
 
+function base64Url(bytes: Uint8Array) {
+  return Buffer.from(bytes).toString("base64url");
+}
+
+function fromBase64Url(value: string) {
+  return new Uint8Array(Buffer.from(value, "base64url"));
+}
+
+function randomSalt() {
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+  return base64Url(salt);
+}
+
+function safeEqual(left: Uint8Array, right: Uint8Array) {
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left[index] ^ right[index];
+  }
+  return diff === 0;
+}
+
+async function derivePassword(password: string, salt: string, iterations: number, length: number) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: DIGEST.toUpperCase().replace("SHA", "SHA-"),
+      salt: new TextEncoder().encode(salt),
+      iterations,
+    },
+    key,
+    length * 8,
+  );
+  return new Uint8Array(bits);
+}
+
 export async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("base64url");
-  const derived = await pbkdf2Async(password, salt, ITERATIONS, KEY_LENGTH, DIGEST);
-  return `pbkdf2:${ITERATIONS}:${salt}:${derived.toString("base64url")}`;
+  const salt = randomSalt();
+  const derived = await derivePassword(password, salt, ITERATIONS, KEY_LENGTH);
+  return `pbkdf2:${ITERATIONS}:${salt}:${base64Url(derived)}`;
 }
 
 export async function verifyPassword(password: string, storedHash: string) {
@@ -17,8 +57,8 @@ export async function verifyPassword(password: string, storedHash: string) {
   if (scheme !== "pbkdf2" || !iterationsText || !salt || !hash) return false;
 
   const iterations = Number(iterationsText);
-  const expected = Buffer.from(hash, "base64url");
-  const actual = await pbkdf2Async(password, salt, iterations, expected.length, DIGEST);
+  const expected = fromBase64Url(hash);
+  const actual = await derivePassword(password, salt, iterations, expected.length);
 
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
+  return safeEqual(expected, actual);
 }
