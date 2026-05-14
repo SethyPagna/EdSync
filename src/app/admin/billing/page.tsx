@@ -10,13 +10,12 @@ import {
   Eye,
   EyeOff,
   Globe2,
-  MoreHorizontal,
   Save,
   Star,
   Trash2,
   X,
 } from "lucide-react";
-import { ActionMenu, GuidePanel } from "@/components/WorkspacePrimitives";
+import { ActionMenu } from "@/components/WorkspacePrimitives";
 import type { BillingPrice, BillingProduct, Entitlement, Tenant, TenantPortal } from "@/types";
 
 type CatalogMetadata = {
@@ -296,7 +295,7 @@ export default function AdminBillingPage() {
 
   return (
     <div className="page-shell space-y-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Monetization</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Catalog & Billing</h1>
@@ -304,13 +303,10 @@ export default function AdminBillingPage() {
             Create products, attach prices, and manage whether each course appears globally, inside an organization portal, or stays private.
           </p>
         </div>
-        <GuidePanel
-          title="Publishing model"
-          description="Draft products stay hidden. Public products appear in the global catalog. Portal products appear through the organization portal when that portal is public."
-          icon={Globe2}
-          items={["Toggle featured items for portal highlights.", "Deactivate prices without deleting product history.", "Unsafe media URLs are ignored by the public catalog."]}
-        />
-      </div>
+        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
+          Drafts stay hidden. Public products appear globally. Portal products show only through organization portals.
+        </div>
+      </header>
 
       {message && (
         <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">
@@ -319,14 +315,13 @@ export default function AdminBillingPage() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <details className="edsync-card p-0" open>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <section className="edsync-card p-0">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
             <span>
               <span className="font-display text-xl font-bold">Add product</span>
               <span className="block text-sm text-edsync-subtle">Course, bundle, membership, or subscription.</span>
             </span>
-            <MoreHorizontal className="h-5 w-5 text-edsync-subtle" />
-          </summary>
+          </div>
           <form onSubmit={createProduct} className="grid gap-3 border-t border-edsync-border p-4">
             <input className="edsync-input" value={product.title} onChange={(event) => setProduct({ ...product, title: event.target.value })} placeholder="Product title" required />
             <textarea className="edsync-input min-h-24" value={product.description} onChange={(event) => setProduct({ ...product, description: event.target.value })} placeholder="Public summary" />
@@ -366,16 +361,16 @@ export default function AdminBillingPage() {
             </label>
             <button className="btn-primary w-fit" type="submit" disabled={busy}>Create product</button>
           </form>
-        </details>
+        </section>
 
-        <details className="edsync-card p-0">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <section className="edsync-card p-0">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
             <span>
               <span className="font-display text-xl font-bold">Add price</span>
               <span className="block text-sm text-edsync-subtle">Attach a free, paid, recurring, or invoice price.</span>
             </span>
             <CreditCard className="h-5 w-5 text-edsync-subtle" />
-          </summary>
+          </div>
           <form onSubmit={createPrice} className="grid gap-3 border-t border-edsync-border p-4">
             <select className="edsync-input" value={price.productId} onChange={(event) => setPrice({ ...price, productId: event.target.value })} required>
               <option value="">Select product</option>
@@ -393,7 +388,7 @@ export default function AdminBillingPage() {
             </div>
             <button className="btn-primary w-fit" type="submit" disabled={busy}>Create price</button>
           </form>
-        </details>
+        </section>
       </div>
 
       <div className="edsync-card overflow-visible p-0">
