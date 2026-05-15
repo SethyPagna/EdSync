@@ -16,6 +16,7 @@ import {
   FileCheck2,
   GraduationCap,
   LayoutDashboard,
+  Layers3,
   LogOut,
   Menu,
   Moon,
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
   StickyNote,
   MessageSquareText,
+  Timer,
   UserRound,
   UsersRound,
   X,
@@ -73,8 +75,11 @@ const roleCopy = {
 
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
+  { href: "/studio", label: "Studio", icon: Layers3, marker: "S" },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck, marker: "2" },
   { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus, marker: "2+" },
+  { href: "/practice", label: "Practice", icon: Timer, marker: "P" },
+  { href: "/ai", label: "AI Tutor", icon: Brain },
   { href: "/teacher/work", label: "Work", icon: FileCheck2, marker: "3" },
   { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList, marker: "4" },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
@@ -88,6 +93,8 @@ export const teacherNavItems: ShellNavItem[] = [
 
 export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
+  { href: "/practice", label: "Practice", icon: Timer, marker: "P" },
+  { href: "/ai", label: "AI Tutor", icon: Brain },
   { href: "/student/work", label: "My Work", icon: FileCheck2, marker: "2" },
   { href: "/student/grades", label: "Grades", icon: ClipboardList, marker: "3" },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
@@ -132,7 +139,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
   if (role === "teacher") {
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
-      { label: "Create", items: pick(["/teacher/lessons", "/teacher/lessons/create"]) },
+      { label: "Create", items: pick(["/studio", "/teacher/lessons", "/teacher/lessons/create", "/practice", "/ai"]) },
       { label: "Classroom", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
       { label: "Insights", items: pick(["/teacher/analytics", "/teacher/reports"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
@@ -141,7 +148,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
 
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
-    { label: "Learning", items: pick(["/student/work", "/student/grades"]) },
+    { label: "Learning", items: pick(["/practice", "/ai", "/student/work", "/student/grades"]) },
     { label: "Support", items: pick(["/student/notes", "/student/discussions"]) },
     { label: "Account", items: pick(["/student/profile"]) },
   ];
