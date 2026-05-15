@@ -162,7 +162,12 @@ export function createClient() {
         email: string;
         password: string;
         options?: {
-          data?: { full_name?: string; role?: "teacher" | "student" };
+          data?: {
+            full_name?: string;
+            role?: "teacher" | "student";
+            account_type?: "individual" | "organization";
+            organization_name?: string;
+          };
           emailRedirectTo?: string;
         };
       }): Promise<AuthResponse> {
