@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, FileCheck2, ShieldCheck, Sparkles } from "lucide-react";
+import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type GovernanceCounts = {
   standards: number;
@@ -15,7 +16,7 @@ const cards = [
   {
     title: "Standards",
     href: "/admin/standards",
-    description: "SCORM, xAPI, and cmi5 package parsing, launch paths, and archive state.",
+    description: "Packages and launch paths.",
     icon: FileCheck2,
     tone: "text-edsync-blue",
     key: "standards",
@@ -23,7 +24,7 @@ const cards = [
   {
     title: "Certifications",
     href: "/admin/certifications",
-    description: "Renewal windows, expiry rules, reminder timing, and compliance audit setup.",
+    description: "Renewal and evidence rules.",
     icon: BadgeCheck,
     tone: "text-edsync-emerald",
     key: "certifications",
@@ -31,7 +32,7 @@ const cards = [
   {
     title: "Automation",
     href: "/admin/automation",
-    description: "Nudges, mastery unlocks, deadline reminders, badge actions, and queued jobs.",
+    description: "Nudges, unlocks, reminders.",
     icon: Sparkles,
     tone: "text-edsync-amber",
     key: "automations",
@@ -39,7 +40,7 @@ const cards = [
   {
     title: "Security",
     href: "/admin/security",
-    description: "Security events, admin audit logs, and owner-level investigation history.",
+    description: "Events and audit trail.",
     icon: ShieldCheck,
     tone: "text-edsync-red",
     key: "securityEvents",
@@ -71,13 +72,10 @@ export default function AdminGovernancePage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Governance</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Governance Workspace</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Standards, certifications, automations, and security are grouped here so they feel like one operating system instead of scattered pages.
-          </p>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          Use this hub to decide what needs action, then open the focused manager to add, edit, delete, or toggle records.
-        </div>
+        <InfoPopover label="How governance works">
+          One hub for standards, certifications, automation, and security. Open a card to add, edit, delete, or toggle records.
+        </InfoPopover>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -105,19 +103,12 @@ export default function AdminGovernancePage() {
         })}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="edsync-card p-4">
-          <p className="font-semibold text-edsync-text">Recommended setup</p>
-          <p className="mt-2 text-sm leading-6 text-edsync-subtle">Keep standard package imports archived until launch paths are reviewed, then assign them through course content.</p>
-        </div>
-        <div className="edsync-card p-4">
-          <p className="font-semibold text-edsync-text">Compliance baseline</p>
-          <p className="mt-2 text-sm leading-6 text-edsync-subtle">Create certification rules before learner enrollment so renewal evidence and reminders stay consistent.</p>
-        </div>
-        <div className="edsync-card p-4">
-          <p className="font-semibold text-edsync-text">Automation safety</p>
-          <p className="mt-2 text-sm leading-6 text-edsync-subtle">Start automations paused, test them with low-risk notifications, then enable unlocks or badges after review.</p>
-        </div>
+      <section className="grid gap-3 lg:grid-cols-3">
+        {["Review launch paths", "Set renewal rules", "Enable automations last"].map((item) => (
+          <div key={item} className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm font-semibold text-edsync-text transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:shadow-card-hover">
+            {item}
+          </div>
+        ))}
       </section>
     </div>
   );
