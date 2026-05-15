@@ -22,10 +22,17 @@ function loadLocalEnvKeys() {
   return keys;
 }
 
+function commandForPlatform(command) {
+  if (process.platform !== "win32") return command;
+  if (command === "npm") return "npm.cmd";
+  if (command === "npx") return "npx.cmd";
+  return command;
+}
+
 function run(command, args) {
   const result = spawnSync(command, args, {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: false,
   });
 
   if (result.status !== 0) {
@@ -46,14 +53,14 @@ if (missing.length > 0) {
 }
 
 if (!skipBuild) {
-  run("npm", ["run", "typecheck"]);
-  run("npm", ["run", "build"]);
+  run(commandForPlatform("npm"), ["run", "typecheck"]);
+  run(commandForPlatform("npm"), ["run", "build"]);
 }
 
 const token = process.env.VERCEL_TOKEN;
 const tokenArgs = token ? ["--token", token] : [];
 const environment = prod ? "production" : "preview";
 
-run("npx", ["vercel", "pull", "--yes", `--environment=${environment}`, ...tokenArgs]);
-run("npx", ["vercel", "build", ...(prod ? ["--prod"] : []), ...tokenArgs]);
-run("npx", ["vercel", "deploy", "--prebuilt", ...(prod ? ["--prod"] : []), ...tokenArgs]);
+run(commandForPlatform("npx"), ["vercel", "pull", "--yes", `--environment=${environment}`, ...tokenArgs]);
+run(commandForPlatform("npx"), ["vercel", "build", ...(prod ? ["--prod"] : []), ...tokenArgs]);
+run(commandForPlatform("npx"), ["vercel", "deploy", "--prebuilt", ...(prod ? ["--prod"] : []), ...tokenArgs]);
