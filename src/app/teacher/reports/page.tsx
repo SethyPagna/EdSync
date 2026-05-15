@@ -1,15 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson, Profile, StudentProgress } from "@/types";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 
 interface StudentReport {
   id: string;
@@ -30,10 +22,11 @@ export default function TeacherReports() {
   const [reports, setReports] = useState<StudentReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLessons, setLoadingLessons] = useState(true);
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    const init = async () => {
+  const loadLessons = useCallback(async () => {
+    setLoadingLessons(true);
+    try {
       const {
         data: { user },
       } = await edsync.auth.getUser();
@@ -45,64 +38,69 @@ export default function TeacherReports() {
         .order("created_at", { ascending: false });
       const list: Lesson[] = data || [];
       setLessons(list);
-      if (list.length > 0) setSelectedLesson(list[0].id);
+      if (list.length > 0) setSelectedLesson((current) => current || list[0].id);
+    } finally {
       setLoadingLessons(false);
-    };
-    init();
-  }, []);
+    }
+  }, [edsync]);
+
+  const loadReport = useCallback(async (lessonId: string) => {
+    setLoading(true);
+    try {
+      const { data: progressRows } = await edsync
+        .from("student_progress")
+        .select("*")
+        .eq("lesson_id", lessonId);
+
+      if (!progressRows || progressRows.length === 0) {
+        setReports([]);
+        return;
+      }
+
+      const progressList: StudentProgress[] = progressRows;
+      const studentIds = progressList.map((progress) => progress.student_id);
+
+      const { data: profileRows } = await edsync
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", studentIds);
+
+      const profileMap = new Map(
+        ((profileRows || []) as Pick<Profile, "id" | "full_name" | "email">[]).map(
+          (profile) => [profile.id, profile],
+        ),
+      );
+
+      const built: StudentReport[] = progressList.map((progress) => {
+        const profile = profileMap.get(progress.student_id);
+        return {
+          id: progress.student_id,
+          name: profile?.full_name || "Unknown",
+          email: profile?.email || "",
+          status: progress.status,
+          score: progress.score,
+          diagnosticScore: progress.diagnostic_score,
+          finalScore: progress.final_quiz_score,
+          timeSpent: progress.time_spent || 0,
+          sectionsCompleted: (progress.sections_completed || []).length,
+          knowledgeGaps: progress.knowledge_gaps || [],
+        };
+      });
+
+      setReports(built.sort((a, b) => (b.score || 0) - (a.score || 0)));
+    } finally {
+      setLoading(false);
+    }
+  }, [edsync]);
+
+  useEffect(() => {
+    loadLessons();
+  }, [loadLessons]);
 
   useEffect(() => {
     if (!selectedLesson) return;
     loadReport(selectedLesson);
-  }, [selectedLesson]);
-
-  const loadReport = async (lessonId: string) => {
-    setLoading(true);
-
-    const { data: progressRows } = await edsync
-      .from("student_progress")
-      .select("*")
-      .eq("lesson_id", lessonId);
-
-    if (!progressRows || progressRows.length === 0) {
-      setReports([]);
-      setLoading(false);
-      return;
-    }
-
-    const progressList: StudentProgress[] = progressRows;
-    const studentIds = progressList.map((p: StudentProgress) => p.student_id);
-
-    const { data: profileRows } = await edsync
-      .from("profiles")
-      .select("id, full_name, email")
-      .in("id", studentIds);
-
-    const profileMap = new Map(
-      ((profileRows || []) as Pick<Profile, "id" | "full_name" | "email">[]).map(
-        (p) => [p.id, p],
-      ),
-    );
-
-    const built: StudentReport[] = progressList.map((p: StudentProgress) => {
-      const profile = profileMap.get(p.student_id);
-      return {
-        id: p.student_id,
-        name: profile?.full_name || "Unknown",
-        email: profile?.email || "",
-        status: p.status,
-        score: p.score,
-        diagnosticScore: p.diagnostic_score,
-        finalScore: p.final_quiz_score,
-        timeSpent: p.time_spent || 0,
-        sectionsCompleted: (p.sections_completed || []).length,
-        knowledgeGaps: p.knowledge_gaps || [],
-      };
-    });
-
-    setReports(built.sort((a, b) => (b.score || 0) - (a.score || 0)));
-    setLoading(false);
-  };
+  }, [loadReport, selectedLesson]);
 
   const exportCSV = () => {
     if (reports.length === 0) {
@@ -126,18 +124,21 @@ export default function TeacherReports() {
     URL.revokeObjectURL(url);
   };
 
-  const completed = reports.filter((r) => r.status === "completed");
-  const inProgress = reports.filter((r) => r.status === "in_progress");
-  const notStarted = reports.filter((r) => r.status === "not_started");
-  const avgScore =
-    completed.filter((r) => r.score !== null).length > 0
-      ? Math.round(
-          completed
-            .filter((r) => r.score !== null)
-            .reduce((a, r) => a + (r.score || 0), 0) /
-            completed.filter((r) => r.score !== null).length,
-        )
-      : null;
+  const summary = useMemo(() => {
+    const completed = reports.filter((report) => report.status === "completed");
+    const inProgress = reports.filter((report) => report.status === "in_progress");
+    const scored = completed.filter((report) => report.score !== null);
+    const avgScore =
+      scored.length > 0
+        ? Math.round(scored.reduce((sum, report) => sum + (report.score || 0), 0) / scored.length)
+        : null;
+
+    return {
+      avgScore,
+      completedCount: completed.length,
+      inProgressCount: inProgress.length,
+    };
+  }, [reports]);
 
   // Build a simple completion-over-time approximation from real completed_at data
   // (for now show a summary bar chart instead of time-series since we'd need historical snapshots)
@@ -214,22 +215,22 @@ export default function TeacherReports() {
               },
               {
                 label: "Completed",
-                value: completed.length,
+                value: summary.completedCount,
                 icon: "DONE",
                 color: "emerald",
               },
               {
                 label: "In Progress",
-                value: inProgress.length,
+                value: summary.inProgressCount,
                 icon: "LIVE",
                 color: "blue",
               },
               {
                 label: "Avg Score",
-                value: avgScore !== null ? `${avgScore}%` : "N/A",
+                value: summary.avgScore !== null ? `${summary.avgScore}%` : "N/A",
                 icon: "AVG",
                 color:
-                  avgScore !== null && avgScore >= 70 ? "emerald" : "amber",
+                  summary.avgScore !== null && summary.avgScore >= 70 ? "emerald" : "amber",
               },
             ].map((s, i) => (
               <div key={i} className="edsync-card">
