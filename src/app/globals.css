@@ -478,6 +478,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 600;
   margin: 0.6rem 0 0.35rem;
 }
+.rich-editor h4 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin: 0.55rem 0 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--subtle);
+}
 .rich-editor p {
   margin: 0.35rem 0;
 }
@@ -598,6 +606,40 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: var(--surface);
   padding: 0.85rem;
 }
+.rich-editor .lesson-checklist,
+.lesson-prose .lesson-checklist {
+  list-style: none;
+  padding-left: 0;
+}
+.rich-editor .lesson-checklist li,
+.lesson-prose .lesson-checklist li {
+  position: relative;
+  padding-left: 1.7rem;
+}
+.rich-editor .lesson-checklist li::before,
+.lesson-prose .lesson-checklist li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  height: 0.85rem;
+  width: 0.85rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--blue);
+  background: rgba(var(--blue-rgb), 0.08);
+}
+.rich-editor .lesson-practice-card,
+.lesson-prose .lesson-practice-card {
+  margin: 0.85rem 0;
+  border: 1px solid rgba(var(--emerald-rgb), 0.32);
+  border-radius: 0.75rem;
+  background: rgba(var(--emerald-rgb), 0.08);
+  padding: 1rem;
+}
+.rich-editor .lesson-spacer,
+.lesson-prose .lesson-spacer {
+  height: 1.5rem;
+}
 [contenteditable]:empty:before {
   content: attr(data-placeholder);
   color: var(--subtle);
@@ -630,6 +672,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-size: 1.05rem;
   font-weight: 600;
   margin: 0.6rem 0 0.3rem;
+}
+.lesson-prose h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0.55rem 0 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--subtle);
 }
 .lesson-prose p {
   margin: 0.5rem 0;
