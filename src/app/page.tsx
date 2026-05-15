@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
-import LandingPage from "./landing";
+import CatalogPage from "./catalog/page";
 import { getSessionUser } from "@/lib/auth/session";
 import { resolveTenantContext } from "@/lib/tenancy";
 
-export default async function RootPage() {
+export default async function RootPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string; portal?: string; tenant?: string };
+}) {
   const user = await getSessionUser().catch(() => null);
 
   if (user) {
@@ -24,5 +28,5 @@ export default async function RootPage() {
     redirect(`/org/${context.portal.slug}`);
   }
 
-  return <LandingPage />;
+  return <CatalogPage searchParams={searchParams} />;
 }
