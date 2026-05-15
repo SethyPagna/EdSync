@@ -4,9 +4,12 @@ import { Toaster } from "react-hot-toast";
 import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
-  title: "EdSync - AI Learning OS",
+  title: {
+    default: "EdSync Catalog",
+    template: "%s | EdSync",
+  },
   description:
-    "A mature AI-assisted education workspace for teachers and students.",
+    "Browse public courses, organization academies, and role-aware EdSync learning workspaces.",
   icons: { icon: "/favicon.svg" },
   manifest: "/manifest.webmanifest",
 };
