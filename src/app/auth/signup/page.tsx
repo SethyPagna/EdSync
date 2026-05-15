@@ -15,12 +15,12 @@ const roleDetails = {
   teacher: {
     label: "Teacher",
     icon: UsersRound,
-    copy: "Classes, lessons, work, progress.",
+    copy: "Create courses, manage classes, grade work, and publish catalog items.",
   },
   student: {
     label: "Student",
     icon: BookOpenCheck,
-    copy: "Lessons, feedback, grades, notes.",
+    copy: "Join learning spaces, take lessons, track grades, and save progress.",
   },
 };
 
@@ -137,7 +137,7 @@ function SignupForm() {
     <form onSubmit={handleSignup} className="space-y-5">
       <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
         {[
-          ["space", "1 Space"],
+          ["space", "1 Workspace"],
           ["role", "2 Role"],
           ["account", "3 Account"],
         ].map(([key, label]) => (
@@ -161,13 +161,13 @@ function SignupForm() {
               {
                 key: "organization" as const,
                 label: "Enter organization",
-                copy: "School, academy, company, cohort, or department.",
+                copy: "Use a school, academy, company, cohort, or department portal.",
                 icon: Building2,
               },
               {
                 key: "individual" as const,
                 label: "Use as individual",
-                copy: "Personal teacher or learner workspace.",
+                copy: "Start a personal teacher or learner workspace.",
                 icon: UserRound,
               },
             ]).map((item) => {
@@ -226,8 +226,8 @@ function SignupForm() {
         <div className="space-y-4">
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
-              ? `Workspace: ${organizationName}`
-              : "Workspace: Individual"}
+              ? `Organization workspace: ${organizationName}`
+              : "Individual workspace"}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
         {(["teacher", "student"] as const).map((item) => {
@@ -269,8 +269,8 @@ function SignupForm() {
         <div className="space-y-5">
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
-              ? `${organizationName} · ${roleDetails[role].label}`
-              : `Individual · ${roleDetails[role].label}`}
+              ? `${organizationName} - ${roleDetails[role].label}`
+              : `Individual - ${roleDetails[role].label}`}
           </div>
 
       <div>
@@ -342,14 +342,14 @@ export default function SignupPage() {
         </Link>
         <div>
           <p className="mb-4 inline-flex rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
-            Role-aware setup
+            Workspace-first setup
           </p>
           <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Start in the right workspace.
+            Build the right EdSync space first.
           </h1>
         </div>
         <p className="text-sm text-edsync-subtle">
-          EdSync routes each role automatically.
+          Individuals stay simple. Organizations get scoped portals, catalogs, and role controls.
         </p>
       </section>
 
@@ -364,7 +364,7 @@ export default function SignupPage() {
             </Link>
           </div>
           <div className="edsync-card p-7">
-            <h2 className="font-display text-3xl font-bold">Create account</h2>
+            <h2 className="font-display text-3xl font-bold">Create workspace</h2>
             <div className="mt-7">
               <Suspense
                 fallback={
