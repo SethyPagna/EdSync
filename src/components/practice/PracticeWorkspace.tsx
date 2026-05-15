@@ -12,6 +12,7 @@ import {
   Save,
   Sparkles,
   Trophy,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { PRACTICE_MODES } from "@/lib/studio/catalog";
@@ -21,6 +22,12 @@ import {
   targetSecondsFromMinutes,
   type PracticeItem,
 } from "@/lib/practice/engine";
+import {
+  deletePracticeReview,
+  listPracticeReviews,
+  updatePracticeReview,
+  type PracticeReviewCardRow,
+} from "@/lib/practice/reviews";
 import type { PracticeAttemptSummary, PracticeMode } from "@/types";
 
 type PracticeWorkspaceProps = {
@@ -64,6 +71,7 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
   const [summary, setSummary] = useState<PracticeAttemptSummary | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [reviewCards, setReviewCards] = useState<PracticeReviewCardRow[]>([]);
   const startedRef = useRef<number | null>(null);
 
   const modeConfig = useMemo(
@@ -82,6 +90,12 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
     }, 1000);
     return () => window.clearInterval(timer);
   }, [elapsedSeconds, running]);
+
+  useEffect(() => {
+    listPracticeReviews()
+      .then((cards) => setReviewCards(cards ?? []))
+      .catch(() => setReviewCards([]));
+  }, []);
 
   const updateResponse = (itemId: string, response: string | boolean) => {
     setItems((current) =>
@@ -113,6 +127,8 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error || "Attempt could not be saved.");
+      const cards = await listPracticeReviews();
+      setReviewCards(cards ?? []);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Attempt could not be saved.");
     } finally {
@@ -134,6 +150,16 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
     setSummary(null);
     setSaveError(null);
     setRunning(false);
+  };
+
+  const updateReviewMastery = async (id: string, mastery: "again" | "almost" | "mastered") => {
+    await updatePracticeReview({ id, mastery });
+    setReviewCards((current) => current.map((card) => (card.id === id ? { ...card, mastery } : card)));
+  };
+
+  const removeReviewCard = async (id: string) => {
+    await deletePracticeReview(id);
+    setReviewCards((current) => current.filter((card) => card.id !== id));
   };
 
   return (
@@ -308,9 +334,33 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                 <HelpCircle className="h-5 w-5 text-edsync-emerald" />
                 <h2 className="font-semibold">Reviews</h2>
               </div>
-              <p className="text-sm leading-6 text-edsync-subtle">
-                Missed items become review cards after submit. The dashboard can recommend the next retry set from those cards.
-              </p>
+              <div className="space-y-2">
+                {reviewCards.length === 0 && (
+                  <p className="text-sm leading-6 text-edsync-subtle">
+                    Missed items become review cards after submit. The dashboard can recommend the next retry set from those cards.
+                  </p>
+                )}
+                {reviewCards.slice(0, 5).map((card) => (
+                  <div key={card.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                    <p className="line-clamp-2 text-sm font-semibold">{card.prompt}</p>
+                    <p className="mt-1 text-xs capitalize text-edsync-subtle">{card.mastery}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "again")}>
+                        Again
+                      </button>
+                      <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "almost")}>
+                        Almost
+                      </button>
+                      <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "mastered")}>
+                        Mastered
+                      </button>
+                      <button type="button" className="rounded-lg p-1 text-edsync-red hover:bg-edsync-red/10" onClick={() => removeReviewCard(card.id)} aria-label="Delete review card">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
           </aside>
         </div>
