@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Edit3, Save, Trash2, UploadCloud, X } from "lucide-react";
 import type { ScormPackage } from "@/types";
+import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type StandardsPayload = {
   packages: ScormPackage[];
@@ -74,13 +75,10 @@ export default function AdminStandardsPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Governance</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Standards Packages</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Parse SCORM, xAPI, and cmi5 manifest text, then edit launch paths and archive packages before assignment.
-          </p>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          SCORM uses packaged launch files. xAPI records granular statements. cmi5 combines xAPI with structured launch rules.
-        </div>
+        <InfoPopover label="Standards help">
+          SCORM launches packaged lessons. xAPI stores learning statements. cmi5 adds structured launch rules.
+        </InfoPopover>
       </header>
 
       {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
@@ -93,7 +91,7 @@ export default function AdminStandardsPage() {
         <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4">
           <UploadCloud className="mb-3 h-7 w-7 text-edsync-blue" />
           <p className="font-semibold text-edsync-text">Parser checklist</p>
-          <p className="mt-2 text-sm leading-6 text-edsync-subtle">Use valid XML, relative launch paths, and review package type before publishing.</p>
+          <p className="mt-2 text-sm leading-5 text-edsync-subtle">Valid XML. Relative paths. Review before publish.</p>
           <button className="btn-primary mt-4 w-full justify-center" type="submit">Parse package</button>
         </div>
       </form>
@@ -101,7 +99,6 @@ export default function AdminStandardsPage() {
       <div className="edsync-card overflow-hidden p-0">
         <div className="border-b border-edsync-border px-4 py-3">
           <h2 className="font-display text-xl font-bold">Parsed packages</h2>
-          <p className="text-sm text-edsync-subtle">Edit launch paths, archive packages, or delete imports that should not be used.</p>
         </div>
         <div className="divide-y divide-edsync-border">
           {payload.packages.map((item) => {
