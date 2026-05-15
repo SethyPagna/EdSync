@@ -46,6 +46,39 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
       "Students complete the blanks while reading or listening.\n\n1. The main idea is __________.\n2. One example is __________.\n3. This matters because __________.",
   },
   {
+    id: "practice-sprint",
+    label: "Practice Sprint",
+    description: "Timed LEARN-style practice loop.",
+    category: "practice",
+    contentType: "activity",
+    durationMinutes: 12,
+    title: "Practice Sprint",
+    content:
+      '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Set a short timer, answer the prompt, then revise once after feedback.</p><ol><li>Try it without notes.</li><li>Compare with the success criteria.</li><li>Write one correction or upgrade.</li></ol></section>',
+  },
+  {
+    id: "flashcard-round",
+    label: "Flashcard Round",
+    description: "Recall, flip, and retry activity.",
+    category: "practice",
+    contentType: "activity",
+    durationMinutes: 8,
+    title: "Flashcard Round",
+    content:
+      '<section class="lesson-practice-card"><h3>Flashcard Round</h3><table><tbody><tr><th>Front</th><th>Back</th></tr><tr><td>Key term or question</td><td>Answer, example, or hint</td></tr><tr><td>Application prompt</td><td>Model response</td></tr></tbody></table><p>Students mark each card as Again, Almost, or Mastered.</p></section>',
+  },
+  {
+    id: "scenario-game",
+    label: "Scenario Game",
+    description: "Choice-based challenge with points.",
+    category: "practice",
+    contentType: "activity",
+    durationMinutes: 15,
+    title: "Scenario Game",
+    content:
+      '<section class="lesson-practice-card"><h3>Scenario Game</h3><p>Give students a realistic situation and three choices. Award points for evidence-backed reasoning.</p><ol><li>Choose a response.</li><li>Explain why it works.</li><li>Unlock the next scenario after a strong answer.</li></ol></section>',
+  },
+  {
     id: "media-analysis",
     label: "Media Analysis",
     description: "Image or video observation.",
