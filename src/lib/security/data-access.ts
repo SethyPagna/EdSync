@@ -53,6 +53,11 @@ const SERVER_ONLY_TABLES = new Set([
   "billing_webhook_events",
   "offline_sync_items",
   "analytics_rollups",
+  "studio_documents",
+  "studio_assets",
+  "practice_attempts",
+  "practice_attempt_items",
+  "practice_review_cards",
 ]);
 
 function hasFilter(request: DataRequest, column: string, value: unknown) {
