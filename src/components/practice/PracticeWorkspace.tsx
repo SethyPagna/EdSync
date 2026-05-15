@@ -59,16 +59,18 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
   const [mode, setMode] = useState<PracticeMode>(modeFromInitial(initialMode));
   const [items, setItems] = useState<PracticeItem[]>(starterItems);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [targetMinutes, setTargetMinutes] = useState(() => modeFromInitial(initialMode) === "exam" ? 30 : 8);
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<PracticeAttemptSummary | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const startedRef = useRef<number | null>(null);
 
   const modeConfig = useMemo(
     () => PRACTICE_MODES.find((entry) => entry.mode === mode) ?? PRACTICE_MODES[0],
     [mode],
   );
-  const targetSeconds = targetSecondsFromMinutes(modeConfig.targetMinutes);
+  const targetSeconds = targetSecondsFromMinutes(targetMinutes || modeConfig.targetMinutes);
   const liveSummary = summarizePracticeAttempt({ mode, items, elapsedSeconds, targetSeconds });
   const missed = missedPracticeItems(items);
 
@@ -86,6 +88,7 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
       current.map((item) => (item.id === itemId ? { ...item, response } : item)),
     );
     setSummary(null);
+    setSaveError(null);
   };
 
   const submit = async () => {
@@ -93,8 +96,9 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
     setSummary(nextSummary);
     setRunning(false);
     setSaving(true);
+    setSaveError(null);
     try {
-      await fetch("/api/practice/attempts", {
+      const response = await fetch("/api/practice/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -107,6 +111,10 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
           items,
         }),
       });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error || "Attempt could not be saved.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Attempt could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -115,6 +123,7 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
   const retryMissed = () => {
     setItems(missed.map((item) => ({ ...item, response: undefined })));
     setSummary(null);
+    setSaveError(null);
     setElapsedSeconds(0);
     setRunning(true);
   };
@@ -123,6 +132,7 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
     setItems(starterItems.map((item) => ({ ...item, response: undefined })));
     setElapsedSeconds(0);
     setSummary(null);
+    setSaveError(null);
     setRunning(false);
   };
 
@@ -164,7 +174,9 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                   type="button"
                   onClick={() => {
                     setMode(entry.mode);
+                    setTargetMinutes(entry.targetMinutes);
                     setSummary(null);
+                    setSaveError(null);
                   }}
                   className={`rounded-lg border p-3 text-left transition ${
                     mode === entry.mode
@@ -236,6 +248,17 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                 <Metric label="Target" value={`${Math.round(targetSeconds / 60)}m`} />
                 <Metric label="Elapsed" value={`${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, "0")}`} />
               </div>
+              <label className="mt-4 block">
+                <span className="text-xs font-semibold text-edsync-subtle">Target minutes</span>
+                <input
+                  className="edsync-input mt-2"
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={targetMinutes}
+                  onChange={(event) => setTargetMinutes(Math.max(1, Number(event.target.value || 1)))}
+                />
+              </label>
             </section>
 
             <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
@@ -253,6 +276,16 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                 <Flame className="h-4 w-4" />
                 Retry missed
               </button>
+              {summary && !saveError && (
+                <p className="mt-3 rounded-lg border border-edsync-emerald/30 bg-edsync-emerald/10 p-2 text-xs font-semibold text-edsync-emerald">
+                  Attempt saved and missed items queued for review.
+                </p>
+              )}
+              {saveError && (
+                <p className="mt-3 rounded-lg border border-edsync-red/30 bg-edsync-red/10 p-2 text-xs font-semibold text-edsync-red">
+                  {saveError}
+                </p>
+              )}
             </section>
 
             <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
