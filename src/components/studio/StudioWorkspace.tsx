@@ -139,8 +139,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     writerRef.current.schedule(next);
   };
 
-  const loadUniverEngine = async () => {
-    await Promise.all([import("@univerjs/core"), import("@univerjs/preset-sheets-core")]);
+  const loadUniverEngine = () => {
     setAdvancedSheetLoaded(true);
   };
 
@@ -258,12 +257,12 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     <div>
                       <p className="font-semibold">Sheet Editor</p>
                       <p className="text-xs text-edsync-subtle">
-                        Univer engine {advancedSheetLoaded ? "loaded" : "available"} with native fallback grid.
+                        Advanced sheet controls {advancedSheetLoaded ? "enabled" : "ready"} with native fallback grid.
                       </p>
                     </div>
                     <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadUniverEngine}>
                       <Grid3X3 className="h-4 w-4" />
-                      Enable advanced sheet
+                      Enable advanced sheet tools
                     </button>
                   </div>
                   <div className="overflow-auto p-3">
