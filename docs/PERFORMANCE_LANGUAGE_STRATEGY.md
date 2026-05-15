@@ -32,5 +32,6 @@ Introduce Rust, Go, Python, or WASM only when all of these are true:
 - Add or verify D1 indexes for tenant, class, work, catalog, and event queries.
 - Keep heavy AI/provider work behind queues, cooldowns, and cached provider health.
 - Bound upload extraction, scanning, and parsing work so large files cannot slow the app.
+- Keep document extraction bounded and representative by sampling across large files before considering a native parser.
 - Split heavy UI panels and settings into lazy-loaded sections.
 - Measure before migrating languages.
