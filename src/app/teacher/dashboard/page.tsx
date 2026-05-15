@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
 import { MetricTile } from "@/components/WorkspacePrimitives";
@@ -26,6 +26,8 @@ type DashboardStats = {
   lowConfidence: number;
 };
 
+type ScoreRow = { score: number | string | null };
+
 export default function TeacherDashboard() {
   const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -41,97 +43,97 @@ export default function TeacherDashboard() {
     lowConfidence: 0,
   });
 
-  useEffect(() => {
-    loadDashboard();
-  }, [edsync]);
-
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) return;
+    try {
+      const {
+        data: { user },
+      } = await edsync.auth.getUser();
+      if (!user) return;
 
-    const [profileRes, classesRes, lessonsRes, alertsRes] = await Promise.all([
-      edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-      edsync
-        .from("classes")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false }),
-      edsync
-        .from("lessons")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(6),
-      edsync
-        .from("teacher_alerts")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .eq("is_dismissed", false)
-        .order("created_at", { ascending: false })
-        .limit(6),
-    ]);
-
-    const classRows: Class[] = classesRes.data || [];
-    const lessonRows: Lesson[] = lessonsRes.data || [];
-    const lessonIds = lessonRows.map((lesson: Lesson) => lesson.id);
-    const classIds = classRows.map((cls: Class) => cls.id);
-
-    const [enrollmentRes, progressRes, interactionRes, reflectionRes] =
-      await Promise.all([
-        classIds.length
-          ? edsync
-              .from("class_enrollments")
-              .select("id", { count: "exact", head: true })
-              .in("class_id", classIds)
-              .eq("is_active", true)
-          : Promise.resolve({ count: 0 }),
-        lessonIds.length
-          ? edsync
-              .from("student_progress")
-              .select("score")
-              .in("lesson_id", lessonIds)
-              .not("score", "is", null)
-          : Promise.resolve({ data: [] }),
-        lessonIds.length
-          ? edsync
-              .from("socratic_interactions")
-              .select("id", { count: "exact", head: true })
-              .in("lesson_id", lessonIds)
-          : Promise.resolve({ count: 0 }),
-        lessonIds.length
-          ? edsync
-              .from("learning_reflections")
-              .select("confidence")
-              .in("lesson_id", lessonIds)
-              .lte("confidence", 2)
-          : Promise.resolve({ data: [] }),
+      const [profileRes, classesRes, lessonsRes, alertsRes] = await Promise.all([
+        edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        edsync
+          .from("classes")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false }),
+        edsync
+          .from("lessons")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(6),
+        edsync
+          .from("teacher_alerts")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .eq("is_dismissed", false)
+          .order("created_at", { ascending: false })
+          .limit(6),
       ]);
 
-    const scores = (progressRes.data || [])
-      .map((row: any) => Number(row.score))
-      .filter((score: number) => Number.isFinite(score));
+      const classRows: Class[] = classesRes.data || [];
+      const lessonRows: Lesson[] = lessonsRes.data || [];
+      const lessonIds = lessonRows.map((lesson) => lesson.id);
+      const classIds = classRows.map((cls) => cls.id);
 
-    setProfile(profileRes.data);
-    setClasses(classRows);
-    setRecentLessons(lessonRows);
-    setAlerts(alertsRes.data || []);
-    setStats({
-      totalStudents: enrollmentRes.count || 0,
-      activeLessons: lessonRows.filter((lesson: Lesson) => lesson.status === "published")
-        .length,
-      avgScore:
-        scores.length > 0
-          ? Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length)
-          : 0,
-      interactions: interactionRes.count || 0,
-      lowConfidence: reflectionRes.data?.length || 0,
-    });
-    setLoading(false);
-  };
+      const [enrollmentRes, progressRes, interactionRes, reflectionRes] =
+        await Promise.all([
+          classIds.length
+            ? edsync
+                .from("class_enrollments")
+                .select("id", { count: "exact", head: true })
+                .in("class_id", classIds)
+                .eq("is_active", true)
+            : Promise.resolve({ count: 0 }),
+          lessonIds.length
+            ? edsync
+                .from("student_progress")
+                .select("score")
+                .in("lesson_id", lessonIds)
+                .not("score", "is", null)
+            : Promise.resolve({ data: [] }),
+          lessonIds.length
+            ? edsync
+                .from("socratic_interactions")
+                .select("id", { count: "exact", head: true })
+                .in("lesson_id", lessonIds)
+            : Promise.resolve({ count: 0 }),
+          lessonIds.length
+            ? edsync
+                .from("learning_reflections")
+                .select("confidence")
+                .in("lesson_id", lessonIds)
+                .lte("confidence", 2)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+      const scores = ((progressRes.data || []) as ScoreRow[])
+        .map((row) => Number(row.score))
+        .filter(Number.isFinite);
+      const scoreTotal = scores.reduce((sum, score) => sum + score, 0);
+
+      setProfile(profileRes.data);
+      setClasses(classRows);
+      setRecentLessons(lessonRows);
+      setAlerts(alertsRes.data || []);
+      setStats({
+        totalStudents: enrollmentRes.count || 0,
+        activeLessons: lessonRows.filter((lesson) => lesson.status === "published").length,
+        avgScore: scores.length > 0 ? Math.round(scoreTotal / scores.length) : 0,
+        interactions: interactionRes.count || 0,
+        lowConfidence: reflectionRes.data?.length || 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [edsync]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const dismissAlert = async (alertId: string) => {
     await edsync
