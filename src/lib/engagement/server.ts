@@ -5,6 +5,7 @@ import {
   validateEmailBody,
   validateEmailSubject,
 } from "@/lib/engagement/email-validation";
+import { normalizeNotificationInput } from "@/lib/engagement/notification-validation";
 
 type NotificationInput = {
   userId: string;
@@ -49,6 +50,7 @@ function composeMailto(input: EmailInput) {
 }
 
 export async function createNotification(input: NotificationInput) {
+  const notification = normalizeNotificationInput(input);
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO notifications (
@@ -58,13 +60,13 @@ export async function createNotification(input: NotificationInput) {
       id,
       input.userId,
       input.actorId ?? null,
-      input.type,
-      input.title,
-      input.message,
-      input.actionUrl ?? null,
-      input.priority ?? "normal",
-      JSON.stringify(input.channels ?? ["in_app"]),
-      JSON.stringify(input.metadata ?? {}),
+      notification.type,
+      notification.title,
+      notification.message,
+      notification.actionUrl,
+      notification.priority,
+      JSON.stringify(notification.channels),
+      JSON.stringify(notification.metadata),
     ],
   );
   return id;
