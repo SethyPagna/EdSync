@@ -13,12 +13,12 @@ const roleDetails = {
   teacher: {
     label: "Teacher",
     icon: UsersRound,
-    copy: "Create classes, generate lessons, assign work, and monitor progress.",
+    copy: "Classes, lessons, work, progress.",
   },
   student: {
     label: "Student",
     icon: BookOpenCheck,
-    copy: "Join classes, follow guided lessons, reflect, and build mastery.",
+    copy: "Lessons, feedback, grades, notes.",
   },
 };
 
@@ -136,7 +136,7 @@ function SignupForm() {
             >
               <Icon className="mb-3 h-5 w-5" />
               <span className="block font-semibold">{roleDetails[item].label}</span>
-              <span className="mt-1 block text-xs leading-5">
+              <span className="mt-1 block text-xs">
                 {roleDetails[item].copy}
               </span>
             </button>
@@ -208,18 +208,14 @@ export default function SignupPage() {
         </Link>
         <div>
           <p className="mb-4 inline-flex rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
-            Personalized learning from the first session
+            Role-aware setup
           </p>
           <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Build a workspace around the way your class learns.
+            Start in the right workspace.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-edsync-subtle">
-            Teachers get planning and intervention tools. Students get a clear
-            path through lessons, practice, reflection, and next steps.
-          </p>
         </div>
         <p className="text-sm text-edsync-subtle">
-          Configure edsync Auth and EdSync handles role routing automatically.
+          EdSync routes each role automatically.
         </p>
       </section>
 
@@ -235,9 +231,6 @@ export default function SignupPage() {
           </div>
           <div className="edsync-card p-7">
             <h2 className="font-display text-3xl font-bold">Create account</h2>
-            <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-              Choose the workspace type that matches your role.
-            </p>
             <div className="mt-7">
               <Suspense
                 fallback={
