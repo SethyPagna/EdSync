@@ -1,3 +1,4 @@
+import { Ellipsis, Info } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type MetricTileProps = {
@@ -80,8 +81,13 @@ type ActionMenuProps = {
 export function ActionMenu({ label = "Actions", children }: ActionMenuProps) {
   return (
     <details className="group relative inline-block text-left">
-      <summary className="btn-secondary list-none justify-center px-3 py-2 text-sm marker:hidden">
-        {label}
+      <summary
+        className="btn-secondary list-none justify-center px-3 py-2 text-sm marker:hidden"
+        aria-label={label}
+        title={label}
+      >
+        <Ellipsis className="h-4 w-4" />
+        <span className="sr-only">{label}</span>
       </summary>
       <div className="absolute right-0 z-30 mt-2 grid min-w-48 gap-1 rounded-lg border border-edsync-border bg-edsync-surface p-2 shadow-2xl shadow-slate-200/60 dark:shadow-black/30">
         {children}
@@ -90,3 +96,24 @@ export function ActionMenu({ label = "Actions", children }: ActionMenuProps) {
   );
 }
 
+type InfoPopoverProps = {
+  label: string;
+  children: React.ReactNode;
+};
+
+export function InfoPopover({ label, children }: InfoPopoverProps) {
+  return (
+    <details className="group relative inline-block">
+      <summary
+        className="inline-flex h-9 w-9 list-none items-center justify-center rounded-lg border border-edsync-border bg-edsync-surface text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue marker:hidden"
+        aria-label={label}
+        title={label}
+      >
+        <Info className="h-4 w-4" />
+      </summary>
+      <div className="absolute right-0 z-40 mt-2 w-72 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm leading-5 text-edsync-subtle shadow-2xl shadow-slate-200/60 dark:shadow-black/30">
+        {children}
+      </div>
+    </details>
+  );
+}
