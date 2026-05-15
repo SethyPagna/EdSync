@@ -6,6 +6,9 @@ import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateUploadFile } from "@/lib/security/upload";
 
 const MAX_EXTRACTED_CHARS = 12_000;
+const MAX_BINARY_FALLBACK_SCAN_BYTES = 256_000;
+const BINARY_FALLBACK_CHUNK_SIZE = 8_192;
+const MIN_DIRECT_TEXT_CHARS = 200;
 
 function normalizeText(value: string) {
   return value
@@ -17,20 +20,36 @@ function normalizeText(value: string) {
 }
 
 function readableBinaryFallback(buffer: ArrayBuffer, fileName: string) {
-  const bytes = new Uint8Array(buffer);
-  let raw = "";
-  for (let index = 0; index < bytes.length; index += 1) {
-    const byte = bytes[index];
-    raw += byte === 10 || byte === 13 || (byte >= 32 && byte <= 126)
-      ? String.fromCharCode(byte)
-      : " ";
+  const scanLength = Math.min(buffer.byteLength, MAX_BINARY_FALLBACK_SCAN_BYTES);
+  const bytes = new Uint8Array(buffer, 0, scanLength);
+  const chunks: string[] = [];
+  let readableChars = 0;
+
+  for (
+    let offset = 0;
+    offset < bytes.length && readableChars < MAX_EXTRACTED_CHARS * 2;
+    offset += BINARY_FALLBACK_CHUNK_SIZE
+  ) {
+    const end = Math.min(offset + BINARY_FALLBACK_CHUNK_SIZE, bytes.length);
+    let chunk = "";
+
+    for (let index = offset; index < end; index += 1) {
+      const byte = bytes[index];
+      chunk += byte === 10 || byte === 13 || (byte >= 32 && byte <= 126)
+        ? String.fromCharCode(byte)
+        : " ";
+    }
+
+    chunks.push(chunk);
+    readableChars += chunk.length;
   }
 
-  const readable = normalizeText(raw);
+  const readable = normalizeText(chunks.join(""));
   const topic = fileName.replace(/\.(pdf|docx?|txt|md|csv)$/i, "").replace(/[-_]/g, " ");
+  const sampled = buffer.byteLength > scanLength;
 
-  return readable.length > 200
-    ? `Document: "${fileName}"\n\nExtracted readable text:\n${readable}`
+  return readable.length > MIN_DIRECT_TEXT_CHARS
+    ? `Document: "${fileName}"\n\nExtracted readable text${sampled ? " (sampled safely from the beginning of the file)" : ""}:\n${readable}`
     : `Document: "${fileName}"\nTopic: ${topic}\n\nThe file did not contain enough directly extractable text. Generate a structured lesson around the inferred topic and ask the teacher to review details before publishing.`;
 }
 
