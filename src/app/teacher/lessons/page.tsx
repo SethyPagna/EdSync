@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson } from "@/types";
@@ -18,17 +18,18 @@ export default function TeacherLessons() {
   >("all");
   const [durationFilter, setDurationFilter] = useState<"all" | "short" | "medium" | "long">("all");
   const [search, setSearch] = useState("");
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    loadLessons();
-  }, []);
-
-  const loadLessons = async () => {
+  const loadLessons = useCallback(async () => {
+    setLoading(true);
     const {
       data: { user },
     } = await edsync.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLessons([]);
+      setLoading(false);
+      return;
+    }
     const { data } = await edsync
       .from("lessons")
       .select("*")
@@ -36,12 +37,20 @@ export default function TeacherLessons() {
       .order("updated_at", { ascending: false });
     setLessons(data || []);
     setLoading(false);
-  };
+  }, [edsync]);
+
+  useEffect(() => {
+    loadLessons();
+  }, [loadLessons]);
 
   const deleteLesson = async (id: string) => {
     if (!confirm("Delete this lesson? This cannot be undone.")) return;
-    await edsync.from("lessons").delete().eq("id", id);
-    setLessons(lessons.filter((l) => l.id !== id));
+    const { error } = await edsync.from("lessons").delete().eq("id", id);
+    if (error) {
+      toast.error(`Could not delete lesson: ${error.message}`);
+      return;
+    }
+    setLessons((current) => current.filter((lesson) => lesson.id !== id));
     toast.success("Lesson deleted");
   };
 
@@ -64,20 +73,30 @@ export default function TeacherLessons() {
       .select()
       .single();
     if (data) {
-      setLessons([data, ...lessons]);
+      setLessons((current) => [data, ...current]);
       toast.success("Lesson duplicated!");
     }
   };
 
-  const filtered = lessons.filter((l) => {
-    if (filter !== "all" && l.status !== filter) return false;
-    if (durationFilter === "short" && l.estimated_duration > 20) return false;
-    if (durationFilter === "medium" && (l.estimated_duration < 21 || l.estimated_duration > 60)) return false;
-    if (durationFilter === "long" && l.estimated_duration < 61) return false;
-    if (search && !l.title.toLowerCase().includes(search.toLowerCase()))
-      return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return lessons.filter((lesson) => {
+      if (filter !== "all" && lesson.status !== filter) return false;
+      if (durationFilter === "short" && lesson.estimated_duration > 20) return false;
+      if (
+        durationFilter === "medium" &&
+        (lesson.estimated_duration < 21 || lesson.estimated_duration > 60)
+      ) {
+        return false;
+      }
+      if (durationFilter === "long" && lesson.estimated_duration < 61) return false;
+      if (normalizedSearch && !lesson.title.toLowerCase().includes(normalizedSearch)) {
+        return false;
+      }
+      return true;
+    });
+  }, [durationFilter, filter, lessons, search]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto animate-fade-in">
