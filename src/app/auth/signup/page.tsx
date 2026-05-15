@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
-import { ArrowRight, BookOpenCheck, GraduationCap, UsersRound } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
 
 type Role = "teacher" | "student";
+type AccountType = "organization" | "individual";
+type SignupStep = "space" | "role" | "account";
 
 const roleDetails = {
   teacher: {
@@ -28,6 +30,9 @@ function SignupForm() {
   const initialRole: Role = preset === "teacher" ? "teacher" : "student";
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
+  const [step, setStep] = useState<SignupStep>("space");
+  const [accountType, setAccountType] = useState<AccountType>("organization");
+  const [organizationName, setOrganizationName] = useState("");
   const [role, setRole] = useState<Role>(initialRole);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,7 +58,12 @@ function SignupForm() {
       email,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: {
+          full_name: fullName,
+          role,
+          account_type: accountType,
+          organization_name: accountType === "organization" ? organizationName : undefined,
+        },
         emailRedirectTo: `${window.location.origin}/auth/login`,
       },
     });
@@ -90,6 +100,12 @@ function SignupForm() {
           email,
           full_name: fullName,
           role,
+          preferences: {
+            theme: "light",
+            text_size: "medium",
+            onboarding_space: accountType,
+            onboarding_organization: accountType === "organization" ? organizationName : null,
+          },
           subjects: [],
           interests: [],
         },
@@ -119,7 +135,101 @@ function SignupForm() {
 
   return (
     <form onSubmit={handleSignup} className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
+        {[
+          ["space", "1 Space"],
+          ["role", "2 Role"],
+          ["account", "3 Account"],
+        ].map(([key, label]) => (
+          <span
+            key={key}
+            className={`rounded-full border px-3 py-1 ${
+              step === key
+                ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
+                : "border-edsync-border bg-edsync-surface"
+            }`}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {step === "space" && (
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([
+              {
+                key: "organization" as const,
+                label: "Enter organization",
+                copy: "School, academy, company, cohort, or department.",
+                icon: Building2,
+              },
+              {
+                key: "individual" as const,
+                label: "Use as individual",
+                copy: "Personal teacher or learner workspace.",
+                icon: UserRound,
+              },
+            ]).map((item) => {
+              const Icon = item.icon;
+              const selected = accountType === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setAccountType(item.key)}
+                  className={`rounded-lg border p-4 text-left transition ${
+                    selected
+                      ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
+                      : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                  }`}
+                >
+                  <Icon className="mb-3 h-5 w-5" />
+                  <span className="block font-semibold">{item.label}</span>
+                  <span className="mt-1 block text-xs">{item.copy}</span>
+                </button>
+              );
+            })}
+          </div>
+          {accountType === "organization" && (
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
+                Organization name
+              </label>
+              <input
+                type="text"
+                value={organizationName}
+                onChange={(event) => setOrganizationName(event.target.value)}
+                placeholder="Example Academy"
+                className="edsync-input"
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (accountType === "organization" && !organizationName.trim()) {
+                toast.error("Enter your organization name first.");
+                return;
+              }
+              setStep("role");
+            }}
+            className="btn-primary w-full justify-center py-3.5"
+          >
+            Continue
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {step === "role" && (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
+            {accountType === "organization"
+              ? `Workspace: ${organizationName}`
+              : "Workspace: Individual"}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
         {(["teacher", "student"] as const).map((item) => {
           const Icon = roleDetails[item].icon;
           const selected = role === item;
@@ -142,7 +252,26 @@ function SignupForm() {
             </button>
           );
         })}
-      </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button type="button" onClick={() => setStep("space")} className="btn-secondary justify-center py-3">
+              Back
+            </button>
+            <button type="button" onClick={() => setStep("account")} className="btn-primary justify-center py-3">
+              Continue
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "account" && (
+        <div className="space-y-5">
+          <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
+            {accountType === "organization"
+              ? `${organizationName} · ${roleDetails[role].label}`
+              : `Individual · ${roleDetails[role].label}`}
+          </div>
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
@@ -192,6 +321,11 @@ function SignupForm() {
         {loading ? "Creating account..." : `Create ${roleDetails[role].label} workspace`}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
+      <button type="button" onClick={() => setStep("role")} className="btn-secondary w-full justify-center py-3">
+        Back
+      </button>
+        </div>
+      )}
     </form>
   );
 }
