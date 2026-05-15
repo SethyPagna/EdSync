@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { Brain, CreditCard, Edit3, LockKeyhole, Save, ShieldCheck, SlidersHorizontal, Trash2, UsersRound, X } from "lucide-react";
+import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type Flag = {
   id: string;
@@ -31,12 +32,12 @@ const emptyFlag: FlagDraft = {
 };
 
 const operationLinks = [
-  { href: "/admin/ai", label: "AI providers", detail: "Provider priority, encrypted keys, health, and fallback.", icon: Brain },
-  { href: "/admin/governance", label: "Governance", detail: "Standards, certifications, automation, and security.", icon: ShieldCheck },
-  { href: "/admin/permissions", label: "Permissions", detail: "Tenant role profiles and feature authority.", icon: UsersRound },
-  { href: "/admin/security", label: "Security", detail: "Security events and admin audit logs.", icon: LockKeyhole },
-  { href: "/admin/billing", label: "Catalog & billing", detail: "Products, prices, portal visibility, and entitlements.", icon: CreditCard },
-  { href: "/admin/portals", label: "Organizations", detail: "Portals, domains, catalogs, and scoped managers.", icon: SlidersHorizontal },
+  { href: "/admin/ai", label: "AI providers", detail: "Keys, health, fallback.", icon: Brain },
+  { href: "/admin/governance", label: "Governance", detail: "Rules and audits.", icon: ShieldCheck },
+  { href: "/admin/permissions", label: "Permissions", detail: "Role profiles.", icon: UsersRound },
+  { href: "/admin/security", label: "Security", detail: "Events and logs.", icon: LockKeyhole },
+  { href: "/admin/billing", label: "Catalog", detail: "Products and prices.", icon: CreditCard },
+  { href: "/admin/portals", label: "Organizations", detail: "Portals and domains.", icon: SlidersHorizontal },
 ];
 
 export default function AdminSettingsPage() {
@@ -118,12 +119,14 @@ export default function AdminSettingsPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">System</p>
           <h1 className="font-display text-3xl font-bold">Settings</h1>
-          <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
-            Use settings as the platform control room: feature toggles, email mode, security/governance shortcuts, AI providers, permissions, and catalog operations.
-          </p>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          Email mode is <span className="font-semibold capitalize text-edsync-text">{emailMode}</span>. Outbox mode creates compose links and avoids sender spoofing.
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-sm font-semibold capitalize text-edsync-text">
+            Email: {emailMode}
+          </span>
+          <InfoPopover label="Settings help">
+            Feature flags, AI providers, security, governance, catalog, and organization controls live here.
+          </InfoPopover>
         </div>
       </header>
 
@@ -140,7 +143,6 @@ export default function AdminSettingsPage() {
       <section className="edsync-card overflow-hidden p-0">
         <div className="border-b border-edsync-border px-4 py-3">
           <h2 className="font-display text-xl font-bold">Feature flags</h2>
-          <p className="text-sm text-edsync-subtle">Turn major modules on or off without changing code.</p>
         </div>
         <form onSubmit={createFlag} className="grid gap-3 border-b border-edsync-border p-4 lg:grid-cols-[180px_220px_minmax(0,1fr)_140px_120px]">
           <input className="edsync-input" value={flagDraft.flagKey} onChange={(event) => setFlagDraft({ ...flagDraft, flagKey: event.target.value })} placeholder="flag_key" required />
