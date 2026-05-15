@@ -190,11 +190,12 @@ export function createClient() {
     storage: {
       from(bucket: string) {
         return {
-          async upload(path: string, file: File, _options: { upsert?: boolean } = {}) {
+          async upload(path: string, file: File, options: { upsert?: boolean } = {}) {
             const form = new FormData();
             form.set("bucket", bucket);
             form.set("path", path);
             form.set("file", file);
+            if (options.upsert !== undefined) form.set("upsert", String(options.upsert));
             const response = await fetch("/api/storage/upload", {
               method: "POST",
               credentials: "include",
