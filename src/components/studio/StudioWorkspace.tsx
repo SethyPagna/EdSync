@@ -42,6 +42,12 @@ import {
   STUDIO_TABS,
 } from "@/lib/studio/catalog";
 import {
+  archiveStudioItem,
+  listStudioItems,
+  saveStudioItem,
+  type StudioServerItem,
+} from "@/lib/studio/api";
+import {
   createDebouncedDraftWriter,
   clearStudioDraft,
   readStudioDraft,
@@ -130,8 +136,31 @@ function extensionForKind(kind: StudioItemKind) {
   return "json";
 }
 
+function draftToServerContent(draft: StudioDraftValue) {
+  return {
+    html: draft.html,
+    plainText: draft.plainText,
+    sheet: draft.sheet,
+    slides: draft.slides,
+  };
+}
+
+function serverItemToDraft(item: StudioServerItem): StudioDraftValue {
+  return {
+    html: typeof item.content.html === "string" ? item.content.html : defaultDraft.html,
+    plainText: item.plainText || (typeof item.content.plainText === "string" ? item.content.plainText : defaultDraft.plainText),
+    sheet: Array.isArray(item.content.sheet) ? (item.content.sheet as string[][]) : defaultDraft.sheet,
+    slides: Array.isArray(item.content.slides)
+      ? (item.content.slides as StudioDraftValue["slides"])
+      : defaultDraft.slides,
+  };
+}
+
 export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorkspaceProps) {
   const [activeKind, setActiveKind] = useState<StudioItemKind>(initialKind);
+  const [itemTitle, setItemTitle] = useState(titleForKind(initialKind));
+  const [serverItems, setServerItems] = useState<StudioServerItem[]>([]);
+  const [currentServerId, setCurrentServerId] = useState<string | null>(null);
   const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
   const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
@@ -140,12 +169,13 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const [statusMessage, setStatusMessage] = useState("Ready");
   const csvInputRef = useRef<HTMLInputElement | null>(null);
   const activeKindRef = useRef<StudioItemKind>(initialKind);
+  const itemTitleRef = useRef(titleForKind(initialKind));
   const writerRef = useRef(createDebouncedDraftWriter<StudioDraftValue>((value) => {
     const currentKind = activeKindRef.current;
     writeStudioDraft({
       kind: currentKind,
       itemId: "workspace",
-      title: titleForKind(currentKind),
+      title: itemTitleRef.current,
       value,
       status: "local_draft",
     });
@@ -155,6 +185,9 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   useEffect(() => {
     setActiveKind(initialKind);
     activeKindRef.current = initialKind;
+    itemTitleRef.current = titleForKind(initialKind);
+    setItemTitle(titleForKind(initialKind));
+    setCurrentServerId(null);
     const stored = readStudioDraft<StudioDraftValue>(initialKind, "workspace");
     setDraft(stored?.value ?? defaultDraft);
     setDraftStatus(stored ? "local_draft" : "saved");
@@ -164,11 +197,30 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     writerRef.current.flush(draft);
     activeKindRef.current = kind;
     setActiveKind(kind);
+    itemTitleRef.current = titleForKind(kind);
+    setItemTitle(titleForKind(kind));
+    setCurrentServerId(null);
     const stored = readStudioDraft<StudioDraftValue>(kind, "workspace");
     setDraft(stored?.value ?? defaultDraft);
     setDraftStatus(stored ? "local_draft" : "saved");
     setStatusMessage(stored ? "Restored local draft" : "Ready");
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    listStudioItems(activeKind)
+      .then((items) => {
+        if (!cancelled) setServerItems(items);
+      })
+      .catch((error) => {
+        if (!cancelled) setStatusMessage(error instanceof Error ? error.message : "Could not load Studio items");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeKind]);
 
   useEffect(() => {
     const draftWriter = writerRef.current;
@@ -217,17 +269,36 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     updateDraft({ ...draft, sheet: updateSheetCellValue(draft.sheet, rowIndex, columnIndex, value) });
   };
 
-  const saveDraft = () => {
+  const saveDraft = async () => {
     writerRef.current.cancel();
     writeStudioDraft({
       kind: activeKind,
       itemId: "workspace",
-      title: titleForKind(activeKind),
+      title: itemTitle,
       value: draft,
       status: "saved",
     });
-    setDraftStatus("saved");
-    setStatusMessage("Saved locally");
+    setDraftStatus("saving");
+    setStatusMessage("Saving to EdSync...");
+
+    try {
+      const item = await saveStudioItem({
+        id: currentServerId ?? undefined,
+        kind: activeKind,
+        title: itemTitle,
+        content: draftToServerContent(draft),
+        plainText: draft.plainText,
+        status: "draft",
+        metadata: { slideCount: draft.slides.length, sheetRows: draft.sheet.length },
+      });
+      setCurrentServerId(item.id);
+      setServerItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
+      setDraftStatus("saved");
+      setStatusMessage("Saved to EdSync");
+    } catch (error) {
+      setDraftStatus("local_draft");
+      setStatusMessage(error instanceof Error ? error.message : "Saved locally, server save failed");
+    }
   };
 
   const resetDraft = () => {
@@ -235,8 +306,41 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     clearStudioDraft(activeKind, "workspace");
     setDraft(defaultDraft);
     setSelectedSlideId(defaultDraft.slides[0].id);
+    itemTitleRef.current = titleForKind(activeKind);
+    setItemTitle(titleForKind(activeKind));
+    setCurrentServerId(null);
     setDraftStatus("saved");
     setStatusMessage("Workspace reset");
+  };
+
+  const openServerItem = (item: StudioServerItem) => {
+    const nextDraft = serverItemToDraft(item);
+    activeKindRef.current = activeKind;
+    itemTitleRef.current = item.title;
+    setCurrentServerId(item.id);
+    setItemTitle(item.title);
+    setDraft(nextDraft);
+    setSelectedSlideId(nextDraft.slides[0]?.id ?? defaultDraft.slides[0].id);
+    setDraftStatus("saved");
+    setStatusMessage("Loaded from EdSync");
+  };
+
+  const archiveCurrentItem = async () => {
+    if (!currentServerId) {
+      resetDraft();
+      return;
+    }
+
+    setStatusMessage("Archiving item...");
+    try {
+      await archiveStudioItem(currentServerId);
+      setServerItems((current) => current.filter((item) => item.id !== currentServerId));
+      setCurrentServerId(null);
+      resetDraft();
+      setStatusMessage("Archived item");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not archive item");
+    }
   };
 
   const exportDraft = () => {
@@ -347,6 +451,38 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               Unsaved work is kept locally first and flushed when you leave the page.
             </p>
           </div>
+          <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">Saved</p>
+              <span className="rounded-full bg-edsync-card px-2 py-0.5 text-xs font-bold text-edsync-subtle">
+                {serverItems.length}
+              </span>
+            </div>
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {serverItems.length === 0 && (
+                <p className="rounded-lg border border-dashed border-edsync-border p-3 text-xs leading-5 text-edsync-subtle">
+                  Server-saved Studio items will appear here.
+                </p>
+              )}
+              {serverItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openServerItem(item)}
+                  className={`w-full rounded-lg border p-2 text-left text-sm transition ${
+                    currentServerId === item.id
+                      ? "border-edsync-blue bg-edsync-blue/10"
+                      : "border-edsync-border bg-edsync-card hover:border-edsync-blue/40"
+                  }`}
+                >
+                  <span className="block truncate font-semibold">{item.title}</span>
+                  <span className="mt-1 block text-xs capitalize text-edsync-subtle">
+                    {item.status} - {new Date(item.updatedAt).toLocaleDateString()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </aside>
 
         <section className="min-w-0">
@@ -354,7 +490,16 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="text-sm font-semibold text-edsync-blue">Comprehensive LMS authoring</p>
-                <h1 className="font-display text-3xl font-bold">{titleForKind(activeKind)}</h1>
+                <input
+                  className="mt-1 w-full bg-transparent font-display text-3xl font-bold outline-none"
+                  value={itemTitle}
+                  onChange={(event) => {
+                    itemTitleRef.current = event.target.value;
+                    setItemTitle(event.target.value);
+                    setDraftStatus("saving");
+                  }}
+                  aria-label="Studio item title"
+                />
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={saveDraft} className="btn-secondary px-3 py-2 text-sm">
@@ -686,7 +831,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="Inspector" icon={PanelRight}>
                 <div className="space-y-2 text-sm text-edsync-subtle">
                   <p>Style, layout, references, navigation, accessibility, and export settings stay here instead of adding more top bars.</p>
-                  <button type="button" onClick={resetDraft} className="btn-secondary w-full justify-center py-2 text-sm">
+                  <button type="button" onClick={archiveCurrentItem} className="btn-secondary w-full justify-center py-2 text-sm">
                     <Trash2 className="h-4 w-4" />
                     Archive item
                   </button>
