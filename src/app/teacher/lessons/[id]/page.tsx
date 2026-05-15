@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
@@ -18,6 +19,12 @@ import { getStatusBadge, formatRelativeTime } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 type Tab = "overview" | "sections" | "questions" | "glossary" | "assign";
+type EdSyncClient = ReturnType<typeof createClient>;
+type AssignmentRow = {
+  class_id: string;
+  classes?: { name?: string | null } | null;
+  created_at: string;
+};
 type QType =
   | "multiple_choice"
   | "true_false"
@@ -45,7 +52,7 @@ function RichTextEditor({
       ref.current.innerHTML = value || "";
       initialized.current = true;
     }
-  }, []);
+  }, [value]);
 
   const exec = (cmd: string, val?: string) => {
     ref.current?.focus();
@@ -349,6 +356,16 @@ const emptyQ = (overrides: Partial<QDraft> = {}): QDraft => ({
   ...overrides,
 });
 
+function toQuestionDraft(question: QuizQuestion): QDraft {
+  return {
+    ...question,
+    question_type: question.question_type === "matching" ? "multiple_choice" : question.question_type,
+    options: question.options || emptyQ().options,
+    correct_answer: question.correct_answer || "",
+    explanation: question.explanation || "",
+  };
+}
+
 function QuestionBuilder({
   q,
   onChange,
@@ -438,7 +455,7 @@ function QuestionBuilder({
                 <input
                   type="checkbox"
                   checked={!!q[k]}
-                  onChange={(e) => set({ [k]: e.target.checked } as any)}
+                  onChange={(e) => set({ [k]: e.target.checked })}
                   className="rounded border-edsync-border"
                 />
                 <span className="text-edsync-subtle">
@@ -618,7 +635,7 @@ function ImageSectionEditor({
 }: {
   section: LessonSection;
   onSave: (id: string, u: Partial<LessonSection>) => Promise<void>;
-  edsync: any;
+  edsync: EdSyncClient;
   lessonId: string;
 }) {
   const [caption, setCaption] = useState("");
@@ -631,7 +648,7 @@ function ImageSectionEditor({
     const parts = (section.content || "").split("|||");
     setImgUrl(parts[0] || "");
     setCaption(parts[1] || "");
-  }, [section.id]);
+  }, [section.content, section.id]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -666,6 +683,7 @@ function ImageSectionEditor({
       metadata: { imgUrl, caption },
     });
   };
+  const previewUrl = safePublicUrl(imgUrl);
 
   return (
     <div className="space-y-4">
@@ -696,12 +714,15 @@ function ImageSectionEditor({
           </button>
         </div>
       </div>
-      {imgUrl && (
+      {previewUrl && (
         <div className="rounded-xl overflow-hidden border border-edsync-border">
-          <img
-            src={imgUrl}
+          <Image
+            src={previewUrl}
             alt={caption || "Section image"}
-            className="w-full max-h-80 object-contain bg-black/20"
+            width={1200}
+            height={675}
+            sizes="(max-width: 768px) 100vw, 960px"
+            className="h-auto max-h-80 w-full object-contain bg-black/20"
           />
         </div>
       )}
@@ -738,7 +759,7 @@ function VideoSectionEditor({
     const parts = (section.content || "").split("|||");
     setUrl(parts[0] || "");
     setCaption(parts[1] || "");
-  }, [section.id]);
+  }, [section.content, section.id]);
 
   const safeUrl = safePublicUrl(url);
   const embed = safeVideoEmbedUrl(url);
@@ -816,7 +837,7 @@ function QuizSectionEditor({
 }: {
   section: LessonSection;
   lessonId: string;
-  edsync: any;
+  edsync: EdSyncClient;
   onSave: (id: string, u: Partial<LessonSection>) => Promise<void>;
 }) {
   const [questions, setQuestions] = useState<QDraft[]>([]);
@@ -829,12 +850,12 @@ function QuizSectionEditor({
       .select("*")
       .eq("lesson_id", lessonId)
       .eq("section_id", section.id)
-      .then(({ data }: any) => {
+      .then(({ data }: { data: QuizQuestion[] | null }) => {
         if (data?.length)
-          setQuestions(data.map((q: any) => ({ ...q, id: q.id })));
+          setQuestions(data.map(toQuestionDraft));
         else setQuestions([emptyQ()]);
       });
-  }, [section.id]);
+  }, [edsync, lessonId, section.id]);
 
   const saveAll = async () => {
     setSaving(true);
@@ -985,7 +1006,7 @@ function SectionEditor({
   onSave: (id: string, u: Partial<LessonSection>) => Promise<void>;
   onDelete: (id: string) => void;
   onCancel: () => void;
-  edsync: any;
+  edsync: EdSyncClient;
   lessonId: string;
 }) {
   const [title, setTitle] = useState(section.title);
@@ -1187,7 +1208,7 @@ export default function TeacherLessonDetail() {
   const params = useParams();
   const router = useRouter();
   const lessonId = params.id as string;
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [sections, setSections] = useState<LessonSection[]>([]);
@@ -1232,11 +1253,7 @@ export default function TeacherLessonDetail() {
   // Questions saving
   const [savingQ, setSavingQ] = useState(false);
 
-  useEffect(() => {
-    loadAll();
-  }, [lessonId]);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     const {
       data: { user },
     } = await edsync.auth.getUser();
@@ -1298,20 +1315,24 @@ export default function TeacherLessonDetail() {
     // Only load non-section questions into the question bank drafts
     setQDrafts(
       qs
-        .filter((q: any) => !q.section_id || q.section_id === null)
-        .map((q: any) => ({ ...q })) as QDraft[],
+        .filter((q) => !q.section_id || q.section_id === null)
+        .map(toQuestionDraft),
     );
     setGlossary(glossaryRes.data || []);
     setMyClasses(classesRes.data || []);
     setAssignments(
-      (assignRes.data || []).map((a: any) => ({
+      ((assignRes.data || []) as AssignmentRow[]).map((a) => ({
         class_id: a.class_id,
         class_name: a.classes?.name || "",
         created_at: a.created_at,
       })),
     );
     setLoading(false);
-  };
+  }, [edsync, lessonId]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   const saveOverview = async () => {
     setSaving(true);
@@ -1661,7 +1682,7 @@ export default function TeacherLessonDetail() {
             <p className="text-edsync-subtle text-xs mt-0.5">
               Updated {formatRelativeTime(lesson.updated_at)} ·{" "}
               {sections.length} sections ·{" "}
-              {questions.filter((q: any) => !q.section_id).length} questions
+              {questions.filter((q) => !q.section_id).length} questions
             </p>
           </div>
         </div>
