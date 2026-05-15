@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Languages } from "lucide-react";
+import { ArrowRight, Languages } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
 import { safeVideoEmbedUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
@@ -424,32 +424,29 @@ export default function CreateLesson() {
 
       {/* ── STEP: CHOOSE MODE ── */}
       {step === "choose" && (
-        <div className="space-y-4 animate-slide-up">
-          <p className="text-edsync-text font-medium mb-6">
-            How would you like to create this lesson?
-          </p>
+        <div className="animate-slide-up space-y-3">
           {[
             {
               mode: "ai_collab" as const,
-              title: "AI + Teacher Collaboration",
-              desc: "AI generates a structured lesson draft. You review, edit, and refine every section to make it yours.",
+              title: "AI draft",
+              desc: "Generate, review, refine.",
               badge: "Recommended",
               badgeColor:
                 "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20",
             },
             {
               mode: "ai_full" as const,
-              title: "Fully AI-Generated",
-              desc: "AI creates a complete, ready-to-publish lesson. Review and approve before going live.",
+              title: "Full AI",
+              desc: "Complete draft, then approve.",
               badge: "Fastest",
               badgeColor:
                 "bg-edsync-purple/10 text-edsync-purple border-edsync-purple/20",
             },
             {
               mode: "manual" as const,
-              title: "Create from Scratch",
-              desc: "Build your lesson entirely yourself. Full creative control with no AI involvement.",
-              badge: "Full Control",
+              title: "Blank lesson",
+              desc: "Start from scratch.",
+              badge: "Control",
               badgeColor:
                 "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20",
             },
@@ -463,15 +460,15 @@ export default function CreateLesson() {
                   setStep("edit");
                 } else setStep("import");
               }}
-              className={`w-full p-5 rounded-2xl border-2 text-left transition-all hover:shadow-card-hover hover:-translate-y-0.5 ${
+              className={`group w-full rounded-xl border-2 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-card-hover ${
                 creationMode === opt.mode
                   ? "border-edsync-blue bg-edsync-blue/5"
                   : "border-edsync-border bg-edsync-card hover:border-edsync-muted"
               }`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-center gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex items-center gap-2">
                     <span className="font-display font-bold text-edsync-text">
                       {opt.title}
                     </span>
@@ -479,9 +476,11 @@ export default function CreateLesson() {
                       {opt.badge}
                     </span>
                   </div>
-                  <p className="text-edsync-subtle text-sm">{opt.desc}</p>
+                  <p className="max-h-0 text-sm text-edsync-subtle opacity-0 transition-all group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100">
+                    {opt.desc}
+                  </p>
                 </div>
-                <span className="text-edsync-blue text-lg mt-1">→</span>
+                <ArrowRight className="h-5 w-5 text-edsync-blue transition group-hover:translate-x-0.5" />
               </div>
             </button>
           ))}
@@ -493,35 +492,32 @@ export default function CreateLesson() {
         <div className="animate-slide-up space-y-6">
           {/* Source type picker */}
           <div className="edsync-card">
-            <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
+            <h2 className="mb-4 font-display text-xl font-bold text-edsync-text">
               {creationMode === "ai_collab"
-                ? "Give AI a starting point"
-                : "What should the AI base your lesson on?"}
+                ? "Starting point"
+                : "Lesson source"}
             </h2>
-            <p className="text-edsync-subtle text-sm mb-5">
-              AI will use this to generate your lesson structure.
-            </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               {[
                 {
                   mode: "objectives" as const,
                   label: "Objectives",
-                  desc: "Describe what students learn",
+                  desc: "Learning goals",
                 },
                 {
                   mode: "text" as const,
-                  label: "Paste Text",
-                  desc: "Article, notes, or content",
+                  label: "Text",
+                  desc: "Notes or article",
                 },
                 {
                   mode: "url" as const,
                   label: "URL",
-                  desc: "Paste a web link",
+                  desc: "Web link",
                 },
                 {
                   mode: "file" as const,
-                  label: "Upload Media",
-                  desc: "Docs, data, image, video",
+                  label: "Upload",
+                  desc: "Docs or media",
                 },
               ].map((opt) => (
                 <button
@@ -530,7 +526,8 @@ export default function CreateLesson() {
                     setImportMode(opt.mode);
                     if (opt.mode === "file") fileRef.current?.click();
                   }}
-                  className={`p-3 rounded-xl border-2 transition-all text-left ${
+                  title={opt.desc}
+                  className={`rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 ${
                     importMode === opt.mode
                       ? "border-edsync-blue bg-edsync-blue/10"
                       : "border-edsync-border bg-edsync-surface hover:border-edsync-muted"
@@ -583,10 +580,10 @@ export default function CreateLesson() {
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={
                     importMode === "objectives"
-                      ? 'e.g. "Students will understand photosynthesis including light-dependent and light-independent reactions. They should be able to explain how plants convert sunlight to energy and identify the role of chlorophyll."'
+                      ? "Learning goals, standards, or outcomes..."
                       : importMode === "text"
-                        ? "Paste your article, notes, textbook excerpt, or any content here..."
-                        : "https://example.com/article-to-use-as-lesson-basis"
+                        ? "Paste notes, article text, or outline..."
+                        : "https://example.com/source"
                   }
                   rows={8}
                   className="edsync-textarea"
