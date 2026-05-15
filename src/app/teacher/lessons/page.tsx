@@ -16,6 +16,7 @@ export default function TeacherLessons() {
   const [filter, setFilter] = useState<
     "all" | "draft" | "published" | "archived"
   >("all");
+  const [durationFilter, setDurationFilter] = useState<"all" | "short" | "medium" | "long">("all");
   const [search, setSearch] = useState("");
   const edsync = createClient();
 
@@ -70,6 +71,9 @@ export default function TeacherLessons() {
 
   const filtered = lessons.filter((l) => {
     if (filter !== "all" && l.status !== filter) return false;
+    if (durationFilter === "short" && l.estimated_duration > 20) return false;
+    if (durationFilter === "medium" && (l.estimated_duration < 21 || l.estimated_duration > 60)) return false;
+    if (durationFilter === "long" && l.estimated_duration < 61) return false;
     if (search && !l.title.toLowerCase().includes(search.toLowerCase()))
       return false;
     return true;
@@ -116,6 +120,17 @@ export default function TeacherLessons() {
             </button>
           ))}
         </div>
+        <select
+          value={durationFilter}
+          onChange={(event) => setDurationFilter(event.target.value as typeof durationFilter)}
+          className="edsync-input w-full py-2 text-sm sm:w-48"
+          aria-label="Filter by expected duration"
+        >
+          <option value="all">Any duration</option>
+          <option value="short">Short · 1-20 min</option>
+          <option value="medium">Medium · 21-60 min</option>
+          <option value="long">Long · 61+ min</option>
+        </select>
       </div>
 
       {loading ? (
