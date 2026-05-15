@@ -12,7 +12,6 @@ import {
   BookOpenCheck,
   CalendarClock,
   Brain,
-  ChevronDown,
   ClipboardList,
   FileCheck2,
   GraduationCap,
@@ -57,19 +56,16 @@ const roleCopy = {
   teacher: {
     label: "Teacher Workspace",
     accent: "text-edsync-amber",
-    badge: "bg-edsync-amber/10 border-edsync-amber/25 text-edsync-amber",
     gradient: "from-edsync-amber to-edsync-blue",
   },
   admin: {
     label: "Admin Console",
     accent: "text-edsync-blue",
-    badge: "bg-edsync-blue/10 border-edsync-blue/25 text-edsync-blue",
     gradient: "from-edsync-blue to-edsync-cyan",
   },
   student: {
     label: "Student Learning OS",
     accent: "text-edsync-emerald",
-    badge: "bg-edsync-emerald/10 border-edsync-emerald/25 text-edsync-emerald",
     gradient: "from-edsync-emerald to-edsync-cyan",
   },
 };
@@ -161,7 +157,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
 
@@ -242,8 +237,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       }),
     }))
     .filter((group) => group.items.length > 0);
-
-  const isGroupOpen = (label: string) => openGroups[label] ?? true;
 
   const renderNavItem = (item: ShellNavItem) => {
     const Icon = item.icon;
@@ -333,15 +326,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         </div>
       )}
 
-      <div className="px-4 pt-4">
-        {!collapsed && (
-          <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${copy.badge}`}>
-            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            AI-assisted workspace
-          </div>
-        )}
-      </div>
-
       <nav className="flex-1 space-y-3 overflow-y-auto p-3">
         {isAdminViewMode && (
           <Link
@@ -358,28 +342,28 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         )}
         {visibleNavGroups.map((group) => {
           const groupActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-          const open = isGroupOpen(group.label);
           return (
             <div key={group.label} className={collapsed ? "space-y-1" : "space-y-1.5"}>
               {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !open }))}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${
-                    groupActive ? "text-edsync-blue" : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+                <div
+                  className={`px-3 pt-2 text-xs font-bold uppercase tracking-wide ${
+                    groupActive ? "text-edsync-blue" : "text-edsync-subtle"
                   }`}
                 >
                   <span>{group.label}</span>
-                  <ChevronDown className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
-                </button>
+                </div>
               )}
-              {(collapsed || open) && <div className="space-y-1">{group.items.map(renderNavItem)}</div>}
+              <div className="space-y-1">{group.items.map(renderNavItem)}</div>
             </div>
           );
         })}
       </nav>
 
       <div className="border-t border-edsync-border p-3">
+        <div className={`mb-1 flex items-center ${collapsed ? "justify-center" : "justify-between px-3 py-1"}`}>
+          {!collapsed && <span className="text-sm font-semibold text-edsync-subtle">Alerts</span>}
+          <NotificationMenu />
+        </div>
         <button
           type="button"
           onClick={toggleTheme}
@@ -451,11 +435,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         <main
           className={`${collapsed ? "lg:ml-[76px]" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:pt-0`}
         >
-          <div className="sticky top-0 z-20 hidden justify-end border-b border-edsync-border bg-edsync-bg px-6 py-3 shadow-sm lg:flex">
-            <NotificationMenu />
-          </div>
           {isAdminViewMode && (
-            <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-[57px] lg:px-6">
+            <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-0 lg:px-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-3 text-sm text-edsync-blue">
                   <ShieldCheck className="h-5 w-5 flex-shrink-0" />
