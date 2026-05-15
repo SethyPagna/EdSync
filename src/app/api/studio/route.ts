@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { PERMISSIONS, getPermissionSet } from "@/lib/permissions";
+import {
+  normalizeStudioKind,
+  validateStudioJsonObject,
+  validateStudioTitle,
+} from "@/lib/studio/validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 import type { StudioItemKind } from "@/types";
 
@@ -21,8 +26,6 @@ type StudioDocumentRow = {
   updated_at: string;
 };
 
-const STUDIO_KINDS = new Set(["note", "doc", "sheet", "slide", "practice", "import", "design"]);
-
 function jsonResponse(data: unknown, status = 200) {
   return NextResponse.json({ data, error: null }, { status });
 }
@@ -31,25 +34,14 @@ function errorResponse(error: string, status: number) {
   return NextResponse.json({ data: null, error }, { status });
 }
 
-function safeJson(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
-
 function parseJsonObject(value: string | null) {
   if (!value) return {};
   try {
     const parsed = JSON.parse(value);
-    return safeJson(parsed);
+    return validateStudioJsonObject(parsed);
   } catch {
     return {};
   }
-}
-
-function normalizeKind(kind: unknown): Exclude<StudioItemKind, "lesson"> {
-  const value = String(kind ?? "doc");
-  if (value === "lesson") return "doc";
-  return STUDIO_KINDS.has(value) ? (value as Exclude<StudioItemKind, "lesson">) : "doc";
 }
 
 function serializeRow(row: StudioDocumentRow) {
@@ -79,11 +71,12 @@ async function canPublish(
 }
 
 async function assertOwnerOrAdmin(documentId: string, tenantId: string, userId: string, isAdmin: boolean) {
-  const [row] = await d1Query<Pick<StudioDocumentRow, "id" | "owner_id">>(
-    "SELECT id, owner_id FROM studio_documents WHERE id = ? AND tenant_id = ? LIMIT 1",
-    [documentId, tenantId],
+  const [row] = await d1Query<Pick<StudioDocumentRow, "id" | "tenant_id" | "owner_id">>(
+    "SELECT id, tenant_id, owner_id FROM studio_documents WHERE id = ? LIMIT 1",
+    [documentId],
   );
   if (!row) throw new Error("Studio item not found.");
+  if (row.tenant_id !== tenantId) throw new Error("Studio item belongs to another tenant.");
   if (!isAdmin && row.owner_id !== userId) throw new Error("You cannot modify this Studio item.");
 }
 
@@ -95,7 +88,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const kind = params.get("kind");
   const includeArchived = params.get("includeArchived") === "true";
-  const normalizedKind = kind ? normalizeKind(kind) : null;
+  const normalizedKind = kind ? normalizeStudioKind(kind) : null;
   const isAdmin = user.user_metadata.role === "admin";
 
   const where = [
@@ -141,15 +134,36 @@ export async function POST(request: Request) {
     sourceId?: string | null;
     metadata?: Record<string, unknown>;
   };
-  const title = body.title?.trim();
-  if (!title) return errorResponse("Title is required.", 400);
+  let title: string;
+  let content: Record<string, unknown>;
+  try {
+    title = validateStudioTitle(body.title);
+    content = validateStudioJsonObject(body.content);
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "Invalid Studio item.", 400);
+  }
   if (body.status === "published" && !(await canPublish(user, context))) {
     return errorResponse("Publishing permission is required.", 403);
   }
 
   const id = body.id || crypto.randomUUID();
-  const kind = normalizeKind(body.kind);
-  const metadata = { ...safeJson(body.metadata), originalKind: body.kind === "lesson" ? "lesson" : kind };
+  if (body.id) {
+    const existing = await d1Query<Pick<StudioDocumentRow, "id" | "tenant_id" | "owner_id">>(
+      "SELECT id, tenant_id, owner_id FROM studio_documents WHERE id = ? LIMIT 1",
+      [body.id],
+    );
+    if (existing[0]) {
+      if (existing[0].tenant_id !== context.tenant.id) return errorResponse("Studio item belongs to another tenant.", 403);
+      if (user.user_metadata.role !== "admin" && existing[0].owner_id !== user.id) {
+        return errorResponse("You cannot modify this Studio item.", 403);
+      }
+    }
+  }
+  const kind = normalizeStudioKind(body.kind);
+  const metadata = {
+    ...validateStudioJsonObject(body.metadata),
+    originalKind: body.kind === "lesson" ? "lesson" : kind,
+  };
 
   await d1Query(
     `INSERT INTO studio_documents (
@@ -171,7 +185,7 @@ export async function POST(request: Request) {
       user.id,
       kind,
       title,
-      JSON.stringify(safeJson(body.content)),
+      JSON.stringify(content),
       body.plainText ?? null,
       body.status === "published" ? "published" : "draft",
       body.sourceType ?? null,
@@ -208,11 +222,19 @@ export async function PATCH(request: Request) {
   const values: unknown[] = [];
   if (body.title?.trim()) {
     updates.push("title = ?");
-    values.push(body.title.trim());
+    try {
+      values.push(validateStudioTitle(body.title));
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Invalid title.", 400);
+    }
   }
   if (body.content) {
     updates.push("content = ?");
-    values.push(JSON.stringify(safeJson(body.content)));
+    try {
+      values.push(JSON.stringify(validateStudioJsonObject(body.content)));
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Invalid Studio content.", 400);
+    }
   }
   if (typeof body.plainText === "string") {
     updates.push("plain_text = ?");
@@ -224,7 +246,7 @@ export async function PATCH(request: Request) {
   }
   if (body.metadata) {
     updates.push("metadata = ?");
-    values.push(JSON.stringify(safeJson(body.metadata)));
+    values.push(JSON.stringify(validateStudioJsonObject(body.metadata)));
   }
   if (updates.length === 0) return errorResponse("No changes provided.", 400);
 
