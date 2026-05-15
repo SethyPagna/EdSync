@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { normalizeExtractedText, readableBinaryFallback } from "@/lib/content/extraction";
+import { extractReadableBinaryFallback, normalizeExtractedText } from "@/lib/content/extraction";
 import { d1Query } from "@/lib/db/d1";
 import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
@@ -33,6 +33,7 @@ async function saveExtraction(input: {
   kind: string;
   text: string;
   warning: string | null;
+  metadata?: Record<string, unknown>;
 }) {
   await d1Query(
     `INSERT INTO content_extractions (
@@ -48,7 +49,10 @@ async function saveExtraction(input: {
       input.kind,
       input.text,
       input.warning,
-      JSON.stringify({ lastModified: input.file.lastModified || null }),
+      JSON.stringify({
+        lastModified: input.file.lastModified || null,
+        ...input.metadata,
+      }),
     ],
   );
 }
@@ -160,14 +164,41 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const text = readableBinaryFallback(buffer, file.name);
+  const extraction = extractReadableBinaryFallback(buffer, file.name);
   const warning =
-    "PDF and Word extraction uses a safe readable-text fallback in this deployment. Review generated lessons before publishing.";
-  await saveExtraction({ userId: user.id, file, kind, text, warning });
+    extraction.quality === "none"
+      ? "No reliable text was found. Use the generated outline as a starting point and review carefully before publishing."
+      : "PDF and Word extraction uses a safe sampled-text fallback in this deployment. Review generated lessons before publishing.";
+  await saveExtraction({
+    userId: user.id,
+    file,
+    kind,
+    text: extraction.text,
+    warning,
+    metadata: {
+      extraction: {
+        method: extraction.method,
+        quality: extraction.quality,
+        sampled: extraction.sampled,
+        scannedBytes: extraction.scannedBytes,
+        totalBytes: extraction.totalBytes,
+        readableChars: extraction.readableChars,
+        ranges: extraction.ranges,
+      },
+    },
+  });
   return NextResponse.json({
-    text,
+    text: extraction.text,
     fileName: file.name,
     kind,
     warning,
+    extraction: {
+      method: extraction.method,
+      quality: extraction.quality,
+      sampled: extraction.sampled,
+      scannedBytes: extraction.scannedBytes,
+      totalBytes: extraction.totalBytes,
+      readableChars: extraction.readableChars,
+    },
   });
 }
