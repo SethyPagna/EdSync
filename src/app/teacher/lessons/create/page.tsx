@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
@@ -604,6 +605,12 @@ export default function CreateLesson() {
             <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
               {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Draft ready"}
             </span>
+            <Link href="/studio" className="btn-secondary px-3 py-1.5 text-xs">
+              Open Studio
+            </Link>
+            <Link href="/practice?mode=generated_from_studio" className="btn-secondary px-3 py-1.5 text-xs">
+              Generate practice
+            </Link>
             <button type="button" onClick={clearSavedDraft} className="btn-secondary px-3 py-1.5 text-xs">
               Clear draft
             </button>
