@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Edit3, Save, Sparkles, Trash2, X } from "lucide-react";
+import { Edit3, MoreVertical, Save, Sparkles, Trash2, X } from "lucide-react";
 import type { AutomationRule } from "@/types";
-import { InfoPopover } from "@/components/WorkspacePrimitives";
+import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
+import { AUTOMATION_RECIPES, AUTOMATION_TRIGGER_LABELS } from "@/lib/automation/rules";
 
 type AutomationPayload = {
   rules: AutomationRule[];
@@ -19,11 +20,13 @@ type RuleDraft = {
 
 const emptyRule: RuleDraft = {
   title: "",
-  triggerKey: "learner.inactive",
+  triggerKey: AUTOMATION_RECIPES[0].triggerKey,
   conditionsText: '{"inactiveDays":5}',
   actionsText: '[{"type":"notify","channel":"in_app"}]',
   enabled: true,
 };
+
+const triggerOptions = Object.entries(AUTOMATION_TRIGGER_LABELS);
 
 function draftFrom(rule: AutomationRule): RuleDraft {
   return {
@@ -43,12 +46,21 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
+function prettyJson(value: unknown) {
+  return JSON.stringify(value, null, 2);
+}
+
+function compactJson(value: unknown) {
+  return JSON.stringify(value);
+}
+
 export default function AdminAutomationPage() {
   const [payload, setPayload] = useState<AutomationPayload>({ rules: [] });
   const [form, setForm] = useState<RuleDraft>(emptyRule);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RuleDraft>(emptyRule);
   const [message, setMessage] = useState("");
+  const [showJson, setShowJson] = useState(false);
 
   const load = () =>
     fetch("/api/automation-rules", { cache: "no-store" })
@@ -66,6 +78,17 @@ export default function AdminAutomationPage() {
     actions: parseJson<Array<Record<string, unknown>>>(source.actionsText, []),
     enabled: source.enabled,
   });
+
+  const applyRecipe = (recipe: (typeof AUTOMATION_RECIPES)[number]) => {
+    setForm({
+      title: recipe.title,
+      triggerKey: recipe.triggerKey,
+      conditionsText: prettyJson(recipe.conditions),
+      actionsText: prettyJson(recipe.actions),
+      enabled: false,
+    });
+    setMessage("Recipe loaded as a paused draft.");
+  };
 
   const run = async (body: Record<string, unknown>, success: string) => {
     setMessage("");
@@ -118,22 +141,49 @@ export default function AdminAutomationPage() {
 
       {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
 
-      <form onSubmit={create} className="edsync-card grid gap-3 p-4 lg:grid-cols-[260px_220px_minmax(0,1fr)_auto]">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {AUTOMATION_RECIPES.map((recipe) => (
+          <button
+            key={recipe.id}
+            type="button"
+            onClick={() => applyRecipe(recipe)}
+            className="rounded-lg border border-edsync-border bg-edsync-card p-4 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-surface"
+          >
+            <span className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
+              {AUTOMATION_TRIGGER_LABELS[recipe.triggerKey]}
+            </span>
+            <span className="mt-2 block font-semibold text-edsync-text">{recipe.title}</span>
+          </button>
+        ))}
+      </section>
+
+      <form onSubmit={create} className="edsync-card grid gap-3 p-4 lg:grid-cols-[minmax(220px,1fr)_220px_140px_auto]">
         <input className="edsync-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Rule title" required />
         <select className="edsync-input" value={form.triggerKey} onChange={(event) => setForm({ ...form, triggerKey: event.target.value })}>
-          <option value="learner.inactive">Learner inactive</option>
-          <option value="score.mastery">Mastery score</option>
-          <option value="deadline.upcoming">Deadline upcoming</option>
-          <option value="certification.expiring">Certification expiring</option>
-          <option value="work.submitted">Work submitted</option>
+          {triggerOptions.map(([triggerKey, label]) => (
+            <option key={triggerKey} value={triggerKey}>{label}</option>
+          ))}
         </select>
         <label className="flex items-center gap-2 text-sm text-edsync-subtle">
           <input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
           Enabled
         </label>
         <button className="btn-primary justify-center" type="submit">Create rule</button>
-        <textarea className="edsync-input min-h-24 lg:col-span-2" value={form.conditionsText} onChange={(event) => setForm({ ...form, conditionsText: event.target.value })} aria-label="Conditions JSON" />
-        <textarea className="edsync-input min-h-24 lg:col-span-2" value={form.actionsText} onChange={(event) => setForm({ ...form, actionsText: event.target.value })} aria-label="Actions JSON" />
+        <div className="lg:col-span-4">
+          <button
+            type="button"
+            className="btn-secondary px-3 py-2 text-sm"
+            onClick={() => setShowJson((value) => !value)}
+          >
+            {showJson ? "Hide JSON" : "Edit conditions"}
+          </button>
+        </div>
+        {showJson && (
+          <>
+            <textarea className="edsync-input min-h-24 lg:col-span-2" value={form.conditionsText} onChange={(event) => setForm({ ...form, conditionsText: event.target.value })} aria-label="Conditions JSON" />
+            <textarea className="edsync-input min-h-24 lg:col-span-2" value={form.actionsText} onChange={(event) => setForm({ ...form, actionsText: event.target.value })} aria-label="Actions JSON" />
+          </>
+        )}
       </form>
 
       <div className="edsync-card overflow-hidden p-0">
@@ -162,26 +212,35 @@ export default function AdminAutomationPage() {
                       <p className="font-semibold text-edsync-text">{rule.title}</p>
                       <p className="mt-1 text-xs text-edsync-subtle">{JSON.stringify(rule.conditions)}</p>
                     </div>
-                    <span className="font-mono text-xs text-edsync-subtle">{rule.trigger_key}</span>
+                    <span className="font-semibold text-xs text-edsync-subtle">{AUTOMATION_TRIGGER_LABELS[rule.trigger_key] ?? rule.trigger_key}</span>
                     <span className={`badge ${rule.enabled ? "bg-edsync-emerald/10 text-edsync-emerald" : "bg-slate-100 text-slate-500"}`}>
                       {rule.enabled ? "Enabled" : "Paused"}
                     </span>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   {editing ? (
                     <>
                       <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => save(rule)}><Save className="h-4 w-4" /> Save</button>
                       <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
                     </>
                   ) : (
-                    <>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => { setEditingId(rule.id); setDraft(draftFrom(rule)); }}><Edit3 className="h-4 w-4" /> Edit</button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => toggle(rule)}>{rule.enabled ? "Pause" : "Enable"}</button>
-                      <button type="button" className="btn-ghost px-3 py-2 text-sm text-rose-600" onClick={() => remove(rule)}><Trash2 className="h-4 w-4" /> Delete</button>
-                    </>
+                    <ActionMenu label={`${rule.title} actions`}>
+                      <button type="button" className="btn-secondary justify-start px-3 py-2 text-sm" onClick={() => { setEditingId(rule.id); setDraft(draftFrom(rule)); }}><Edit3 className="h-4 w-4" /> Edit</button>
+                      <button type="button" className="btn-secondary justify-start px-3 py-2 text-sm" onClick={() => toggle(rule)}>{rule.enabled ? "Pause" : "Enable"}</button>
+                      <button type="button" className="btn-ghost justify-start px-3 py-2 text-sm text-rose-600" onClick={() => remove(rule)}><Trash2 className="h-4 w-4" /> Delete</button>
+                    </ActionMenu>
                   )}
                 </div>
+                {!editing && (
+                  <details className="rounded-lg border border-edsync-border bg-edsync-surface">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-edsync-subtle">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                      Rule payload
+                    </summary>
+                    <pre className="overflow-auto border-t border-edsync-border p-3 text-xs text-edsync-subtle">{compactJson({ conditions: rule.conditions, actions: rule.actions })}</pre>
+                  </details>
+                )}
               </section>
             );
           })}
