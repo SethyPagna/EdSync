@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
+import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
 import { createClient } from "@/lib/edsync/client";
 import { safeVideoEmbedUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
@@ -149,6 +150,41 @@ export default function CreateLesson() {
       glossary_terms: ai.glossary_terms || [],
       difficulty: "intermediate",
       subject: "",
+    });
+  };
+
+  const addDraftSection = (template: SectionTemplate = SECTION_TEMPLATES[0]) => {
+    setDraft((current) => ({
+      ...current,
+      sections: [
+        ...current.sections,
+        {
+          title: template.title,
+          content: template.content,
+          content_type: template.contentType,
+          duration_minutes: template.durationMinutes,
+        },
+      ],
+    }));
+  };
+
+  const moveDraftSection = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= draft.sections.length) return;
+    const sections = [...draft.sections];
+    [sections[index], sections[nextIndex]] = [sections[nextIndex], sections[index]];
+    setDraft({ ...draft, sections });
+  };
+
+  const duplicateDraftSection = (index: number) => {
+    const source = draft.sections[index];
+    setDraft({
+      ...draft,
+      sections: [
+        ...draft.sections.slice(0, index + 1),
+        { ...source, title: `${source.title} Copy` },
+        ...draft.sections.slice(index + 1),
+      ],
     });
   };
 
@@ -1076,6 +1112,37 @@ export default function CreateLesson() {
           {/* SECTIONS */}
           {activeTab === "sections" && (
             <div className="space-y-4">
+              <div className="rounded-lg border border-edsync-border bg-edsync-card p-3">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-sm font-semibold text-edsync-text">Section Library</h2>
+                    <p className="text-xs text-edsync-subtle">
+                      Start from slide, notes, media, activity, discussion, or quiz blocks.
+                    </p>
+                  </div>
+                  <button onClick={() => addDraftSection()} className="btn-primary px-3 py-2 text-sm">
+                    Blank section
+                  </button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {SECTION_TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => addDraftSection(template)}
+                      className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
+                        <span className="rounded-md border border-edsync-border px-2 py-0.5 text-[11px] uppercase tracking-wide text-edsync-subtle">
+                          {template.contentType}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-edsync-subtle">{template.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {draft.sections.map((sec, i) => (
                 <div key={i} className="edsync-card">
                   <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -1127,6 +1194,26 @@ export default function CreateLesson() {
                       placeholder="min"
                       title="Duration (minutes)"
                     />
+                    <button
+                      onClick={() => moveDraftSection(i, -1)}
+                      disabled={i === 0}
+                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Up
+                    </button>
+                    <button
+                      onClick={() => moveDraftSection(i, 1)}
+                      disabled={i === draft.sections.length - 1}
+                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Down
+                    </button>
+                    <button
+                      onClick={() => duplicateDraftSection(i)}
+                      className="btn-ghost px-2 py-1 text-xs"
+                    >
+                      Duplicate
+                    </button>
                     <button
                       onClick={() =>
                         setDraft({
@@ -1277,23 +1364,10 @@ export default function CreateLesson() {
                 </div>
               ))}
               <button
-                onClick={() =>
-                  setDraft({
-                    ...draft,
-                    sections: [
-                      ...draft.sections,
-                      {
-                        title: "New Section",
-                        content: "",
-                        content_type: "text",
-                        duration_minutes: 5,
-                      },
-                    ],
-                  })
-                }
+                onClick={() => addDraftSection()}
                 className="w-full py-4 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
               >
-                + Add Section
+                Add Section
               </button>
             </div>
           )}
