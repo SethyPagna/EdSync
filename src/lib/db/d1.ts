@@ -25,7 +25,7 @@ export type DataRequest = {
   rpc?: { name: string; args: Record<string, unknown> };
 };
 
-export type D1Result<T = any> = {
+export type D1Result<T = Record<string, unknown> | Record<string, unknown>[]> = {
   data: T | null;
   error: { message: string } | null;
   count?: number | null;
