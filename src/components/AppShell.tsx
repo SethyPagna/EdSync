@@ -37,6 +37,7 @@ export type ShellNavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  marker?: string;
   permission?: string;
   plan?: "solo" | "team" | "enterprise";
 };
@@ -71,14 +72,14 @@ const roleCopy = {
 };
 
 export const teacherNavItems: ShellNavItem[] = [
-  { href: "/teacher/dashboard", label: "Command Center", icon: LayoutDashboard },
-  { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
-  { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus },
-  { href: "/teacher/work", label: "Work", icon: FileCheck2 },
-  { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList },
+  { href: "/teacher/dashboard", label: "Command Center", icon: LayoutDashboard, marker: "1" },
+  { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck, marker: "2" },
+  { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus, marker: "2+" },
+  { href: "/teacher/work", label: "Work", icon: FileCheck2, marker: "3" },
+  { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList, marker: "4" },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
   { href: "/teacher/discussions", label: "Discussions", icon: MessageSquareText },
-  { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
+  { href: "/teacher/planner", label: "Planner", icon: CalendarClock, marker: "5" },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/teacher/reports", label: "Reports", icon: ClipboardList },
@@ -86,9 +87,9 @@ export const teacherNavItems: ShellNavItem[] = [
 ];
 
 export const studentNavItems: ShellNavItem[] = [
-  { href: "/student/dashboard", label: "Learning Cockpit", icon: LayoutDashboard },
-  { href: "/student/work", label: "My Work", icon: FileCheck2 },
-  { href: "/student/grades", label: "Grades", icon: ClipboardList },
+  { href: "/student/dashboard", label: "Learning Cockpit", icon: LayoutDashboard, marker: "1" },
+  { href: "/student/work", label: "My Work", icon: FileCheck2, marker: "2" },
+  { href: "/student/grades", label: "Grades", icon: ClipboardList, marker: "3" },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/student/profile", label: "Profile", icon: UserRound },
@@ -247,14 +248,28 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         href={item.href}
         onClick={() => setMobileOpen(false)}
         title={collapsed ? item.label : undefined}
-        className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
+        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
           isActive
             ? "bg-edsync-blue/12 text-edsync-blue ring-1 ring-edsync-blue/25"
             : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
         } ${collapsed ? "justify-center" : ""}`}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.marker && (
+              <span className="rounded-full border border-edsync-border bg-edsync-card px-1.5 py-0.5 text-[10px] font-bold leading-none text-edsync-subtle group-hover:text-edsync-text">
+                {item.marker}
+              </span>
+            )}
+          </>
+        )}
+        {collapsed && item.marker && (
+          <span className="absolute right-1 top-1 rounded-full bg-edsync-blue px-1 text-[9px] font-bold leading-4 text-white">
+            {item.marker}
+          </span>
+        )}
       </Link>
     );
   };
