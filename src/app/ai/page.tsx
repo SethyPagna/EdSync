@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowRight, Brain, FileText, Presentation, Sparkles, Timer } from "lucide-react";
+import AiPromptBuilder from "@/components/ai/AiPromptBuilder";
 import { AI_PROMPT_CONTRACTS } from "@/lib/studio/catalog";
 import { getSessionUser } from "@/lib/auth/session";
 
@@ -9,21 +8,13 @@ export const metadata = {
   description: "Guided AI prompt builder for Studio content, lessons, slides, and practice.",
 };
 
-const featureIcons = {
-  clean_notes: FileText,
-  organize_outline: FileText,
-  lesson_sections: FileText,
-  slide_deck: Presentation,
-  worksheet: FileText,
-  quiz: Timer,
-  flashcards: Timer,
-  rubric: FileText,
-  discussion: FileText,
-  rewrite: Sparkles,
-  zero_to_expert: Brain,
+type AiPageProps = {
+  searchParams?: {
+    task?: string;
+  };
 };
 
-export default async function AiPage() {
+export default async function AiPage({ searchParams }: AiPageProps) {
   const user = await getSessionUser().catch(() => null);
   if (!user) redirect("/auth/login?next=/ai");
 
@@ -38,29 +29,7 @@ export default async function AiPage() {
             slides, documents, or Practice.
           </p>
         </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {AI_PROMPT_CONTRACTS.map((contract) => {
-            const Icon = featureIcons[contract.feature] ?? Sparkles;
-            return (
-              <article key={contract.id} className="rounded-lg border border-edsync-border bg-edsync-card p-5">
-                <Icon className="mb-4 h-7 w-7 text-edsync-blue" />
-                <h2 className="font-display text-xl font-bold">{contract.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-edsync-subtle">{contract.description}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {contract.insertTargets.map((target) => (
-                    <span key={target} className="badge bg-edsync-blue/10 text-edsync-blue">
-                      {target.replaceAll("_", " ")}
-                    </span>
-                  ))}
-                </div>
-                <Link href="/studio" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                  Open in Studio <ArrowRight className="h-4 w-4" />
-                </Link>
-              </article>
-            );
-          })}
-        </div>
+        <AiPromptBuilder contracts={AI_PROMPT_CONTRACTS} initialTask={searchParams?.task} />
       </section>
     </main>
   );
