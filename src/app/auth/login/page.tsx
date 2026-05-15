@@ -112,19 +112,15 @@ export default function LoginPage() {
         </Link>
         <div>
           <p className="mb-4 inline-flex rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
-            Secure role-aware workspace
+            Secure workspace
           </p>
           <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Pick up right where your learning evidence left off.
+            Learning work, organized.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-edsync-subtle">
-            Teachers see class actions. Students see their next step. EdSync
-            keeps both views connected by progress and reflection data.
-          </p>
         </div>
         <div className="flex items-center gap-3 text-sm text-edsync-subtle">
           <ShieldCheck className="h-5 w-5 text-edsync-emerald" />
-          edsync Auth with protected teacher and student portals.
+          Protected teacher, student, and admin portals.
         </div>
       </section>
 
@@ -140,9 +136,6 @@ export default function LoginPage() {
           </div>
           <div className="edsync-card p-7">
             <h2 className="font-display text-3xl font-bold">Welcome back</h2>
-            <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-              Sign in to continue your teacher or student workspace.
-            </p>
             <div className="mt-7">
               <Suspense
                 fallback={
