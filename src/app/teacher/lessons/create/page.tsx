@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
@@ -1466,13 +1467,16 @@ export default function CreateLesson() {
                             className="edsync-input py-2 text-sm"
                             placeholder="Caption / description for students..."
                           />
-                          {imgUrl && imgUrl.startsWith("http") && (
-                            <img
+                          {imgUrl && imgUrl.startsWith("https://") && (
+                            <Image
                               src={imgUrl}
                               alt="Preview"
-                              className="w-full max-h-48 object-contain rounded-xl border border-edsync-border mt-1"
+                              width={960}
+                              height={540}
+                              sizes="(max-width: 768px) 100vw, 720px"
+                              className="mt-1 h-auto max-h-48 w-full rounded-xl border border-edsync-border object-contain"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
+                                (e.currentTarget as HTMLImageElement).style.display =
                                   "none";
                               }}
                             />
