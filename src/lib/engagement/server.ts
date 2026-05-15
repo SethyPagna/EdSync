@@ -1,4 +1,10 @@
 import { d1Query } from "@/lib/db/d1";
+import {
+  normalizeEmailDisplay,
+  validateEmailAddress,
+  validateEmailBody,
+  validateEmailSubject,
+} from "@/lib/engagement/email-validation";
 
 type NotificationInput = {
   userId: string;
@@ -22,6 +28,17 @@ type EmailInput = {
   replyTo?: string | null;
   metadata?: Record<string, unknown>;
 };
+
+function normalizeEmailInput(input: EmailInput): EmailInput {
+  return {
+    ...input,
+    recipientEmail: validateEmailAddress(input.recipientEmail, "Recipient email"),
+    subject: validateEmailSubject(input.subject),
+    bodyText: validateEmailBody(input.bodyText),
+    senderDisplay: normalizeEmailDisplay(input.senderDisplay, "EdSync"),
+    replyTo: input.replyTo ? validateEmailAddress(input.replyTo, "Reply-to email") : null,
+  };
+}
 
 function composeMailto(input: EmailInput) {
   const query = new URLSearchParams({
@@ -93,8 +110,9 @@ async function sendViaResend(input: EmailInput) {
 }
 
 export async function queueEmail(input: EmailInput) {
-  const result = await sendViaResend(input);
-  const composeUrl = composeMailto(input);
+  const normalized = normalizeEmailInput(input);
+  const result = await sendViaResend(normalized);
+  const composeUrl = composeMailto(normalized);
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO email_messages (
@@ -103,20 +121,20 @@ export async function queueEmail(input: EmailInput) {
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`,
     [
       id,
-      input.recipientUserId ?? null,
-      input.recipientEmail,
-      input.subject,
-      input.bodyText,
-      input.bodyHtml ?? null,
+      normalized.recipientUserId ?? null,
+      normalized.recipientEmail,
+      normalized.subject,
+      normalized.bodyText,
+      normalized.bodyHtml ?? null,
       result.status,
       result.provider,
       result.providerId,
       result.error,
       JSON.stringify({
         composeUrl,
-        senderDisplay: input.senderDisplay ?? null,
-        replyTo: input.replyTo ?? null,
-        ...(input.metadata ?? {}),
+        senderDisplay: normalized.senderDisplay ?? null,
+        replyTo: normalized.replyTo ?? null,
+        ...(normalized.metadata ?? {}),
       }),
       result.status === "sent" ? new Date().toISOString() : null,
     ],
