@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Edit3, Save, Sparkles, Trash2, X } from "lucide-react";
 import type { AutomationRule } from "@/types";
+import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type AutomationPayload = {
   rules: AutomationRule[];
@@ -109,13 +110,10 @@ export default function AdminAutomationPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Governance</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Automation Rules</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Build practical if-this-then-that rules for nudges, unlocks, badge awards, deadline reminders, and certification follow-up.
-          </p>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          Default recipes are seeded as paused rules. Turn on only the automations that match the tenant workflow.
-        </div>
+        <InfoPopover label="Automation help">
+          Start paused. Test notifications first. Enable unlocks, badges, and reminders after the tenant flow is confirmed.
+        </InfoPopover>
       </header>
 
       {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
@@ -141,7 +139,6 @@ export default function AdminAutomationPage() {
       <div className="edsync-card overflow-hidden p-0">
         <div className="border-b border-edsync-border px-4 py-3">
           <h2 className="font-display text-xl font-bold">Rules</h2>
-          <p className="text-sm text-edsync-subtle">Edit, pause, enable, or delete automation recipes.</p>
         </div>
         <div className="divide-y divide-edsync-border">
           {payload.rules.map((rule) => {
