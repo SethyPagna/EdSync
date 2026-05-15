@@ -38,11 +38,11 @@ function draftFrom(rule: AutomationRule): RuleDraft {
   };
 }
 
-function parseJson<T>(value: string, fallback: T): T {
+function parseJsonStrict<T>(value: string, label: string): T {
   try {
     return JSON.parse(value) as T;
   } catch {
-    return fallback;
+    throw new Error(`${label} must be valid JSON.`);
   }
 }
 
@@ -74,8 +74,8 @@ export default function AdminAutomationPage() {
   const bodyFrom = (source: RuleDraft) => ({
     title: source.title,
     triggerKey: source.triggerKey,
-    conditions: parseJson<Record<string, unknown>>(source.conditionsText, {}),
-    actions: parseJson<Array<Record<string, unknown>>>(source.actionsText, []),
+    conditions: parseJsonStrict<Record<string, unknown>>(source.conditionsText, "Conditions"),
+    actions: parseJsonStrict<Array<Record<string, unknown>>>(source.actionsText, "Actions"),
     enabled: source.enabled,
   });
 
@@ -109,12 +109,26 @@ export default function AdminAutomationPage() {
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
-    const ok = await run({ action: "create", ...bodyFrom(form) }, "Automation rule created.");
+    let body;
+    try {
+      body = bodyFrom(form);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Automation rule is invalid.");
+      return;
+    }
+    const ok = await run({ action: "create", ...body }, "Automation rule created.");
     if (ok) setForm(emptyRule);
   };
 
   const save = async (rule: AutomationRule) => {
-    const ok = await run({ action: "update", id: rule.id, ...bodyFrom(draft) }, "Automation rule saved.");
+    let body;
+    try {
+      body = bodyFrom(draft);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Automation rule is invalid.");
+      return;
+    }
+    const ok = await run({ action: "update", id: rule.id, ...body }, "Automation rule saved.");
     if (ok) setEditingId(null);
   };
 
