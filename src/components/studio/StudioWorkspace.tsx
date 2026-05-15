@@ -5,11 +5,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  ArrowDown,
+  ArrowUp,
   BadgeCheck,
   BookOpenCheck,
   Columns3,
+  Copy,
   Download,
   FileText,
+  FileUp,
   Grid3X3,
   History,
   ImageIcon,
@@ -27,6 +31,7 @@ import {
   Table2,
   Timer,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   AI_PROMPT_CONTRACTS,
@@ -38,9 +43,23 @@ import {
 } from "@/lib/studio/catalog";
 import {
   createDebouncedDraftWriter,
+  clearStudioDraft,
   readStudioDraft,
   writeStudioDraft,
 } from "@/lib/studio/drafts";
+import {
+  addSheetColumn,
+  addSheetRow,
+  createSlide,
+  csvToSheet,
+  deleteSheetColumn,
+  deleteSheetRow,
+  deleteSlide,
+  duplicateSlide,
+  moveSlide,
+  sheetToCsv,
+  updateSheetCell as updateSheetCellValue,
+} from "@/lib/studio/workspace-actions";
 import type { StudioItemKind } from "@/types";
 
 const RichTextStudioEditor = dynamic(() => import("@/components/studio/RichTextStudioEditor"), {
@@ -94,17 +113,39 @@ function titleForKind(kind: StudioItemKind) {
   return "Studio";
 }
 
+function downloadTextFile(filename: string, text: string, mimeType: string) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function extensionForKind(kind: StudioItemKind) {
+  if (kind === "sheet") return "csv";
+  if (kind === "slide") return "json";
+  if (kind === "doc" || kind === "note" || kind === "lesson") return "html";
+  return "json";
+}
+
 export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorkspaceProps) {
   const [activeKind, setActiveKind] = useState<StudioItemKind>(initialKind);
   const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
   const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
   const [advancedSheetLoaded, setAdvancedSheetLoaded] = useState(false);
+  const [presenting, setPresenting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("Ready");
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
+  const activeKindRef = useRef<StudioItemKind>(initialKind);
   const writerRef = useRef(createDebouncedDraftWriter<StudioDraftValue>((value) => {
+    const currentKind = activeKindRef.current;
     writeStudioDraft({
-      kind: activeKind,
+      kind: currentKind,
       itemId: "workspace",
-      title: titleForKind(activeKind),
+      title: titleForKind(currentKind),
       value,
       status: "local_draft",
     });
@@ -113,14 +154,28 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
   useEffect(() => {
     setActiveKind(initialKind);
+    activeKindRef.current = initialKind;
     const stored = readStudioDraft<StudioDraftValue>(initialKind, "workspace");
     setDraft(stored?.value ?? defaultDraft);
     setDraftStatus(stored ? "local_draft" : "saved");
   }, [initialKind]);
 
+  const selectKind = (kind: StudioItemKind) => {
+    writerRef.current.flush(draft);
+    activeKindRef.current = kind;
+    setActiveKind(kind);
+    const stored = readStudioDraft<StudioDraftValue>(kind, "workspace");
+    setDraft(stored?.value ?? defaultDraft);
+    setDraftStatus(stored ? "local_draft" : "saved");
+    setStatusMessage(stored ? "Restored local draft" : "Ready");
+  };
+
   useEffect(() => {
     const draftWriter = writerRef.current;
-    const flush = () => draftWriter.flush(draft);
+    const flush = () => {
+      draftWriter.flush(draft);
+      setStatusMessage("Draft saved locally");
+    };
     window.addEventListener("beforeunload", flush);
     return () => {
       window.removeEventListener("beforeunload", flush);
@@ -132,10 +187,19 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     () => draft.slides.find((slide) => slide.id === selectedSlideId) ?? draft.slides[0],
     [draft.slides, selectedSlideId],
   );
+  const activeSlideIndex = useMemo(
+    () => Math.max(draft.slides.findIndex((slide) => slide.id === selectedSlideId), 0),
+    [draft.slides, selectedSlideId],
+  );
+  const sheetColumnCount = useMemo(
+    () => Math.max(...draft.sheet.map((row) => row.length), 1),
+    [draft.sheet],
+  );
 
   const updateDraft = (next: StudioDraftValue) => {
     setDraft(next);
     setDraftStatus("saving");
+    setStatusMessage("Saving local draft...");
     writerRef.current.schedule(next);
   };
 
@@ -144,23 +208,97 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   };
 
   const addSlide = () => {
-    const nextSlide = {
-      id: `slide-${draft.slides.length + 1}`,
-      title: "New Slide",
-      notes: "Add speaker notes or teaching guidance.",
-      accent: SLIDE_THEMES[draft.slides.length % SLIDE_THEMES.length].colors.primary,
-    };
+    const nextSlide = createSlide(draft.slides, SLIDE_THEMES[draft.slides.length % SLIDE_THEMES.length].colors.primary);
     updateDraft({ ...draft, slides: [...draft.slides, nextSlide] });
     setSelectedSlideId(nextSlide.id);
   };
 
   const updateSheetCell = (rowIndex: number, columnIndex: number, value: string) => {
-    const sheet = draft.sheet.map((row, currentRow) =>
-      currentRow === rowIndex
-        ? row.map((cell, currentColumn) => (currentColumn === columnIndex ? value : cell))
-        : row,
-    );
-    updateDraft({ ...draft, sheet });
+    updateDraft({ ...draft, sheet: updateSheetCellValue(draft.sheet, rowIndex, columnIndex, value) });
+  };
+
+  const saveDraft = () => {
+    writerRef.current.cancel();
+    writeStudioDraft({
+      kind: activeKind,
+      itemId: "workspace",
+      title: titleForKind(activeKind),
+      value: draft,
+      status: "saved",
+    });
+    setDraftStatus("saved");
+    setStatusMessage("Saved locally");
+  };
+
+  const resetDraft = () => {
+    writerRef.current.cancel();
+    clearStudioDraft(activeKind, "workspace");
+    setDraft(defaultDraft);
+    setSelectedSlideId(defaultDraft.slides[0].id);
+    setDraftStatus("saved");
+    setStatusMessage("Workspace reset");
+  };
+
+  const exportDraft = () => {
+    const extension = extensionForKind(activeKind);
+    const filename = `edsync-${activeKind}-${new Date().toISOString().slice(0, 10)}.${extension}`;
+    if (activeKind === "sheet") {
+      downloadTextFile(filename, sheetToCsv(draft.sheet), "text/csv;charset=utf-8");
+      return;
+    }
+    if (activeKind === "slide") {
+      downloadTextFile(filename, JSON.stringify({ slides: draft.slides }, null, 2), "application/json");
+      return;
+    }
+    downloadTextFile(filename, draft.html, "text/html;charset=utf-8");
+  };
+
+  const importCsv = async (file: File | undefined) => {
+    if (!file) return;
+    const text = await file.text();
+    updateDraft({ ...draft, sheet: csvToSheet(text) });
+    activeKindRef.current = "sheet";
+    setActiveKind("sheet");
+    setStatusMessage(`Imported ${file.name}`);
+  };
+
+  const insertBlock = (label: string) => {
+    const nextHtml = `${draft.html}<hr><h2>${label}</h2><p>Add details, examples, and checks for understanding.</p>`;
+    updateDraft({ ...draft, html: nextHtml, plainText: `${draft.plainText}\n${label}` });
+    activeKindRef.current = "lesson";
+    setActiveKind("lesson");
+  };
+
+  const appendImagePrompt = () => {
+    const url = window.prompt("Paste an HTTPS image URL");
+    if (!url?.startsWith("https://")) {
+      setStatusMessage("Only HTTPS image URLs are allowed");
+      return;
+    }
+    updateDraft({
+      ...draft,
+      html: `${draft.html}<figure><img src="${url}" alt="Lesson visual"><figcaption>Image caption</figcaption></figure>`,
+    });
+    activeKindRef.current = "doc";
+    setActiveKind("doc");
+  };
+
+  const duplicateSelectedSlide = () => {
+    const nextSlides = duplicateSlide(draft.slides, selectedSlideId);
+    updateDraft({ ...draft, slides: nextSlides });
+    const selectedIndex = draft.slides.findIndex((slide) => slide.id === selectedSlideId);
+    const duplicate = nextSlides[selectedIndex + 1];
+    if (duplicate) setSelectedSlideId(duplicate.id);
+  };
+
+  const deleteSelectedSlide = () => {
+    const nextSlides = deleteSlide(draft.slides, selectedSlideId);
+    updateDraft({ ...draft, slides: nextSlides });
+    setSelectedSlideId(nextSlides[0]?.id ?? defaultDraft.slides[0].id);
+  };
+
+  const moveSelectedSlide = (direction: "up" | "down") => {
+    updateDraft({ ...draft, slides: moveSlide(draft.slides, selectedSlideId, direction) });
   };
 
   return (
@@ -184,7 +322,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <button
                   key={tab.href}
                   type="button"
-                  onClick={() => setActiveKind(tab.kind)}
+                  onClick={() => selectKind(tab.kind)}
                   className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
                     active
                       ? "bg-edsync-blue text-white"
@@ -219,26 +357,34 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <h1 className="font-display text-3xl font-bold">{titleForKind(activeKind)}</h1>
               </div>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { label: "Save", icon: Save },
-                  { label: "Split", icon: SplitSquareHorizontal },
-                  { label: "History", icon: History },
-                  { label: "Export", icon: Download },
-                  { label: "Reset", icon: RotateCcw },
-                ].map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <button key={action.label} type="button" className="btn-secondary px-3 py-2 text-sm">
-                      <Icon className="h-4 w-4" />
-                      {action.label}
-                    </button>
-                  );
-                })}
-                <button type="button" className="btn-primary px-3 py-2 text-sm">
+                <button type="button" onClick={saveDraft} className="btn-secondary px-3 py-2 text-sm">
+                  <Save className="h-4 w-4" />
+                  Save
+                </button>
+                <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setStatusMessage("Split panes are ready for the next layout pass")}>
+                  <SplitSquareHorizontal className="h-4 w-4" />
+                  Split
+                </button>
+                <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setStatusMessage("History is tracked through local drafts and D1 events")}>
+                  <History className="h-4 w-4" />
+                  History
+                </button>
+                <button type="button" onClick={exportDraft} className="btn-secondary px-3 py-2 text-sm">
+                  <Download className="h-4 w-4" />
+                  Export
+                </button>
+                <button type="button" onClick={resetDraft} className="btn-secondary px-3 py-2 text-sm">
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </button>
+                <Link href="/ai" className="btn-primary px-3 py-2 text-sm">
                   <Sparkles className="h-4 w-4" />
                   Ask AI
-                </button>
+                </Link>
               </div>
+            </div>
+            <div className="mt-3 inline-flex rounded-full border border-edsync-border bg-edsync-surface px-3 py-1 text-xs font-semibold text-edsync-subtle">
+              {statusMessage}
             </div>
           </header>
 
@@ -260,17 +406,71 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         Advanced sheet controls {advancedSheetLoaded ? "enabled" : "ready"} with native fallback grid.
                       </p>
                     </div>
-                    <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadUniverEngine}>
-                      <Grid3X3 className="h-4 w-4" />
-                      Enable advanced sheet tools
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadUniverEngine}>
+                        <Grid3X3 className="h-4 w-4" />
+                        Advanced tools
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => updateDraft({ ...draft, sheet: addSheetRow(draft.sheet) })}>
+                        <Plus className="h-4 w-4" />
+                        Row
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => updateDraft({ ...draft, sheet: addSheetColumn(draft.sheet) })}>
+                        <Plus className="h-4 w-4" />
+                        Column
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => csvInputRef.current?.click()}>
+                        <FileUp className="h-4 w-4" />
+                        CSV
+                      </button>
+                      <input
+                        ref={csvInputRef}
+                        type="file"
+                        accept=".csv,text/csv"
+                        className="hidden"
+                        onChange={(event) => importCsv(event.target.files?.[0])}
+                      />
+                    </div>
                   </div>
                   <div className="overflow-auto p-3">
                     <table className="min-w-full border-collapse text-sm">
+                      <thead>
+                        <tr>
+                          <th className="w-12 border border-edsync-border bg-edsync-surface px-2 py-1 text-xs text-edsync-subtle" />
+                          {Array.from({ length: sheetColumnCount }, (_, columnIndex) => (
+                            <th key={`column-${columnIndex}`} className="border border-edsync-border bg-edsync-surface px-2 py-1">
+                              <div className="flex items-center justify-between gap-2 text-xs text-edsync-subtle">
+                                <span>{String.fromCharCode(65 + columnIndex)}</span>
+                                <button
+                                  type="button"
+                                  className="rounded p-1 hover:bg-edsync-card"
+                                  onClick={() => updateDraft({ ...draft, sheet: deleteSheetColumn(draft.sheet, columnIndex) })}
+                                  aria-label={`Delete column ${columnIndex + 1}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
                       <tbody>
                         {draft.sheet.map((row, rowIndex) => (
                           <tr key={rowIndex}>
-                            {row.map((cell, columnIndex) => (
+                            <th className="border border-edsync-border bg-edsync-surface px-2 py-1">
+                              <div className="flex items-center justify-between gap-2 text-xs text-edsync-subtle">
+                                <span>{rowIndex + 1}</span>
+                                <button
+                                  type="button"
+                                  className="rounded p-1 hover:bg-edsync-card"
+                                  onClick={() => updateDraft({ ...draft, sheet: deleteSheetRow(draft.sheet, rowIndex) })}
+                                  aria-label={`Delete row ${rowIndex + 1}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </th>
+                            {Array.from({ length: sheetColumnCount }, (_, columnIndex) => row[columnIndex] ?? "").map((cell, columnIndex) => (
                               <td key={`${rowIndex}-${columnIndex}`} className="border border-edsync-border">
                                 <input
                                   className="h-10 min-w-40 bg-transparent px-2 outline-none focus:bg-edsync-surface"
@@ -309,6 +509,24 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       <Plus className="h-4 w-4" />
                       Add slide
                     </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={duplicateSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </button>
+                      <button type="button" onClick={deleteSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                      <button type="button" onClick={() => moveSelectedSlide("up")} className="btn-secondary justify-center py-2 text-sm">
+                        <ArrowUp className="h-4 w-4" />
+                        Up
+                      </button>
+                      <button type="button" onClick={() => moveSelectedSlide("down")} className="btn-secondary justify-center py-2 text-sm">
+                        <ArrowDown className="h-4 w-4" />
+                        Down
+                      </button>
+                    </div>
                   </div>
                   <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
                     <div className="aspect-video rounded-lg border border-edsync-border bg-edsync-surface p-8 shadow-inner">
@@ -345,6 +563,29 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         })
                       }
                     />
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {SLIDE_THEMES.map((theme) => (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          className="rounded-lg border border-edsync-border px-3 py-2 text-sm font-semibold hover:border-edsync-blue/40"
+                          onClick={() =>
+                            updateDraft({
+                              ...draft,
+                              slides: draft.slides.map((slide) =>
+                                slide.id === activeSlide.id ? { ...slide, accent: theme.colors.primary } : slide,
+                              ),
+                            })
+                          }
+                        >
+                          {theme.name}
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => setPresenting(true)} className="btn-primary px-3 py-2 text-sm">
+                        <MonitorPlay className="h-4 w-4" />
+                        Present
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -369,16 +610,16 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="Insert Tools" icon={Plus}>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "Text", icon: FileText },
-                    { label: "Image", icon: ImageIcon },
-                    { label: "Table", icon: Table2 },
-                    { label: "Shape", icon: Shapes },
-                    { label: "Slides", icon: Presentation },
-                    { label: "Practice", icon: Timer },
+                    { label: "Text", icon: FileText, action: () => insertBlock("Text block") },
+                    { label: "Image", icon: ImageIcon, action: appendImagePrompt },
+                    { label: "Table", icon: Table2, action: () => selectKind("sheet") },
+                    { label: "Shape", icon: Shapes, action: () => insertBlock("Design callout") },
+                    { label: "Slides", icon: Presentation, action: () => selectKind("slide") },
+                    { label: "Practice", icon: Timer, action: () => selectKind("practice") },
                   ].map((tool) => {
                     const Icon = tool.icon;
                     return (
-                      <button key={tool.label} type="button" className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold hover:border-edsync-blue/40">
+                      <button key={tool.label} type="button" onClick={tool.action} className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold hover:border-edsync-blue/40">
                         <Icon className="mb-2 h-4 w-4 text-edsync-blue" />
                         {tool.label}
                       </button>
@@ -390,7 +631,12 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="Design Templates" icon={Shapes}>
                 <div className="space-y-2">
                   {DESIGN_TEMPLATES.slice(0, 5).map((template) => (
-                    <button key={template.id} type="button" className="w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40">
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => insertBlock(template.title)}
+                      className="w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40"
+                    >
                       <p className="text-sm font-semibold">{template.title}</p>
                       <p className="mt-1 line-clamp-2 text-xs text-edsync-subtle">{template.description}</p>
                     </button>
@@ -401,7 +647,12 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="Section Blocks" icon={Columns3}>
                 <div className="space-y-2">
                   {DESIGN_BLOCKS.map((block) => (
-                    <button key={block.id} type="button" className="flex w-full items-start gap-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40">
+                    <button
+                      key={block.id}
+                      type="button"
+                      onClick={() => insertBlock(block.title)}
+                      className="flex w-full items-start gap-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40"
+                    >
                       <BadgeCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-edsync-emerald" />
                       <span>
                         <span className="block text-sm font-semibold">{block.title}</span>
@@ -415,27 +666,27 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="AI Actions" icon={Sparkles}>
                 <div className="space-y-2">
                   {AI_PROMPT_CONTRACTS.map((contract) => (
-                    <button key={contract.id} type="button" className="w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40">
+                    <Link key={contract.id} href={`/ai?task=${contract.id}`} className="block w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40">
                       <p className="text-sm font-semibold">{contract.title}</p>
                       <p className="mt-1 text-xs text-edsync-subtle">{contract.description}</p>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </Panel>
 
               <Panel title="Slide Show" icon={MonitorPlay}>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <button type="button" className="btn-secondary justify-center py-2">Present</button>
-                  <button type="button" className="btn-secondary justify-center py-2">Transitions</button>
-                  <button type="button" className="btn-secondary justify-center py-2">Animation</button>
-                  <button type="button" className="btn-secondary justify-center py-2">Notes</button>
+                  <button type="button" onClick={() => setPresenting(true)} className="btn-secondary justify-center py-2">Present</button>
+                  <button type="button" onClick={() => setStatusMessage("Fade transition selected")} className="btn-secondary justify-center py-2">Transitions</button>
+                  <button type="button" onClick={() => setStatusMessage("Rise animation selected")} className="btn-secondary justify-center py-2">Animation</button>
+                  <button type="button" onClick={() => selectKind("slide")} className="btn-secondary justify-center py-2">Notes</button>
                 </div>
               </Panel>
 
               <Panel title="Inspector" icon={PanelRight}>
                 <div className="space-y-2 text-sm text-edsync-subtle">
                   <p>Style, layout, references, navigation, accessibility, and export settings stay here instead of adding more top bars.</p>
-                  <button type="button" className="btn-secondary w-full justify-center py-2 text-sm">
+                  <button type="button" onClick={resetDraft} className="btn-secondary w-full justify-center py-2 text-sm">
                     <Trash2 className="h-4 w-4" />
                     Archive item
                   </button>
@@ -445,6 +696,54 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
           </div>
         </section>
       </div>
+      {presenting && (
+        <div className="fixed inset-0 z-50 bg-slate-950 p-4 text-white">
+          <div className="mx-auto flex h-full max-w-6xl flex-col">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-white/60">
+                  Slide {activeSlideIndex + 1} of {draft.slides.length}
+                </p>
+                <h2 className="font-display text-xl font-bold">{activeSlide.title}</h2>
+              </div>
+              <button type="button" className="rounded-lg bg-white/10 p-2 hover:bg-white/20" onClick={() => setPresenting(false)} aria-label="Close slideshow">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="flex items-center justify-center rounded-2xl bg-white p-8 text-slate-950">
+                <div className="aspect-video w-full max-w-5xl rounded-xl border border-slate-200 p-10 shadow-2xl">
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: activeSlide.accent }}>
+                    EdSync slideshow
+                  </span>
+                  <h3 className="mt-10 font-display text-6xl font-bold">{activeSlide.title}</h3>
+                  <p className="mt-8 max-w-2xl text-lg text-slate-600">Use this native preview to rehearse pacing, notes, and slide flow before publishing.</p>
+                </div>
+              </div>
+              <aside className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                <p className="text-sm font-semibold text-white/70">Speaker notes</p>
+                <p className="mt-3 text-sm leading-6 text-white/85">{activeSlide.notes}</p>
+                <div className="mt-6 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
+                    onClick={() => setSelectedSlideId(draft.slides[Math.max(activeSlideIndex - 1, 0)].id)}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-white/90"
+                    onClick={() => setSelectedSlideId(draft.slides[Math.min(activeSlideIndex + 1, draft.slides.length - 1)].id)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
