@@ -3,6 +3,13 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent } from "@/lib/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import {
+  normalizeContentBlockStatus,
+  normalizeContentBlockTags,
+  normalizeContentBlockType,
+  validateContentBlockData,
+  validateContentBlockTitle,
+} from "@/lib/studio/content-block-validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
 type ContentBlockRow = {
@@ -29,6 +36,7 @@ function parseJson(value: string | null) {
 }
 
 function serializeBlock(row: ContentBlockRow) {
+  const tags = parseJson(row.tags);
   return {
     id: row.id,
     tenantId: row.tenant_id,
@@ -38,10 +46,14 @@ function serializeBlock(row: ContentBlockRow) {
     data: parseJson(row.data),
     version: row.version,
     status: row.status,
-    tags: Array.isArray(parseJson(row.tags)) ? (parseJson(row.tags) as string[]) : [],
+    tags: Array.isArray(tags) ? (tags as string[]) : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function jsonError(message: string, status = 400) {
+  return NextResponse.json({ data: null, error: message }, { status });
 }
 
 async function assertBlockOwner(input: {
@@ -95,11 +107,22 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) return jsonError("Unauthorized", 401);
   const context = await resolveTenantContext(user);
   await requirePermission(user, context, PERMISSIONS.coursesAuthor);
   const body = (await request.json()) as { title?: string; blockType?: string; data?: Record<string, unknown>; tags?: string[]; status?: string };
-  if (!body.title) return NextResponse.json({ data: null, error: "Title is required." }, { status: 400 });
+  let title: string;
+  let data: Record<string, unknown>;
+  try {
+    title = validateContentBlockTitle(body.title);
+    data = validateContentBlockData(body.data);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "Invalid content block.");
+  }
+  const blockType = normalizeContentBlockType(body.blockType);
+  const status = normalizeContentBlockStatus(body.status);
+  const tags = normalizeContentBlockTags(body.tags);
+  if (status === "published") await requirePermission(user, context, PERMISSIONS.coursesPublish);
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO content_blocks (id, tenant_id, owner_id, block_type, title, data, version, status, tags, created_at, updated_at)
@@ -108,11 +131,11 @@ export async function POST(request: Request) {
       id,
       context.tenant.id,
       user.id,
-      body.blockType || "rich_text",
-      body.title.trim(),
-      JSON.stringify(body.data ?? {}),
-      body.status === "published" ? "published" : "draft",
-      JSON.stringify(body.tags ?? []),
+      blockType,
+      title,
+      JSON.stringify(data),
+      status,
+      JSON.stringify(tags),
     ],
   );
   await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "content_blocks", objectId: id });
@@ -121,9 +144,9 @@ export async function POST(request: Request) {
     actorId: user.id,
     blockId: id,
     eventType: "content_block.created",
-    title: body.title.trim(),
-    status: body.status === "published" ? "published" : "draft",
-    blockType: body.blockType || "rich_text",
+    title,
+    status,
+    blockType,
   });
   const [row] = await d1Query<ContentBlockRow>("SELECT * FROM content_blocks WHERE id = ? LIMIT 1", [id]);
   return NextResponse.json({ data: { block: row ? serializeBlock(row) : { id } }, error: null });
@@ -131,7 +154,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) return jsonError("Unauthorized", 401);
   const context = await resolveTenantContext(user);
   await requirePermission(user, context, PERMISSIONS.coursesAuthor);
 
@@ -143,7 +166,7 @@ export async function PATCH(request: Request) {
     tags?: string[];
     status?: "draft" | "published" | "archived";
   };
-  if (!body.id) return NextResponse.json({ data: null, error: "Content block id is required." }, { status: 400 });
+  if (!body.id) return jsonError("Content block id is required.");
   await assertBlockOwner({
     blockId: body.id,
     tenantId: context.tenant.id,
@@ -153,27 +176,41 @@ export async function PATCH(request: Request) {
 
   const updates: string[] = [];
   const values: unknown[] = [];
-  if (body.title?.trim()) {
+  if (body.title !== undefined) {
+    let title: string;
+    try {
+      title = validateContentBlockTitle(body.title);
+    } catch (error) {
+      return jsonError(error instanceof Error ? error.message : "Invalid content block title.");
+    }
     updates.push("title = ?");
-    values.push(body.title.trim());
+    values.push(title);
   }
-  if (body.blockType?.trim()) {
+  if (body.blockType !== undefined) {
     updates.push("block_type = ?");
-    values.push(body.blockType.trim());
+    values.push(normalizeContentBlockType(body.blockType));
   }
-  if (body.data) {
+  if (body.data !== undefined) {
+    let data: Record<string, unknown>;
+    try {
+      data = validateContentBlockData(body.data);
+    } catch (error) {
+      return jsonError(error instanceof Error ? error.message : "Invalid content block data.");
+    }
     updates.push("data = ?");
-    values.push(JSON.stringify(body.data));
+    values.push(JSON.stringify(data));
   }
-  if (body.tags) {
+  if (body.tags !== undefined) {
     updates.push("tags = ?");
-    values.push(JSON.stringify(body.tags));
+    values.push(JSON.stringify(normalizeContentBlockTags(body.tags)));
   }
-  if (body.status) {
+  if (body.status !== undefined) {
+    const status = normalizeContentBlockStatus(body.status);
+    if (status === "published") await requirePermission(user, context, PERMISSIONS.coursesPublish);
     updates.push("status = ?");
-    values.push(body.status);
+    values.push(status);
   }
-  if (updates.length === 0) return NextResponse.json({ data: null, error: "No changes provided." }, { status: 400 });
+  if (updates.length === 0) return jsonError("No changes provided.");
 
   await d1Query(
     `UPDATE content_blocks
@@ -201,14 +238,14 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) return jsonError("Unauthorized", 401);
   const context = await resolveTenantContext(user);
   await requirePermission(user, context, PERMISSIONS.coursesAuthor);
 
   const params = new URL(request.url).searchParams;
   const id = params.get("id");
   const hard = params.get("hard") === "true";
-  if (!id) return NextResponse.json({ data: null, error: "Content block id is required." }, { status: 400 });
+  if (!id) return jsonError("Content block id is required.");
   await assertBlockOwner({
     blockId: id,
     tenantId: context.tenant.id,
