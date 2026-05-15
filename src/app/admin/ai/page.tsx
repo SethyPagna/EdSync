@@ -57,6 +57,7 @@ type Provider = {
   last_error: string | null;
   last_checked_at: string | null;
   has_key: boolean;
+  key_state: "ready" | "missing" | "unreadable" | "encryption_unconfigured";
   key_masked?: string;
 };
 
@@ -227,6 +228,20 @@ function statusClasses(status: Provider["last_status"]) {
   if (status === "ok") return "bg-edsync-emerald/10 text-edsync-emerald";
   if (status === "error") return "bg-edsync-red/10 text-edsync-red";
   return "bg-edsync-amber/10 text-edsync-amber";
+}
+
+function keyStateLabel(provider: Provider) {
+  if (provider.key_masked) return provider.key_masked;
+  if (provider.key_state === "unreadable") return "re-save key";
+  if (provider.key_state === "encryption_unconfigured") return "encryption off";
+  if (provider.key_state === "missing") return "missing";
+  return provider.has_key ? "stored" : "missing";
+}
+
+function keyStateClasses(provider: Provider) {
+  if (provider.key_state === "ready") return "bg-edsync-emerald/10 text-edsync-emerald";
+  if (provider.key_state === "missing") return "bg-edsync-amber/10 text-edsync-amber";
+  return "bg-edsync-red/10 text-edsync-red";
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -463,6 +478,10 @@ export default function AdminAIPage() {
                     <p>Cooldown <span className="font-semibold text-edsync-text">{provider.cooldown_seconds}s</span></p>
                   </div>
                   <p className="mt-2 break-all text-xs text-edsync-subtle">{provider.endpoint_effective}</p>
+                  <div className={`mt-2 inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-bold ${keyStateClasses(provider)}`}>
+                    <KeyRound className="h-3.5 w-3.5" />
+                    {keyStateLabel(provider)}
+                  </div>
                   {provider.last_error && <p className="mt-2 text-xs text-edsync-red">{provider.last_error}</p>}
                   <details className="mt-3 rounded-lg border border-edsync-border">
                     <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-semibold text-edsync-text" aria-label={`Provider actions for ${provider.name}`}>
@@ -557,9 +576,9 @@ export default function AdminAIPage() {
                         {provider.last_error && <p className="mt-1 max-w-[220px] text-xs text-edsync-red">{provider.last_error}</p>}
                       </td>
                       <td className="px-4 py-3 text-xs text-edsync-subtle">
-                        <div className="flex items-center gap-2">
+                        <div className={`inline-flex items-center gap-2 rounded-full px-2 py-1 font-bold ${keyStateClasses(provider)}`}>
                           <KeyRound className="h-4 w-4" />
-                          {provider.key_masked || (provider.has_key ? "stored" : "missing")}
+                          {keyStateLabel(provider)}
                         </div>
                       </td>
                       <td className="px-4 py-3">
