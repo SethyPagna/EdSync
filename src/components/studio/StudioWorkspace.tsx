@@ -43,6 +43,12 @@ import {
   STUDIO_TABS,
 } from "@/lib/studio/catalog";
 import {
+  archiveContentBlock,
+  createContentBlock,
+  listContentBlocks,
+  type StudioContentBlock,
+} from "@/lib/studio/content-blocks";
+import {
   archiveStudioItem,
   hardDeleteStudioItem,
   listStudioHistory,
@@ -169,6 +175,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const [includeArchived, setIncludeArchived] = useState(false);
   const [historyEvents, setHistoryEvents] = useState<StudioHistoryEvent[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [contentBlocks, setContentBlocks] = useState<StudioContentBlock[]>([]);
   const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
   const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
@@ -229,6 +236,22 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
       cancelled = true;
     };
   }, [activeKind, includeArchived]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    listContentBlocks()
+      .then((blocks) => {
+        if (!cancelled) setContentBlocks(blocks.filter((block) => block.status !== "archived"));
+      })
+      .catch(() => {
+        if (!cancelled) setContentBlocks([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const draftWriter = writerRef.current;
@@ -408,6 +431,48 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
       setStatusMessage(events.length > 0 ? "History loaded" : "No history yet");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Could not load history");
+    }
+  };
+
+  const saveAsContentBlock = async () => {
+    setStatusMessage("Saving reusable block...");
+    try {
+      const block = await createContentBlock({
+        title: itemTitle,
+        blockType: activeKind === "sheet" ? "sheet" : activeKind === "slide" ? "slide_deck" : "rich_text",
+        data: draftToServerContent(draft),
+        tags: ["studio", activeKind],
+        status: "draft",
+      });
+      setContentBlocks((current) => [block, ...current.filter((entry) => entry.id !== block.id)]);
+      setStatusMessage("Saved to library");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not save library block");
+    }
+  };
+
+  const insertContentBlock = (block: StudioContentBlock) => {
+    const html = typeof block.data.html === "string" ? block.data.html : `<h2>${block.title}</h2>`;
+    const sheet = Array.isArray(block.data.sheet) ? (block.data.sheet as string[][]) : draft.sheet;
+    const slides = Array.isArray(block.data.slides) ? (block.data.slides as StudioDraftValue["slides"]) : draft.slides;
+    updateDraft({
+      ...draft,
+      html: `${draft.html}<hr>${html}`,
+      plainText: `${draft.plainText}\n${block.title}`,
+      sheet,
+      slides,
+    });
+    setStatusMessage("Inserted library block");
+  };
+
+  const archiveLibraryBlock = async (block: StudioContentBlock) => {
+    setStatusMessage("Archiving library block...");
+    try {
+      await archiveContentBlock(block.id);
+      setContentBlocks((current) => current.filter((entry) => entry.id !== block.id));
+      setStatusMessage("Library block archived");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not archive block");
     }
   };
 
@@ -618,6 +683,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <button type="button" onClick={publishCurrentItem} className="btn-secondary px-3 py-2 text-sm">
                   <CheckCircle2 className="h-4 w-4" />
                   Publish
+                </button>
+                <button type="button" onClick={saveAsContentBlock} className="btn-secondary px-3 py-2 text-sm">
+                  <Layers3 className="h-4 w-4" />
+                  Save Block
                 </button>
                 <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setStatusMessage("Split panes are ready for the next layout pass")}>
                   <SplitSquareHorizontal className="h-4 w-4" />
@@ -904,6 +973,27 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
               <Panel title="Section Blocks" icon={Columns3}>
                 <div className="space-y-2">
+                  {contentBlocks.slice(0, 6).map((block) => (
+                    <div key={block.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                      <button
+                        type="button"
+                        onClick={() => insertContentBlock(block)}
+                        className="w-full text-left"
+                      >
+                        <span className="block text-sm font-semibold">{block.title}</span>
+                        <span className="mt-1 block text-xs capitalize text-edsync-subtle">
+                          Library block - v{block.version}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => archiveLibraryBlock(block)}
+                        className="mt-2 rounded-full bg-edsync-red/10 px-2 py-1 text-xs font-bold text-edsync-red"
+                      >
+                        Archive
+                      </button>
+                    </div>
+                  ))}
                   {DESIGN_BLOCKS.map((block) => (
                     <button
                       key={block.id}
