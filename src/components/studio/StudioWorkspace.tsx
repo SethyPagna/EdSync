@@ -119,11 +119,12 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   }, [initialKind]);
 
   useEffect(() => {
-    const flush = () => writerRef.current.flush(draft);
+    const draftWriter = writerRef.current;
+    const flush = () => draftWriter.flush(draft);
     window.addEventListener("beforeunload", flush);
     return () => {
       window.removeEventListener("beforeunload", flush);
-      writerRef.current.flush(draft);
+      draftWriter.flush(draft);
     };
   }, [draft]);
 
