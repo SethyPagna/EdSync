@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import { sanitizeHtml } from "@/lib/security/html";
@@ -32,6 +33,41 @@ type ReflectionAdvice = {
   guidingQuestion: string;
   encouragement: string;
 };
+
+type ExtendedQuizOption = {
+  text: string;
+  is_correct: boolean;
+};
+
+type ExtendedQuizQuestion = {
+  question: string;
+  options: ExtendedQuizOption[];
+};
+
+type ExtendedLearningPayload = {
+  topic?: unknown;
+  content?: unknown;
+  quiz?: unknown;
+};
+
+function isExtendedQuizQuestion(value: unknown): value is ExtendedQuizQuestion {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const question = (value as { question?: unknown }).question;
+  const options = (value as { options?: unknown }).options;
+  return (
+    typeof question === "string" &&
+    Array.isArray(options) &&
+    options.length >= 2 &&
+    options.every(
+      (option) =>
+        option &&
+        typeof option === "object" &&
+        !Array.isArray(option) &&
+        typeof (option as { text?: unknown }).text === "string" &&
+        typeof (option as { is_correct?: unknown }).is_correct === "boolean",
+    )
+  );
+}
 
 type ReflectionRecord = {
   id: string;
@@ -85,10 +121,13 @@ function ImageContent({ content, title }: { content: string; title: string }) {
     );
   return (
     <div className="py-2">
-      <img
+      <Image
         src={imgUrl}
         alt={caption || title}
-        className="w-full max-h-[500px] object-contain rounded-xl border border-edsync-border"
+        width={1200}
+        height={675}
+        sizes="(max-width: 768px) 100vw, 960px"
+        className="h-auto max-h-[500px] w-full rounded-xl border border-edsync-border object-contain"
       />
       {caption && (
         <p className="text-sm text-edsync-subtle text-center mt-2 italic">
@@ -507,7 +546,7 @@ export default function StudentLesson() {
   const params = useParams();
   const router = useRouter();
   const lessonId = params.id as string;
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [sections, setSections] = useState<LessonSection[]>([]);
@@ -522,8 +561,6 @@ export default function StudentLesson() {
   const [finalAnswers, setFinalAnswers] = useState<AnswerState>({});
   const [finalSubmitted, setFinalSubmitted] = useState(false);
   const [finalScore, setFinalScore] = useState<number | null>(null);
-  const [microAnswers, setMicroAnswers] = useState<AnswerState>({});
-  const [microSubmitted, setMicroSubmitted] = useState(false);
 
   // Reflection coaching states
   const [reflectionNotes, setReflectionNotes] = useState("");
@@ -536,7 +573,7 @@ export default function StudentLesson() {
   // Extended learning states
   const [extendedTopic, setExtendedTopic] = useState<string>("");
   const [extendedContent, setExtendedContent] = useState<string>("");
-  const [extendedQuiz, setExtendedQuiz] = useState<any>(null);
+  const [extendedQuiz, setExtendedQuiz] = useState<ExtendedQuizQuestion[] | null>(null);
   const [extendedLoading, setExtendedLoading] = useState(false);
   const [extendedQuizAnswers, setExtendedQuizAnswers] = useState<AnswerState>(
     {},
@@ -560,9 +597,6 @@ export default function StudentLesson() {
   const [sectionQs, setSectionQs] = useState<QuizQuestion[]>([]);
 
   useEffect(() => {
-    loadLesson();
-  }, [lessonId]);
-  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
@@ -575,21 +609,16 @@ export default function StudentLesson() {
     () => questions.filter((q) => q.is_final_quiz),
     [questions],
   );
-  const microQs = useMemo(
-    () => questions.filter((q) => q.is_micro_check),
-    [questions],
-  );
-
-  const loadLesson = async () => {
+  const loadLesson = useCallback(async () => {
     const {
       data: { user },
     } = await edsync.auth.getUser();
     if (!user) return;
 
-    let lessonData = null;
-    let sectionsData = [];
-    let questionsData = [];
-    let glossaryData = [];
+    let lessonData: Lesson | null = null;
+    let sectionsData: LessonSection[] = [];
+    let questionsData: QuizQuestion[] = [];
+    let glossaryData: GlossaryTerm[] = [];
 
     try {
       const lessonRes = await edsync
@@ -659,9 +688,7 @@ export default function StudentLesson() {
         else {
           // Resume: find which section we left off on
           const completedIds: string[] = p.sections_completed || [];
-          const nextIdx = sectionsData.findIndex(
-            (s: any) => !completedIds.includes(s.id),
-          );
+          const nextIdx = sectionsData.findIndex((section) => !completedIds.includes(section.id));
           setSectionIdx(nextIdx === -1 ? 0 : nextIdx);
           setPhase(p.diagnostic_completed ? "learning" : "diagnostic");
         }
@@ -687,7 +714,11 @@ export default function StudentLesson() {
       setPhase("diagnostic");
       toast.error("Progress tracking unavailable, starting fresh");
     }
-  };
+  }, [edsync, lessonId]);
+
+  useEffect(() => {
+    loadLesson();
+  }, [loadLesson]);
 
   const completeDiagnostic = async () => {
     const {
@@ -742,8 +773,6 @@ export default function StudentLesson() {
       );
       if (microQs.length > 0) {
         setSectionQs(microQs);
-        setMicroAnswers({});
-        setMicroSubmitted(false);
         setPhase("micro_check");
       } else {
         advanceSection();
@@ -1105,16 +1134,16 @@ export default function StudentLesson() {
       const response = data.hint || "";
 
       // Clean markdown code blocks
-      let cleanResponse = response
+      const cleanResponse = response
         .replace(/```(?:json)?\s*/g, "")
         .replace(/```\s*$/g, "")
         .trim();
 
       // Try to parse the cleaned response as JSON
-      let parsed;
+      let parsed: ExtendedLearningPayload;
       try {
         parsed = JSON.parse(cleanResponse);
-      } catch (parseError) {
+      } catch {
         // If that fails, try to extract JSON with regex
         const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -1144,21 +1173,9 @@ export default function StudentLesson() {
           ? parsed.content
           : "Extended learning content could not be generated properly.";
 
-      let quiz = [];
+      let quiz: ExtendedQuizQuestion[] = [];
       if (Array.isArray(parsed.quiz)) {
-        quiz = parsed.quiz.filter(
-          (q: any) =>
-            q &&
-            typeof q.question === "string" &&
-            Array.isArray(q.options) &&
-            q.options.length >= 2 &&
-            q.options.every(
-              (opt: any) =>
-                opt &&
-                typeof opt.text === "string" &&
-                typeof opt.is_correct === "boolean",
-            ),
-        );
+        quiz = parsed.quiz.filter(isExtendedQuizQuestion);
       }
 
       if (quiz.length === 0) {
@@ -1198,7 +1215,7 @@ export default function StudentLesson() {
         toast.error("Request timed out. Please try again.");
       } else {
         // Fallback content showing incorrect questions
-        let fallbackTopic = "Review of Challenging Topics";
+        const fallbackTopic = "Review of Challenging Topics";
         let fallbackContent =
           "Let's review the questions you found challenging in the final quiz:\n\n";
 
@@ -1503,7 +1520,7 @@ export default function StudentLesson() {
                       <QuizSection
                         questions={qsForSection}
                         title={currentSection.content || "Section Quiz"}
-                        onComplete={(score) => {
+                        onComplete={() => {
                           advanceSection();
                         }}
                       />
@@ -1571,7 +1588,7 @@ export default function StudentLesson() {
               <QuizSection
                 questions={sectionQs}
                 title="Section Quiz"
-                onComplete={(score) => advanceSection()}
+                onComplete={() => advanceSection()}
               />
             </div>
           )}
@@ -1604,7 +1621,7 @@ export default function StudentLesson() {
               <QuizSection
                 questions={sectionQs}
                 title="Micro-Check"
-                onComplete={(score) => {
+                onComplete={() => {
                   setPhase("learning");
                   advanceSection();
                 }}
@@ -1915,7 +1932,7 @@ export default function StudentLesson() {
                         Knowledge Check
                       </h3>
                       <div className="space-y-4">
-                        {extendedQuiz.map((q: any, i: number) => {
+                        {extendedQuiz.map((q, i) => {
                           const ans = extendedQuizAnswers[q.question] || "";
                           const setAns = (val: string) =>
                             !extendedQuizSubmitted &&
@@ -1923,11 +1940,6 @@ export default function StudentLesson() {
                               ...extendedQuizAnswers,
                               [q.question]: val,
                             });
-
-                          const isCorrect = (opt: any) => opt.is_correct;
-                          const selectedCorrect = q.options.find(
-                            (opt: any) => opt.text === ans,
-                          )?.is_correct;
 
                           return (
                             <div
@@ -1938,7 +1950,7 @@ export default function StudentLesson() {
                                 {q.question}
                               </p>
                               <div className="space-y-2">
-                                {q.options.map((opt: any, j: number) => {
+                                {q.options.map((opt, j) => {
                                   const selected = ans === opt.text;
                                   const showCorrect =
                                     extendedQuizSubmitted && opt.is_correct;
@@ -1995,7 +2007,7 @@ export default function StudentLesson() {
                             onClick={() => setExtendedQuizSubmitted(true)}
                             disabled={
                               !extendedQuiz.every(
-                                (q: any) => extendedQuizAnswers[q.question],
+                                (q) => extendedQuizAnswers[q.question],
                               )
                             }
                             className="btn-primary w-full justify-center py-3.5 disabled:opacity-40"
@@ -2007,10 +2019,10 @@ export default function StudentLesson() {
                             <p className="font-display font-bold text-3xl mb-2">
                               <span className="text-edsync-emerald">
                                 {Math.round(
-                                  (extendedQuiz.filter((q: any) => {
+                                  (extendedQuiz.filter((q) => {
                                     const ans = extendedQuizAnswers[q.question];
                                     return q.options.find(
-                                      (opt: any) => opt.text === ans,
+                                      (opt) => opt.text === ans,
                                     )?.is_correct;
                                   }).length /
                                     extendedQuiz.length) *
