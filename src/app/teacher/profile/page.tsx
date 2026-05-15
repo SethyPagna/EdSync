@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
@@ -102,9 +103,9 @@ export default function TeacherProfile() {
       <div className="edsync-card">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <div className="flex flex-col items-center gap-3">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-amber to-edsync-blue text-3xl font-bold text-white">
+            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-amber to-edsync-blue text-3xl font-bold text-white">
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                <Image src={profile.avatar_url} alt="" fill sizes="96px" className="object-cover" />
               ) : (
                 generateInitials(fullName || profile?.email || "Teacher")
               )}
