@@ -55,24 +55,24 @@ type AppShellProps = {
 
 const roleCopy = {
   teacher: {
-    label: "Teacher Workspace",
+    label: "Teaching Workspace",
     accent: "text-edsync-amber",
     gradient: "from-edsync-amber to-edsync-blue",
   },
   admin: {
-    label: "Admin Console",
+    label: "Platform Admin",
     accent: "text-edsync-blue",
     gradient: "from-edsync-blue to-edsync-cyan",
   },
   student: {
-    label: "Student Learning OS",
+    label: "Student Workspace",
     accent: "text-edsync-emerald",
     gradient: "from-edsync-emerald to-edsync-cyan",
   },
 };
 
 export const teacherNavItems: ShellNavItem[] = [
-  { href: "/teacher/dashboard", label: "Command Center", icon: LayoutDashboard, marker: "1" },
+  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck, marker: "2" },
   { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus, marker: "2+" },
   { href: "/teacher/work", label: "Work", icon: FileCheck2, marker: "3" },
@@ -87,7 +87,7 @@ export const teacherNavItems: ShellNavItem[] = [
 ];
 
 export const studentNavItems: ShellNavItem[] = [
-  { href: "/student/dashboard", label: "Learning Cockpit", icon: LayoutDashboard, marker: "1" },
+  { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
   { href: "/student/work", label: "My Work", icon: FileCheck2, marker: "2" },
   { href: "/student/grades", label: "Grades", icon: ClipboardList, marker: "3" },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
@@ -96,21 +96,21 @@ export const studentNavItems: ShellNavItem[] = [
 ];
 
 export const adminNavItems: ShellNavItem[] = [
-  { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: UsersRound },
   { href: "/admin/portals", label: "Portals", icon: GraduationCap, permission: "portals.manage", plan: "team" },
   { href: "/admin/permissions", label: "Permissions", icon: ShieldCheck, permission: "users.manage", plan: "enterprise" },
-  { href: "/admin/governance", label: "Governance Hub", icon: ShieldCheck },
-  { href: "/admin/ai", label: "AI Providers", icon: Brain },
+  { href: "/admin/governance", label: "Governance", icon: ShieldCheck },
+  { href: "/admin/ai", label: "AI", icon: Brain },
   { href: "/admin/standards", label: "Standards", icon: FileCheck2, permission: "courses.author", plan: "team" },
   { href: "/admin/certifications", label: "Certifications", icon: ClipboardList, permission: "courses.publish", plan: "team" },
   { href: "/admin/automation", label: "Automation", icon: Sparkles, permission: "courses.publish", plan: "team" },
   { href: "/admin/billing", label: "Billing", icon: CalendarClock, permission: "billing.manage", plan: "team" },
-  { href: "/admin/email", label: "Email Outbox", icon: MessageSquareText },
+  { href: "/admin/email", label: "Email", icon: MessageSquareText },
   { href: "/admin/security", label: "Security", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
-  { href: "/admin/view/teacher", label: "Teacher View", icon: GraduationCap },
-  { href: "/admin/view/student", label: "Student View", icon: BookOpenCheck },
+  { href: "/admin/view/teacher", label: "View Teacher", icon: GraduationCap },
+  { href: "/admin/view/student", label: "View Student", icon: BookOpenCheck },
 ];
 
 function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
@@ -467,7 +467,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
                   </div>
                 </div>
                 <Link href="/admin/dashboard" className="btn-primary w-fit px-4 py-2 text-sm">
-                  Back to Admin Console
+                  Back to Platform Admin
                 </Link>
               </div>
             </div>
