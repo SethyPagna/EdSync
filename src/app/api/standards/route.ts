@@ -4,6 +4,13 @@ import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { parseStandardsManifest } from "@/lib/standards";
+import {
+  normalizeStandardsLaunchPath,
+  normalizeStandardsStatus,
+  validateStandardsFileName,
+  validateStandardsManifestText,
+  validateStandardsTitle,
+} from "@/lib/standards-validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
 export async function GET() {
@@ -46,21 +53,34 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "update") {
-    if (!body.id || !body.title?.trim()) {
-      return NextResponse.json({ data: null, error: "Package title is required." }, { status: 400 });
+    if (!body.id) return NextResponse.json({ data: null, error: "Package is required." }, { status: 400 });
+    let title: string;
+    let launchPath: string | null;
+    try {
+      title = validateStandardsTitle(body.title);
+      launchPath = normalizeStandardsLaunchPath(body.launchPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Standards package is invalid.";
+      return NextResponse.json({ data: null, error: message }, { status: 400 });
     }
-    const status = ["uploaded", "parsed", "error", "archived"].includes(body.status || "") ? body.status : "parsed";
+    const status = normalizeStandardsStatus(body.status);
     await d1Query(
       "UPDATE standards_packages SET title = ?, launch_path = ?, status = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?",
-      [body.title.trim(), body.launchPath ?? null, status, context.tenant.id, body.id],
+      [title, launchPath, status, context.tenant.id, body.id],
     );
     return NextResponse.json({ data: { id: body.id }, error: null });
   }
 
-  if (!body.fileName || !body.manifestText) {
-    return NextResponse.json({ data: null, error: "File name and manifest text are required." }, { status: 400 });
+  let fileName: string;
+  let manifestText: string;
+  try {
+    fileName = validateStandardsFileName(body.fileName);
+    manifestText = validateStandardsManifestText(body.manifestText);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Standards manifest is invalid.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
   }
-  const parsed = parseStandardsManifest({ fileName: body.fileName, manifestText: body.manifestText });
+  const parsed = parseStandardsManifest({ fileName, manifestText });
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO standards_packages (
