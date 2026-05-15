@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { appendLearningEvent } from "@/lib/learning-events";
 import { PERMISSIONS, getPermissionSet } from "@/lib/permissions";
 import {
   normalizeStudioKind,
@@ -24,6 +25,14 @@ type StudioDocumentRow = {
   metadata: string;
   created_at: string;
   updated_at: string;
+};
+
+type StudioEventRow = {
+  id: string;
+  actor_id: string | null;
+  event_type: string;
+  payload: string;
+  created_at: string;
 };
 
 function jsonResponse(data: unknown, status = 200) {
@@ -62,6 +71,16 @@ function serializeRow(row: StudioDocumentRow) {
   };
 }
 
+function serializeEvent(row: StudioEventRow) {
+  return {
+    id: row.id,
+    actorId: row.actor_id,
+    eventType: row.event_type,
+    payload: parseJsonObject(row.payload),
+    createdAt: row.created_at,
+  };
+}
+
 async function canPublish(
   user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>,
   tenantContext: Awaited<ReturnType<typeof resolveTenantContext>>,
@@ -80,6 +99,29 @@ async function assertOwnerOrAdmin(documentId: string, tenantId: string, userId: 
   if (!isAdmin && row.owner_id !== userId) throw new Error("You cannot modify this Studio item.");
 }
 
+async function recordStudioEvent(input: {
+  tenantId: string;
+  actorId: string;
+  documentId: string;
+  eventType: string;
+  title?: string;
+  status?: string;
+  kind?: string;
+}) {
+  await appendLearningEvent({
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    sourceType: "studio_document",
+    sourceId: input.documentId,
+    eventType: input.eventType,
+    payload: {
+      title: input.title,
+      status: input.status,
+      kind: input.kind,
+    },
+  });
+}
+
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return errorResponse("Unauthorized", 401);
@@ -87,9 +129,25 @@ export async function GET(request: Request) {
   const context = await resolveTenantContext(user);
   const params = new URL(request.url).searchParams;
   const kind = params.get("kind");
+  const historyId = params.get("historyId");
   const includeArchived = params.get("includeArchived") === "true";
   const normalizedKind = kind ? normalizeStudioKind(kind) : null;
   const isAdmin = user.user_metadata.role === "admin";
+
+  if (historyId) {
+    await assertOwnerOrAdmin(historyId, context.tenant.id, user.id, isAdmin);
+    const events = await d1Query<StudioEventRow>(
+      `SELECT id, actor_id, event_type, payload, created_at
+         FROM learning_events
+        WHERE tenant_id = ?
+          AND source_type = 'studio_document'
+          AND source_id = ?
+        ORDER BY created_at DESC
+        LIMIT 50`,
+      [context.tenant.id, historyId],
+    );
+    return jsonResponse({ events: events.map(serializeEvent) });
+  }
 
   const where = [
     "tenant_id = ?",
@@ -147,12 +205,14 @@ export async function POST(request: Request) {
   }
 
   const id = body.id || crypto.randomUUID();
+  let existed = false;
   if (body.id) {
     const existing = await d1Query<Pick<StudioDocumentRow, "id" | "tenant_id" | "owner_id">>(
       "SELECT id, tenant_id, owner_id FROM studio_documents WHERE id = ? LIMIT 1",
       [body.id],
     );
     if (existing[0]) {
+      existed = true;
       if (existing[0].tenant_id !== context.tenant.id) return errorResponse("Studio item belongs to another tenant.", 403);
       if (user.user_metadata.role !== "admin" && existing[0].owner_id !== user.id) {
         return errorResponse("You cannot modify this Studio item.", 403);
@@ -194,6 +254,15 @@ export async function POST(request: Request) {
     ],
   );
   await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "studio_documents", objectId: id });
+  await recordStudioEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    documentId: id,
+    eventType: existed ? "studio.document.updated" : "studio.document.created",
+    title,
+    status: body.status === "published" ? "published" : "draft",
+    kind,
+  });
 
   const [row] = await d1Query<StudioDocumentRow>("SELECT * FROM studio_documents WHERE id = ? LIMIT 1", [id]);
   return jsonResponse({ item: row ? serializeRow(row) : { id } }, 201);
@@ -255,6 +324,22 @@ export async function PATCH(request: Request) {
     [...values, body.id, context.tenant.id],
   );
   const [row] = await d1Query<StudioDocumentRow>("SELECT * FROM studio_documents WHERE id = ? LIMIT 1", [body.id]);
+  await recordStudioEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    documentId: body.id,
+    eventType:
+      body.status === "published"
+        ? "studio.document.published"
+        : body.status === "archived"
+          ? "studio.document.archived"
+          : body.status === "draft"
+            ? "studio.document.restored"
+            : "studio.document.updated",
+    title: row?.title,
+    status: row?.status,
+    kind: row?.item_kind,
+  });
   return jsonResponse({ item: row ? serializeRow(row) : null });
 }
 
@@ -270,6 +355,12 @@ export async function DELETE(request: Request) {
 
   await assertOwnerOrAdmin(id, context.tenant.id, user.id, user.user_metadata.role === "admin");
   if (hard) {
+    await recordStudioEvent({
+      tenantId: context.tenant.id,
+      actorId: user.id,
+      documentId: id,
+      eventType: "studio.document.deleted",
+    });
     await d1Query("DELETE FROM studio_documents WHERE id = ? AND tenant_id = ?", [id, context.tenant.id]);
     return jsonResponse({ id, deleted: true });
   }
@@ -278,5 +369,12 @@ export async function DELETE(request: Request) {
     "UPDATE studio_documents SET status = 'archived', updated_at = datetime('now') WHERE id = ? AND tenant_id = ?",
     [id, context.tenant.id],
   );
+  await recordStudioEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    documentId: id,
+    eventType: "studio.document.archived",
+    status: "archived",
+  });
   return jsonResponse({ id, archived: true });
 }
