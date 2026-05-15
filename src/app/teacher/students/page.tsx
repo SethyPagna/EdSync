@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
 import type { Profile, Class, Lesson } from "@/types";
 import { generateInitials, formatRelativeTime } from "@/lib/utils";
@@ -13,6 +13,22 @@ interface Assignment {
   created_at: string;
   due_date: string | null;
 }
+
+type EnrollmentRow = { student_id: string; class_id?: string };
+type AssignmentRow = {
+  id: string;
+  lesson_id: string;
+  created_at: string;
+  due_date: string | null;
+  lessons?: { title?: string | null } | null;
+};
+
+const CLASS_CARD_COLORS = [
+  "from-blue-500 to-cyan-500",
+  "from-purple-500 to-pink-500",
+  "from-amber-500 to-orange-500",
+  "from-emerald-500 to-teal-500",
+];
 
 export default function TeacherStudents() {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -35,69 +51,77 @@ export default function TeacherStudents() {
   const [assignDueDate, setAssignDueDate] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) return;
+    try {
+      const {
+        data: { user },
+      } = await edsync.auth.getUser();
+      if (!user) return;
 
-    const { data: cls, error: clsErr } = await edsync
-      .from("classes")
-      .select("*")
-      .eq("teacher_id", user.id)
-      .eq("is_active", true)
-      .order("name");
+      const [classRes, lessonsRes] = await Promise.all([
+        edsync
+          .from("classes")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .eq("is_active", true)
+          .order("name"),
+        edsync
+          .from("lessons")
+          .select("id, title, status")
+          .eq("teacher_id", user.id)
+          .order("title"),
+      ]);
 
-    if (clsErr) {
-      toast.error("Could not load classes: " + clsErr.message);
-      setLoading(false);
-      return;
-    }
+      if (classRes.error) {
+        toast.error("Could not load classes: " + classRes.error.message);
+        return;
+      }
 
-    const myClasses: Class[] = cls || [];
-    setClasses(myClasses);
+      const myClasses: Class[] = classRes.data || [];
+      setClasses(myClasses);
+      setMyLessons((lessonsRes.data || []) as Lesson[]);
 
-    const { data: lessonsData } = await edsync
-      .from("lessons")
-      .select("id, title, status")
-      .eq("teacher_id", user.id)
-      .order("title");
-    setMyLessons((lessonsData || []) as Lesson[]);
+      if (myClasses.length === 0) {
+        setAllStudents([]);
+        setStudents([]);
+        return;
+      }
+      const classIds = myClasses.map((classItem) => classItem.id);
 
-    if (myClasses.length === 0) {
-      setLoading(false);
-      return;
-    }
-    const classIds = myClasses.map((c) => c.id);
+      const { data: enrollments } = await edsync
+        .from("class_enrollments")
+        .select("student_id, class_id")
+        .in("class_id", classIds)
+        .eq("is_active", true);
 
-    const { data: enrollments } = await edsync
-      .from("class_enrollments")
-      .select("student_id, class_id")
-      .in("class_id", classIds)
-      .eq("is_active", true);
+      const studentIds = Array.from(
+        new Set(((enrollments || []) as EnrollmentRow[]).map((enrollment) => enrollment.student_id)),
+      );
+      if (studentIds.length === 0) {
+        setAllStudents([]);
+        setStudents([]);
+        return;
+      }
 
-    const studentIds = Array.from(
-      new Set((enrollments || []).map((e: any) => e.student_id)),
-    );
-    if (studentIds.length > 0) {
       const { data: profileData } = await edsync
         .from("profiles")
         .select("*")
         .in("id", studentIds);
       setAllStudents(profileData || []);
       setStudents(profileData || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [edsync]);
 
-  const loadAssignments = async (classId: string) => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const loadAssignments = useCallback(async (classId: string) => {
     const { data } = await edsync
       .from("lesson_assignments")
       .select("id, lesson_id, created_at, due_date, lessons(title)")
@@ -106,15 +130,15 @@ export default function TeacherStudents() {
       .order("created_at", { ascending: false });
 
     setAssignments(
-      (data || []).map((a: any) => ({
-        id: a.id,
-        lesson_id: a.lesson_id,
-        lesson_title: a.lessons?.title || "Unknown lesson",
-        created_at: a.created_at,
-        due_date: a.due_date,
+      ((data || []) as AssignmentRow[]).map((assignment) => ({
+        id: assignment.id,
+        lesson_id: assignment.lesson_id,
+        lesson_title: assignment.lessons?.title || "Unknown lesson",
+        created_at: assignment.created_at,
+        due_date: assignment.due_date,
       })),
     );
-  };
+  }, [edsync]);
 
   const selectClass = async (classId: string) => {
     setSelectedClass(classId);
@@ -128,8 +152,8 @@ export default function TeacherStudents() {
       .select("student_id")
       .eq("class_id", classId)
       .eq("is_active", true);
-    const ids = (data || []).map((e: any) => e.student_id);
-    setStudents(allStudents.filter((s) => ids.includes(s.id)));
+    const ids = new Set(((data || []) as EnrollmentRow[]).map((enrollment) => enrollment.student_id));
+    setStudents(allStudents.filter((student) => ids.has(student.id)));
     await loadAssignments(classId);
   };
 
@@ -193,8 +217,7 @@ export default function TeacherStudents() {
       return;
     }
 
-    const already = assignments.find((a) => a.lesson_id === assignLessonId);
-    if (already) {
+    if (assignedLessonIds.has(assignLessonId)) {
       toast.error("Already assigned");
       setAssigning(false);
       return;
@@ -257,14 +280,14 @@ export default function TeacherStudents() {
     toast.success("Class deleted");
   };
 
-  const COLORS = [
-    "from-blue-500 to-cyan-500",
-    "from-purple-500 to-pink-500",
-    "from-amber-500 to-orange-500",
-    "from-emerald-500 to-teal-500",
-  ];
-
-  const activeClass = classes.find((c) => c.id === selectedClass);
+  const assignedLessonIds = useMemo(
+    () => new Set(assignments.map((assignment) => assignment.lesson_id)),
+    [assignments],
+  );
+  const activeClass = useMemo(
+    () => classes.find((classItem) => classItem.id === selectedClass),
+    [classes, selectedClass],
+  );
 
   return (
     <div className="p-6 max-w-7xl mx-auto animate-fade-in">
@@ -367,7 +390,7 @@ export default function TeacherStudents() {
                   <option value="">— Choose a lesson —</option>
                   {myLessons
                     .filter(
-                      (l) => !assignments.find((a) => a.lesson_id === l.id),
+                      (lesson) => !assignedLessonIds.has(lesson.id),
                     )
                     .map((l) => (
                       <option key={l.id} value={l.id}>
@@ -377,7 +400,7 @@ export default function TeacherStudents() {
                     ))}
                 </select>
                 {myLessons.filter(
-                  (l) => !assignments.find((a) => a.lesson_id === l.id),
+                  (lesson) => !assignedLessonIds.has(lesson.id),
                 ).length === 0 && (
                   <p className="text-xs text-edsync-subtle mt-1">
                     All your lessons are already assigned to this class.
@@ -453,7 +476,7 @@ export default function TeacherStudents() {
               className={`edsync-card cursor-pointer transition-all relative group ${selectedClass === cls.id ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
             >
               <div
-                className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${COLORS[i % COLORS.length]} flex items-center justify-center text-2xl mb-3`}
+                className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${CLASS_CARD_COLORS[i % CLASS_CARD_COLORS.length]} flex items-center justify-center text-2xl mb-3`}
               >
                 <span className="text-white text-sm font-semibold">
                   {cls.name
