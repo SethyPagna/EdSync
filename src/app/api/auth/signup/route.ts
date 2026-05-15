@@ -4,16 +4,30 @@ import { hashPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
+function organizationSlug(name: string) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "organization";
+  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
 export async function POST(request: Request) {
   const { email, password, options } = (await request.json()) as {
     email?: string;
     password?: string;
-    options?: { data?: { full_name?: string; role?: "teacher" | "student" } };
+    options?: {
+      data?: {
+        full_name?: string;
+        role?: "teacher" | "student";
+        account_type?: "individual" | "organization";
+        organization_name?: string;
+      };
+    };
   };
 
   const normalizedEmail = email?.trim().toLowerCase();
   const role = options?.data?.role === "teacher" ? "teacher" : "student";
   const fullName = options?.data?.full_name?.trim() || null;
+  const accountType = options?.data?.account_type === "organization" ? "organization" : "individual";
+  const organizationName = options?.data?.organization_name?.trim() || null;
 
   if (!normalizedEmail || !password || password.length < 8) {
     return NextResponse.json({
@@ -37,6 +51,13 @@ export async function POST(request: Request) {
       },
       { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
     );
+  }
+
+  if (accountType === "organization" && !organizationName) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Organization name is required.", status: 400 },
+    }, { status: 400 });
   }
 
   const existing = await d1Query<{ id: string }>("SELECT id FROM auth_users WHERE lower(email) = lower(?) LIMIT 1", [
@@ -72,6 +93,37 @@ export async function POST(request: Request) {
      ) VALUES (?, ?, ?, ?, '[]', '[]', '{"theme":"light","text_size":"medium"}', '[]', 0, 0, datetime('now'), datetime('now'), datetime('now'))`,
     [id, normalizedEmail, fullName, role],
   );
+
+  if (accountType === "organization" && organizationName) {
+    const tenantId = crypto.randomUUID();
+    const portalId = crypto.randomUUID();
+    await d1Query(
+      `INSERT INTO tenants (id, slug, name, owner_id, plan_tier, isolation_mode, settings, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'solo', 'shared_d1', ?, datetime('now'), datetime('now'))`,
+      [
+        tenantId,
+        organizationSlug(organizationName),
+        organizationName,
+        id,
+        JSON.stringify({ signup_source: "auth_signup", owner_role: role }),
+      ],
+    );
+    await d1Query(
+      `INSERT INTO tenant_portals (id, tenant_id, slug, name, audience, is_default, theme, catalog_settings, created_at, updated_at)
+       VALUES (?, ?, 'main', ?, 'internal', 1, '{"theme":"light"}', '{}', datetime('now'), datetime('now'))`,
+      [portalId, tenantId, `${organizationName} Portal`],
+    );
+    await d1Query(
+      `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'active', '[]', datetime('now'), datetime('now'))`,
+      [
+        crypto.randomUUID(),
+        tenantId,
+        id,
+        role === "teacher" ? "role_portal_admin" : "role_learner",
+      ],
+    );
+  }
 
   const user: SessionUser = {
     id,
