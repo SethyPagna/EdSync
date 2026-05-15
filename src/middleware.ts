@@ -4,7 +4,18 @@ import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected =
-    pathname.startsWith("/admin") || pathname.startsWith("/teacher") || pathname.startsWith("/student");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/teacher") ||
+    pathname.startsWith("/student") ||
+    pathname.startsWith("/studio") ||
+    pathname.startsWith("/notes") ||
+    pathname.startsWith("/docs") ||
+    pathname.startsWith("/sheets") ||
+    pathname.startsWith("/slides") ||
+    pathname.startsWith("/ai") ||
+    pathname.startsWith("/practice") ||
+    pathname.startsWith("/quizzes") ||
+    pathname.startsWith("/games");
   const isAuthPage =
     pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup");
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
