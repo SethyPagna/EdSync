@@ -739,3 +739,251 @@ export interface AILessonDraft {
   tags: string[];
   estimated_duration: number;
 }
+
+export type StudioItemKind =
+  | "lesson"
+  | "note"
+  | "doc"
+  | "sheet"
+  | "slide"
+  | "practice"
+  | "import"
+  | "design";
+
+export type StudioDraftStatus = "clean" | "local_draft" | "saving" | "saved" | "conflict" | "error";
+export type StudioDirtyBadge = "none" | "dirty" | "conflict" | "offline";
+export type StudioPaneAction =
+  | "split_right"
+  | "split_down"
+  | "close"
+  | "close_others"
+  | "pin"
+  | "duplicate"
+  | "rename"
+  | "archive"
+  | "restore"
+  | "history"
+  | "export"
+  | "ask_ai"
+  | "insert_into_lesson"
+  | "reset_layout";
+export type StudioInsertTarget =
+  | "lesson_section"
+  | "new_doc"
+  | "new_slide_deck"
+  | "new_sheet"
+  | "practice_set"
+  | "review_card";
+
+export interface StudioItem {
+  id: string;
+  kind: StudioItemKind;
+  title: string;
+  subtitle?: string;
+  ownerId?: string | null;
+  sourceId?: string | null;
+  tags: string[];
+  status: "draft" | "published" | "archived";
+  updatedAt: string;
+  draftStatus?: StudioDraftStatus;
+  dirtyBadge?: StudioDirtyBadge;
+  metadata: Record<string, unknown>;
+}
+
+export interface RichDocumentContent {
+  type: "tiptap";
+  json: Record<string, unknown>;
+  plainText: string;
+  html?: string;
+  markdown?: string;
+  wordCount: number;
+  readingMinutes: number;
+}
+
+export interface SheetMetadata {
+  rowCount: number;
+  columnCount: number;
+  frozenRows: number;
+  selectedRange?: string;
+  formulas: Record<string, string>;
+  formatting: Record<string, unknown>;
+}
+
+export type SlideObjectType =
+  | "text"
+  | "heading"
+  | "image"
+  | "shape"
+  | "line"
+  | "icon"
+  | "table"
+  | "callout"
+  | "badge"
+  | "media"
+  | "quiz_prompt"
+  | "practice_card";
+
+export interface SlideObject {
+  id: string;
+  type: SlideObjectType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  locked?: boolean;
+  hidden?: boolean;
+  data: Record<string, unknown>;
+  style: Record<string, unknown>;
+}
+
+export interface SlideTransition {
+  type: "none" | "fade" | "slide" | "push" | "zoom";
+  durationMs: number;
+}
+
+export interface SlideAnimation {
+  id: string;
+  objectId: string;
+  type: "entrance" | "emphasis" | "exit";
+  preset: "none" | "fade" | "rise" | "scale" | "wipe";
+  delayMs: number;
+  durationMs: number;
+}
+
+export interface SlideTheme {
+  id: string;
+  name: string;
+  colors: {
+    background: string;
+    foreground: string;
+    primary: string;
+    accent: string;
+  };
+  fonts: {
+    heading: string;
+    body: string;
+  };
+}
+
+export interface SlideDeck {
+  id: string;
+  title: string;
+  theme: SlideTheme;
+  slides: {
+    id: string;
+    title: string;
+    layout: string;
+    notes: string;
+    objects: SlideObject[];
+    transition: SlideTransition;
+    animations: SlideAnimation[];
+  }[];
+}
+
+export interface DesignTemplate {
+  id: string;
+  title: string;
+  category:
+    | "course_cover"
+    | "lesson_hero"
+    | "worksheet"
+    | "flashcards"
+    | "announcement"
+    | "certificate"
+    | "quiz_review"
+    | "practice_game"
+    | "rubric"
+    | "report"
+    | "slide_theme";
+  description: string;
+  tags: string[];
+  previewTone: string;
+  blocks: string[];
+}
+
+export interface DesignBlock {
+  id: string;
+  title: string;
+  kind: "teach" | "practice" | "media" | "assess" | "reflect" | "design";
+  description: string;
+  insertTarget: StudioInsertTarget;
+  estimatedMinutes: number;
+  content: Record<string, unknown>;
+}
+
+export type AiPromptFieldType = "text" | "textarea" | "select" | "multiselect" | "number" | "tone" | "language";
+
+export interface AiPromptField {
+  id: string;
+  label: string;
+  type: AiPromptFieldType;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+  defaultValue?: string | number | string[];
+}
+
+export interface AiPromptContract {
+  id: string;
+  title: string;
+  description: string;
+  feature:
+    | "clean_notes"
+    | "organize_outline"
+    | "lesson_sections"
+    | "slide_deck"
+    | "worksheet"
+    | "quiz"
+    | "flashcards"
+    | "rubric"
+    | "discussion"
+    | "rewrite"
+    | "zero_to_expert";
+  fields: AiPromptField[];
+  insertTargets: StudioInsertTarget[];
+  outputShape: Record<string, unknown>;
+}
+
+export interface AiInsertBackAction {
+  id: string;
+  label: string;
+  target: StudioInsertTarget;
+  payload: Record<string, unknown>;
+}
+
+export type PracticeMode =
+  | "quiz"
+  | "exam"
+  | "flashcards"
+  | "matching"
+  | "sprint"
+  | "mistake_retry"
+  | "fill_blank"
+  | "true_false"
+  | "generated_from_studio";
+
+export interface PracticeAttemptSummary {
+  mode: PracticeMode;
+  totalItems: number;
+  correctItems: number;
+  missedItems: number;
+  pointsEarned: number;
+  pointsPossible: number;
+  percent: number;
+  elapsedSeconds: number;
+  targetSeconds: number | null;
+  reviewCardIds: string[];
+}
+
+export interface ReviewCard {
+  id: string;
+  sourceType: "practice" | "quiz" | "lesson" | "studio";
+  sourceId: string;
+  prompt: string;
+  correctAnswer: string | null;
+  explanation: string;
+  nextReviewAt: string | null;
+  mastery: "again" | "almost" | "mastered";
+  createdAt: string;
+}
