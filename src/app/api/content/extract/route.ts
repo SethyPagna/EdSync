@@ -1,57 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { normalizeExtractedText, readableBinaryFallback } from "@/lib/content/extraction";
 import { d1Query } from "@/lib/db/d1";
 import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateUploadFile } from "@/lib/security/upload";
-
-const MAX_EXTRACTED_CHARS = 12_000;
-const MAX_BINARY_FALLBACK_SCAN_BYTES = 256_000;
-const BINARY_FALLBACK_CHUNK_SIZE = 8_192;
-const MIN_DIRECT_TEXT_CHARS = 200;
-
-function normalizeText(value: string) {
-  return value
-    .replace(/[^\x09\x0a\x0d\x20-\x7e]/g, " ")
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, MAX_EXTRACTED_CHARS);
-}
-
-function readableBinaryFallback(buffer: ArrayBuffer, fileName: string) {
-  const scanLength = Math.min(buffer.byteLength, MAX_BINARY_FALLBACK_SCAN_BYTES);
-  const bytes = new Uint8Array(buffer, 0, scanLength);
-  const chunks: string[] = [];
-  let readableChars = 0;
-
-  for (
-    let offset = 0;
-    offset < bytes.length && readableChars < MAX_EXTRACTED_CHARS * 2;
-    offset += BINARY_FALLBACK_CHUNK_SIZE
-  ) {
-    const end = Math.min(offset + BINARY_FALLBACK_CHUNK_SIZE, bytes.length);
-    let chunk = "";
-
-    for (let index = offset; index < end; index += 1) {
-      const byte = bytes[index];
-      chunk += byte === 10 || byte === 13 || (byte >= 32 && byte <= 126)
-        ? String.fromCharCode(byte)
-        : " ";
-    }
-
-    chunks.push(chunk);
-    readableChars += chunk.length;
-  }
-
-  const readable = normalizeText(chunks.join(""));
-  const topic = fileName.replace(/\.(pdf|docx?|txt|md|csv)$/i, "").replace(/[-_]/g, " ");
-  const sampled = buffer.byteLength > scanLength;
-
-  return readable.length > MIN_DIRECT_TEXT_CHARS
-    ? `Document: "${fileName}"\n\nExtracted readable text${sampled ? " (sampled safely from the beginning of the file)" : ""}:\n${readable}`
-    : `Document: "${fileName}"\nTopic: ${topic}\n\nThe file did not contain enough directly extractable text. Generate a structured lesson around the inferred topic and ask the teacher to review details before publishing.`;
-}
 
 function fileKind(file: File) {
   if (file.type.startsWith("image/")) return "image";
@@ -190,7 +143,7 @@ export async function POST(request: NextRequest) {
     /\.(txt|md|csv)$/i.test(file.name);
 
   if (isTextLike) {
-    const text = normalizeText(new TextDecoder("utf-8").decode(buffer));
+    const text = normalizeExtractedText(new TextDecoder("utf-8").decode(buffer));
     const responseText = `Document: "${file.name}"\n\n${text}`;
     await saveExtraction({
       userId: user.id,
