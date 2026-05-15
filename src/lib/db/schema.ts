@@ -74,6 +74,11 @@ export const TABLES = [
   "billing_webhook_events",
   "offline_sync_items",
   "analytics_rollups",
+  "studio_documents",
+  "studio_assets",
+  "practice_attempts",
+  "practice_attempt_items",
+  "practice_review_cards",
 ] as const;
 
 export type TableName = (typeof TABLES)[number];
@@ -137,6 +142,11 @@ export const JSON_COLUMNS: Record<string, string[]> = {
   billing_webhook_events: ["payload"],
   offline_sync_items: ["payload"],
   analytics_rollups: ["metrics"],
+  studio_documents: ["content", "metadata"],
+  studio_assets: ["metadata"],
+  practice_attempts: ["summary"],
+  practice_attempt_items: ["metadata"],
+  practice_review_cards: ["metadata"],
 };
 
 export const DATE_COLUMNS = new Set([
@@ -161,6 +171,7 @@ export const DATE_COLUMNS = new Set([
   "starts_at",
   "ends_at",
   "due_at",
+  "next_review_at",
 ]);
 
 export function assertTableName(table: string): asserts table is TableName {
