@@ -1,5 +1,5 @@
 import { d1Query } from "@/lib/db/d1";
-import { decryptSecret, encryptSecret, maskSecret } from "@/lib/security/secrets";
+import { decryptSecret, encryptSecret, isSecretEncryptionConfigured, maskSecret } from "@/lib/security/secrets";
 
 export type AIProviderKey = "groq" | "mistral" | "cerebras" | "google" | "cohere";
 export type AIProviderType = "chat" | "embed";
@@ -182,6 +182,13 @@ export function providerDefaults(provider: AIProviderKey) {
 export function serializeProvider(row: AIProviderRow) {
   const key = decryptSecret(row.api_key_encrypted);
   const meta = PROVIDER_META[row.provider];
+  const keyState = key
+    ? "ready"
+    : row.api_key_encrypted
+      ? isSecretEncryptionConfigured()
+        ? "unreadable"
+        : "encryption_unconfigured"
+      : "missing";
   return {
     ...row,
     label: meta.label,
@@ -190,6 +197,7 @@ export function serializeProvider(row: AIProviderRow) {
     supported_models: parseSupportedModels(row.supported_models),
     enabled: Boolean(row.enabled),
     has_key: Boolean(key),
+    key_state: keyState,
     key_masked: maskSecret(key),
     api_key_encrypted: undefined,
   };
