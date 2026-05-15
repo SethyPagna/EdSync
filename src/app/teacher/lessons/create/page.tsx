@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
@@ -105,6 +105,8 @@ const GENERATION_STEPS = [
   "Organizing and finalizing lesson...",
 ];
 
+const DRAFT_STORAGE_KEY = "edsync.lesson.create.draft.v1";
+
 // ─── Main Component ───────────────────────────────────────────
 export default function CreateLesson() {
   const router = useRouter();
@@ -131,11 +133,90 @@ export default function CreateLesson() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "sections" | "questions" | "glossary"
   >("overview");
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [analysisInfo, setAnalysisInfo] = useState<{
     main_topic?: string;
     key_concepts?: string[];
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as {
+          draft?: Draft;
+          inputText?: string;
+          complexity?: number;
+          pacing?: number;
+          scaffolding?: number;
+          generationDepth?: GenerationDepth;
+          languageStyle?: LanguageStyle;
+          audienceLanguage?: string;
+          versionCount?: number;
+          creationMode?: CreationMode;
+          importMode?: ImportMode;
+          activeTab?: "overview" | "sections" | "questions" | "glossary";
+          savedAt?: string;
+        };
+        if (parsed.draft) setDraft(parsed.draft);
+        if (typeof parsed.inputText === "string") setInputText(parsed.inputText);
+        if (typeof parsed.complexity === "number") setComplexity(parsed.complexity);
+        if (typeof parsed.pacing === "number") setPacing(parsed.pacing);
+        if (typeof parsed.scaffolding === "number") setScaffolding(parsed.scaffolding);
+        if (parsed.generationDepth) setGenerationDepth(parsed.generationDepth);
+        if (parsed.languageStyle) setLanguageStyle(parsed.languageStyle);
+        if (parsed.audienceLanguage) setAudienceLanguage(parsed.audienceLanguage);
+        if (typeof parsed.versionCount === "number") setVersionCount(parsed.versionCount);
+        if (parsed.creationMode) setCreationMode(parsed.creationMode);
+        if (parsed.importMode) setImportMode(parsed.importMode);
+        if (parsed.activeTab) setActiveTab(parsed.activeTab);
+        if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
+      } catch {
+        window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    }
+    setDraftLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const savedAt = new Date().toISOString();
+    window.localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify({
+        draft,
+        inputText,
+        complexity,
+        pacing,
+        scaffolding,
+        generationDepth,
+        languageStyle,
+        audienceLanguage,
+        versionCount,
+        creationMode,
+        importMode,
+        activeTab,
+        savedAt,
+      }),
+    );
+    setDraftSavedAt(savedAt);
+  }, [
+    activeTab,
+    audienceLanguage,
+    complexity,
+    creationMode,
+    draft,
+    draftLoaded,
+    generationDepth,
+    importMode,
+    inputText,
+    languageStyle,
+    pacing,
+    scaffolding,
+    versionCount,
+  ]);
 
   const applyAiDraft = (ai: AILessonDraft) => {
     setDraft({
@@ -186,6 +267,19 @@ export default function CreateLesson() {
         ...draft.sections.slice(index + 1),
       ],
     });
+  };
+
+  const clearSavedDraft = () => {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setDraft(emptyDraft());
+    setInputText("");
+    setUploadedFile(null);
+    setUploadedKind(null);
+    setVariants([]);
+    setAnalysisInfo(null);
+    setDraftSavedAt(null);
+    setActiveTab("overview");
+    toast.success("Local draft cleared");
   };
 
   // ── File Upload ──────────────────────────────────────────────
@@ -384,6 +478,7 @@ export default function CreateLesson() {
     toast.success(
       status === "published" ? "Lesson published" : "Saved as draft",
     );
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     router.push(`/teacher/lessons/${lesson.id}`);
   };
 
@@ -422,6 +517,16 @@ export default function CreateLesson() {
                   : "Review and edit your lesson"}
           </p>
         </div>
+        {step === "edit" && (
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs text-edsync-subtle">
+            <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
+              {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Draft ready"}
+            </span>
+            <button type="button" onClick={clearSavedDraft} className="btn-secondary px-3 py-1.5 text-xs">
+              Clear draft
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Step pill tracker */}
@@ -432,15 +537,15 @@ export default function CreateLesson() {
               key: "mode",
               label:
                 creationMode === "manual"
-                  ? "Manual"
+                  ? "1 Manual"
                   : creationMode === "ai_full"
-                    ? "Full AI"
-                    : "AI Collab",
+                    ? "1 Full AI"
+                    : "1 AI Collab",
             },
             ...(creationMode !== "manual"
-              ? [{ key: "import", label: "Import" }]
+              ? [{ key: "import", label: "2 Import" }]
               : []),
-            { key: "edit", label: "Edit" },
+            { key: "edit", label: creationMode === "manual" ? "2 Edit" : "3 Edit" },
           ].map((pill, i) => (
             <span
               key={pill.key}
