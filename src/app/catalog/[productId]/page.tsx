@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -12,6 +13,21 @@ import {
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import { getPublicCatalogItem } from "@/lib/catalog";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: { productId: string };
+}): Promise<Metadata> {
+  const item = await getPublicCatalogItem(params.productId);
+  return {
+    title: item ? item.title : "Course",
+    description:
+      item?.metadata.previewSummary ||
+      item?.description ||
+      "Preview an EdSync public course and enroll when ready.",
+  };
+}
+
 export default async function CatalogDetailPage({
   params,
   searchParams,
@@ -24,11 +40,11 @@ export default async function CatalogDetailPage({
 
   return (
     <main className="min-h-screen bg-edsync-bg text-edsync-text">
-      <header className="border-b border-edsync-border bg-edsync-surface">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
+      <header className="border-b border-edsync-border bg-edsync-surface/95">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/catalog" className="btn-ghost px-0">
             <ArrowLeft className="h-4 w-4" />
-            Catalog
+            Back to catalog
           </Link>
           <Link href="/auth/login" className="btn-secondary px-4 py-2 text-sm">Sign in</Link>
         </div>
@@ -70,6 +86,10 @@ export default async function CatalogDetailPage({
               <p className="mt-4 text-base leading-7 text-edsync-subtle">
                 {item.metadata.previewSummary || item.description || "This public course is available through EdSync."}
               </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="badge bg-edsync-blue/10 text-edsync-blue">Individual learners</span>
+                <span className="badge bg-edsync-emerald/10 text-edsync-emerald">Organization members</span>
+              </div>
             </div>
           </div>
 
@@ -107,7 +127,7 @@ export default async function CatalogDetailPage({
             <p className="text-sm font-semibold text-edsync-subtle">Enrollment</p>
             <p className="mt-2 font-display text-4xl font-bold">{item.price.label}</p>
             <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-              Sign in before enrollment so EdSync can keep access, progress, grades, and certificates tied to your account.
+              Sign in before enrollment so EdSync can keep access, progress, grades, certificates, and organization context tied to your account.
             </p>
             <div className="mt-5">
               <CatalogEnrollButton productId={item.id} isFree={item.price.isFree} />
@@ -144,4 +164,3 @@ export default async function CatalogDetailPage({
     </main>
   );
 }
-
