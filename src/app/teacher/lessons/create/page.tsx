@@ -106,6 +106,52 @@ const GENERATION_STEPS = [
 ];
 
 const DRAFT_STORAGE_KEY = "edsync.lesson.create.draft.v1";
+const DRAFT_AUTOSAVE_DELAY_MS = 700;
+
+type DraftStorageContent = {
+  draft: Draft;
+  inputText: string;
+  complexity: number;
+  pacing: number;
+  scaffolding: number;
+  generationDepth: GenerationDepth;
+  languageStyle: LanguageStyle;
+  audienceLanguage: string;
+  versionCount: number;
+  creationMode: CreationMode;
+  importMode: ImportMode;
+  activeTab: "overview" | "sections" | "questions" | "glossary";
+};
+
+type DraftStoragePayload = Partial<DraftStorageContent> & {
+  savedAt?: string;
+};
+
+const DRAFT_INSERT_TOOLS = [
+  { label: "H2", html: "<h2>Section heading</h2>" },
+  { label: "H3", html: "<h3>Subheading</h3>" },
+  {
+    label: "Slide",
+    html: '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>',
+  },
+  {
+    label: "Table",
+    html: "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>",
+  },
+  {
+    label: "Checklist",
+    html: '<ul class="lesson-checklist"><li>Step one</li><li>Step two</li><li>Reflection</li></ul>',
+  },
+  {
+    label: "Practice",
+    html: '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Try it, check it, then revise one part.</p></section>',
+  },
+  {
+    label: "Callout",
+    html: '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>',
+  },
+  { label: "Spacer", html: '<div class="lesson-spacer"></div>' },
+];
 
 // ─── Main Component ───────────────────────────────────────────
 export default function CreateLesson() {
@@ -140,26 +186,14 @@ export default function CreateLesson() {
     key_concepts?: string[];
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const lastSavedDraftContentRef = useRef<string | null>(null);
+  const autosaveErrorShownRef = useRef(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(DRAFT_STORAGE_KEY);
     if (stored) {
       try {
-        const parsed = JSON.parse(stored) as {
-          draft?: Draft;
-          inputText?: string;
-          complexity?: number;
-          pacing?: number;
-          scaffolding?: number;
-          generationDepth?: GenerationDepth;
-          languageStyle?: LanguageStyle;
-          audienceLanguage?: string;
-          versionCount?: number;
-          creationMode?: CreationMode;
-          importMode?: ImportMode;
-          activeTab?: "overview" | "sections" | "questions" | "glossary";
-          savedAt?: string;
-        };
+        const parsed = JSON.parse(stored) as DraftStoragePayload;
         if (parsed.draft) setDraft(parsed.draft);
         if (typeof parsed.inputText === "string") setInputText(parsed.inputText);
         if (typeof parsed.complexity === "number") setComplexity(parsed.complexity);
@@ -173,6 +207,9 @@ export default function CreateLesson() {
         if (parsed.importMode) setImportMode(parsed.importMode);
         if (parsed.activeTab) setActiveTab(parsed.activeTab);
         if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
+        const savedContent = { ...parsed };
+        delete savedContent.savedAt;
+        lastSavedDraftContentRef.current = JSON.stringify(savedContent);
       } catch {
         window.localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
@@ -182,10 +219,8 @@ export default function CreateLesson() {
 
   useEffect(() => {
     if (!draftLoaded) return;
-    const savedAt = new Date().toISOString();
-    window.localStorage.setItem(
-      DRAFT_STORAGE_KEY,
-      JSON.stringify({
+    const timeoutId = window.setTimeout(() => {
+      const content: DraftStorageContent = {
         draft,
         inputText,
         complexity,
@@ -198,10 +233,27 @@ export default function CreateLesson() {
         creationMode,
         importMode,
         activeTab,
-        savedAt,
-      }),
-    );
-    setDraftSavedAt(savedAt);
+      };
+      const serializedContent = JSON.stringify(content);
+      if (serializedContent === lastSavedDraftContentRef.current) return;
+
+      const savedAt = new Date().toISOString();
+      try {
+        window.localStorage.setItem(
+          DRAFT_STORAGE_KEY,
+          JSON.stringify({ ...content, savedAt }),
+        );
+        lastSavedDraftContentRef.current = serializedContent;
+        setDraftSavedAt(savedAt);
+      } catch {
+        if (!autosaveErrorShownRef.current) {
+          toast.error("Local draft storage is full. Save the lesson to keep the latest changes.");
+          autosaveErrorShownRef.current = true;
+        }
+      }
+    }, DRAFT_AUTOSAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
   }, [
     activeTab,
     audienceLanguage,
@@ -279,8 +331,25 @@ export default function CreateLesson() {
     setDraft({ ...draft, sections });
   };
 
+  const draftSummaryItems = useMemo(
+    () => [
+      { label: "Sections", value: draft.sections.length, hint: "Teaching blocks" },
+      { label: "Questions", value: draft.quiz_questions.length, hint: "Assessment items" },
+      { label: "Glossary", value: draft.glossary_terms.length, hint: "Vocabulary terms" },
+      { label: "Duration", value: `${draft.estimated_duration || 0}m`, hint: "Expected time" },
+    ],
+    [
+      draft.estimated_duration,
+      draft.glossary_terms.length,
+      draft.quiz_questions.length,
+      draft.sections.length,
+    ],
+  );
+
   const clearSavedDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    lastSavedDraftContentRef.current = null;
+    autosaveErrorShownRef.current = false;
     setDraft(emptyDraft());
     setInputText("");
     setUploadedFile(null);
@@ -489,6 +558,8 @@ export default function CreateLesson() {
       status === "published" ? "Lesson published" : "Saved as draft",
     );
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    lastSavedDraftContentRef.current = null;
+    autosaveErrorShownRef.current = false;
     router.push(`/teacher/lessons/${lesson.id}`);
   };
 
@@ -1005,12 +1076,7 @@ export default function CreateLesson() {
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: "Sections", value: draft.sections.length, hint: "Teaching blocks" },
-              { label: "Questions", value: draft.quiz_questions.length, hint: "Assessment items" },
-              { label: "Glossary", value: draft.glossary_terms.length, hint: "Vocabulary terms" },
-              { label: "Duration", value: `${draft.estimated_duration || 0}m`, hint: "Expected time" },
-            ].map((item) => (
+            {draftSummaryItems.map((item) => (
               <div
                 key={item.label}
                 className="rounded-xl border border-edsync-border bg-edsync-card p-3 shadow-sm"
@@ -1479,16 +1545,7 @@ export default function CreateLesson() {
                   ) : (
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1.5 rounded-lg border border-edsync-border bg-edsync-surface p-2">
-                        {[
-                          { label: "H2", html: "<h2>Section heading</h2>" },
-                          { label: "H3", html: "<h3>Subheading</h3>" },
-                          { label: "Slide", html: '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>' },
-                          { label: "Table", html: "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>" },
-                          { label: "Checklist", html: '<ul class="lesson-checklist"><li>Step one</li><li>Step two</li><li>Reflection</li></ul>' },
-                          { label: "Practice", html: '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Try it, check it, then revise one part.</p></section>' },
-                          { label: "Callout", html: '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>' },
-                          { label: "Spacer", html: '<div class="lesson-spacer"></div>' },
-                        ].map((tool) => (
+                        {DRAFT_INSERT_TOOLS.map((tool) => (
                           <button
                             key={tool.label}
                             type="button"
