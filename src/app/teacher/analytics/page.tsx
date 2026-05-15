@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
@@ -43,6 +43,39 @@ interface ReflectionEntry {
   created_at: string;
 }
 
+type ReflectionMetadataEntry = {
+  id?: string;
+  confidence?: unknown;
+  notes?: unknown;
+  advice?: { guidingQuestion?: unknown };
+  created_at?: unknown;
+};
+
+type AnalyticsProgressRow = {
+  id: string;
+  student_id: string;
+  lesson_id: string;
+  status: string;
+  score: number | null;
+  knowledge_gaps?: string[] | null;
+  metadata?: { reflections?: ReflectionMetadataEntry[] } | null;
+  last_active: string;
+};
+
+type SocraticRow = {
+  id: string;
+  student_id: string;
+  lesson_id: string;
+  student_question: string;
+  created_at: string;
+};
+
+type AnalyticsProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string;
+};
+
 type Tab =
   | "overview"
   | "heatmap"
@@ -62,212 +95,215 @@ export default function TeacherAnalytics() {
   const [loading, setLoading] = useState(true);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [gettingSuggestions, setGettingSuggestions] = useState(false);
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await edsync.auth.getUser();
+      if (!user) return;
+
+      const { data: lessonData } = await edsync
+        .from("lessons")
+        .select("*")
+        .eq("teacher_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const myLessons: Lesson[] = lessonData || [];
+      setLessons(myLessons);
+
+      if (myLessons.length === 0) {
+        setLessonStats([]);
+        setStudentStats([]);
+        setSocraticLog([]);
+        setReflectionLog([]);
+        return;
+      }
+
+      const lessonIds = myLessons.map((lesson) => lesson.id);
+      const titleMap = new Map(myLessons.map((lesson) => [lesson.id, lesson.title]));
+
+      const [{ data: progressRows }, { data: socraticRows }] = await Promise.all([
+        edsync.from("student_progress").select("*").in("lesson_id", lessonIds),
+        edsync
+          .from("socratic_interactions")
+          .select("id, student_question, created_at, student_id, lesson_id")
+          .in("lesson_id", lessonIds)
+          .order("created_at", { ascending: false })
+          .limit(30),
+      ]);
+
+      const progressData = (progressRows || []) as AnalyticsProgressRow[];
+      const socraticData = (socraticRows || []) as SocraticRow[];
+      const allStudentIds = Array.from(
+        new Set([
+          ...progressData.map((progress) => progress.student_id),
+          ...socraticData.map((entry) => entry.student_id),
+        ]),
+      );
+
+      const profileMap = new Map<string, { full_name: string | null; email: string }>();
+      if (allStudentIds.length > 0) {
+        const { data: profileData } = await edsync
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", allStudentIds);
+        ((profileData || []) as AnalyticsProfileRow[]).forEach((profile) =>
+          profileMap.set(profile.id, { full_name: profile.full_name, email: profile.email }),
+        );
+      }
+
+      const progressByLesson = new Map<string, AnalyticsProgressRow[]>();
+      progressData.forEach((progress) => {
+        const rows = progressByLesson.get(progress.lesson_id) || [];
+        rows.push(progress);
+        progressByLesson.set(progress.lesson_id, rows);
+      });
+
+      const lStats: LessonStat[] = myLessons.map((lesson) => {
+        const lessonProgress = progressByLesson.get(lesson.id) || [];
+        const scores = lessonProgress
+          .map((progress) => progress.score)
+          .filter((score): score is number => typeof score === "number");
+        const gapCounts = new Map<string, number>();
+        lessonProgress
+          .flatMap((progress) => progress.knowledge_gaps || [])
+          .forEach((gap) => {
+            gapCounts.set(gap, (gapCounts.get(gap) || 0) + 1);
+          });
+        const topGaps = Array.from(gapCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([gap]) => gap);
+        return {
+          id: lesson.id,
+          title: lesson.title,
+          studentsStarted: lessonProgress.filter((progress) => progress.status !== "not_started")
+            .length,
+          studentsCompleted: lessonProgress.filter((progress) => progress.status === "completed")
+            .length,
+          avgScore:
+            scores.length > 0
+              ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+              : null,
+          knowledgeGaps: topGaps,
+        };
+      });
+      setLessonStats(lStats);
+
+      const studentMap = new Map<string, StudentStat>();
+      const reflectionEntries: ReflectionEntry[] = [];
+
+      for (const progress of progressData) {
+        const profile = profileMap.get(progress.student_id);
+        const existing = studentMap.get(progress.student_id) ?? {
+          id: progress.student_id,
+          name: profile?.full_name || "Unknown",
+          email: profile?.email || "",
+          lessonsCompleted: 0,
+          avgScore: null,
+          aiInteractions: 0,
+          reflectionCount: 0,
+          lowConfidenceReflections: 0,
+          status: "on_track" as const,
+        };
+        if (progress.status === "completed") existing.lessonsCompleted++;
+        if (progress.score !== null) {
+          existing.avgScore =
+            existing.avgScore === null
+              ? progress.score
+              : Math.round((existing.avgScore + progress.score) / 2);
+        }
+
+        const reflections = Array.isArray(progress.metadata?.reflections)
+          ? progress.metadata.reflections
+          : [];
+
+        if (reflections.length > 0) {
+          existing.reflectionCount += reflections.length;
+
+          reflections.forEach((entry, index) => {
+            const confidenceValue = Number(entry?.confidence);
+            const confidence = Number.isFinite(confidenceValue)
+              ? Math.min(5, Math.max(1, Math.round(confidenceValue)))
+              : 3;
+
+            if (confidence <= 2) {
+              existing.lowConfidenceReflections++;
+            }
+
+            const notes =
+              typeof entry?.notes === "string" && entry.notes.trim()
+                ? entry.notes.trim()
+                : "No notes provided.";
+
+            reflectionEntries.push({
+              id: typeof entry?.id === "string" ? entry.id : `${progress.id}-${index}`,
+              student_name: profile?.full_name || "Unknown",
+              lesson_title: titleMap.get(progress.lesson_id),
+              notes_preview:
+                notes.length > 180 ? `${notes.slice(0, 180)}...` : notes,
+              confidence,
+              guiding_question:
+                typeof entry?.advice?.guidingQuestion === "string"
+                  ? entry.advice.guidingQuestion
+                  : "No guiding question captured.",
+              created_at:
+                typeof entry?.created_at === "string"
+                  ? entry.created_at
+                  : progress.last_active,
+            });
+          });
+        }
+
+        studentMap.set(progress.student_id, existing);
+      }
+      for (const entry of socraticData) {
+        const student = studentMap.get(entry.student_id);
+        if (student) {
+          student.aiInteractions++;
+          studentMap.set(entry.student_id, student);
+        }
+      }
+      const students = Array.from(studentMap.values()).map((student) => ({
+        ...student,
+        status: (student.avgScore === null
+          ? "on_track"
+          : student.avgScore >= 80
+            ? "advanced"
+            : student.avgScore < 60
+              ? "at_risk"
+              : "on_track") as StudentStat["status"],
+      }));
+      setStudentStats(students);
+      setReflectionLog(
+        reflectionEntries
+          .sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          )
+          .slice(0, 40),
+      );
+
+      setSocraticLog(
+        socraticData.map((entry) => ({
+          id: entry.id,
+          student_name: profileMap.get(entry.student_id)?.full_name || "Unknown",
+          student_question: entry.student_question,
+          created_at: entry.created_at,
+          lesson_title: titleMap.get(entry.lesson_id),
+        })),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [edsync]);
 
   useEffect(() => {
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) return;
-
-    const { data: lessonData } = await edsync
-      .from("lessons")
-      .select("*")
-      .eq("teacher_id", user.id)
-      .order("created_at", { ascending: false });
-
-    const myLessons: Lesson[] = lessonData || [];
-    setLessons(myLessons);
-
-    if (myLessons.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const lessonIds = myLessons.map((l) => l.id);
-    const titleMap = new Map(myLessons.map((l) => [l.id, l.title]));
-
-    const { data: progressData } = await edsync
-      .from("student_progress")
-      .select("*")
-      .in("lesson_id", lessonIds);
-
-    const { data: socraticData } = await edsync
-      .from("socratic_interactions")
-      .select("id, student_question, created_at, student_id, lesson_id")
-      .in("lesson_id", lessonIds)
-      .order("created_at", { ascending: false })
-      .limit(30);
-
-    // Student IDs for profile lookup
-    const allStudentIds = Array.from(
-      new Set([
-        ...(progressData || []).map((p: any) => p.student_id),
-        ...(socraticData || []).map((s: any) => s.student_id),
-      ]),
-    );
-
-    const profileMap = new Map<string, { full_name: string; email: string }>();
-    if (allStudentIds.length > 0) {
-      const { data: profileData } = await edsync
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", allStudentIds);
-      (profileData || []).forEach((p: any) =>
-        profileMap.set(p.id, { full_name: p.full_name, email: p.email }),
-      );
-    }
-
-    // Build lesson stats
-    const lStats: LessonStat[] = myLessons.map((lesson) => {
-      const lp = (progressData || []).filter(
-        (p: any) => p.lesson_id === lesson.id,
-      );
-      const scores = lp
-        .filter((p: any) => p.score !== null)
-        .map((p: any) => p.score);
-      const gaps = lp.flatMap((p: any) => p.knowledge_gaps || []);
-      const gapCounts: Record<string, number> = {};
-      gaps.forEach((g: string) => {
-        gapCounts[g] = (gapCounts[g] || 0) + 1;
-      });
-      const topGaps = Object.entries(gapCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([g]) => g);
-      return {
-        id: lesson.id,
-        title: lesson.title,
-        studentsStarted: lp.filter((p: any) => p.status !== "not_started")
-          .length,
-        studentsCompleted: lp.filter((p: any) => p.status === "completed")
-          .length,
-        avgScore:
-          scores.length > 0
-            ? Math.round(
-                scores.reduce((a: number, b: number) => a + b, 0) /
-                  scores.length,
-              )
-            : null,
-        knowledgeGaps: topGaps,
-      };
-    });
-    setLessonStats(lStats);
-
-    // Build student stats
-    const studentMap = new Map<string, StudentStat>();
-    const reflectionEntries: ReflectionEntry[] = [];
-
-    for (const p of progressData || []) {
-      const prof = profileMap.get(p.student_id);
-      const existing = studentMap.get(p.student_id) ?? {
-        id: p.student_id,
-        name: prof?.full_name || "Unknown",
-        email: prof?.email || "",
-        lessonsCompleted: 0,
-        avgScore: null,
-        aiInteractions: 0,
-        reflectionCount: 0,
-        lowConfidenceReflections: 0,
-        status: "on_track" as const,
-      };
-      if (p.status === "completed") existing.lessonsCompleted++;
-      if (p.score !== null) {
-        existing.avgScore =
-          existing.avgScore === null
-            ? p.score
-            : Math.round((existing.avgScore + p.score) / 2);
-      }
-
-      const reflections = Array.isArray(p?.metadata?.reflections)
-        ? p.metadata.reflections
-        : [];
-
-      if (reflections.length > 0) {
-        existing.reflectionCount += reflections.length;
-
-        reflections.forEach((entry: any, index: number) => {
-          const confidenceValue = Number(entry?.confidence);
-          const confidence = Number.isFinite(confidenceValue)
-            ? Math.min(5, Math.max(1, Math.round(confidenceValue)))
-            : 3;
-
-          if (confidence <= 2) {
-            existing.lowConfidenceReflections++;
-          }
-
-          const notes =
-            typeof entry?.notes === "string" && entry.notes.trim()
-              ? entry.notes.trim()
-              : "No notes provided.";
-
-          reflectionEntries.push({
-            id: typeof entry?.id === "string" ? entry.id : `${p.id}-${index}`,
-            student_name: prof?.full_name || "Unknown",
-            lesson_title: titleMap.get(p.lesson_id),
-            notes_preview:
-              notes.length > 180 ? `${notes.slice(0, 180)}...` : notes,
-            confidence,
-            guiding_question:
-              typeof entry?.advice?.guidingQuestion === "string"
-                ? entry.advice.guidingQuestion
-                : "No guiding question captured.",
-            created_at:
-              typeof entry?.created_at === "string"
-                ? entry.created_at
-                : p.last_active,
-          });
-        });
-      }
-
-      studentMap.set(p.student_id, existing);
-    }
-    for (const s of socraticData || []) {
-      const e = studentMap.get(s.student_id);
-      if (e) {
-        e.aiInteractions++;
-        studentMap.set(s.student_id, e);
-      }
-    }
-    // Classify status
-    const students = Array.from(studentMap.values()).map((s) => ({
-      ...s,
-      status: (s.avgScore === null
-        ? "on_track"
-        : s.avgScore >= 80
-          ? "advanced"
-          : s.avgScore < 60
-            ? "at_risk"
-            : "on_track") as StudentStat["status"],
-    }));
-    setStudentStats(students);
-    setReflectionLog(
-      reflectionEntries
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        )
-        .slice(0, 40),
-    );
-
-    // Socratic log
-    setSocraticLog(
-      (socraticData || []).map((s: any) => ({
-        id: s.id,
-        student_name: profileMap.get(s.student_id)?.full_name || "Unknown",
-        student_question: s.student_question,
-        created_at: s.created_at,
-        lesson_title: titleMap.get(s.lesson_id),
-      })),
-    );
-
-    setLoading(false);
-  };
+  }, [loadData]);
 
   const getInterventions = async () => {
     setGettingSuggestions(true);
