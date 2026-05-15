@@ -226,18 +226,22 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     }
   };
 
-  const visibleNavGroups = navGroupsForRole(role, navItems)
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (role === "admin") return true;
-        if (item.permission && !permissions.includes(item.permission)) return false;
-        if (item.plan === "team" && planTier === "solo") return false;
-        if (item.plan === "enterprise" && planTier !== "enterprise") return false;
-        return true;
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  const visibleNavGroups = useMemo(() => {
+    const grantedPermissions = new Set(permissions);
+
+    return navGroupsForRole(role, navItems)
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          if (role === "admin") return true;
+          if (item.permission && !grantedPermissions.has(item.permission)) return false;
+          if (item.plan === "team" && planTier === "solo") return false;
+          if (item.plan === "enterprise" && planTier !== "enterprise") return false;
+          return true;
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [navItems, permissions, planTier, role]);
 
   const renderNavItem = (item: ShellNavItem) => {
     const Icon = item.icon;
