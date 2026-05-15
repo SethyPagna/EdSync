@@ -9,6 +9,7 @@ import {
   ArrowUp,
   BadgeCheck,
   BookOpenCheck,
+  CheckCircle2,
   Columns3,
   Copy,
   Download,
@@ -43,8 +44,10 @@ import {
 } from "@/lib/studio/catalog";
 import {
   archiveStudioItem,
+  hardDeleteStudioItem,
   listStudioItems,
   saveStudioItem,
+  updateStudioItem,
   type StudioServerItem,
 } from "@/lib/studio/api";
 import {
@@ -161,6 +164,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const [itemTitle, setItemTitle] = useState(titleForKind(initialKind));
   const [serverItems, setServerItems] = useState<StudioServerItem[]>([]);
   const [currentServerId, setCurrentServerId] = useState<string | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
   const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
   const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
@@ -209,7 +213,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   useEffect(() => {
     let cancelled = false;
 
-    listStudioItems(activeKind)
+    listStudioItems(activeKind, includeArchived)
       .then((items) => {
         if (!cancelled) setServerItems(items);
       })
@@ -220,7 +224,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     return () => {
       cancelled = true;
     };
-  }, [activeKind]);
+  }, [activeKind, includeArchived]);
 
   useEffect(() => {
     const draftWriter = writerRef.current;
@@ -343,6 +347,47 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     }
   };
 
+  const publishCurrentItem = async () => {
+    if (!currentServerId) {
+      await saveDraft();
+      setStatusMessage("Saved draft first. Click Publish again when ready.");
+      return;
+    }
+
+    setStatusMessage("Publishing...");
+    try {
+      const item = await updateStudioItem({ id: currentServerId, status: "published" });
+      setServerItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
+      setStatusMessage("Published");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not publish item");
+    }
+  };
+
+  const restoreServerItem = async (item: StudioServerItem) => {
+    setStatusMessage("Restoring...");
+    try {
+      const restored = await updateStudioItem({ id: item.id, status: "draft" });
+      setServerItems((current) => [restored, ...current.filter((entry) => entry.id !== item.id)]);
+      openServerItem(restored);
+      setStatusMessage("Restored to drafts");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not restore item");
+    }
+  };
+
+  const hardDeleteServerItem = async (item: StudioServerItem) => {
+    setStatusMessage("Deleting permanently...");
+    try {
+      await hardDeleteStudioItem(item.id);
+      setServerItems((current) => current.filter((entry) => entry.id !== item.id));
+      if (currentServerId === item.id) resetDraft();
+      setStatusMessage("Deleted permanently");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not delete item");
+    }
+  };
+
   const exportDraft = () => {
     const extension = extensionForKind(activeKind);
     const filename = `edsync-${activeKind}-${new Date().toISOString().slice(0, 10)}.${extension}`;
@@ -453,7 +498,14 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
           </div>
           <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">Saved</p>
+              <button
+                type="button"
+                className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle hover:text-edsync-text"
+                onClick={() => setIncludeArchived((value) => !value)}
+                title="Toggle archived items"
+              >
+                {includeArchived ? "All items" : "Saved"}
+              </button>
               <span className="rounded-full bg-edsync-card px-2 py-0.5 text-xs font-bold text-edsync-subtle">
                 {serverItems.length}
               </span>
@@ -479,6 +531,40 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   <span className="mt-1 block text-xs capitalize text-edsync-subtle">
                     {item.status} - {new Date(item.updatedAt).toLocaleDateString()}
                   </span>
+                  {item.status === "archived" && (
+                    <span className="mt-2 flex gap-2">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Restore ${item.title}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          restoreServerItem(item);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") restoreServerItem(item);
+                        }}
+                        className="rounded-full bg-edsync-blue/10 px-2 py-1 text-xs font-bold text-edsync-blue"
+                      >
+                        Restore
+                      </span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Delete ${item.title}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          hardDeleteServerItem(item);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") hardDeleteServerItem(item);
+                        }}
+                        className="rounded-full bg-edsync-red/10 px-2 py-1 text-xs font-bold text-edsync-red"
+                      >
+                        Delete
+                      </span>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -505,6 +591,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <button type="button" onClick={saveDraft} className="btn-secondary px-3 py-2 text-sm">
                   <Save className="h-4 w-4" />
                   Save
+                </button>
+                <button type="button" onClick={publishCurrentItem} className="btn-secondary px-3 py-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Publish
                 </button>
                 <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setStatusMessage("Split panes are ready for the next layout pass")}>
                   <SplitSquareHorizontal className="h-4 w-4" />
