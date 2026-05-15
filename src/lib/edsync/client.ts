@@ -30,6 +30,8 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
   return payload;
 }
 
+// The query builder mirrors Supabase's permissive default so existing callers can opt into types gradually.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
   private request: DataRequest;
 
@@ -177,6 +179,7 @@ export function createClient() {
         return postJson<{ error: null }>("/api/auth/logout");
       },
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     from<T = any>(table: string) {
       return new EdSyncQueryBuilder<T>(table);
     },
