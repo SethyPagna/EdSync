@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
+import { normalizeCertificationRulePayload } from "@/lib/certifications/rules";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     courseId?: string | null;
     expiresAfterDays?: number | null;
     notifyBeforeDays?: number;
+    settings?: Record<string, unknown>;
   };
 
   if (body.action === "delete") {
@@ -42,20 +44,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { id: body.id }, error: null });
   }
 
-  if (!body.title) return NextResponse.json({ data: null, error: "Title is required." }, { status: 400 });
+  let normalized;
+  try {
+    normalized = normalizeCertificationRulePayload(body);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Certification rule is invalid.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
+  }
 
   if (body.action === "update") {
     if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
     await d1Query(
       `UPDATE certification_rules
-       SET title = ?, description = ?, course_id = ?, expires_after_days = ?, notify_before_days = ?, updated_at = datetime('now')
+       SET title = ?, description = ?, course_id = ?, expires_after_days = ?, notify_before_days = ?, settings = ?, updated_at = datetime('now')
        WHERE tenant_id = ? AND id = ?`,
       [
-        body.title.trim(),
-        body.description ?? null,
-        body.courseId ?? null,
-        body.expiresAfterDays ?? null,
-        Math.max(0, Number(body.notifyBeforeDays ?? 30)),
+        normalized.title,
+        normalized.description,
+        normalized.courseId,
+        normalized.expiresAfterDays,
+        normalized.notifyBeforeDays,
+        normalized.settings,
         context.tenant.id,
         body.id,
       ],
@@ -66,9 +75,18 @@ export async function POST(request: Request) {
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO certification_rules (
-       id, tenant_id, title, description, course_id, expires_after_days, notify_before_days, settings, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, '{}', datetime('now'), datetime('now'))`,
-    [id, context.tenant.id, body.title.trim(), body.description ?? null, body.courseId ?? null, body.expiresAfterDays ?? null, body.notifyBeforeDays ?? 30],
+     id, tenant_id, title, description, course_id, expires_after_days, notify_before_days, settings, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    [
+      id,
+      context.tenant.id,
+      normalized.title,
+      normalized.description,
+      normalized.courseId,
+      normalized.expiresAfterDays,
+      normalized.notifyBeforeDays,
+      normalized.settings,
+    ],
   );
   return NextResponse.json({ data: { id }, error: null });
 }
