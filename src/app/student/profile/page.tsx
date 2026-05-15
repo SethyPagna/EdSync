@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS } from "@/lib/grades";
 import type { Profile, UserPreferences } from "@/types";
@@ -212,10 +212,10 @@ export default function StudentProfile() {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const edsync = createClient();
+  const edsync = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    const loadProfileAndStats = async () => {
+  const loadProfileAndStats = useCallback(async () => {
+    try {
       const {
         data: { user },
       } = await edsync.auth.getUser();
@@ -246,10 +246,14 @@ export default function StudentProfile() {
       const progressRows = (progressRes.data || []) as ProgressRow[];
       const socraticCount = socraticRes.count || 0;
       setSkillMetrics(buildSkillMetrics(progressRows, socraticCount));
-    };
+    } catch {
+      toast.error("Could not load profile.");
+    }
+  }, [edsync]);
 
+  useEffect(() => {
     loadProfileAndStats();
-  }, []);
+  }, [loadProfileAndStats]);
 
   const toggleInterest = (interest: string) => {
     setInterests((prev) =>
@@ -264,7 +268,10 @@ export default function StudentProfile() {
     const {
       data: { user },
     } = await edsync.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSaving(false);
+      return;
+    }
 
     const { error } = await edsync
       .from("profiles")
@@ -276,7 +283,9 @@ export default function StudentProfile() {
       })
       .eq("id", user.id);
 
-    if (!error) {
+    if (error) {
+      toast.error(error.message);
+    } else {
       toast.success("Profile saved!");
       setProfile((prev) =>
         prev
