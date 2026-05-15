@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS } from "@/lib/grades";
 import type { Profile, UserPreferences } from "@/types";
@@ -336,9 +337,9 @@ export default function StudentProfile() {
       {/* Avatar & basic info */}
       <div className="edsync-card mb-6">
         <div className="flex items-start gap-6">
-          <div className="w-20 h-20 overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan flex items-center justify-center text-white text-3xl font-display font-bold flex-shrink-0">
+          <div className="relative flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan font-display text-3xl font-bold text-white">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+              <Image src={profile.avatar_url} alt="" fill sizes="80px" className="object-cover" />
             ) : profile ? (
               generateInitials(profile.full_name || profile.email)
             ) : (
