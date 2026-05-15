@@ -1,34 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enqueueAutomationJob } from "@/lib/automation";
+import { AUTOMATION_RECIPES, normalizeAutomationRulePayload } from "@/lib/automation/rules";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
 
-const DEFAULT_AUTOMATIONS = [
-  {
-    title: "Inactive learner nudge",
-    triggerKey: "learner.inactive",
-    conditions: { inactiveDays: 5 },
-    actions: [{ type: "notify", channel: "in_app", template: "gentle_nudge" }],
-  },
-  {
-    title: "Mastery unlock",
-    triggerKey: "score.mastery",
-    conditions: { scoreGte: 90 },
-    actions: [{ type: "unlock", target: "optional_work" }, { type: "award_badge", badge: "mastery" }],
-  },
-  {
-    title: "Deadline reminder",
-    triggerKey: "deadline.upcoming",
-    conditions: { hoursBeforeDue: 24 },
-    actions: [{ type: "notify", channel: "in_app", template: "deadline_reminder" }],
-  },
-];
-
 async function seedDefaultAutomations(tenantId: string, userId: string) {
-  for (const rule of DEFAULT_AUTOMATIONS) {
+  for (const rule of AUTOMATION_RECIPES) {
     await d1Query(
       `INSERT OR IGNORE INTO automation_rules (
          id, tenant_id, title, trigger_key, conditions, actions, enabled, created_by, created_at, updated_at
@@ -97,8 +77,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { id: body.id, jobId }, error: null });
   }
 
-  if (!body.title || !body.triggerKey) {
-    return NextResponse.json({ data: null, error: "Title and trigger are required." }, { status: 400 });
+  let normalized;
+  try {
+    normalized = normalizeAutomationRulePayload(body);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Automation rule is invalid.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
   }
 
   if (body.action === "update") {
@@ -108,11 +92,11 @@ export async function POST(request: Request) {
        SET title = ?, trigger_key = ?, conditions = ?, actions = ?, enabled = ?, updated_at = datetime('now')
        WHERE tenant_id = ? AND id = ?`,
       [
-        body.title.trim(),
-        body.triggerKey,
-        body.conditions ?? {},
-        body.actions ?? [],
-        body.enabled === false ? 0 : 1,
+        normalized.title,
+        normalized.triggerKey,
+        normalized.conditions,
+        normalized.actions,
+        normalized.enabled ? 1 : 0,
         context.tenant.id,
         body.id,
       ],
@@ -128,11 +112,11 @@ export async function POST(request: Request) {
     [
       id,
       context.tenant.id,
-      body.title.trim(),
-      body.triggerKey,
-      body.conditions ?? {},
-      body.actions ?? [],
-      body.enabled === false ? 0 : 1,
+      normalized.title,
+      normalized.triggerKey,
+      normalized.conditions,
+      normalized.actions,
+      normalized.enabled ? 1 : 0,
       user.id,
     ],
   );
