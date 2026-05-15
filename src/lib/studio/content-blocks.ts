@@ -49,9 +49,33 @@ export async function createContentBlock(input: {
   return data.block;
 }
 
+export async function updateContentBlock(input: {
+  id: string;
+  title?: string;
+  blockType?: string;
+  data?: Record<string, unknown>;
+  tags?: string[];
+  status?: "draft" | "published" | "archived";
+}) {
+  const data = await fetch("/api/content-blocks", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  }).then(parseContentBlockResponse<{ block: StudioContentBlock }>);
+  return data.block;
+}
+
 export async function archiveContentBlock(id: string) {
   return fetch(`/api/content-blocks?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
     credentials: "include",
   }).then(parseContentBlockResponse<{ id: string; archived: true }>);
+}
+
+export async function hardDeleteContentBlock(id: string) {
+  return fetch(`/api/content-blocks?id=${encodeURIComponent(id)}&hard=true`, {
+    method: "DELETE",
+    credentials: "include",
+  }).then(parseContentBlockResponse<{ id: string; deleted: true }>);
 }
