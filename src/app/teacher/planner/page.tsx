@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { CalendarClock, Megaphone, Plus, Send, TimerReset } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
@@ -56,41 +56,43 @@ export default function TeacherPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadPlanner();
+  const loadPlanner = useCallback(async () => {
+    setLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await edsync.auth.getUser();
+      if (!user) return;
+
+      const [classRes, plannerRes] = await Promise.all([
+        edsync
+          .from("classes")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false }),
+        fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
+          res.json(),
+        ),
+      ]);
+
+      const classRows = classRes.data || [];
+      setClasses(classRows);
+      setForm((current) => ({
+        ...current,
+        classId: current.classId || classRows[0]?.id || "",
+      }));
+      setPlanner(plannerRes.data || { announcements: [], events: [] });
+    } catch {
+      toast.error("Could not load planner.");
+    } finally {
+      setLoading(false);
+    }
   }, [edsync]);
 
-  const loadPlanner = async () => {
-    setLoading(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const [classRes, plannerRes] = await Promise.all([
-      edsync
-        .from("classes")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false }),
-      fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
-        res.json(),
-      ),
-    ]);
-
-    const classRows = classRes.data || [];
-    setClasses(classRows);
-    setForm((current) => ({
-      ...current,
-      classId: current.classId || classRows[0]?.id || "",
-    }));
-    setPlanner(plannerRes.data || { announcements: [], events: [] });
-    setLoading(false);
-  };
+  useEffect(() => {
+    loadPlanner();
+  }, [loadPlanner]);
 
   const submitPlannerItem = async () => {
     if (!form.classId) {
@@ -111,44 +113,47 @@ export default function TeacherPlannerPage() {
     }
 
     setSaving(true);
-    const response = await fetch("/api/planner", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        kind: form.mode === "announcement" ? "announcement" : "event",
-        classId: form.classId,
-        title: form.title,
-        body: form.body,
-        description: form.body,
-        priority: form.priority,
-        eventType:
-          form.mode === "deadline"
-            ? "deadline"
-            : form.mode === "event"
-              ? "class"
-              : "announcement",
-        startsAt: form.startsAt || null,
-        endsAt: form.endsAt || null,
-        dueAt: form.mode === "deadline" ? form.dueAt : null,
-        location: form.location || null,
-      }),
-    });
-    const payload = await response.json();
-    setSaving(false);
+    try {
+      const response = await fetch("/api/planner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          kind: form.mode === "announcement" ? "announcement" : "event",
+          classId: form.classId,
+          title: form.title,
+          body: form.body,
+          description: form.body,
+          priority: form.priority,
+          eventType:
+            form.mode === "deadline"
+              ? "deadline"
+              : form.mode === "event"
+                ? "class"
+                : "announcement",
+          startsAt: form.startsAt || null,
+          endsAt: form.endsAt || null,
+          dueAt: form.mode === "deadline" ? form.dueAt : null,
+          location: form.location || null,
+        }),
+      });
+      const payload = await response.json();
 
-    if (!response.ok) {
-      toast.error(payload.error?.message || "Could not save planner item.");
-      return;
+      if (!response.ok) {
+        toast.error(payload.error?.message || "Could not save planner item.");
+        return;
+      }
+
+      toast.success(
+        form.mode === "announcement"
+          ? `Announcement sent to ${payload.data?.notified ?? 0} students.`
+          : "Schedule updated.",
+      );
+      setForm((current) => ({ ...emptyForm, classId: current.classId }));
+      await loadPlanner();
+    } finally {
+      setSaving(false);
     }
-
-    toast.success(
-      form.mode === "announcement"
-        ? `Announcement sent to ${payload.data?.notified ?? 0} students.`
-        : "Schedule updated.",
-    );
-    setForm((current) => ({ ...emptyForm, classId: current.classId }));
-    await loadPlanner();
   };
 
   return (
