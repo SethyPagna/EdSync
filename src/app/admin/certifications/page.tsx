@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Edit3, Save, Trash2, X } from "lucide-react";
+import { Award, Edit3, MoreVertical, Save, Trash2, X } from "lucide-react";
 import type { CertificationRule } from "@/types";
-import { InfoPopover } from "@/components/WorkspacePrimitives";
+import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
+import { CERTIFICATION_RECIPES } from "@/lib/certifications/rules";
 
 type CertificationsPayload = {
   rules: CertificationRule[];
@@ -14,6 +15,7 @@ type RuleDraft = {
   description: string;
   expiresAfterDays: number;
   notifyBeforeDays: number;
+  settingsText: string;
 };
 
 const emptyRule: RuleDraft = {
@@ -21,6 +23,7 @@ const emptyRule: RuleDraft = {
   description: "",
   expiresAfterDays: 365,
   notifyBeforeDays: 30,
+  settingsText: "{}",
 };
 
 function draftFrom(rule: CertificationRule): RuleDraft {
@@ -29,7 +32,22 @@ function draftFrom(rule: CertificationRule): RuleDraft {
     description: rule.description ?? "",
     expiresAfterDays: rule.expires_after_days ?? 365,
     notifyBeforeDays: rule.notify_before_days ?? 30,
+    settingsText: JSON.stringify(rule.settings ?? {}, null, 2),
   };
+}
+
+function parseSettings(value: string) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    return parsed as Record<string, unknown>;
+  } catch {
+    throw new Error("Settings must be a valid JSON object.");
+  }
+}
+
+function compactJson(value: unknown) {
+  return JSON.stringify(value);
 }
 
 export default function AdminCertificationsPage() {
@@ -38,6 +56,7 @@ export default function AdminCertificationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RuleDraft>(emptyRule);
   const [message, setMessage] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
 
   const load = () =>
     fetch("/api/certifications", { cache: "no-store" })
@@ -65,14 +84,47 @@ export default function AdminCertificationsPage() {
     return true;
   };
 
+  const bodyFrom = (source: RuleDraft) => ({
+    title: source.title,
+    description: source.description,
+    expiresAfterDays: source.expiresAfterDays,
+    notifyBeforeDays: source.notifyBeforeDays,
+    settings: parseSettings(source.settingsText),
+  });
+
+  const applyRecipe = (recipe: (typeof CERTIFICATION_RECIPES)[number]) => {
+    setForm({
+      title: recipe.title,
+      description: recipe.description,
+      expiresAfterDays: recipe.expiresAfterDays ?? 0,
+      notifyBeforeDays: recipe.notifyBeforeDays,
+      settingsText: JSON.stringify(recipe.settings, null, 2),
+    });
+    setMessage("Certification recipe loaded.");
+  };
+
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
-    const ok = await run({ action: "create", ...form }, "Certification rule created.");
+    let body;
+    try {
+      body = bodyFrom(form);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Certification rule is invalid.");
+      return;
+    }
+    const ok = await run({ action: "create", ...body }, "Certification rule created.");
     if (ok) setForm(emptyRule);
   };
 
   const save = async (rule: CertificationRule) => {
-    const ok = await run({ action: "update", id: rule.id, ...draft }, "Certification rule saved.");
+    let body;
+    try {
+      body = bodyFrom(draft);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Certification rule is invalid.");
+      return;
+    }
+    const ok = await run({ action: "update", id: rule.id, ...body }, "Certification rule saved.");
     if (ok) setEditingId(null);
   };
 
@@ -95,12 +147,37 @@ export default function AdminCertificationsPage() {
 
       {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
 
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {CERTIFICATION_RECIPES.map((recipe) => (
+          <button
+            key={recipe.id}
+            type="button"
+            onClick={() => applyRecipe(recipe)}
+            className="rounded-lg border border-edsync-border bg-edsync-card p-4 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-surface"
+          >
+            <Award className="mb-3 h-5 w-5 text-edsync-blue" />
+            <span className="block font-semibold text-edsync-text">{recipe.title}</span>
+            <span className="mt-2 block text-xs text-edsync-subtle">
+              {recipe.expiresAfterDays ? `${recipe.expiresAfterDays} day expiry` : "No expiry"} · notify {recipe.notifyBeforeDays} days
+            </span>
+          </button>
+        ))}
+      </section>
+
       <form onSubmit={create} className="edsync-card grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_160px_160px_auto]">
         <input className="edsync-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Certification title" required />
         <input className="edsync-input" type="number" min="0" value={form.expiresAfterDays} onChange={(event) => setForm({ ...form, expiresAfterDays: Number(event.target.value) })} aria-label="Expires after days" />
         <input className="edsync-input" type="number" min="0" value={form.notifyBeforeDays} onChange={(event) => setForm({ ...form, notifyBeforeDays: Number(event.target.value) })} aria-label="Notify before days" />
         <button className="btn-primary justify-center" type="submit">Create rule</button>
         <textarea className="edsync-input lg:col-span-4" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Rule purpose and audit notes" />
+        <div className="lg:col-span-4">
+          <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setShowSettings((value) => !value)}>
+            {showSettings ? "Hide settings" : "Edit settings"}
+          </button>
+        </div>
+        {showSettings && (
+          <textarea className="edsync-input min-h-24 lg:col-span-4" value={form.settingsText} onChange={(event) => setForm({ ...form, settingsText: event.target.value })} aria-label="Certification settings JSON" />
+        )}
       </form>
 
       <div className="edsync-card overflow-hidden p-0">
@@ -118,6 +195,7 @@ export default function AdminCertificationsPage() {
                     <input className="edsync-input" type="number" min="0" value={draft.expiresAfterDays} onChange={(event) => setDraft({ ...draft, expiresAfterDays: Number(event.target.value) })} />
                     <input className="edsync-input" type="number" min="0" value={draft.notifyBeforeDays} onChange={(event) => setDraft({ ...draft, notifyBeforeDays: Number(event.target.value) })} />
                     <textarea className="edsync-input lg:col-span-3" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
+                    <textarea className="edsync-input min-h-24 lg:col-span-3" value={draft.settingsText} onChange={(event) => setDraft({ ...draft, settingsText: event.target.value })} />
                   </div>
                 ) : (
                   <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_160px_160px] lg:items-center">
@@ -129,19 +207,28 @@ export default function AdminCertificationsPage() {
                     <span>Notify {rule.notify_before_days} days</span>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   {editing ? (
                     <>
                       <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => save(rule)}><Save className="h-4 w-4" /> Save</button>
                       <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
                     </>
                   ) : (
-                    <>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => { setEditingId(rule.id); setDraft(draftFrom(rule)); }}><Edit3 className="h-4 w-4" /> Edit</button>
-                      <button type="button" className="btn-ghost px-3 py-2 text-sm text-rose-600" onClick={() => remove(rule)}><Trash2 className="h-4 w-4" /> Delete</button>
-                    </>
+                    <ActionMenu label={`${rule.title} actions`}>
+                      <button type="button" className="btn-secondary justify-start px-3 py-2 text-sm" onClick={() => { setEditingId(rule.id); setDraft(draftFrom(rule)); }}><Edit3 className="h-4 w-4" /> Edit</button>
+                      <button type="button" className="btn-ghost justify-start px-3 py-2 text-sm text-rose-600" onClick={() => remove(rule)}><Trash2 className="h-4 w-4" /> Delete</button>
+                    </ActionMenu>
                   )}
                 </div>
+                {!editing && (
+                  <details className="rounded-lg border border-edsync-border bg-edsync-surface">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-edsync-subtle">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                      Audit settings
+                    </summary>
+                    <pre className="overflow-auto border-t border-edsync-border p-3 text-xs text-edsync-subtle">{compactJson(rule.settings ?? {})}</pre>
+                  </details>
+                )}
               </section>
             );
           })}
