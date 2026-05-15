@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
-import { GuidePanel, MetricTile } from "@/components/WorkspacePrimitives";
+import { InfoPopover, MetricTile } from "@/components/WorkspacePrimitives";
 
 type Summary = {
   cards: Record<string, number>;
@@ -19,32 +19,32 @@ type Summary = {
 };
 
 const platformMetrics = [
-  ["users", "Users", UsersRound, "text-edsync-blue", "All platform identities."],
-  ["classes", "Classes", BookOpenCheck, "text-edsync-emerald", "Active learning spaces."],
-  ["workItems", "Work items", Activity, "text-edsync-amber", "Tasks, tests, quizzes, and discussions."],
-  ["submissions", "Submissions", Activity, "text-edsync-cyan", "Learner evidence captured."],
+  ["users", "Users", UsersRound, "text-edsync-blue", ""],
+  ["classes", "Classes", BookOpenCheck, "text-edsync-emerald", ""],
+  ["workItems", "Work items", Activity, "text-edsync-amber", ""],
+  ["submissions", "Submissions", Activity, "text-edsync-cyan", ""],
 ] as const;
 
 const systemMetrics = [
-  ["providers", "AI providers", Bot, "text-edsync-purple", "Smart fallback capacity."],
-  ["emails", "Email events", Mail, "text-edsync-blue", "Outbox and compose records."],
-  ["securityEvents", "Security events", ShieldCheck, "text-edsync-red", "Items needing review."],
+  ["providers", "AI providers", Bot, "text-edsync-purple", ""],
+  ["emails", "Email events", Mail, "text-edsync-blue", ""],
+  ["securityEvents", "Security events", ShieldCheck, "text-edsync-red", ""],
 ] as const;
 
 const priorityActions = [
   {
     title: "Review AI provider health",
-    detail: "Test enabled providers, check cooldowns, and confirm encrypted keys are usable.",
+    detail: "Test providers.",
     href: "/admin/ai",
   },
   {
     title: "Tune platform permissions",
-    detail: "Keep global owner access separate from tenant-scoped organization roles.",
+    detail: "Review roles.",
     href: "/admin/permissions",
   },
   {
     title: "Open governance hub",
-    detail: "Manage standards, certifications, automation, and security from one place.",
+    detail: "Open hub.",
     href: "/admin/governance",
   },
 ];
@@ -60,7 +60,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6 p-5 lg:p-8">
-      <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
         <section className="rounded-lg border border-edsync-border bg-edsync-card p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -68,27 +68,18 @@ export default function AdminDashboardPage() {
               <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text sm:text-4xl">
                 Admin command center
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-edsync-subtle">
-                Monitor the whole EdSync application, separate global owner tasks from tenant operations, and jump into the areas that need attention.
-              </p>
             </div>
-            <Link href="/admin/governance" className="btn-primary w-full justify-center sm:w-fit">
-              Governance hub
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <InfoPopover label="Owner console help">
+                Global owner controls stay separate from tenant-scoped organization manager controls.
+              </InfoPopover>
+              <Link href="/admin/governance" className="btn-primary w-fit justify-center px-4 py-2">
+                Governance
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
-
-        <GuidePanel
-          title="What to check first"
-          description="Start with system health, then review governance and access changes. Tenant managers should only receive scoped controls for their own organization."
-          icon={ShieldCheck}
-          items={[
-            "AI provider tests should pass before teachers generate content.",
-            "Security events and global admin grants should be reviewed regularly.",
-            "Feature visibility belongs in tenant-scoped roles whenever possible.",
-          ]}
-        />
       </header>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -122,7 +113,6 @@ export default function AdminDashboardPage() {
           <section className="edsync-card overflow-hidden p-0">
             <div className="border-b border-edsync-border p-4">
               <h2 className="font-display text-xl font-bold">Recent admin audit</h2>
-              <p className="mt-1 text-sm text-edsync-subtle">Owner-level actions and platform changes.</p>
             </div>
             <div className="divide-y divide-edsync-border">
               {(summary?.recentAudit ?? []).map((item) => (
