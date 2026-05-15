@@ -97,7 +97,22 @@ function RichTextEditor({
           <option value="h1">Heading 1</option>
           <option value="h2">Heading 2</option>
           <option value="h3">Heading 3</option>
+          <option value="h4">Subheading</option>
           <option value="blockquote">Quote</option>
+        </select>
+
+        <select
+          onMouseDown={(e) => e.preventDefault()}
+          onChange={(e) => {
+            exec("fontName", e.target.value);
+            e.target.value = "Inter";
+          }}
+          className="text-xs bg-edsync-card border border-edsync-border rounded px-1 py-1 text-edsync-subtle mr-1"
+        >
+          <option value="Inter">Sans</option>
+          <option value="Georgia">Serif</option>
+          <option value="Arial">Arial</option>
+          <option value="Courier New">Mono</option>
         </select>
 
         {/* Font size */}
@@ -120,29 +135,29 @@ function RichTextEditor({
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Text style */}
+        {toolbarBtn("Undo", () => exec("undo"), "Undo")}
+        {toolbarBtn("Redo", () => exec("redo"), "Redo")}
         {toolbarBtn("B", () => exec("bold"), "Bold", false)}
         {toolbarBtn("I", () => exec("italic"), "Italic", false)}
         {toolbarBtn("U", () => exec("underline"), "Underline", false)}
         {toolbarBtn("S", () => exec("strikeThrough"), "Strikethrough", false)}
+        {toolbarBtn("Sub", () => exec("subscript"), "Subscript", false)}
+        {toolbarBtn("Sup", () => exec("superscript"), "Superscript", false)}
 
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Alignment */}
-        {toolbarBtn("≡L", () => exec("justifyLeft"), "Align Left")}
-        {toolbarBtn("≡C", () => exec("justifyCenter"), "Center")}
-        {toolbarBtn("≡R", () => exec("justifyRight"), "Align Right")}
-
+        {toolbarBtn("Left", () => exec("justifyLeft"), "Align Left")}
+        {toolbarBtn("Center", () => exec("justifyCenter"), "Center")}
+        {toolbarBtn("Right", () => exec("justifyRight"), "Align Right")}
+        {toolbarBtn("Justify", () => exec("justifyFull"), "Justify")}
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Lists */}
-        {toolbarBtn("• List", () => exec("insertUnorderedList"), "Bullet List")}
-        {toolbarBtn(
-          "1. List",
-          () => exec("insertOrderedList"),
-          "Numbered List",
-        )}
-        {toolbarBtn("→", () => exec("indent"), "Indent")}
-        {toolbarBtn("←", () => exec("outdent"), "Outdent")}
+        {toolbarBtn("Bullets", () => exec("insertUnorderedList"), "Bullet List")}
+        {toolbarBtn("Numbers", () => exec("insertOrderedList"), "Numbered List")}
+        {toolbarBtn("Indent", () => exec("indent"), "Indent")}
+        {toolbarBtn("Outdent", () => exec("outdent"), "Outdent")}
 
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
@@ -159,12 +174,24 @@ function RichTextEditor({
           />
           <span>Color</span>
         </button>
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          title="Highlight color"
+          className="text-xs text-edsync-subtle hover:text-edsync-text px-2 py-1 rounded hover:bg-edsync-muted/30 flex items-center gap-1"
+        >
+          <input
+            type="color"
+            className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
+            onChange={(e) => exec("hiliteColor", e.target.value)}
+          />
+          <span>Highlight</span>
+        </button>
 
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Misc */}
         {toolbarBtn(
-          "― HR",
+          "Line",
           () => exec("insertHorizontalRule"),
           "Horizontal Line",
         )}
@@ -208,6 +235,27 @@ function RichTextEditor({
             ),
           "Insert Two Columns",
         )}
+        {toolbarBtn(
+          "Checklist",
+          () =>
+            insertHtml(
+              '<ul class="lesson-checklist"><li>Step one or success criterion</li><li>Step two or evidence to submit</li><li>Reflection question</li></ul>',
+            ),
+          "Insert Checklist",
+        )}
+        {toolbarBtn(
+          "Practice",
+          () =>
+            insertHtml(
+              '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Set a timer, answer the prompt, then compare with the model answer.</p><ol><li>Try it alone.</li><li>Check your reasoning.</li><li>Revise one part.</li></ol></section>',
+            ),
+          "Insert Practice Sprint",
+        )}
+        {toolbarBtn(
+          "Spacer",
+          () => insertHtml('<div class="lesson-spacer"></div>'),
+          "Add Paragraph Spacing",
+        )}
         {toolbarBtn("Clear", () => exec("removeFormat"), "Clear Formatting")}
       </div>
 
@@ -233,7 +281,7 @@ function RichTextEditor({
 
       {/* Status bar */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-edsync-surface border-t border-edsync-border text-xs text-edsync-subtle">
-        <span>Rich text editor — use toolbar or Markdown shortcuts</span>
+        <span>Rich text editor - formatting is saved with the lesson</span>
         <span>{(ref.current?.innerText || "").length} chars</span>
       </div>
     </div>
