@@ -14,6 +14,14 @@ export type StudioServerItem = {
   updatedAt: string;
 };
 
+export type StudioHistoryEvent = {
+  id: string;
+  actorId: string | null;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
 type StudioApiResponse<T> = {
   data: T | null;
   error: string | null;
@@ -88,4 +96,12 @@ export async function hardDeleteStudioItem(id: string) {
     credentials: "include",
   }).then(parseStudioResponse<{ id: string; deleted: true }>);
   return data;
+}
+
+export async function listStudioHistory(id: string) {
+  const params = new URLSearchParams({ historyId: id });
+  const data = await fetch(`/api/studio?${params.toString()}`, {
+    credentials: "include",
+  }).then(parseStudioResponse<{ events: StudioHistoryEvent[] }>);
+  return data.events;
 }
