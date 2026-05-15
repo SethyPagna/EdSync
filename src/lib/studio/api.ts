@@ -28,9 +28,12 @@ async function parseStudioResponse<T>(response: Response) {
   return payload.data;
 }
 
-export async function listStudioItems(kind?: StudioItemKind) {
-  const params = kind ? `?kind=${encodeURIComponent(kind)}` : "";
-  const data = await fetch(`/api/studio${params}`, { credentials: "include" }).then(
+export async function listStudioItems(kind?: StudioItemKind, includeArchived = false) {
+  const params = new URLSearchParams();
+  if (kind) params.set("kind", kind);
+  if (includeArchived) params.set("includeArchived", "true");
+  const query = params.toString();
+  const data = await fetch(`/api/studio${query ? `?${query}` : ""}`, { credentials: "include" }).then(
     parseStudioResponse<{ items: StudioServerItem[] }>,
   );
   return data.items;
@@ -54,10 +57,35 @@ export async function saveStudioItem(input: {
   return data.item;
 }
 
+export async function updateStudioItem(input: {
+  id: string;
+  title?: string;
+  content?: Record<string, unknown>;
+  plainText?: string;
+  status?: "draft" | "published" | "archived";
+  metadata?: Record<string, unknown>;
+}) {
+  const data = await fetch("/api/studio", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  }).then(parseStudioResponse<{ item: StudioServerItem }>);
+  return data.item;
+}
+
 export async function archiveStudioItem(id: string) {
   const data = await fetch(`/api/studio?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
     credentials: "include",
   }).then(parseStudioResponse<{ id: string; archived: true }>);
+  return data;
+}
+
+export async function hardDeleteStudioItem(id: string) {
+  const data = await fetch(`/api/studio?id=${encodeURIComponent(id)}&hard=true`, {
+    method: "DELETE",
+    credentials: "include",
+  }).then(parseStudioResponse<{ id: string; deleted: true }>);
   return data;
 }
