@@ -18,6 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type ProviderMetaEntry = {
   label: string;
@@ -246,7 +247,6 @@ export default function AdminAIPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   const providerOptions = useMemo(() => Object.keys(providerMeta), [providerMeta]);
-  const editingProvider = providers.find((provider) => provider.id === editingId) ?? null;
 
   const loadProviders = async () => {
     setLoading(true);
@@ -388,14 +388,16 @@ export default function AdminAIPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">AI command center</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">AI Providers</h1>
-          <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
-            Manage encrypted provider keys, routing priority, cooldowns, limits, health tests, and automatic fallback from one admin page.
-          </p>
         </div>
-        <button type="button" onClick={loadProviders} className="btn-secondary w-fit" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <InfoPopover label="AI routing help">
+            Keys are encrypted. Lower priority numbers run first. Failed providers cool down and fallback automatically.
+          </InfoPopover>
+          <button type="button" onClick={loadProviders} className="btn-secondary w-fit px-3 py-2" disabled={loading} aria-label="Refresh providers">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="sr-only">Refresh providers</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -405,7 +407,7 @@ export default function AdminAIPage() {
             <ShieldCheck className="h-4 w-4 text-edsync-blue" />
           </div>
           <p className="mt-2 text-3xl font-bold">{summary.enabled}</p>
-          <p className="text-xs text-edsync-subtle">{summary.total} stored providers</p>
+          <p className="text-xs text-edsync-subtle">{summary.total} stored</p>
         </div>
         <div className="edsync-card p-4">
           <div className="flex items-center justify-between gap-3">
@@ -413,7 +415,7 @@ export default function AdminAIPage() {
             <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
           </div>
           <p className="mt-2 text-3xl font-bold">{summary.healthy}</p>
-          <p className="text-xs text-edsync-subtle">{summary.errors} provider errors</p>
+          <p className="text-xs text-edsync-subtle">{summary.errors} errors</p>
         </div>
         <div className="edsync-card p-4">
           <div className="flex items-center justify-between gap-3">
@@ -421,7 +423,7 @@ export default function AdminAIPage() {
             <Bot className="h-4 w-4 text-edsync-cyan" />
           </div>
           <p className="mt-2 text-3xl font-bold">{summary.chat}</p>
-          <p className="text-xs text-edsync-subtle">{summary.embed} embedding route</p>
+          <p className="text-xs text-edsync-subtle">{summary.embed} embed</p>
         </div>
         <div className="edsync-card p-4">
           <div className="flex items-center justify-between gap-3">
@@ -440,7 +442,6 @@ export default function AdminAIPage() {
           <div className="edsync-card overflow-hidden p-0">
             <div className="border-b border-edsync-border px-4 py-3">
               <h2 className="font-display text-xl font-bold">Routing Stack</h2>
-              <p className="text-sm text-edsync-subtle">Lower priority numbers are tried first; failed providers cool down automatically.</p>
             </div>
             <div className="grid gap-3 p-3 lg:hidden">
               {providers.map((provider) => (
@@ -464,8 +465,8 @@ export default function AdminAIPage() {
                   <p className="mt-2 break-all text-xs text-edsync-subtle">{provider.endpoint_effective}</p>
                   {provider.last_error && <p className="mt-2 text-xs text-edsync-red">{provider.last_error}</p>}
                   <details className="mt-3 rounded-lg border border-edsync-border">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-semibold text-edsync-text">
-                      Actions
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-semibold text-edsync-text" aria-label={`Provider actions for ${provider.name}`}>
+                      <span className="sr-only">Actions</span>
                       <MoreVertical className="h-4 w-4 text-edsync-subtle" />
                     </summary>
                     <div className="grid grid-cols-2 gap-2 border-t border-edsync-border p-2">
@@ -563,9 +564,9 @@ export default function AdminAIPage() {
                       </td>
                       <td className="px-4 py-3">
                         <details className="relative">
-                          <summary className="btn-secondary w-fit cursor-pointer list-none px-3 py-2">
+                          <summary className="btn-secondary w-fit cursor-pointer list-none px-3 py-2" aria-label={`Provider actions for ${provider.name}`}>
                             <MoreVertical className="h-4 w-4" />
-                            Actions
+                            <span className="sr-only">Actions</span>
                           </summary>
                           <div className="absolute right-0 z-10 mt-2 grid w-48 gap-2 rounded-lg border border-edsync-border bg-edsync-card p-2 shadow-xl">
                             <button type="button" onClick={() => editProvider(provider)} className="btn-secondary justify-start px-3 py-2">
@@ -623,7 +624,6 @@ export default function AdminAIPage() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-xl font-bold">Recent AI Runs</h2>
-                <p className="text-sm text-edsync-subtle">Audited attempts from the smart fallback layer.</p>
               </div>
               {summary.recent_failures > 0 && (
                 <span className="badge bg-edsync-red/10 text-edsync-red">
@@ -653,9 +653,6 @@ export default function AdminAIPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit Provider" : "Add Provider"}</h2>
-              <p className="text-sm text-edsync-subtle">
-                {editingProvider ? `Editing ${editingProvider.name}. Leave API key blank to keep the encrypted key.` : "Keys are encrypted before storage."}
-              </p>
             </div>
             {editingId ? (
               <button type="button" onClick={resetForm} className="btn-ghost px-2 py-2">
