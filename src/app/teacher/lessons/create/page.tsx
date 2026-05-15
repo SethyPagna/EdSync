@@ -269,6 +269,16 @@ export default function CreateLesson() {
     });
   };
 
+  const appendDraftSectionContent = (index: number, html: string) => {
+    const sections = [...draft.sections];
+    const current = sections[index]?.content || "";
+    sections[index] = {
+      ...sections[index],
+      content: `${current}${current ? "\n\n" : ""}${html}`,
+    };
+    setDraft({ ...draft, sections });
+  };
+
   const clearSavedDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     setDraft(emptyDraft());
@@ -994,6 +1004,27 @@ export default function CreateLesson() {
               </div>
             </div>
           )}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: "Sections", value: draft.sections.length, hint: "Teaching blocks" },
+              { label: "Questions", value: draft.quiz_questions.length, hint: "Assessment items" },
+              { label: "Glossary", value: draft.glossary_terms.length, hint: "Vocabulary terms" },
+              { label: "Duration", value: `${draft.estimated_duration || 0}m`, hint: "Expected time" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl border border-edsync-border bg-edsync-card p-3 shadow-sm"
+              >
+                <p className="text-xs font-medium uppercase tracking-wide text-edsync-subtle">
+                  {item.label}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-edsync-text">
+                  {item.value}
+                </p>
+                <p className="text-xs text-edsync-subtle">{item.hint}</p>
+              </div>
+            ))}
+          </div>
 
           {/* Tabs */}
           <div className="flex gap-2 border-b border-edsync-border pb-0 overflow-x-auto -mx-1 px-1">
@@ -1446,25 +1477,48 @@ export default function CreateLesson() {
                       );
                     })()
                   ) : (
-                    <textarea
-                      value={sec.content || ""}
-                      onChange={(e) => {
-                        const ss = [...draft.sections];
-                        ss[i] = { ...ss[i], content: e.target.value };
-                        setDraft({ ...draft, sections: ss });
-                      }}
-                      rows={6}
-                      className="edsync-textarea text-sm"
-                      placeholder={
-                        sec.content_type === "quiz"
-                          ? "Quiz title (questions are managed in the Questions tab)..."
-                          : sec.content_type === "activity"
-                            ? "Step-by-step activity instructions..."
-                            : sec.content_type === "discussion"
-                              ? "Discussion prompt or open-ended question..."
-                              : "Write your section content here..."
-                      }
-                    />
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5 rounded-lg border border-edsync-border bg-edsync-surface p-2">
+                        {[
+                          { label: "H2", html: "<h2>Section heading</h2>" },
+                          { label: "H3", html: "<h3>Subheading</h3>" },
+                          { label: "Slide", html: '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>' },
+                          { label: "Table", html: "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>" },
+                          { label: "Checklist", html: '<ul class="lesson-checklist"><li>Step one</li><li>Step two</li><li>Reflection</li></ul>' },
+                          { label: "Practice", html: '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Try it, check it, then revise one part.</p></section>' },
+                          { label: "Callout", html: '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>' },
+                          { label: "Spacer", html: '<div class="lesson-spacer"></div>' },
+                        ].map((tool) => (
+                          <button
+                            key={tool.label}
+                            type="button"
+                            onClick={() => appendDraftSectionContent(i, tool.html)}
+                            className="rounded-md px-2 py-1 text-xs font-semibold text-edsync-subtle transition hover:bg-edsync-card hover:text-edsync-text"
+                          >
+                            {tool.label}
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={sec.content || ""}
+                        onChange={(e) => {
+                          const ss = [...draft.sections];
+                          ss[i] = { ...ss[i], content: e.target.value };
+                          setDraft({ ...draft, sections: ss });
+                        }}
+                        rows={7}
+                        className="edsync-textarea text-sm font-mono"
+                        placeholder={
+                          sec.content_type === "quiz"
+                            ? "Quiz title (questions are managed in the Questions tab)..."
+                            : sec.content_type === "activity"
+                              ? "Step-by-step activity instructions..."
+                              : sec.content_type === "discussion"
+                                ? "Discussion prompt or open-ended question..."
+                                : "Write your section content here..."
+                        }
+                      />
+                    </div>
                   )}
                 </div>
               ))}
