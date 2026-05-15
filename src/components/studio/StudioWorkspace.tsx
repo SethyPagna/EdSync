@@ -45,9 +45,11 @@ import {
 import {
   archiveStudioItem,
   hardDeleteStudioItem,
+  listStudioHistory,
   listStudioItems,
   saveStudioItem,
   updateStudioItem,
+  type StudioHistoryEvent,
   type StudioServerItem,
 } from "@/lib/studio/api";
 import {
@@ -165,6 +167,8 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const [serverItems, setServerItems] = useState<StudioServerItem[]>([]);
   const [currentServerId, setCurrentServerId] = useState<string | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [historyEvents, setHistoryEvents] = useState<StudioHistoryEvent[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
   const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
@@ -327,6 +331,8 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     setSelectedSlideId(nextDraft.slides[0]?.id ?? defaultDraft.slides[0].id);
     setDraftStatus("saved");
     setStatusMessage("Loaded from EdSync");
+    setHistoryEvents([]);
+    setHistoryOpen(false);
   };
 
   const archiveCurrentItem = async () => {
@@ -385,6 +391,23 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
       setStatusMessage("Deleted permanently");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Could not delete item");
+    }
+  };
+
+  const loadHistory = async () => {
+    if (!currentServerId) {
+      setStatusMessage("Save or open an item before viewing history");
+      return;
+    }
+
+    setStatusMessage("Loading history...");
+    try {
+      const events = await listStudioHistory(currentServerId);
+      setHistoryEvents(events);
+      setHistoryOpen(true);
+      setStatusMessage(events.length > 0 ? "History loaded" : "No history yet");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not load history");
     }
   };
 
@@ -600,7 +623,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   <SplitSquareHorizontal className="h-4 w-4" />
                   Split
                 </button>
-                <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setStatusMessage("History is tracked through local drafts and D1 events")}>
+                <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadHistory}>
                   <History className="h-4 w-4" />
                   History
                 </button>
@@ -927,6 +950,26 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   </button>
                 </div>
               </Panel>
+
+              {historyOpen && (
+                <Panel title="History" icon={History}>
+                  <div className="space-y-2">
+                    {historyEvents.length === 0 && (
+                      <p className="rounded-lg border border-dashed border-edsync-border p-3 text-sm text-edsync-subtle">
+                        No actions have been recorded for this item yet.
+                      </p>
+                    )}
+                    {historyEvents.map((event) => (
+                      <div key={event.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                        <p className="text-sm font-semibold">{event.eventType.replaceAll(".", " ")}</p>
+                        <p className="mt-1 text-xs text-edsync-subtle">
+                          {new Date(event.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              )}
             </aside>
           </div>
         </section>
