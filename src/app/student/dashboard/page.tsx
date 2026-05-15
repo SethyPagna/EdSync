@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
@@ -38,6 +38,10 @@ type StudentPlannerData = {
   events: (ScheduleEvent & { class_name?: string | null; lesson_title?: string | null })[];
 };
 
+type EnrollmentRow = { class_id: string };
+type AssignmentRow = { lesson_id: string };
+type SectionLessonRow = { lesson_id: string };
+
 function formatPlannerDate(value: string | null) {
   if (!value) return "No time set";
   const date = new Date(value);
@@ -67,101 +71,114 @@ export default function StudentDashboard() {
   const [savingStudy, setSavingStudy] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboard();
-  }, [edsync]);
-
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) return;
+    try {
+      const {
+        data: { user },
+      } = await edsync.auth.getUser();
+      if (!user) {
+        setLessons([]);
+        return;
+      }
 
-    const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes] =
-      await Promise.all([
-        edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes] =
+        await Promise.all([
+          edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+          edsync
+            .from("class_enrollments")
+            .select("class_id")
+            .eq("student_id", user.id)
+            .eq("is_active", true),
+          edsync
+            .from("learning_goals")
+            .select("*")
+            .eq("student_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(4),
+          edsync
+            .from("learning_reflections")
+            .select("*")
+            .eq("student_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(4),
+          fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
+            res.json(),
+          ),
+        ]);
+
+      setProfile(profileRes.data);
+      setGoals(goalsRes.data || []);
+      setReflections(reflectionsRes.data || []);
+      setPlanner(plannerRes.data || { announcements: [], events: [] });
+
+      const classIds = ((enrollmentsRes.data || []) as EnrollmentRow[]).map(
+        (row) => row.class_id,
+      );
+      if (classIds.length === 0) {
+        setLessons([]);
+        return;
+      }
+
+      const { data: assignments } = await edsync
+        .from("lesson_assignments")
+        .select("lesson_id")
+        .in("class_id", classIds)
+        .eq("is_active", true);
+
+      const lessonIds = Array.from(
+        new Set(((assignments || []) as AssignmentRow[]).map((assignment) => assignment.lesson_id)),
+      );
+
+      if (lessonIds.length === 0) {
+        setLessons([]);
+        return;
+      }
+
+      const [lessonRes, sectionRes, progressRes] = await Promise.all([
         edsync
-          .from("class_enrollments")
-          .select("class_id")
-          .eq("student_id", user.id)
-          .eq("is_active", true),
+          .from("lessons")
+          .select("*")
+          .in("id", lessonIds)
+          .eq("status", "published")
+          .order("updated_at", { ascending: false }),
+        edsync.from("lesson_sections").select("lesson_id").in("lesson_id", lessonIds),
         edsync
-          .from("learning_goals")
+          .from("student_progress")
           .select("*")
           .eq("student_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(4),
-        edsync
-          .from("learning_reflections")
-          .select("*")
-          .eq("student_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(4),
-        fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
-          res.json(),
-        ),
+          .in("lesson_id", lessonIds),
       ]);
 
-    setProfile(profileRes.data);
-    setGoals(goalsRes.data || []);
-    setReflections(reflectionsRes.data || []);
-    setPlanner(plannerRes.data || { announcements: [], events: [] });
+      const sectionCounts = new Map<string, number>();
+      ((sectionRes.data || []) as SectionLessonRow[]).forEach((section) => {
+        sectionCounts.set(section.lesson_id, (sectionCounts.get(section.lesson_id) || 0) + 1);
+      });
+      const progressByLesson = new Map(
+        ((progressRes.data || []) as StudentProgress[]).map((progress) => [
+          progress.lesson_id,
+          progress,
+        ]),
+      );
 
-    const classIds = (enrollmentsRes.data || []).map((row: any) => row.class_id);
-    if (classIds.length === 0) {
-      setLessons([]);
+      setLessons(
+        ((lessonRes.data || []) as Lesson[]).map((lesson) => ({
+          ...lesson,
+          progress: progressByLesson.get(lesson.id),
+          sectionCount: sectionCounts.get(lesson.id) || 0,
+        })),
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not load your dashboard.");
+    } finally {
       setLoading(false);
-      return;
     }
+  }, [edsync]);
 
-    const { data: assignments } = await edsync
-      .from("lesson_assignments")
-      .select("lesson_id")
-      .in("class_id", classIds)
-      .eq("is_active", true);
-
-    const lessonIds = Array.from(
-      new Set((assignments || []).map((assignment: any) => assignment.lesson_id)),
-    );
-
-    if (lessonIds.length === 0) {
-      setLessons([]);
-      setLoading(false);
-      return;
-    }
-
-    const [lessonRes, sectionRes, progressRes] = await Promise.all([
-      edsync
-        .from("lessons")
-        .select("*")
-        .in("id", lessonIds)
-        .eq("status", "published")
-        .order("updated_at", { ascending: false }),
-      edsync.from("lesson_sections").select("lesson_id").in("lesson_id", lessonIds),
-      edsync
-        .from("student_progress")
-        .select("*")
-        .eq("student_id", user.id)
-        .in("lesson_id", lessonIds),
-    ]);
-
-    const sectionCounts: Record<string, number> = {};
-    (sectionRes.data || []).forEach((section: any) => {
-      sectionCounts[section.lesson_id] = (sectionCounts[section.lesson_id] || 0) + 1;
-    });
-
-    setLessons(
-      (lessonRes.data || []).map((lesson: Lesson) => ({
-        ...lesson,
-        progress: (progressRes.data || []).find(
-          (progress: StudentProgress) => progress.lesson_id === lesson.id,
-        ),
-        sectionCount: sectionCounts[lesson.id] || 0,
-      })),
-    );
-    setLoading(false);
-  };
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const joinClass = async () => {
     if (!joinCode.trim()) return;
