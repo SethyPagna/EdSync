@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
+import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
 import { sanitizeHtml } from "@/lib/security/html";
 import { safePublicUrl, safeVideoEmbedUrl } from "@/lib/security/media";
 import type {
@@ -52,8 +53,11 @@ function RichTextEditor({
     onChange(ref.current?.innerHTML || "");
   };
 
-  const formatBlock = (tag: string) => exec("formatBlock", tag);
-  const fontSize = (size: string) => exec("fontSize", size);
+  const insertHtml = (html: string) => {
+    ref.current?.focus();
+    document.execCommand("insertHTML", false, sanitizeHtml(html));
+    onChange(ref.current?.innerHTML || "");
+  };
 
   const toolbarBtn = (
     label: string,
@@ -172,6 +176,38 @@ function RichTextEditor({
           },
           "Insert Link",
         )}
+        {toolbarBtn(
+          "Table",
+          () =>
+            insertHtml(
+              "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>",
+            ),
+          "Insert Table",
+        )}
+        {toolbarBtn(
+          "Slide",
+          () =>
+            insertHtml(
+              '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>',
+            ),
+          "Insert Slide Block",
+        )}
+        {toolbarBtn(
+          "Callout",
+          () =>
+            insertHtml(
+              '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>',
+            ),
+          "Insert Callout",
+        )}
+        {toolbarBtn(
+          "2 Col",
+          () =>
+            insertHtml(
+              '<div class="lesson-columns"><section><h3>Concept</h3><p>Add explanation.</p></section><section><h3>Example</h3><p>Add application.</p></section></div>',
+            ),
+          "Insert Two Columns",
+        )}
         {toolbarBtn("Clear", () => exec("removeFormat"), "Clear Formatting")}
       </div>
 
@@ -200,6 +236,32 @@ function RichTextEditor({
         <span>Rich text editor — use toolbar or Markdown shortcuts</span>
         <span>{(ref.current?.innerText || "").length} chars</span>
       </div>
+    </div>
+  );
+}
+
+function SectionTemplateLibrary({
+  onAdd,
+}: {
+  onAdd: (template: SectionTemplate) => void;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      {SECTION_TEMPLATES.map((template) => (
+        <button
+          key={template.id}
+          onClick={() => onAdd(template)}
+          className="group rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
+            <span className="rounded-md border border-edsync-border px-2 py-0.5 text-[11px] uppercase tracking-wide text-edsync-subtle">
+              {template.contentType}
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-edsync-subtle">{template.description}</p>
+        </button>
+      ))}
     </div>
   );
 }
@@ -1260,16 +1322,28 @@ export default function TeacherLessonDetail() {
     toast.success("Section saved!");
   };
 
-  const addSection = async () => {
+  const persistSectionOrder = async (nextSections: LessonSection[]) => {
+    await Promise.all(
+      nextSections.map((section, index) =>
+        edsync
+          .from("lesson_sections")
+          .update({ order_index: index })
+          .eq("id", section.id),
+      ),
+    );
+  };
+
+  const addSection = async (template: SectionTemplate = SECTION_TEMPLATES[0]) => {
     const { data, error } = await edsync
       .from("lesson_sections")
       .insert({
         lesson_id: lessonId,
-        title: "New Section",
-        content: "",
-        content_type: "text",
+        title: template.title,
+        content: template.content,
+        content_type: template.contentType,
         order_index: sections.length,
-        duration_minutes: 5,
+        duration_minutes: template.durationMinutes,
+        metadata: { template_id: template.id, template_category: template.category },
       })
       .select()
       .single();
@@ -1281,9 +1355,62 @@ export default function TeacherLessonDetail() {
     setEditingSectionId(data.id);
   };
 
+  const moveSection = async (id: string, direction: -1 | 1) => {
+    const currentIndex = sections.findIndex((section) => section.id === id);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= sections.length) return;
+
+    const nextSections = [...sections];
+    [nextSections[currentIndex], nextSections[nextIndex]] = [
+      nextSections[nextIndex],
+      nextSections[currentIndex],
+    ];
+    const ordered = nextSections.map((section, index) => ({ ...section, order_index: index }));
+    setSections(ordered);
+    await persistSectionOrder(ordered);
+    toast.success("Section moved");
+  };
+
+  const duplicateSection = async (section: LessonSection) => {
+    const insertIndex = sections.findIndex((item) => item.id === section.id) + 1;
+    const { data, error } = await edsync
+      .from("lesson_sections")
+      .insert({
+        lesson_id: lessonId,
+        title: `${section.title} Copy`,
+        content: section.content || "",
+        content_type: section.content_type,
+        order_index: insertIndex,
+        duration_minutes: section.duration_minutes,
+        metadata: { ...(section.metadata || {}), duplicated_from: section.id },
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Could not duplicate section");
+      return;
+    }
+
+    const nextSections = [
+      ...sections.slice(0, insertIndex),
+      data,
+      ...sections.slice(insertIndex),
+    ].map((item, index) => ({ ...item, order_index: index }));
+
+    setSections(nextSections);
+    await persistSectionOrder(nextSections);
+    setEditingSectionId(data.id);
+    toast.success("Section duplicated");
+  };
+
   const deleteSection = async (id: string) => {
     await edsync.from("lesson_sections").delete().eq("id", id);
-    setSections((s) => s.filter((sec) => sec.id !== id));
+    const nextSections = sections
+      .filter((sec) => sec.id !== id)
+      .map((section, index) => ({ ...section, order_index: index }));
+    setSections(nextSections);
+    await persistSectionOrder(nextSections);
     setEditingSectionId(null);
     toast.success("Section deleted");
   };
@@ -1734,13 +1861,27 @@ export default function TeacherLessonDetail() {
       {/* ── SECTIONS ── */}
       {tab === "sections" && (
         <div className="animate-fade-in space-y-3">
+          <div className="rounded-lg border border-edsync-border bg-edsync-card p-3">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-edsync-text">Section Library</h2>
+                <p className="text-xs text-edsync-subtle">
+                  Add teaching, slide, activity, media, discussion, or quiz blocks.
+                </p>
+              </div>
+              <button onClick={() => addSection()} className="btn-primary text-sm py-2">
+                Blank section
+              </button>
+            </div>
+            <SectionTemplateLibrary onAdd={addSection} />
+          </div>
+
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm text-edsync-subtle">
-              Click Edit to expand the editor. Choose content type with the icon
-              buttons.
+              Reorder, duplicate, and edit sections from this outline.
             </p>
-            <button onClick={addSection} className="btn-primary text-sm py-2">
-              + Add Section
+            <button onClick={() => addSection()} className="btn-primary text-sm py-2">
+              Add Section
             </button>
           </div>
 
@@ -1749,8 +1890,8 @@ export default function TeacherLessonDetail() {
               <p className="text-edsync-text font-medium mb-4">
                 No sections yet
               </p>
-              <button onClick={addSection} className="btn-primary">
-                + Add First Section
+              <button onClick={() => addSection()} className="btn-primary">
+                Add First Section
               </button>
             </div>
           )}
@@ -1797,10 +1938,32 @@ export default function TeacherLessonDetail() {
                         : "Empty — click Edit"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
                     <span className="text-xs text-edsync-subtle">
                       {sec.duration_minutes}m
                     </span>
+                    <button
+                      onClick={() => moveSection(sec.id, -1)}
+                      disabled={i === 0}
+                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Move up"
+                    >
+                      Up
+                    </button>
+                    <button
+                      onClick={() => moveSection(sec.id, 1)}
+                      disabled={i === sections.length - 1}
+                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Move down"
+                    >
+                      Down
+                    </button>
+                    <button
+                      onClick={() => duplicateSection(sec)}
+                      className="btn-ghost px-2 py-1 text-xs"
+                    >
+                      Duplicate
+                    </button>
                     <button
                       onClick={() => setEditingSectionId(sec.id)}
                       className="btn-ghost text-xs py-1 px-3"
@@ -1815,10 +1978,10 @@ export default function TeacherLessonDetail() {
 
           {sections.length > 0 && editingSectionId === null && (
             <button
-              onClick={addSection}
+              onClick={() => addSection()}
               className="w-full py-4 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
             >
-              + Add Section
+              Add Section
             </button>
           )}
         </div>
