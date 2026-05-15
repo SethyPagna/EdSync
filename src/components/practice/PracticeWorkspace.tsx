@@ -11,7 +11,6 @@ import {
   RotateCcw,
   Save,
   Sparkles,
-  Timer,
   Trophy,
   XCircle,
 } from "lucide-react";
