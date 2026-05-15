@@ -1,5 +1,5 @@
 import { d1Query } from "@/lib/db/d1";
-import { decryptSecret } from "@/lib/security/secrets";
+import { decryptSecret, isSecretEncryptionConfigured } from "@/lib/security/secrets";
 import { listEnabledProviderRows, PROVIDER_META, type AIProviderKey, type AIProviderRow } from "./providers";
 
 export type AIChatMessage = {
@@ -309,7 +309,12 @@ export async function aiGatewayChat(options: AIChatOptions) {
 export async function testAIProvider(row: AIProviderRow) {
   const apiKey = decryptSecret(row.api_key_encrypted);
   const endpoint = endpointFor(row);
-  if (!apiKey || !endpoint) throw new Error("Provider API key or endpoint is unavailable.");
+  if (!endpoint) throw new Error("Provider endpoint is unavailable. Add an HTTPS endpoint or choose a supported provider preset.");
+  if (!apiKey) {
+    if (!row.api_key_encrypted) throw new Error("Provider API key is missing. Edit the provider and paste a key.");
+    if (!isSecretEncryptionConfigured()) throw new Error("APP_ENCRYPTION_KEY is not configured, so stored provider keys cannot be opened.");
+    throw new Error("Stored provider key cannot be decrypted. Re-save the provider key in this environment.");
+  }
 
   const provider: RuntimeProvider = {
     ...row,
