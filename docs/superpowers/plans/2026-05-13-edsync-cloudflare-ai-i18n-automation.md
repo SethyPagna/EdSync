@@ -17,6 +17,10 @@
 - AI: encrypted D1 provider configs for Groq, Google AI, Mistral AI, Cerebras,
   and Cohere embeddings, with smart fallback and audit rows in `ai_runs`.
 - Automation: Cloudflare Queue/Worker profile for long-running learning jobs.
+- Resource strategy: critical authoring and navigation loops should debounce
+  noisy browser writes, memoize repeated permission/navigation work, avoid
+  nested client-side recomputation in large screens, and prefer queued work for
+  AI/automation jobs that do not need to block the UI.
 
 ## Implementation Checklist
 
@@ -29,6 +33,9 @@
 - [x] Update Vercel deployment script and required env keys.
 - [x] Update README and deployment docs for Cloudflare-only data/storage.
 - [x] Switch the visual system to EdSync naming, light default, and dark toggle.
+- [x] Add the workflow efficiency pass: debounced lesson draft persistence,
+  memoized navigation permission checks, hoisted authoring tool definitions, and
+  viewport bounds QA for the lesson authoring route.
 - [ ] Create real Cloudflare D1/R2/Queue/Vectorize/Turnstile resources in the
   Cloudflare account and paste IDs into environment variables.
 - [ ] Relink Vercel with `npx vercel link --project EdSync`.
