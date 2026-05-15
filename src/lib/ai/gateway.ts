@@ -141,12 +141,26 @@ function markFailure(provider: RuntimeProvider, error: unknown, now = Date.now()
   state.cooldownUntil = now + Number(provider.cooldown_seconds || 20) * 1000 * Math.min(3, state.failureCount);
 }
 
-function extractOpenAiText(payload: any) {
-  const content = payload?.choices?.[0]?.message?.content ?? payload?.choices?.[0]?.text ?? "";
+function readRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function extractOpenAiText(payload: unknown) {
+  const root = readRecord(payload);
+  const choices = Array.isArray(root.choices) ? root.choices : [];
+  const firstChoice = readRecord(choices[0]);
+  const message = readRecord(firstChoice.message);
+  const content = message.content ?? firstChoice.text ?? "";
   if (typeof content === "string") return content.trim();
   if (Array.isArray(content)) {
     return content
-      .map((part) => (typeof part === "string" ? part : part?.text || part?.content || ""))
+      .map((part) => {
+        if (typeof part === "string") return part;
+        const record = readRecord(part);
+        return trim(record.text || record.content);
+      })
       .join("")
       .trim();
   }
