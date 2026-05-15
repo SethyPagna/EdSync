@@ -45,8 +45,10 @@ import {
 import {
   archiveContentBlock,
   createContentBlock,
+  hardDeleteContentBlock,
   listContentBlocks,
   type StudioContentBlock,
+  updateContentBlock,
 } from "@/lib/studio/content-blocks";
 import {
   archiveStudioItem,
@@ -176,6 +178,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const [historyEvents, setHistoryEvents] = useState<StudioHistoryEvent[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [contentBlocks, setContentBlocks] = useState<StudioContentBlock[]>([]);
+  const [includeArchivedBlocks, setIncludeArchivedBlocks] = useState(false);
   const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
   const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
@@ -242,7 +245,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
     listContentBlocks()
       .then((blocks) => {
-        if (!cancelled) setContentBlocks(blocks.filter((block) => block.status !== "archived"));
+        if (!cancelled) setContentBlocks(blocks);
       })
       .catch(() => {
         if (!cancelled) setContentBlocks([]);
@@ -277,6 +280,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const sheetColumnCount = useMemo(
     () => Math.max(...draft.sheet.map((row) => row.length), 1),
     [draft.sheet],
+  );
+  const visibleContentBlocks = useMemo(
+    () => contentBlocks.filter((block) => includeArchivedBlocks || block.status !== "archived").slice(0, 8),
+    [contentBlocks, includeArchivedBlocks],
   );
 
   const updateDraft = (next: StudioDraftValue) => {
@@ -473,6 +480,54 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
       setStatusMessage("Library block archived");
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Could not archive block");
+    }
+  };
+
+  const restoreLibraryBlock = async (block: StudioContentBlock) => {
+    setStatusMessage("Restoring library block...");
+    try {
+      const restored = await updateContentBlock({ id: block.id, status: "draft" });
+      setContentBlocks((current) => [restored, ...current.filter((entry) => entry.id !== block.id)]);
+      setStatusMessage("Library block restored");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not restore block");
+    }
+  };
+
+  const toggleLibraryPublish = async (block: StudioContentBlock) => {
+    const status = block.status === "published" ? "draft" : "published";
+    setStatusMessage(status === "published" ? "Publishing library block..." : "Moving block to drafts...");
+    try {
+      const updated = await updateContentBlock({ id: block.id, status });
+      setContentBlocks((current) => [updated, ...current.filter((entry) => entry.id !== block.id)]);
+      setStatusMessage(status === "published" ? "Library block published" : "Library block moved to drafts");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not update block status");
+    }
+  };
+
+  const renameLibraryBlock = async (block: StudioContentBlock) => {
+    const title = window.prompt("Rename library block", block.title);
+    if (!title || title.trim() === block.title) return;
+    setStatusMessage("Renaming library block...");
+    try {
+      const updated = await updateContentBlock({ id: block.id, title });
+      setContentBlocks((current) => [updated, ...current.filter((entry) => entry.id !== block.id)]);
+      setStatusMessage("Library block renamed");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not rename block");
+    }
+  };
+
+  const hardDeleteLibraryBlock = async (block: StudioContentBlock) => {
+    if (!window.confirm(`Permanently delete "${block.title}"? This cannot be undone.`)) return;
+    setStatusMessage("Deleting library block...");
+    try {
+      await hardDeleteContentBlock(block.id);
+      setContentBlocks((current) => current.filter((entry) => entry.id !== block.id));
+      setStatusMessage("Library block deleted");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not delete block");
     }
   };
 
@@ -973,7 +1028,24 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
               <Panel title="Section Blocks" icon={Columns3}>
                 <div className="space-y-2">
-                  {contentBlocks.slice(0, 6).map((block) => (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">
+                      Library
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIncludeArchivedBlocks((value) => !value)}
+                      className="rounded-full bg-edsync-surface px-2 py-1 text-xs font-bold text-edsync-subtle hover:text-edsync-text"
+                    >
+                      {includeArchivedBlocks ? "Hide archived" : "Show archived"}
+                    </button>
+                  </div>
+                  {visibleContentBlocks.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
+                      Saved blocks, worksheets, and deck patterns appear here after you use Save Block.
+                    </div>
+                  )}
+                  {visibleContentBlocks.map((block) => (
                     <div key={block.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
                       <button
                         type="button"
@@ -982,16 +1054,51 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       >
                         <span className="block text-sm font-semibold">{block.title}</span>
                         <span className="mt-1 block text-xs capitalize text-edsync-subtle">
-                          Library block - v{block.version}
+                          {block.status} block - v{block.version}
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => archiveLibraryBlock(block)}
-                        className="mt-2 rounded-full bg-edsync-red/10 px-2 py-1 text-xs font-bold text-edsync-red"
-                      >
-                        Archive
-                      </button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => renameLibraryBlock(block)}
+                          className="rounded-full bg-edsync-card px-2 py-1 text-xs font-bold text-edsync-subtle hover:text-edsync-text"
+                        >
+                          Rename
+                        </button>
+                        {block.status === "archived" ? (
+                          <button
+                            type="button"
+                            onClick={() => restoreLibraryBlock(block)}
+                            className="rounded-full bg-edsync-blue/10 px-2 py-1 text-xs font-bold text-edsync-blue"
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => toggleLibraryPublish(block)}
+                              className="rounded-full bg-edsync-emerald/10 px-2 py-1 text-xs font-bold text-edsync-emerald"
+                            >
+                              {block.status === "published" ? "Unpublish" : "Publish"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => archiveLibraryBlock(block)}
+                              className="rounded-full bg-edsync-amber/10 px-2 py-1 text-xs font-bold text-edsync-amber"
+                            >
+                              Archive
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => hardDeleteLibraryBlock(block)}
+                          className="rounded-full bg-edsync-red/10 px-2 py-1 text-xs font-bold text-edsync-red"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                   {DESIGN_BLOCKS.map((block) => (
