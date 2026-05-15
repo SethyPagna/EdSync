@@ -33,5 +33,6 @@ Introduce Rust, Go, Python, or WASM only when all of these are true:
 - Keep heavy AI/provider work behind queues, cooldowns, and cached provider health.
 - Bound upload extraction, scanning, and parsing work so large files cannot slow the app.
 - Keep document extraction bounded and representative by sampling across large files before considering a native parser.
+- Run `npm run check:extraction` when changing document extraction so the sampling budget stays capped.
 - Split heavy UI panels and settings into lazy-loaded sections.
 - Measure before migrating languages.
