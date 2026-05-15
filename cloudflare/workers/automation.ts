@@ -47,6 +47,15 @@ async function runAutomation(job: AutomationJob, env: Env) {
 }
 
 export default {
+  async fetch() {
+    return Response.json({
+      ok: true,
+      service: "edsync-automation",
+      queue: "ready",
+      checked_at: new Date().toISOString(),
+    });
+  },
+
   async queue(batch: MessageBatch<AutomationJob>, env: Env) {
     for (const message of batch.messages) {
       const job = message.body;
