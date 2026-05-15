@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 type ClassRow = { id: string; name: string };
@@ -13,30 +13,40 @@ export default function TeacherGradebookPage() {
   const [classId, setClassId] = useState("");
   const [rows, setRows] = useState<GradeRow[]>([]);
   const [form, setForm] = useState({ studentId: "", title: "", earned: "", possible: "100" });
+  const [loading, setLoading] = useState(true);
 
-  const loadRoster = () => {
-    fetch("/api/teacher/roster", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => {
-        setClasses(payload.data?.classes ?? []);
-        setStudents(payload.data?.students ?? []);
-      });
-  };
+  const filteredStudents = useMemo(
+    () => students.filter((student) => !classId || student.class_id === classId),
+    [classId, students],
+  );
 
-  const loadGrades = () => {
-    fetch(`/api/grades${classId ? `?classId=${classId}` : ""}`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => setRows(payload.data?.rows ?? []));
-  };
-
-  useEffect(() => {
-    loadRoster();
-    loadGrades();
+  const loadRoster = useCallback(async () => {
+    const response = await fetch("/api/teacher/roster", { cache: "no-store" });
+    const payload = await response.json();
+    setClasses(payload.data?.classes ?? []);
+    setStudents(payload.data?.students ?? []);
   }, []);
 
+  const loadGrades = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/grades${classId ? `?classId=${classId}` : ""}`, {
+        cache: "no-store",
+      });
+      const payload = await response.json();
+      setRows(payload.data?.rows ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [classId]);
+
+  useEffect(() => {
+    loadRoster().catch(() => toast.error("Could not load roster."));
+  }, [loadRoster]);
+
   useEffect(() => {
     loadGrades();
-  }, [classId]);
+  }, [loadGrades]);
 
   const addScore = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -58,7 +68,7 @@ export default function TeacherGradebookPage() {
     }
     toast.success("Score saved.");
     setForm({ studentId: "", title: "", earned: "", possible: "100" });
-    loadGrades();
+    await loadGrades();
   };
 
   return (
@@ -77,7 +87,7 @@ export default function TeacherGradebookPage() {
       <form onSubmit={addScore} className="edsync-card grid gap-3 p-4 md:grid-cols-5">
         <select className="edsync-input" value={form.studentId} onChange={(event) => setForm({ ...form, studentId: event.target.value })} required>
           <option value="">Student</option>
-          {students.filter((student) => !classId || student.class_id === classId).map((student) => (
+          {filteredStudents.map((student) => (
             <option key={`${student.class_id}-${student.id}`} value={student.id}>{student.full_name || student.email}</option>
           ))}
         </select>
@@ -97,7 +107,13 @@ export default function TeacherGradebookPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-edsync-border">
-            {rows.map((row) => (
+            {loading ? (
+              <tr>
+                <td className="px-4 py-6 text-edsync-subtle" colSpan={3}>
+                  Loading gradebook...
+                </td>
+              </tr>
+            ) : rows.map((row) => (
               <tr key={row.studentId}>
                 <td className="px-4 py-3">
                   <p className="font-semibold">{row.name}</p>
@@ -111,7 +127,7 @@ export default function TeacherGradebookPage() {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="p-4 text-sm text-edsync-subtle">No gradebook rows yet.</p>}
+        {!loading && rows.length === 0 && <p className="p-4 text-sm text-edsync-subtle">No gradebook rows yet.</p>}
       </div>
     </div>
   );
