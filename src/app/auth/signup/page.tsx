@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import LanguageMenu from "@/components/LanguageMenu";
+import ThemeToggle from "@/components/ThemeToggle";
 import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
 
 type Role = "teacher" | "student";
@@ -221,9 +223,9 @@ function SignupForm() {
         ].map(([key, label]) => (
           <span
             key={key}
-            className={`rounded-full border px-3 py-1 ${
+            className={`rounded-full border px-3 py-1 shadow-sm ${
               step === key
-                ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
+                ? "premium-active"
                 : "border-edsync-border bg-edsync-surface"
             }`}
           >
@@ -256,10 +258,10 @@ function SignupForm() {
                   key={item.key}
                   type="button"
                   onClick={() => setAccountType(item.key)}
-                  className={`rounded-lg border p-4 text-left transition ${
+                  className={`rounded-2xl border p-4 text-left shadow-sm transition ${
                     selected
-                      ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
-                      : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                      ? "premium-active text-edsync-text"
+                      : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
                   }`}
                 >
                   <Icon className="mb-3 h-5 w-5" />
@@ -270,7 +272,7 @@ function SignupForm() {
             })}
           </div>
           {accountType === "organization" && (
-            <div className="space-y-3 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+            <div className="premium-surface space-y-3 rounded-2xl p-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 {([
                   ["join", "Join existing"],
@@ -280,9 +282,9 @@ function SignupForm() {
                     key={mode}
                     type="button"
                     onClick={() => setOrganizationMode(mode)}
-                    className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                       organizationMode === mode
-                        ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
+                        ? "premium-active"
                         : "border-edsync-border bg-edsync-card text-edsync-subtle hover:border-edsync-blue/50"
                     }`}
                   >
@@ -362,7 +364,7 @@ function SignupForm() {
 
       {step === "role" && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
+          <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
               ? organizationMode === "create"
                 ? `New organization: ${organizationLabel}`
@@ -378,10 +380,10 @@ function SignupForm() {
               key={item}
               type="button"
               onClick={() => setRole(item)}
-              className={`rounded-lg border p-4 text-left transition ${
+              className={`rounded-2xl border p-4 text-left shadow-sm transition ${
                 selected
-                  ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
-                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                  ? "premium-active text-edsync-text"
+                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
               }`}
             >
               <Icon className="mb-3 h-5 w-5" />
@@ -407,7 +409,7 @@ function SignupForm() {
 
       {step === "account" && (
         <div className="space-y-5">
-          <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
+          <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
               ? organizationMode === "create"
                 ? `${organizationLabel} - ${roleDetails[role].label}`
@@ -474,21 +476,21 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <main className="grid min-h-screen bg-edsync-bg lg:grid-cols-[1fr_560px]">
-      <section className="hidden border-r border-edsync-border bg-edsync-surface/40 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
+    <main className="premium-shell grid min-h-screen lg:grid-cols-[1fr_560px]">
+      <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <span className="font-display text-xl font-bold">EdSync</span>
         </Link>
-        <div>
-          <p className="mb-4 inline-flex rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
-            Workspace-first setup
-          </p>
+        <div className="premium-panel rounded-[1.65rem] p-7">
           <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Build the right EdSync space first.
+            Create the right space first.
           </h1>
+          <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
+            Start as an individual or enter an organization before choosing teacher or student mode.
+          </p>
         </div>
         <p className="text-sm text-edsync-subtle">
           Individuals stay simple. Organizations get scoped portals, catalogs, and role controls.
@@ -497,15 +499,19 @@ export default function SignupPage() {
 
       <section className="flex items-center justify-center px-5 py-10">
         <div className="w-full max-w-md">
-          <div className="mb-8 lg:hidden">
+          <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <span className="font-display text-xl font-bold">EdSync</span>
             </Link>
+            <div className="flex items-center gap-2">
+              <ThemeToggle compact />
+              <LanguageMenu compact />
+            </div>
           </div>
-          <div className="edsync-card p-7">
+          <div className="premium-panel animate-reveal-soft rounded-[1.65rem] p-7">
             <h2 className="font-display text-3xl font-bold">Create workspace</h2>
             <div className="mt-7">
               <Suspense
