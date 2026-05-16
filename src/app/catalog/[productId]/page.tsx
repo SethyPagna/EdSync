@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpenCheck,
   Building2,
   Clock3,
   GraduationCap,
   Languages,
   ShieldCheck,
+  UserRound,
 } from "lucide-react";
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import { getPublicCatalogItem } from "@/lib/catalog";
@@ -86,10 +88,6 @@ export default async function CatalogDetailPage({
               <p className="mt-4 text-base leading-7 text-edsync-subtle">
                 {item.metadata.previewSummary || item.description || "This public course is available through EdSync."}
               </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="badge bg-edsync-blue/10 text-edsync-blue">Individual learners</span>
-                <span className="badge bg-edsync-emerald/10 text-edsync-emerald">Organization members</span>
-              </div>
             </div>
           </div>
 
@@ -127,10 +125,35 @@ export default async function CatalogDetailPage({
             <p className="text-sm font-semibold text-edsync-subtle">Enrollment</p>
             <p className="mt-2 font-display text-4xl font-bold">{item.price.label}</p>
             <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-              Sign in before enrollment so EdSync can keep access, progress, grades, certificates, and organization context tied to your account.
+              Sign in, choose your organization when one applies, then EdSync keeps access, progress, grades, and certificates tied to the right space.
             </p>
             <div className="mt-5">
               <CatalogEnrollButton productId={item.id} isFree={item.price.isFree} />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+              <div className="flex items-start gap-3">
+                <UserRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-blue" />
+                <div>
+                  <p className="font-semibold">Individual learner</p>
+                  <p className="mt-1 text-sm leading-6 text-edsync-subtle">
+                    Join with your own account and continue from your student dashboard.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+              <div className="flex items-start gap-3">
+                <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-emerald" />
+                <div>
+                  <p className="font-semibold">Organization member</p>
+                  <p className="mt-1 text-sm leading-6 text-edsync-subtle">
+                    Enter through your academy so access and reports stay scoped correctly.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -143,8 +166,9 @@ export default async function CatalogDetailPage({
                   {item.portal ? `${item.portal.name} - ${item.portal.audience}` : "Main EdSync catalog"}
                 </p>
                 {item.portal && (
-                  <Link href={`/org/${item.portal.slug}`} className="mt-3 inline-flex text-sm font-semibold text-edsync-blue hover:underline">
+                  <Link href={`/org/${item.portal.slug}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-edsync-blue hover:underline">
                     View organization catalog
+                    <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 )}
               </div>
