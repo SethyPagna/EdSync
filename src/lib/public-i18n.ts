@@ -27,6 +27,10 @@ export function normalizePublicLanguage(value?: string | null): PublicLanguageNa
   return byCode?.name ?? DEFAULT_PUBLIC_LANGUAGE;
 }
 
+export function getPublicCopy() {
+  return publicCopy.English;
+}
+
 export const publicCopy = {
   English: {
     brandSubhead: "Learning spaces for courses, practice, and progress",
