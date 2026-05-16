@@ -56,6 +56,35 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/octet-stream",
   "",
 ]);
+const BLOCKED_MIME_TYPES = new Set([
+  "application/javascript",
+  "application/x-msdownload",
+  "application/x-sh",
+  "image/svg+xml",
+  "text/html",
+  "text/javascript",
+  "text/xml",
+]);
+
+const EXTENSION_MIME_FAMILIES: Record<string, string[]> = {
+  csv: ["text/", "application/octet-stream"],
+  doc: ["application/msword", "application/octet-stream"],
+  docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/octet-stream"],
+  gif: ["image/gif", "application/octet-stream"],
+  jpeg: ["image/jpeg", "application/octet-stream"],
+  jpg: ["image/jpeg", "application/octet-stream"],
+  json: ["application/json", "text/", "application/octet-stream"],
+  md: ["text/", "application/octet-stream"],
+  mov: ["video/quicktime", "video/", "application/octet-stream"],
+  mp3: ["audio/mpeg", "audio/", "application/octet-stream"],
+  mp4: ["video/mp4", "video/", "application/octet-stream"],
+  pdf: ["application/pdf", "application/octet-stream"],
+  png: ["image/png", "application/octet-stream"],
+  txt: ["text/", "application/octet-stream", ""],
+  wav: ["audio/wav", "audio/x-wav", "audio/", "application/octet-stream"],
+  webm: ["video/webm", "video/", "application/octet-stream"],
+  webp: ["image/webp", "application/octet-stream"],
+};
 
 export type SafeUpload = {
   fileName: string;
@@ -110,6 +139,11 @@ function hasAllowedSignature(extension: string, bytes: Uint8Array) {
   return false;
 }
 
+function mimeMatchesExtension(extension: string, contentType: string) {
+  const allowed = EXTENSION_MIME_FAMILIES[extension] ?? [];
+  return allowed.some((entry) => (entry.endsWith("/") ? contentType.startsWith(entry) : contentType === entry));
+}
+
 export function sanitizeFileName(name: string) {
   const fallback = "upload";
   const cleaned = name
@@ -145,6 +179,10 @@ export async function validateUploadFile(file: File): Promise<SafeUpload> {
     ALLOWED_MIME_TYPES.has(contentType) ||
     ALLOWED_MIME_PREFIXES.some((prefix) => contentType.startsWith(prefix));
   if (!allowedMime) throw new Error("This content type is not allowed.");
+  if (BLOCKED_MIME_TYPES.has(contentType)) throw new Error("This content type is not allowed.");
+  if (!mimeMatchesExtension(extension, contentType)) {
+    throw new Error("File extension and content type do not match.");
+  }
 
   const bytes = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
   const executable =
