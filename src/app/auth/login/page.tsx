@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -9,6 +9,13 @@ import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
 import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
+type OrganizationLookup = {
+  slug: string;
+  name: string;
+  portalSlug: string | null;
+  portalName: string | null;
+  ssoEnabled: boolean;
+};
 
 function normalizeOrganizationCode(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -21,9 +28,52 @@ function LoginForm() {
   const edsync = useMemo(() => createClient(), []);
   const [accountType, setAccountType] = useState<AccountType>(presetOrganization ? "organization" : "individual");
   const [organizationCode, setOrganizationCode] = useState(presetOrganization);
+  const [organizationLookup, setOrganizationLookup] = useState<OrganizationLookup | null>(null);
+  const [organizationStatus, setOrganizationStatus] = useState<"idle" | "checking" | "found" | "missing">(
+    presetOrganization ? "checking" : "idle",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const code = normalizeOrganizationCode(organizationCode);
+    if (accountType !== "organization" || !code) {
+      setOrganizationLookup(null);
+      setOrganizationStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      setOrganizationStatus("checking");
+      fetch(`/api/auth/organizations?code=${encodeURIComponent(code)}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload) => {
+          if (!payload?.data) {
+            setOrganizationLookup(null);
+            setOrganizationStatus("missing");
+            return;
+          }
+          setOrganizationLookup(payload.data as OrganizationLookup);
+          setOrganizationStatus("found");
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setOrganizationLookup(null);
+            setOrganizationStatus("missing");
+          }
+        });
+    }, 300);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [accountType, organizationCode]);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -132,19 +182,43 @@ function LoginForm() {
           />
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <Link
-              href={organizationCode.trim() ? `/org/${normalizeOrganizationCode(organizationCode)}` : "/catalog"}
+              href={organizationLookup?.portalSlug ? `/org/${organizationLookup.portalSlug}` : "/catalog"}
               className="btn-secondary justify-center px-3 py-2 text-sm"
             >
               Open portal
             </Link>
             <button
               type="button"
-              onClick={() => toast("Organization SSO can be enabled by the organization owner from portal settings.", { duration: 7000 })}
+              onClick={() =>
+                toast(
+                  organizationLookup?.ssoEnabled
+                    ? `${organizationLookup.name} SSO is enabled. Provider handoff will be available from organization settings.`
+                    : "Organization SSO can be enabled by the organization owner from portal settings.",
+                  { duration: 7000 },
+                )
+              }
               className="btn-secondary justify-center px-3 py-2 text-sm"
             >
               SSO options
             </button>
           </div>
+          {organizationStatus !== "idle" && (
+            <div
+              className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+                organizationStatus === "found"
+                  ? "border-edsync-emerald/30 bg-edsync-emerald/10 text-edsync-emerald"
+                  : organizationStatus === "checking"
+                    ? "border-edsync-blue/25 bg-edsync-blue/10 text-edsync-blue"
+                    : "border-edsync-amber/30 bg-edsync-amber/10 text-edsync-amber"
+              }`}
+            >
+              {organizationStatus === "found"
+                ? `Found ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
+                : organizationStatus === "checking"
+                  ? "Checking organization..."
+                  : "No active organization found for that code yet."}
+            </div>
+          )}
         </div>
       )}
 
