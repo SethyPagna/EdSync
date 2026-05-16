@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   safeCatalogImageUrl,
   safeCatalogVideoUrl,
+  safePublicUrl,
   safeVideoEmbedUrl,
   sanitizeCatalogMetadata,
 } from "@/lib/security/media";
@@ -14,6 +15,13 @@ describe("catalog media security", () => {
     expect(safeCatalogImageUrl("http://cdn.example.com/course-cover.webp")).toBeNull();
     expect(safeCatalogImageUrl("https://cdn.example.com/course-cover.svg")).toBeNull();
     expect(safeCatalogImageUrl("javascript:alert(1)")).toBeNull();
+  });
+
+  it("blocks credentialed and executable public links", () => {
+    expect(safePublicUrl("https://user:pass@example.com/file.png")).toBeNull();
+    expect(safePublicUrl("https://cdn.example.com/installer.exe")).toBeNull();
+    expect(safePublicUrl("https://cdn.example.com/script.js")).toBeNull();
+    expect(safePublicUrl("https://cdn.example.com/document.pdf")).toBe("https://cdn.example.com/document.pdf");
   });
 
   it("allows direct video files and approved video embeds for previews", () => {
