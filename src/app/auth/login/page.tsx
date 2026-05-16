@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
+import { safeNextPath } from "@/lib/auth/redirects";
 import { ArrowRight, GraduationCap, ShieldCheck } from "lucide-react";
 
 function LoginForm() {
@@ -38,20 +39,7 @@ function LoginForm() {
     }
 
     const role = (data.user?.user_metadata?.role as string) || "student";
-    const next = searchParams.get("next");
-    const safeNext =
-      next &&
-      (next.startsWith("/admin") ||
-        next.startsWith("/teacher") ||
-        next.startsWith("/student") ||
-        next.startsWith("/catalog") ||
-        next.startsWith("/org"))
-        ? next
-        : role === "admin"
-          ? "/admin/dashboard"
-          : role === "teacher"
-            ? "/teacher/dashboard"
-            : "/student/dashboard";
+    const safeNext = safeNextPath(searchParams.get("next"), role);
 
     toast.success("Welcome back.");
     router.push(safeNext);
