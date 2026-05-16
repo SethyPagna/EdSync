@@ -18,6 +18,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 type PublicTopbarProps = {
   active?: "catalog" | "organization" | "course";
   organizationName?: string;
+  organizationCode?: string;
+  portalSlug?: string;
   organizationSlug?: string;
 };
 
@@ -54,13 +56,17 @@ const menuGroups = [
 export default function PublicTopbar({
   active = "catalog",
   organizationName,
+  organizationCode,
+  portalSlug,
   organizationSlug,
 }: PublicTopbarProps) {
-  const orgLoginHref = organizationSlug
-    ? `/auth/login?org=${encodeURIComponent(organizationSlug)}`
+  const resolvedOrganizationCode = organizationCode || organizationSlug || portalSlug;
+  const organizationHref = portalSlug ? `/org/${portalSlug}` : null;
+  const orgLoginHref = resolvedOrganizationCode
+    ? `/auth/login?org=${encodeURIComponent(resolvedOrganizationCode)}`
     : "/auth/login?mode=organization";
-  const orgSignupHref = organizationSlug
-    ? `/auth/signup?org=${encodeURIComponent(organizationSlug)}`
+  const orgSignupHref = resolvedOrganizationCode
+    ? `/auth/signup?org=${encodeURIComponent(resolvedOrganizationCode)}`
     : "/auth/signup?mode=organization";
 
   return (
@@ -96,9 +102,9 @@ export default function PublicTopbar({
           >
             Catalog
           </Link>
-          {organizationSlug && (
+          {organizationHref && (
             <Link
-              href={`/org/${organizationSlug}`}
+              href={organizationHref}
               className={`rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-edsync-card ${
                 active === "organization" ? "premium-active" : "border-transparent text-edsync-subtle"
               }`}
