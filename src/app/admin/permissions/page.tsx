@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Edit3, Save, ShieldCheck, Trash2, X } from "lucide-react";
+import { InfoPopover } from "@/components/WorkspacePrimitives";
 import type { Permission, RoleProfile } from "@/types";
 
 type PermissionsPayload = {
@@ -28,6 +29,51 @@ function draftFrom(profile: RoleProfile): ProfileDraft {
     description: profile.description ?? "",
     permissions: profile.permissions ?? [],
   };
+}
+
+function PermissionPicker({
+  grouped,
+  selected,
+  onToggle,
+}: {
+  grouped: Record<string, Permission[]>;
+  selected: string[];
+  onToggle: (permission: string) => void;
+}) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {Object.entries(grouped).map(([category, permissions]) => (
+        <section key={category} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="font-semibold text-edsync-text">{category}</p>
+            <span className="text-xs font-semibold text-edsync-subtle">
+              {permissions.filter((permission) => selected.includes(permission.permission_key)).length}/
+              {permissions.length}
+            </span>
+          </div>
+          <div className="grid gap-1.5">
+            {permissions.map((permission) => (
+              <label
+                key={permission.id}
+                className="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-2 text-sm transition hover:bg-edsync-card"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(permission.permission_key)}
+                  onChange={() => onToggle(permission.permission_key)}
+                  className="mt-1"
+                />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-edsync-text">{permission.label}</span>
+                  <span className="block truncate text-xs text-edsync-subtle">{permission.permission_key}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 export default function AdminPermissionsPage() {
@@ -107,7 +153,8 @@ export default function AdminPermissionsPage() {
 
   return (
     <div className="space-y-5 p-5 lg:p-8">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <header className="premium-panel rounded-2xl p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Access model</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Permissions</h1>
@@ -115,38 +162,34 @@ export default function AdminPermissionsPage() {
             Create tenant-scoped role profiles for organization owners, managers, auditors, billing admins, instructors, and learners.
           </p>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          Platform owner access stays global. Profiles created here only apply inside the selected tenant.
+        <div className="flex items-center gap-2">
+          <InfoPopover label="Permission scope help">
+            Platform owner access stays global. Profiles created here only apply inside the selected tenant, which keeps organization managers from changing application-wide settings.
+          </InfoPopover>
+          <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 text-sm font-semibold text-edsync-subtle">
+            Tenant-scoped roles
+          </div>
+        </div>
         </div>
       </header>
 
-      {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
+      {message && <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
 
-      <form onSubmit={createProfile} className="edsync-card grid gap-4 p-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
+      <form onSubmit={createProfile} className="premium-surface grid gap-4 rounded-2xl p-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
         <div className="grid gap-3">
           <input className="edsync-input" value={draft.label} onChange={(event) => setDraft({ ...draft, label: event.target.value })} placeholder="Role profile name" required />
           <textarea className="edsync-input min-h-24" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="What this role can manage" />
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {payload.catalog.map((permission) => (
-            <label key={permission.id} className="flex items-start gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
-              <input
-                type="checkbox"
-                checked={draft.permissions.includes(permission.permission_key)}
-                onChange={() => togglePermission(permission.permission_key, draft, setDraft)}
-              />
-              <span>
-                <span className="block font-semibold text-edsync-text">{permission.label}</span>
-                <span className="block text-xs text-edsync-subtle">{permission.permission_key}</span>
-              </span>
-            </label>
-          ))}
-        </div>
+        <PermissionPicker
+          grouped={catalogByCategory}
+          selected={draft.permissions}
+          onToggle={(permission) => togglePermission(permission, draft, setDraft)}
+        />
         <button className="btn-primary h-fit justify-center" type="submit">Add profile</button>
       </form>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="edsync-card overflow-hidden p-0">
+        <div className="premium-surface overflow-hidden rounded-2xl p-0">
           <div className="border-b border-edsync-border px-4 py-3">
             <h2 className="font-display text-xl font-bold">Tenant role profiles</h2>
             <p className="text-sm text-edsync-subtle">Edit, delete, or adjust permissions without changing platform-owner access.</p>
@@ -162,21 +205,11 @@ export default function AdminPermissionsPage() {
                         <input className="edsync-input" value={editDraft.label} onChange={(event) => setEditDraft({ ...editDraft, label: event.target.value })} />
                         <input className="edsync-input" value={editDraft.description} onChange={(event) => setEditDraft({ ...editDraft, description: event.target.value })} />
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {payload.catalog.map((permission) => (
-                          <label key={permission.id} className="flex items-start gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-3">
-                            <input
-                              type="checkbox"
-                              checked={editDraft.permissions.includes(permission.permission_key)}
-                              onChange={() => togglePermission(permission.permission_key, editDraft, setEditDraft)}
-                            />
-                            <span>
-                              <span className="block font-semibold">{permission.label}</span>
-                              <span className="block text-xs text-edsync-subtle">{permission.permission_key}</span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+                      <PermissionPicker
+                        grouped={catalogByCategory}
+                        selected={editDraft.permissions}
+                        onToggle={(permission) => togglePermission(permission, editDraft, setEditDraft)}
+                      />
                     </div>
                   ) : (
                     <div>
@@ -211,18 +244,18 @@ export default function AdminPermissionsPage() {
         </div>
 
         <aside className="grid gap-4">
-          <div className="edsync-card p-4">
+          <div className="premium-surface rounded-2xl p-4">
             <h2 className="font-display text-xl font-bold">System profiles</h2>
             <div className="mt-3 grid gap-2">
               {systemProfiles.map((role) => (
-                <div key={role.id} className="rounded-lg border border-edsync-border p-3 text-sm">
+                <div key={role.id} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-sm">
                   <p className="font-semibold">{role.label}</p>
                   <p className="text-edsync-subtle">{role.description || "System role profile"}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="edsync-card p-4">
+          <div className="premium-surface rounded-2xl p-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-edsync-blue" />
               <h2 className="font-display text-xl font-bold">Permission catalog</h2>
