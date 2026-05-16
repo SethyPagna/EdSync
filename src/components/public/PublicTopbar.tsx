@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Building2, GraduationCap, UserPlus } from "lucide-react";
+import { ArrowRight, Building2, GraduationCap } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
+import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { normalizePublicLanguage, publicCopy } from "@/lib/public-i18n";
 
 type PublicTopbarProps = {
@@ -25,15 +26,25 @@ export default async function PublicTopbar({
   );
   const copy = publicCopy[language];
   const resolvedOrganizationCode = organizationCode || organizationSlug || portalSlug;
-  const signupHref = resolvedOrganizationCode
-    ? `/auth/signup?org=${encodeURIComponent(resolvedOrganizationCode)}`
-    : "/auth/signup";
+  const role = cookieStore.get(ROLE_COOKIE)?.value;
+  const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
+  const workspaceHref =
+    role === "admin"
+      ? "/admin/dashboard"
+      : role === "teacher"
+        ? "/teacher/dashboard"
+        : role === "student"
+          ? "/student/dashboard"
+          : "/auth/login";
+  const loginHref = resolvedOrganizationCode
+    ? `/auth/login?org=${encodeURIComponent(resolvedOrganizationCode)}`
+    : "/auth/login";
 
   return (
     <header className="sticky top-0 z-30 bg-edsync-bg/92 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Link href="/catalog" className="group flex min-w-0 items-center gap-2 sm:gap-3">
+          <Link href="/" className="group flex min-w-0 items-center gap-2 sm:gap-3">
             <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue text-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
               <GraduationCap className="h-5 w-5" />
             </span>
@@ -56,9 +67,9 @@ export default async function PublicTopbar({
         <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
-          <Link href={signupHref} className="btn-primary !hidden justify-center px-3 py-2 text-sm sm:!inline-flex sm:px-4">
-            <UserPlus className="h-4 w-4" />
-            <span>{copy.start}</span>
+          <Link href={signedIn ? workspaceHref : loginHref} className="btn-primary !hidden justify-center px-3 py-2 text-sm sm:!inline-flex sm:px-4">
+            <span>{signedIn ? "Open workspace" : copy.signIn}</span>
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
