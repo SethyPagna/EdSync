@@ -244,6 +244,13 @@ function keyStateClasses(provider: Provider) {
   return "bg-edsync-red/10 text-edsync-red";
 }
 
+function keyStateAction(provider: Provider) {
+  if (provider.key_state === "missing") return "Paste an API key before testing this provider.";
+  if (provider.key_state === "unreadable") return "Re-save this provider key in the current deployment environment.";
+  if (provider.key_state === "encryption_unconfigured") return "Configure APP_ENCRYPTION_KEY before testing stored provider keys.";
+  return "";
+}
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">{children}</label>;
 }
@@ -382,6 +389,13 @@ export default function AdminAIPage() {
   };
 
   const testProvider = async (provider: Provider) => {
+    const keyIssue = keyStateAction(provider);
+    if (keyIssue) {
+      toast.error(keyIssue, { duration: 8000 });
+      if (provider.key_state !== "encryption_unconfigured") editProvider(provider);
+      return;
+    }
+
     setTestingId(provider.id);
     try {
       const response = await fetch(`/api/ai/providers/${provider.id}/test`, { method: "POST" });
@@ -482,6 +496,7 @@ export default function AdminAIPage() {
                     <KeyRound className="h-3.5 w-3.5" />
                     {keyStateLabel(provider)}
                   </div>
+                  {keyStateAction(provider) && <p className="mt-2 text-xs text-edsync-amber">{keyStateAction(provider)}</p>}
                   {provider.last_error && <p className="mt-2 text-xs text-edsync-red">{provider.last_error}</p>}
                   <details className="mt-3 rounded-lg border border-edsync-border">
                     <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-semibold text-edsync-text" aria-label={`Provider actions for ${provider.name}`}>
@@ -580,6 +595,7 @@ export default function AdminAIPage() {
                           <KeyRound className="h-4 w-4" />
                           {keyStateLabel(provider)}
                         </div>
+                        {keyStateAction(provider) && <p className="mt-2 max-w-[220px] text-xs text-edsync-amber">{keyStateAction(provider)}</p>}
                       </td>
                       <td className="px-4 py-3">
                         <details className="relative">
