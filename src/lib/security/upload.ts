@@ -151,7 +151,7 @@ export function sanitizeFileName(name: string) {
     .replace(/[^\w.\- ]+/g, "")
     .replace(/\s+/g, "-")
     .replace(/\.+/g, ".")
-    .replace(/^\.|\.$/g, "")
+    .replace(/^[.\-]+|[.\-]+$/g, "")
     .slice(0, 120);
   return cleaned || fallback;
 }
@@ -159,6 +159,10 @@ export function sanitizeFileName(name: string) {
 export function sanitizeObjectPath(path: string) {
   return path
     .split("/")
+    .filter((part) => {
+      const trimmed = part.trim();
+      return trimmed && trimmed !== "." && trimmed !== "..";
+    })
     .map((part) => sanitizeFileName(part))
     .filter(Boolean)
     .join("/")
