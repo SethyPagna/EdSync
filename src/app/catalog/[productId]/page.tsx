@@ -48,7 +48,7 @@ export default async function CatalogDetailPage({
             <ArrowLeft className="h-4 w-4" />
             Back to catalog
           </Link>
-          <Link href="/auth/login" className="btn-secondary px-4 py-2 text-sm">Sign in</Link>
+          <Link href={`/auth/login?org=${encodeURIComponent(item.organization.slug)}`} className="btn-secondary px-4 py-2 text-sm">Sign in</Link>
         </div>
       </header>
 
