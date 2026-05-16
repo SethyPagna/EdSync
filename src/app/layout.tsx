@@ -8,7 +8,8 @@ const preferenceScript = `
   try {
     const theme = window.localStorage.getItem("edsync-theme");
     document.documentElement.classList.toggle("dark", theme === "dark");
-    const language = window.localStorage.getItem("edsync-language") || "English";
+    const cookieLanguage = document.cookie.split("; ").find((row) => row.startsWith("edsync-language="))?.split("=")[1];
+    const language = window.localStorage.getItem("edsync-language") || (cookieLanguage ? decodeURIComponent(cookieLanguage) : "English");
     const codes = { English: "en", Korean: "ko", Khmer: "km", Chinese: "zh", Japanese: "ja", Spanish: "es", French: "fr", Vietnamese: "vi", Thai: "th" };
     document.documentElement.lang = codes[language] || "en";
   } catch {}
