@@ -5,6 +5,7 @@ import type { Profile, Class, Lesson } from "@/types";
 import { generateInitials, formatRelativeTime } from "@/lib/utils";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { BookOpenCheck, Plus, Trash2, UsersRound } from "lucide-react";
 
 interface Assignment {
   id: string;
@@ -194,9 +195,7 @@ export default function TeacherStudents() {
     setNewSubject("");
     setShowAddClass(false);
     setCreating(false);
-    toast.success(
-      ` Class "${data.name}" created! Join code: ${data.join_code}`,
-    );
+    toast.success(`Class "${data.name}" created. Join code: ${data.join_code}`);
   };
 
   const assignLesson = async () => {
@@ -290,29 +289,35 @@ export default function TeacherStudents() {
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display font-bold text-3xl text-edsync-text">
-            Student Management
+          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
+            Classroom
+          </p>
+          <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
+            Students
           </h1>
-          <p className="text-edsync-subtle">
+          <p className="mt-1 text-sm text-edsync-subtle">
             {allStudents.length} enrolled · {classes.length} class
             {classes.length !== 1 ? "es" : ""}
           </p>
         </div>
-        <button onClick={() => setShowAddClass(true)} className="btn-primary">
-          + New Class
+        <button onClick={() => setShowAddClass(true)} className="btn-primary justify-center">
+          <Plus className="h-4 w-4" />
+          New class
         </button>
       </div>
+      </section>
 
       {/* Create Class Modal */}
       {showAddClass && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="edsync-card w-full max-w-md animate-slide-up p-8">
             <h2 className="font-display font-bold text-xl text-edsync-text mb-6">
-              Create New Class
+              Create class
             </h2>
             <div className="space-y-4">
               <div>
@@ -369,7 +374,7 @@ export default function TeacherStudents() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="edsync-card w-full max-w-md animate-slide-up p-8">
             <h2 className="font-display font-bold text-xl text-edsync-text mb-1">
-              Assign a Lesson
+              Assign lesson
             </h2>
             <p className="text-edsync-subtle text-sm mb-6">
               To:{" "}
@@ -458,8 +463,8 @@ export default function TeacherStudents() {
             onClick={() => selectClass("all")}
             className={`edsync-card cursor-pointer transition-all border-dashed ${selectedClass === "all" ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
           >
-            <div className="w-12 h-12 rounded-2xl bg-edsync-blue/10 flex items-center justify-center text-2xl mb-3">
-              <span className="text-xs font-semibold text-edsync-blue">ALL</span>
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+              <UsersRound className="h-5 w-5" />
             </div>
             <h3 className="font-display font-bold text-edsync-text">
               All Classes
@@ -476,7 +481,7 @@ export default function TeacherStudents() {
               className={`edsync-card cursor-pointer transition-all relative group ${selectedClass === cls.id ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
             >
               <div
-                className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${CLASS_CARD_COLORS[i % CLASS_CARD_COLORS.length]} flex items-center justify-center text-2xl mb-3`}
+                className={`mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br ${CLASS_CARD_COLORS[i % CLASS_CARD_COLORS.length]}`}
               >
                 <span className="text-white text-sm font-semibold">
                   {cls.name
@@ -494,21 +499,22 @@ export default function TeacherStudents() {
               <p className="text-xs text-edsync-subtle">
                 {cls.subject || "No subject"}
               </p>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-edsync-border">
-                <span className="text-xs text-edsync-subtle">Join Code:</span>
+              <div className="mt-3 flex items-center justify-between border-t border-edsync-border pt-3">
+                <span className="text-xs text-edsync-subtle">Join code</span>
                 <span className="font-mono text-edsync-amber font-bold text-sm">
                   {cls.join_code}
                 </span>
               </div>
-              {/* Delete button appears on hover */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteClass(cls.id);
                 }}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-edsync-subtle hover:text-edsync-red text-sm"
+                className="absolute right-3 top-3 rounded-lg p-1.5 text-[0] text-edsync-subtle opacity-0 transition-opacity hover:bg-edsync-red/10 hover:text-edsync-red group-hover:opacity-100"
                 title="Delete class"
+                aria-label={`Delete ${cls.name}`}
               >
+                <Trash2 className="h-4 w-4" />
                 ×
               </button>
             </div>
@@ -668,7 +674,8 @@ export default function TeacherStudents() {
                     onClick={() => setShowAssign(true)}
                     className="btn-primary text-xs py-1.5 px-3"
                   >
-                    + Assign
+                    <BookOpenCheck className="h-3.5 w-3.5" />
+                    Assign
                   </button>
                 </div>
                 {assignments.length === 0 ? (
