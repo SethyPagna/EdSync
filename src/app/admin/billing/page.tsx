@@ -48,6 +48,11 @@ type BillingPayload = {
   context: { tenant: Tenant; portal: TenantPortal | null };
 };
 
+type BillingActionResult = {
+  warnings?: string[];
+  [key: string]: unknown;
+};
+
 type ProductDraft = {
   title: string;
   description: string;
@@ -204,9 +209,10 @@ export default function AdminBillingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = await response.json();
+      const json = (await response.json()) as { data?: BillingActionResult | null; error?: string | null };
       if (!response.ok || json.error) throw new Error(json.error || "Request failed.");
-      setMessage(success);
+      const warnings = Array.isArray(json.data?.warnings) ? json.data.warnings : [];
+      setMessage(warnings.length > 0 ? `${success} ${warnings.join(" ")}` : success);
       await load();
       return json.data ?? true;
     } catch (error) {
