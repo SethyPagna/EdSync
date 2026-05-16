@@ -4,7 +4,7 @@ import { ArrowRight, Building2, GraduationCap } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
-import { normalizePublicLanguage, publicCopy } from "@/lib/public-i18n";
+import { getPublicCopy } from "@/lib/public-i18n";
 
 type PublicTopbarProps = {
   active?: "catalog" | "organization" | "course";
@@ -21,10 +21,7 @@ export default async function PublicTopbar({
   organizationSlug,
 }: PublicTopbarProps) {
   const cookieStore = await cookies();
-  const language = normalizePublicLanguage(
-    cookieStore.get("edsync-language")?.value || cookieStore.get("edsync-language-code")?.value,
-  );
-  const copy = publicCopy[language];
+  const copy = getPublicCopy();
   const resolvedOrganizationCode = organizationCode || organizationSlug || portalSlug;
   const role = cookieStore.get(ROLE_COOKIE)?.value;
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
