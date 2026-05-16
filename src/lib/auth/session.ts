@@ -11,7 +11,12 @@ const SESSION_DAYS = 30;
 export type SessionUser = {
   id: string;
   email: string;
-  user_metadata: { role: UserRole; full_name?: string | null };
+  user_metadata: {
+    role: UserRole;
+    full_name?: string | null;
+    tenant_slug?: string | null;
+    tenant_name?: string | null;
+  };
 };
 
 function hashToken(token: string) {
