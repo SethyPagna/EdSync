@@ -102,6 +102,7 @@
 | 2026-05-17 | Intro-to-workflow gallery refinement | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots at hero, transition, workflow desktop, and workflow mobile viewports | Passed |
 | 2026-05-17 | Concrete EdSync slide-scenes redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots at hero, workflow, search, results, and mobile viewports | Passed |
 | 2026-05-17 | Dark reference-style catalog hero | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshot review for hero and workflow contrast | Passed |
+| 2026-05-17 | LEARN-style intro link and workflow gallery pass | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots for `/`, `/showcase`, and mobile intro links | Passed |
 
 ---
 
