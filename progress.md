@@ -99,6 +99,7 @@
 | 2026-05-16 | Public intro launch redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; headless Chrome and Playwright screenshots at desktop/mobile/gallery viewports | Passed |
 | 2026-05-16 | Interactive workflow showcase redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; Playwright screenshots at hero, workflow desktop, and workflow mobile viewports | Passed |
 | 2026-05-16 | Public intro performance pass | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; desktop/mobile workflow smoke review | Passed |
+| 2026-05-17 | Intro-to-workflow gallery refinement | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots at hero, transition, workflow desktop, and workflow mobile viewports | Passed |
 
 ---
 
