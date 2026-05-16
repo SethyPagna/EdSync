@@ -158,6 +158,8 @@
 - Verification for this pass: local Chrome screenshots covered light desktop, dark desktop, mobile, workflow bridge, and the dedicated showcase page with no horizontal overflow. `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
 - Refined the intro/workflow connection so `View workflow` stays on the catalog page, the product preview is larger and clearer, organization/teacher labels no longer collide, and workflow gallery controls change slides in place instead of scrolling the page.
 - Browser verification for this pass confirmed dot navigation changes active slides with `jump: 0`, autoplay advances slides without moving scroll, and desktop/mobile intro views have no horizontal overflow. `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
+- Reworked the public intro/workflow style closer to the LEARN reference: transparent launch header controls, dark cinematic workflow stage, left narrative panel, realistic app window preview, and bottom tab navigation for Dashboard/Studio/AI/Practice/Admin/Catalog style slides.
+- Verification for this pass: local browser smoke confirmed no horizontal overflow, transparent public header in dark mode, in-place workflow tab switching with no scroll jump, and successful `typecheck`, `lint`, `test`, and `build`.
 
 ## Update Protocol
 
