@@ -55,6 +55,12 @@ type AppShellProps = {
   navItems: ShellNavItem[];
 };
 
+type WorkspaceContext = {
+  type: "organization" | "individual";
+  organizationCode?: string | null;
+  organizationName?: string | null;
+};
+
 const roleCopy = {
   teacher: {
     label: "Teaching Workspace",
@@ -85,6 +91,22 @@ function sessionRoleFromCookie() {
 
 function pathWithoutQuery(href: string) {
   return href.split("?")[0];
+}
+
+function workspaceContextFromStorage(): WorkspaceContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem("edsync-auth-workspace") || "null") as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const record = parsed as Record<string, unknown>;
+    return {
+      type: record.type === "organization" ? "organization" : "individual",
+      organizationCode: typeof record.organizationCode === "string" ? record.organizationCode : null,
+      organizationName: typeof record.organizationName === "string" ? record.organizationName : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export const teacherNavItems: ShellNavItem[] = [
@@ -179,6 +201,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
+  const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(() => workspaceContextFromStorage());
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
 
@@ -187,6 +210,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const useDark = stored === "dark";
     document.documentElement.classList.toggle("dark", useDark);
     setDarkMode(useDark);
+    setWorkspaceContext(workspaceContextFromStorage());
   }, []);
 
   useEffect(() => {
@@ -367,6 +391,18 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           {role === "admin" && (
             <div className="mt-3 rounded-lg border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
               Read-only view mode is audited.
+            </div>
+          )}
+          {workspaceContext && (
+            <div className="mt-3 rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-xs text-edsync-subtle">
+              <p className="font-semibold text-edsync-text">
+                {workspaceContext.type === "organization" ? "Organization" : "Individual workspace"}
+              </p>
+              {workspaceContext.type === "organization" && (
+                <p className="mt-0.5 truncate">
+                  {workspaceContext.organizationName || workspaceContext.organizationCode || "Organization context"}
+                </p>
+              )}
             </div>
           )}
           {role === "student" && (
