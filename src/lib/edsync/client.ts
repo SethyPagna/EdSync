@@ -35,7 +35,7 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
   return payload;
 }
 
-// The query builder mirrors Supabase's permissive default so existing callers can opt into types gradually.
+// The query builder keeps legacy table callers working while new code moves toward typed D1 helpers.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
   private request: DataRequest;
