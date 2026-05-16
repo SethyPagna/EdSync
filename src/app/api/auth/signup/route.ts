@@ -124,6 +124,7 @@ export async function POST(request: Request) {
 
   const id = crypto.randomUUID();
   const passwordHash = await hashPassword(password);
+  let tenantContext: { id: string; slug: string; name: string } | null = null;
 
   await d1Query(
     `INSERT INTO auth_users (id, email, password_hash, created_at, updated_at)
@@ -141,12 +142,13 @@ export async function POST(request: Request) {
   if (accountType === "organization" && organizationMode === "create" && organizationName) {
     const tenantId = crypto.randomUUID();
     const portalId = crypto.randomUUID();
+    const tenantSlug = organizationSlug(organizationName);
     await d1Query(
       `INSERT INTO tenants (id, slug, name, owner_id, plan_tier, isolation_mode, settings, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'solo', 'shared_d1', ?, datetime('now'), datetime('now'))`,
       [
         tenantId,
-        organizationSlug(organizationName),
+        tenantSlug,
         organizationName,
         id,
         JSON.stringify({ signup_source: "auth_signup", owner_role: role }),
@@ -167,6 +169,7 @@ export async function POST(request: Request) {
         roleProfileFor({ role, accountType, organizationMode }),
       ],
     );
+    tenantContext = { id: tenantId, slug: tenantSlug, name: organizationName };
   }
 
   if (accountType === "organization" && organizationMode === "join" && joinedTenantRows[0]) {
@@ -180,12 +183,22 @@ export async function POST(request: Request) {
         roleProfileFor({ role, accountType, organizationMode }),
       ],
     );
+    tenantContext = {
+      id: joinedTenantRows[0].id,
+      slug: organizationCode,
+      name: joinedTenantRows[0].name,
+    };
   }
 
   const user: SessionUser = {
     id,
     email: normalizedEmail,
-    user_metadata: { role, full_name: fullName },
+    user_metadata: {
+      role,
+      full_name: fullName,
+      tenant_slug: tenantContext?.slug,
+      tenant_name: tenantContext?.name,
+    },
   };
   const session = await createSession(user);
   const response = NextResponse.json({
