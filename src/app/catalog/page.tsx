@@ -13,6 +13,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
+import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 
 export const metadata: Metadata = {
   title: "Catalog",
@@ -23,14 +24,22 @@ export const metadata: Metadata = {
 export default async function CatalogPage({
   searchParams,
 }: {
-  searchParams?: { q?: string; portal?: string; tenant?: string };
+  searchParams?: {
+    q?: string;
+    portal?: string;
+    tenant?: string;
+    price?: string;
+    category?: string;
+    difficulty?: string;
+    language?: string;
+    duration?: string;
+  };
 }) {
-  const query = searchParams?.q?.trim() ?? "";
+  const filters = normalizeCatalogFilters(searchParams);
+  const hasFilters = hasCatalogFilters(filters);
   const [items, portals] = await Promise.all([
     listPublicCatalog({
-      query,
-      portalSlug: searchParams?.portal ?? null,
-      tenantSlug: searchParams?.tenant ?? null,
+      ...filters,
     }),
     listPublicPortals(),
   ]);
@@ -86,17 +95,43 @@ export default async function CatalogPage({
               <label className="sr-only" htmlFor="catalog-search">
                 Search catalog
               </label>
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              {filters.portalSlug && <input type="hidden" name="portal" value={filters.portalSlug} />}
+              {filters.tenantSlug && <input type="hidden" name="tenant" value={filters.tenantSlug} />}
+              <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_auto_auto_auto_auto_auto]">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
                   <input
                     id="catalog-search"
                     name="q"
-                    defaultValue={query}
+                    defaultValue={filters.query}
                     className="edsync-input pl-9"
                     placeholder="Search subject, skill, organization, or course"
                   />
                 </div>
+                <select name="price" defaultValue={filters.price} className="edsync-input min-w-28">
+                  <option value="all">All prices</option>
+                  <option value="free">Free</option>
+                  <option value="paid">Paid</option>
+                </select>
+                <input
+                  name="difficulty"
+                  defaultValue={filters.difficulty}
+                  className="edsync-input min-w-28"
+                  placeholder="Difficulty"
+                />
+                <input
+                  name="language"
+                  defaultValue={filters.language}
+                  className="edsync-input min-w-28"
+                  placeholder="Language"
+                />
+                <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-32">
+                  <option value="">Any duration</option>
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="60">60 min</option>
+                  <option value="120">2 hours</option>
+                </select>
                 <button className="btn-primary justify-center" type="submit">
                   Search
                 </button>
@@ -107,7 +142,7 @@ export default async function CatalogPage({
                 {categories.map((category) => (
                   <Link
                     key={category}
-                    href={`/catalog?q=${encodeURIComponent(category)}`}
+                    href={`/catalog?category=${encodeURIComponent(category)}`}
                     className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue"
                   >
                     {category}
@@ -157,9 +192,9 @@ export default async function CatalogPage({
                 Global and organization-published learning products.
               </p>
             </div>
-            {query && (
+            {hasFilters && (
               <Link href="/catalog" className="text-sm font-semibold text-edsync-blue hover:underline">
-                Clear search
+                Clear filters
               </Link>
             )}
           </div>
