@@ -20,7 +20,7 @@ function roleProfileFor(input: { role: "teacher" | "student"; accountType: "indi
 }
 
 export async function POST(request: Request) {
-  const { email, password, options } = (await request.json()) as {
+  const body = (await request.json().catch(() => null)) as {
     email?: string;
     password?: string;
     options?: {
@@ -33,7 +33,16 @@ export async function POST(request: Request) {
         organization_code?: string;
       };
     };
-  };
+  } | null;
+
+  if (!body) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Invalid signup request.", status: 400 },
+    }, { status: 400 });
+  }
+
+  const { email, password, options } = body;
 
   const normalizedEmail = email?.trim().toLowerCase();
   const role = options?.data?.role === "teacher" ? "teacher" : "student";
