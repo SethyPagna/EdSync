@@ -157,7 +157,12 @@ export function createClient() {
           response.json(),
         );
       },
-      async signInWithPassword(input: { email: string; password: string }): Promise<AuthResponse> {
+      async signInWithPassword(input: {
+        email: string;
+        password: string;
+        account_type?: "individual" | "organization";
+        organization_code?: string;
+      }): Promise<AuthResponse> {
         return postJson<AuthResponse>("/api/auth/login", input);
       },
       async signUp(input: {
