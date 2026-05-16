@@ -314,7 +314,7 @@ export default function StudentDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <OrganizationContextBanner />
-      <header className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+      <header className="premium-panel rounded-2xl p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
@@ -324,7 +324,7 @@ export default function StudentDashboard() {
               Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
             </h1>
           </div>
-          <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3">
+          <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 shadow-sm">
             <div className="flex items-center gap-3">
               <Flame className="h-5 w-5 text-edsync-amber" />
               <div>
@@ -376,7 +376,7 @@ export default function StudentDashboard() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <section className="premium-surface rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Continue learning</h2>
@@ -389,7 +389,7 @@ export default function StudentDashboard() {
           {recommendation ? (
             <Link
               href={`/student/lessons/${recommendation.id}`}
-              className="group block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50 hover:bg-edsync-card"
+              className="premium-card group block rounded-2xl p-4 transition hover:-translate-y-0.5"
             >
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
@@ -414,7 +414,7 @@ export default function StudentDashboard() {
               </div>
             </Link>
           ) : (
-            <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
+            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
               <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No lesson assigned yet</p>
               <p className="mt-1 text-sm text-edsync-subtle">Join a class to get started.</p>
@@ -422,7 +422,7 @@ export default function StudentDashboard() {
           )}
         </section>
 
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <section className="premium-surface rounded-2xl p-4 sm:p-5">
           <h2 className="font-display text-xl font-bold">Join a class</h2>
           <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-1">
             <input
@@ -445,7 +445,7 @@ export default function StudentDashboard() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <section className="premium-surface rounded-2xl p-4 sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Learning path</h2>
@@ -462,7 +462,7 @@ export default function StudentDashboard() {
               ))}
             </div>
           ) : lessons.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-10 text-center">
+            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-10 text-center">
               <Target className="mx-auto mb-4 h-9 w-9 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No lessons yet</p>
               <p className="mt-1 text-sm text-edsync-subtle">
@@ -483,7 +483,7 @@ export default function StudentDashboard() {
         </section>
 
         <aside className="space-y-5">
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <section className="premium-surface rounded-2xl p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-xl font-bold">Announcements</h2>
@@ -499,7 +499,7 @@ export default function StudentDashboard() {
                 planner.announcements.slice(0, 3).map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
+                    className="rounded-2xl border border-edsync-border bg-edsync-surface p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold text-edsync-text">{item.title}</p>
@@ -514,7 +514,7 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <section className="premium-surface rounded-2xl p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-xl font-bold">Schedule</h2>
@@ -555,7 +555,7 @@ export default function StudentDashboard() {
                 planner.events.slice(0, 5).map((event) => (
                   <div
                     key={event.id}
-                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
+                    className="rounded-2xl border border-edsync-border bg-edsync-surface p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -575,7 +575,7 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <details className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <details className="premium-surface rounded-2xl p-4 sm:p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden">
               <div>
                 <h2 className="font-display text-xl font-bold">Goals</h2>
@@ -628,7 +628,7 @@ export default function StudentDashboard() {
             </div>
           </details>
 
-          <details className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <details className="premium-surface rounded-2xl p-4 sm:p-5">
             <summary className="cursor-pointer list-none marker:hidden">
               <h2 className="font-display text-xl font-bold">Reflections</h2>
               <p className="mt-1 text-sm text-edsync-subtle">{reflections.length} recent notes</p>
@@ -708,7 +708,7 @@ function LessonCard({ lesson }: { lesson: AssignedLesson }) {
   return (
     <Link
       href={`/student/lessons/${lesson.id}`}
-      className="flex items-center gap-4 rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
+      className="flex items-center gap-4 rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50 hover:bg-edsync-card"
     >
       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
         <BookOpenCheck className="h-5 w-5" />
