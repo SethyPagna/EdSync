@@ -1,7 +1,7 @@
 services:
-  edsync-app:
+  edsync:
     image: node:20-alpine
-    container_name: edsync-app
+    container_name: edsync
     working_dir: /app
     command: sh -c "npm install && npm run build && npm run start"
     ports:
