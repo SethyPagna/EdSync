@@ -4,12 +4,12 @@ import { notFound } from "next/navigation";
 import {
   ArrowRight,
   BookOpenCheck,
-  Clock3,
   Globe2,
   Search,
   SlidersHorizontal,
   UsersRound,
 } from "lucide-react";
+import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
@@ -176,52 +176,7 @@ export default async function OrganizationPortalPage({
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
-              <Link
-                key={item.id}
-                href={item.detailUrl}
-                className="premium-card group overflow-hidden rounded-2xl"
-              >
-                <div className="relative aspect-video overflow-hidden bg-edsync-surface">
-                  {item.metadata.thumbnailUrl ? (
-                    <div
-                      className="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
-                      style={{ backgroundImage: `url(${item.metadata.thumbnailUrl})` }}
-                      aria-label={`${item.title} thumbnail`}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/20 via-edsync-surface to-edsync-emerald/20">
-                      <BookOpenCheck className="h-12 w-12 text-edsync-blue" />
-                    </div>
-                  )}
-                  <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-edsync-surface/90 px-2.5 py-1 text-xs font-bold text-edsync-text shadow-sm backdrop-blur">
-                      {item.price.label}
-                    </span>
-                    {item.metadata.category && (
-                      <span className="rounded-full bg-edsync-blue px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-                        {item.metadata.category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h2 className="font-display text-xl font-bold">{item.title}</h2>
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-edsync-subtle">
-                    {item.metadata.previewSummary ||
-                      item.description ||
-                      "Open this course to preview details and enroll."}
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <span className="inline-flex items-center gap-1.5 text-edsync-subtle">
-                      <Clock3 className="h-4 w-4" />
-                      {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} min` : "Flexible"}
-                    </span>
-                    <span className="inline-flex items-center gap-2 font-semibold text-edsync-blue">
-                      View course <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </span>
-                  </div>
-                </div>
-              </Link>
+              <CatalogCourseCard key={item.id} item={item} showOrganization={false} />
             ))}
           </div>
         </section>
