@@ -281,7 +281,7 @@ const WorkflowScreen = memo(function WorkflowScreen({ slide }: { slide: Workflow
   );
 });
 
-export default function WorkflowShowcase() {
+export default function WorkflowShowcase({ includeBridge = true }: { includeBridge?: boolean }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
@@ -326,27 +326,29 @@ export default function WorkflowShowcase() {
 
   return (
     <>
-      <section id="workflow-transition" className="edsync-workflow-bridge" aria-label="Workflow transition">
-        <div className="edsync-workflow-bridge-sticky">
-          <div className="edsync-workflow-bridge-card">
-            <div className="min-w-0">
-              <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
-                From public page to learning evidence.
-              </h2>
-              <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
-                Each scroll step swaps the stage to a real EdSync surface: catalog, Studio, AI, teacher review, student practice, and admin controls.
-              </p>
-            </div>
-            <div className="edsync-workflow-bridge-window" aria-hidden="true">
-              {["Catalog", "Studio", "AI draft", "Practice", "Gradebook"].map((label, index) => (
-                <span key={label} style={{ transform: `translateX(${index * 0.65}rem)` }}>
-                  {label}
-                </span>
-              ))}
+      {includeBridge && (
+        <section id="workflow-transition" className="edsync-workflow-bridge" aria-label="Workflow transition">
+          <div className="edsync-workflow-bridge-sticky">
+            <div className="edsync-workflow-bridge-card">
+              <div className="min-w-0">
+                <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
+                  From public page to learning evidence.
+                </h2>
+                <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
+                  Each scroll step swaps the stage to a real EdSync surface: catalog, Studio, AI, teacher review, student practice, and admin controls.
+                </p>
+              </div>
+              <div className="edsync-workflow-bridge-window" aria-hidden="true">
+                {["Catalog", "Studio", "AI draft", "Practice", "Gradebook"].map((label, index) => (
+                  <span key={label} style={{ transform: `translateX(${index * 0.65}rem)` }}>
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section id="showcase" className="edsync-workflow-showcase scroll-mt-24">
         <div className="edsync-workflow-sticky">
