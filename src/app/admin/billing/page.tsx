@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
+import { safeCatalogImageUrl, safeCatalogVideoUrl } from "@/lib/security/media";
 import type { BillingPrice, BillingProduct, Entitlement, Tenant, TenantPortal } from "@/types";
 
 type CatalogMetadata = {
@@ -132,6 +133,17 @@ function money(amountCents?: number, currency = "usd") {
   return new Intl.NumberFormat("en", { style: "currency", currency: currency.toUpperCase() }).format((amountCents ?? 0) / 100);
 }
 
+function mediaWarnings(draft: ProductDraft) {
+  return [
+    draft.thumbnailUrl && !safeCatalogImageUrl(draft.thumbnailUrl)
+      ? "Thumbnail must be an HTTPS image URL ending in PNG, JPG, WEBP, or GIF."
+      : null,
+    draft.previewVideoUrl && !safeCatalogVideoUrl(draft.previewVideoUrl)
+      ? "Preview must be a YouTube, Vimeo, MP4, WEBM, or MOV HTTPS URL."
+      : null,
+  ].filter(Boolean) as string[];
+}
+
 export default function AdminBillingPage() {
   const [payload, setPayload] = useState<BillingPayload | null>(null);
   const [product, setProduct] = useState<ProductDraft>(emptyProduct);
@@ -180,6 +192,8 @@ export default function AdminBillingPage() {
     }
     return grouped;
   }, [payload]);
+  const productMediaWarnings = mediaWarnings(product);
+  const productDraftMediaWarnings = mediaWarnings(productDraft);
 
   const run = async (body: Record<string, unknown>, success: string) => {
     setBusy(true);
@@ -386,6 +400,13 @@ export default function AdminBillingPage() {
               <input className="edsync-input" value={product.thumbnailUrl} onChange={(event) => setProduct({ ...product, thumbnailUrl: event.target.value })} placeholder="HTTPS thumbnail URL or R2 public URL" />
               <input className="edsync-input" value={product.previewVideoUrl} onChange={(event) => setProduct({ ...product, previewVideoUrl: event.target.value })} placeholder="YouTube, Vimeo, or direct HTTPS video" />
             </div>
+            {productMediaWarnings.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                {productMediaWarnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+            )}
             <label className="flex items-center gap-2 text-sm text-edsync-subtle">
               <input type="checkbox" checked={product.featured} onChange={(event) => setProduct({ ...product, featured: event.target.checked })} />
               Feature this product in portal highlights
@@ -541,6 +562,13 @@ export default function AdminBillingPage() {
                     <input className="edsync-input" value={productDraft.difficulty} onChange={(event) => setProductDraft({ ...productDraft, difficulty: event.target.value })} placeholder="Difficulty" />
                     <input className="edsync-input md:col-span-2" value={productDraft.thumbnailUrl} onChange={(event) => setProductDraft({ ...productDraft, thumbnailUrl: event.target.value })} placeholder="Thumbnail URL" />
                     <input className="edsync-input" value={productDraft.previewVideoUrl} onChange={(event) => setProductDraft({ ...productDraft, previewVideoUrl: event.target.value })} placeholder="Preview video URL" />
+                    {productDraftMediaWarnings.length > 0 && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200 md:col-span-3">
+                        {productDraftMediaWarnings.map((warning) => (
+                          <p key={warning}>{warning}</p>
+                        ))}
+                      </div>
+                    )}
                     <label className="flex items-center gap-2 text-sm text-edsync-subtle">
                       <input type="checkbox" checked={productDraft.featured} onChange={(event) => setProductDraft({ ...productDraft, featured: event.target.checked })} />
                       Featured
