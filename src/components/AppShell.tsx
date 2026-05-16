@@ -73,6 +73,16 @@ const roleCopy = {
   },
 };
 
+function sessionRoleFromCookie() {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split(";")
+    .map((value) => value.trim())
+    .find((value) => value.startsWith("edsync-role="));
+  const role = match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null;
+  return role === "admin" || role === "teacher" || role === "student" ? role : null;
+}
+
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
   { href: "/studio", label: "Studio", icon: Layers3, marker: "S" },
@@ -164,7 +174,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [darkMode, setDarkMode] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
-  const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
+  const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
 
