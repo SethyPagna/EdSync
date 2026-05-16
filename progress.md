@@ -96,6 +96,7 @@
 | 2026-05-16 | Phase 3 learning-object foundation | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts` | Passed |
 | 2026-05-16 | Phase 3 lesson-package composer and Studio integration | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts src/lib/learning/lesson-package.test.ts`; `npm.cmd run lint` | Passed |
 | 2026-05-16 | Phase 3 teacher lesson package summary | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test -- src/lib/learning/lesson-package.test.ts` | Passed |
+| 2026-05-16 | Public intro launch redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; headless Chrome and Playwright screenshots at desktop/mobile/gallery viewports | Passed |
 
 ---
 
@@ -139,6 +140,13 @@
 - Updated Studio's saved block library to use shared learning-object state labels and block type mapping.
 - Updated the teacher lesson editor header to summarize the current lesson through `lessonRowsToLearningObject`, including shared state, block count, and package duration.
 - Phase 3 remains in progress until large teacher/student lesson pages consume the shared layer and duplicated section/quiz normalization is removed.
+
+## Public Intro Redesign Summary
+
+- Replaced the word-heavy catalog intro with a compact launch-style hook and animated product-preview deck.
+- Added a horizontal product gallery that previews Studio, teacher workflow, student practice, admin command, and discussion surfaces.
+- Tightened mobile header behavior so the public topbar keeps theme/language controls visible without clipping.
+- Added responsive motion and overflow safeguards for desktop and mobile.
 
 ## Update Protocol
 
