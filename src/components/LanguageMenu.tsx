@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Languages } from "lucide-react";
 
 export const EDSYNC_LANGUAGES = [
@@ -36,6 +36,7 @@ export default function LanguageMenu({
   align = "right",
   className = "",
 }: LanguageMenuProps) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const [language, setLanguage] = useState<LanguageName>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
@@ -51,6 +52,8 @@ export default function LanguageMenu({
     setLanguage(nextLanguage);
     window.localStorage.setItem("edsync-language", nextLanguage);
     document.documentElement.lang = languageCodeFor(nextLanguage);
+    window.dispatchEvent(new CustomEvent("edsync-language-change", { detail: { language: nextLanguage } }));
+    detailsRef.current?.removeAttribute("open");
 
     if (syncCatalogFilter) {
       const { pathname, search } = window.location;
@@ -62,7 +65,7 @@ export default function LanguageMenu({
   };
 
   return (
-    <details className={`group relative inline-block ${className}`}>
+    <details ref={detailsRef} className={`group relative inline-block ${className}`}>
       <summary
         className={`${compact ? "premium-icon-button" : "btn-secondary px-4 py-2 text-sm"} list-none marker:hidden [&::-webkit-details-marker]:hidden`}
         aria-label="Choose language"
