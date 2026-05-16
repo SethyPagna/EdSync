@@ -103,6 +103,7 @@
 | 2026-05-17 | Concrete EdSync slide-scenes redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots at hero, workflow, search, results, and mobile viewports | Passed |
 | 2026-05-17 | Dark reference-style catalog hero | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshot review for hero and workflow contrast | Passed |
 | 2026-05-17 | LEARN-style intro link and workflow gallery pass | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots for `/`, `/showcase`, and mobile intro links | Passed |
+| 2026-05-17 | LEARN-style public launch redo | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; in-app browser hero/workflow/theme/language QA; Chrome desktop/mobile screenshots | Passed locally |
 
 ---
 
@@ -160,6 +161,8 @@
 - Browser verification for this pass confirmed dot navigation changes active slides with `jump: 0`, autoplay advances slides without moving scroll, and desktop/mobile intro views have no horizontal overflow. `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
 - Reworked the public intro/workflow style closer to the LEARN reference: transparent launch header controls, dark cinematic workflow stage, left narrative panel, realistic app window preview, and bottom tab navigation for Dashboard/Studio/AI/Practice/Admin/Catalog style slides.
 - Verification for this pass: local browser smoke confirmed no horizontal overflow, transparent public header in dark mode, in-place workflow tab switching with no scroll jump, and successful `typecheck`, `lint`, `test`, and `build`.
+- Replaced the public catalog topbar on `/catalog` and `/showcase` with a floating launch chrome, rebuilt the hero around a larger concrete EdSync workspace preview, set the public launch surface to dark-first, reordered workflow slides around Catalog, Studio, AI, Review, Practice, and Progress, and made language selection fall back to clean English public copy while preserving full language names.
+- Verification for this pass: local in-app browser QA confirmed no conventional public topbar, dark/light toggle persistence, language menu full-name options, in-place workflow tab switching, and no desktop horizontal overflow. Headless Chrome desktop/mobile screenshots were reviewed; mobile headless Chrome appears to enforce a wider CSS layout than the captured bitmap, so final live smoke should still check a real narrow browser viewport after deploy.
 
 ## Update Protocol
 
