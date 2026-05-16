@@ -108,6 +108,11 @@ Use the short EdSync Pages project name `edsync` and the app Worker name
 `edsync`. Preview uses `edsync-preview`, and the queue/background Worker uses
 `edsync-automation`.
 
+Live links:
+
+- App Worker: `https://edsync.learn-app.workers.dev`
+- Pages redirect: `https://edsync.pages.dev`
+
 ```powershell
 npm.cmd run deploy:cloudflare
 npm.cmd run deploy:cloudflare -- --preview
