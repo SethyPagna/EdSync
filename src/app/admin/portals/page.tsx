@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Edit3, Globe2, Home, Save, Trash2, X } from "lucide-react";
+import { Check, Copy, Edit3, Globe2, Home, Save, Trash2, X } from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
 import type { Tenant, TenantPortal } from "@/types";
 
@@ -157,6 +157,13 @@ export default function AdminPortalsPage() {
     await run({ action: "delete", id: portal.id }, "Portal deleted.");
   };
 
+  const copyTenantCode = async () => {
+    const code = payload?.context.tenant.slug;
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
+    setMessage("Organization code copied.");
+  };
+
   return (
     <div className="page-shell space-y-6">
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -168,7 +175,16 @@ export default function AdminPortalsPage() {
           </p>
         </div>
         <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          Public portals are discoverable at /org/[slug]. Organization managers remain tenant-scoped.
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start">
+            <span>
+              Organization code:{" "}
+              <span className="font-semibold text-edsync-text">{payload?.context.tenant.slug || "loading"}</span>
+            </span>
+            <button type="button" className="btn-secondary w-fit px-3 py-2 text-xs" onClick={copyTenantCode}>
+              <Copy className="h-3.5 w-3.5" />
+              Copy code
+            </button>
+          </div>
         </div>
       </header>
 
