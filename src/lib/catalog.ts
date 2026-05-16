@@ -303,4 +303,21 @@ export async function listPublicPortals() {
   );
 }
 
+export async function getOrganizationPortal(slug: string) {
+  const [portal] = await d1Query<TenantPortal & { tenant_name: string; tenant_slug: string }>(
+    `SELECT tp.*, t.name AS tenant_name, t.slug AS tenant_slug
+       FROM tenant_portals tp
+       JOIN tenants t ON t.id = tp.tenant_id
+      WHERE t.status = 'active'
+        AND (lower(tp.slug) = lower(?) OR lower(t.slug) = lower(?))
+      ORDER BY
+        CASE WHEN lower(t.slug) = lower(?) THEN 0 ELSE 1 END,
+        tp.is_default DESC,
+        tp.created_at ASC
+      LIMIT 1`,
+    [slug, slug, slug],
+  );
+  return portal ?? null;
+}
+
 export type CatalogTenant = Tenant;
