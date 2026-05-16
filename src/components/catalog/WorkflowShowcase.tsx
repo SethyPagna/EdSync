@@ -285,6 +285,7 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
   const [activeIndex, setActiveIndex] = useState(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
+  const manualControlUntilRef = useRef(0);
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   const setActiveSlide = useCallback((index: number) => {
@@ -306,7 +307,9 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
           bestRatio = entry.intersectionRatio;
           bestIndex = Number(entry.target.getAttribute("data-step-index"));
         }
-        if (Number.isFinite(bestIndex) && bestIndex >= 0) setActiveSlide(bestIndex);
+        if (Date.now() > manualControlUntilRef.current && Number.isFinite(bestIndex) && bestIndex >= 0) {
+          setActiveSlide(bestIndex);
+        }
       },
       { rootMargin: "-36% 0px -44% 0px", threshold: 0.5 },
     );
@@ -318,10 +321,22 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
     return () => observer.disconnect();
   }, [setActiveSlide]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) return;
+
+    const interval = window.setInterval(() => {
+      if (document.hidden || Date.now() < manualControlUntilRef.current) return;
+      setActiveSlide(activeIndexRef.current + 1);
+    }, 5200);
+
+    return () => window.clearInterval(interval);
+  }, [setActiveSlide]);
+
   const goToSlide = useCallback((index: number) => {
     const safeIndex = (index + slides.length) % slides.length;
+    manualControlUntilRef.current = Date.now() + 9000;
     setActiveSlide(safeIndex);
-    stepRefs.current[safeIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [setActiveSlide]);
 
   return (
@@ -366,7 +381,7 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
                 Slide through the actual app.
               </h2>
               <p className="mt-3 max-w-2xl text-base leading-7 text-edsync-subtle">
-                Click the dots or scroll. Each slide shows the route, controls, data, and actions users actually touch.
+                The gallery advances automatically. Use the dots or arrows to inspect each route without moving the page.
               </p>
             </div>
           </div>
