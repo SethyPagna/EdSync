@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
 import { sanitizeHtml } from "@/lib/security/html";
-import { safePublicUrl, safeVideoEmbedUrl } from "@/lib/security/media";
+import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type {
   Lesson,
   LessonSection,
@@ -683,7 +683,7 @@ function ImageSectionEditor({
       metadata: { imgUrl, caption },
     });
   };
-  const previewUrl = safePublicUrl(imgUrl);
+  const previewUrl = safeImageUrl(imgUrl);
 
   return (
     <div className="space-y-4">
@@ -726,6 +726,11 @@ function ImageSectionEditor({
           />
         </div>
       )}
+      {imgUrl && !previewUrl && (
+        <div className="rounded-xl border border-edsync-red/30 bg-edsync-red/10 p-3 text-sm text-edsync-red">
+          Use a safe HTTPS image ending in PNG, JPG, JPEG, WEBP, or GIF. SVG, scripts, credentials, and executable links are blocked.
+        </div>
+      )}
       <div>
         <label className="block text-xs text-edsync-subtle mb-1">
           Caption (optional)
@@ -761,16 +766,16 @@ function VideoSectionEditor({
     setCaption(parts[1] || "");
   }, [section.content, section.id]);
 
-  const safeUrl = safePublicUrl(url);
-  const embed = safeVideoEmbedUrl(url);
+  const media = classifySafeMediaUrl(url);
+  const embed = media?.embedUrl ?? null;
   const isEmbeddable = Boolean(embed);
 
   const save = async () => {
-    if (!safeUrl) {
-      toast.error("Use a valid HTTPS video or reference link.");
+    if (!media?.url) {
+      toast.error("Use a valid HTTPS YouTube/Vimeo URL or direct video file.");
       return;
     }
-    await onSave(section.id, { content: `${safeUrl}|||${caption}` });
+    await onSave(section.id, { content: `${media.url}|||${caption}` });
   };
 
   return (
@@ -796,17 +801,21 @@ function VideoSectionEditor({
           />
         </div>
       )}
-      {url && safeUrl && !isEmbeddable && (
+      {url && media && !isEmbeddable && (
         <div className="p-4 bg-edsync-surface border border-edsync-border rounded-xl">
-          <p className="text-edsync-subtle text-sm">
-            Safe HTTPS link set. Embed previews are only available for YouTube and Vimeo.
-          </p>
+          {media?.kind === "video" ? (
+            <video src={media.url} controls className="aspect-video w-full rounded-lg bg-black" />
+          ) : (
+            <p className="text-edsync-subtle text-sm">
+              Safe HTTPS link set. Embed previews are only available for YouTube, Vimeo, and direct video files.
+            </p>
+          )}
         </div>
       )}
-      {url && !safeUrl && (
+      {url && !media && (
         <div className="p-4 bg-edsync-red/10 border border-edsync-red/30 rounded-xl">
           <p className="text-edsync-red text-sm">
-            This link is blocked. Use HTTPS links only.
+            This link is blocked. Use HTTPS YouTube/Vimeo URLs or direct MP4, WEBM, or MOV files.
           </p>
         </div>
       )}
