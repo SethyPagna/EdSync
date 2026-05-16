@@ -9,6 +9,16 @@ function organizationSlug(name: string) {
   return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
+function normalizeOrganizationCode(value?: string | null) {
+  return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function roleProfileFor(input: { role: "teacher" | "student"; accountType: "individual" | "organization"; organizationMode?: "join" | "create" }) {
+  if (input.role === "student") return "role_learner";
+  if (input.accountType === "individual") return "role_solo_teacher";
+  return input.organizationMode === "join" ? "role_instructor" : "role_portal_admin";
+}
+
 export async function POST(request: Request) {
   const { email, password, options } = (await request.json()) as {
     email?: string;
@@ -18,7 +28,9 @@ export async function POST(request: Request) {
         full_name?: string;
         role?: "teacher" | "student";
         account_type?: "individual" | "organization";
+        organization_mode?: "join" | "create";
         organization_name?: string;
+        organization_code?: string;
       };
     };
   };
@@ -27,7 +39,9 @@ export async function POST(request: Request) {
   const role = options?.data?.role === "teacher" ? "teacher" : "student";
   const fullName = options?.data?.full_name?.trim() || null;
   const accountType = options?.data?.account_type === "organization" ? "organization" : "individual";
+  const organizationMode = options?.data?.organization_mode === "join" ? "join" : "create";
   const organizationName = options?.data?.organization_name?.trim() || null;
+  const organizationCode = normalizeOrganizationCode(options?.data?.organization_code);
 
   if (!normalizedEmail || !password || password.length < 8) {
     return NextResponse.json({
@@ -53,11 +67,32 @@ export async function POST(request: Request) {
     );
   }
 
-  if (accountType === "organization" && !organizationName) {
+  if (accountType === "organization" && organizationMode === "create" && !organizationName) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Organization name is required.", status: 400 },
     }, { status: 400 });
+  }
+
+  if (accountType === "organization" && organizationMode === "join" && !organizationCode) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Organization code is required.", status: 400 },
+    }, { status: 400 });
+  }
+
+  const joinedTenantRows = accountType === "organization" && organizationMode === "join"
+    ? await d1Query<{ id: string; name: string }>(
+        "SELECT id, name FROM tenants WHERE lower(slug) = lower(?) AND status = 'active' LIMIT 1",
+        [organizationCode],
+      )
+    : [];
+
+  if (accountType === "organization" && organizationMode === "join" && !joinedTenantRows[0]) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Organization was not found. Check the code or ask your organization owner.", status: 404 },
+    }, { status: 404 });
   }
 
   const existing = await d1Query<{ id: string }>("SELECT id FROM auth_users WHERE lower(email) = lower(?) LIMIT 1", [
@@ -94,7 +129,7 @@ export async function POST(request: Request) {
     [id, normalizedEmail, fullName, role],
   );
 
-  if (accountType === "organization" && organizationName) {
+  if (accountType === "organization" && organizationMode === "create" && organizationName) {
     const tenantId = crypto.randomUUID();
     const portalId = crypto.randomUUID();
     await d1Query(
@@ -120,7 +155,20 @@ export async function POST(request: Request) {
         crypto.randomUUID(),
         tenantId,
         id,
-        role === "teacher" ? "role_portal_admin" : "role_learner",
+        roleProfileFor({ role, accountType, organizationMode }),
+      ],
+    );
+  }
+
+  if (accountType === "organization" && organizationMode === "join" && joinedTenantRows[0]) {
+    await d1Query(
+      `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'active', '[]', datetime('now'), datetime('now'))`,
+      [
+        crypto.randomUUID(),
+        joinedTenantRows[0].id,
+        id,
+        roleProfileFor({ role, accountType, organizationMode }),
       ],
     );
   }
