@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   ArrowRight,
   BookOpenCheck,
   Building2,
@@ -13,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
+import PublicTopbar from "@/components/public/PublicTopbar";
 import { getPublicCatalogItem } from "@/lib/catalog";
 
 export async function generateMetadata({
@@ -42,18 +42,17 @@ export default async function CatalogDetailPage({
 
   return (
     <main className="min-h-screen bg-edsync-bg text-edsync-text">
-      <header className="border-b border-edsync-border bg-edsync-surface/95">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/catalog" className="btn-ghost px-0">
-            <ArrowLeft className="h-4 w-4" />
-            Back to catalog
-          </Link>
-          <Link href={`/auth/login?org=${encodeURIComponent(item.organization.slug)}`} className="btn-secondary px-4 py-2 text-sm">Sign in</Link>
-        </div>
-      </header>
+      <PublicTopbar
+        active="course"
+        organizationName={item.portal?.name || item.organization.name}
+        organizationSlug={item.organization.slug}
+      />
 
       <section className="mx-auto grid max-w-7xl gap-6 px-5 py-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
+          <Link href="/catalog" className="btn-ghost w-fit px-0">
+            Back to catalog
+          </Link>
           <div className="overflow-hidden rounded-lg border border-edsync-border bg-edsync-card">
             <div className="aspect-video bg-edsync-surface">
               {item.metadata.previewEmbedUrl ? (
