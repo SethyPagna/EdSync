@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BookOpenCheck, Building2, Clock3, Globe2, Search } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Building2, Clock3, Globe2 } from "lucide-react";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 
@@ -88,11 +88,10 @@ export default async function OrganizationPortalPage({
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
                 <label className="relative">
                   <span className="sr-only">Search this academy</span>
-                  <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
                   <input
                     name="q"
                     defaultValue={filters.query}
-                    className="edsync-input pl-9"
+                    className="edsync-input"
                     placeholder="Search this academy"
                   />
                 </label>
