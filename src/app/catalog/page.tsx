@@ -1,24 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import type { CSSProperties } from "react";
 import {
   ArrowRight,
-  BarChart3,
   BookOpenCheck,
   Building2,
-  CalendarCheck,
-  Layers3,
-  MessageSquareText,
-  Play,
-  Presentation,
   Search,
-  ShieldCheck,
   SlidersHorizontal,
-  Trophy,
-  Wand2,
 } from "lucide-react";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
+import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
@@ -63,77 +54,6 @@ export default async function CatalogPage({
   const categories = Array.from(
     new Set(items.map((item) => item.metadata.category).filter(Boolean) as string[]),
   ).slice(0, 6);
-  const launchSlides = [
-    {
-      title: "Studio",
-      caption: "Draft, design, publish",
-      icon: Presentation,
-      accent: "text-edsync-blue",
-      bars: ["w-11/12", "w-8/12", "w-10/12"],
-      tiles: ["Lesson", "Slides", "Practice"],
-    },
-    {
-      title: "AI",
-      caption: "Generate with control",
-      icon: Wand2,
-      accent: "text-edsync-emerald",
-      bars: ["w-9/12", "w-7/12", "w-10/12"],
-      tiles: ["Outline", "Quiz", "Rubric"],
-    },
-    {
-      title: "Practice",
-      caption: "Retry what matters",
-      icon: Trophy,
-      accent: "text-edsync-amber",
-      bars: ["w-8/12", "w-10/12", "w-6/12"],
-      tiles: ["Sprint", "Cards", "Review"],
-    },
-    {
-      title: "Progress",
-      caption: "See the next move",
-      icon: BarChart3,
-      accent: "text-edsync-blue",
-      bars: ["w-10/12", "w-9/12", "w-7/12"],
-      tiles: ["Grades", "Signals", "Plans"],
-    },
-  ];
-  const galleryScreens = [
-    {
-      title: "Course Studio",
-      detail: "Turn a source into slides, checks, and practice.",
-      icon: Layers3,
-      accent: "from-blue-500/18 to-cyan-400/12",
-      rows: ["Objective map", "Slide draft", "Exit ticket"],
-    },
-    {
-      title: "Teacher Flow",
-      detail: "Assign, review, intervene, improve.",
-      icon: CalendarCheck,
-      accent: "from-emerald-500/16 to-blue-500/10",
-      rows: ["Today", "Needs feedback", "Ready to assign"],
-    },
-    {
-      title: "Student Practice",
-      detail: "Timed modes, explanations, retry missed.",
-      icon: Play,
-      accent: "from-amber-400/18 to-rose-400/10",
-      rows: ["Sprint", "Flashcards", "Mistake retry"],
-    },
-    {
-      title: "Admin Command",
-      detail: "Providers, portals, governance, security.",
-      icon: ShieldCheck,
-      accent: "from-slate-500/12 to-blue-500/12",
-      rows: ["AI status", "Portals", "Audit trail"],
-    },
-    {
-      title: "Class Discussion",
-      detail: "Prompts, replies, notes, feedback.",
-      icon: MessageSquareText,
-      accent: "from-purple-500/14 to-cyan-500/10",
-      rows: ["Prompt", "Student replies", "Teacher note"],
-    },
-  ];
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -160,102 +80,36 @@ export default async function CatalogPage({
               </div>
             </div>
 
-            <div className="edsync-launch-deck animate-reveal-soft min-w-0" aria-label="Animated EdSync launch preview">
-              {launchSlides.map((slide, index) => {
-                const Icon = slide.icon;
-                return (
-                  <article
-                    key={slide.title}
-                    className="edsync-launch-slide"
-                    style={{ "--slide-index": index } as CSSProperties}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-edsync-bg ${slide.accent}`}>
-                        <Icon className="h-5 w-5" />
+            <div className="edsync-launch-deck animate-reveal-soft min-w-0" aria-label="EdSync launch path preview">
+              <article className="edsync-launch-slide edsync-launch-slide-static">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-edsync-bg text-edsync-blue">
+                    <BookOpenCheck className="h-5 w-5" />
+                  </span>
+                  <span className="text-xs font-bold text-edsync-subtle">Launch</span>
+                </div>
+                <div className="mt-8">
+                  <h2 className="font-display text-4xl font-bold">From idea to progress.</h2>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-edsync-subtle">
+                    The full workflow now has its own interactive showcase below.
+                  </p>
+                </div>
+                <div className="mt-7 grid gap-3">
+                  {["Find or create a course", "Build slides, practice, and discussion", "Assign and track learning"].map((row, index) => (
+                    <div key={row} className="flex items-center gap-3 rounded-2xl bg-edsync-bg/80 p-3">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-edsync-blue/10 text-xs font-bold text-edsync-blue">
+                        {index + 1}
                       </span>
-                      <span className="text-xs font-bold text-edsync-subtle">0{index + 1}</span>
+                      <span className="font-semibold text-edsync-text">{row}</span>
                     </div>
-                    <div className="mt-8">
-                      <h2 className="font-display text-4xl font-bold">{slide.title}</h2>
-                      <p className="mt-1 text-sm font-semibold text-edsync-subtle">{slide.caption}</p>
-                    </div>
-                    <div className="mt-7 space-y-3">
-                      {slide.bars.map((width) => (
-                        <div key={width} className="flex items-center gap-3 rounded-2xl bg-edsync-bg/80 p-3">
-                          <span className="h-2.5 w-2.5 rounded-full bg-edsync-blue" />
-                          <span className="h-2.5 min-w-0 flex-1 rounded-full bg-edsync-border">
-                            <span className={`block h-full rounded-full bg-edsync-blue/20 ${width}`} />
-                          </span>
-                          <span className="h-2.5 w-8 flex-shrink-0 rounded-full bg-edsync-blue/15 sm:w-10" />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {slide.tiles.map((tile) => (
-                        <span key={tile} className="rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-3 text-center text-xs font-bold text-edsync-text">
-                          {tile}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                );
-              })}
-              <div className="edsync-launch-progress" aria-hidden="true" />
+                  ))}
+                </div>
+              </article>
             </div>
           </div>
         </section>
 
-        <section id="showcase" className="edsync-gallery-section scroll-mt-24 py-10">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="font-display text-3xl font-bold leading-tight sm:text-5xl">See the product.</h2>
-              <p className="mt-2 max-w-lg text-sm leading-6 text-edsync-subtle">
-                A fast tour of the real EdSync workflow.
-              </p>
-            </div>
-            <Link href="#catalog-search-panel" className="btn-secondary w-fit justify-center">
-              Open catalog
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="edsync-screen-gallery" aria-label="EdSync product screen gallery">
-            {galleryScreens.map((screen, index) => {
-              const Icon = screen.icon;
-              return (
-                <article
-                  key={screen.title}
-                  className={`edsync-screen-card bg-gradient-to-br ${screen.accent}`}
-                  style={{ animationDelay: `${index * 90}ms` }}
-                >
-                  <div className="edsync-screen-chrome">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="mt-5 flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-display text-2xl font-bold">{screen.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-edsync-subtle">{screen.detail}</p>
-                    </div>
-                    <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-card text-edsync-blue shadow-sm">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                  </div>
-                  <div className="mt-7 grid gap-3">
-                    {screen.rows.map((row, rowIndex) => (
-                      <div key={row} className="edsync-screen-row">
-                        <span className="h-9 w-9 rounded-xl bg-edsync-blue/10" />
-                        <span className="font-semibold text-edsync-text">{row}</span>
-                        <span className="ml-auto h-2 max-w-[5rem] flex-1 rounded-full bg-edsync-border" style={{ flexBasis: `${4 + rowIndex * 1.3}rem` }} />
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
+        <WorkflowShowcase />
 
         <section id="catalog-search-panel" className="grid min-h-screen scroll-mt-24 content-center py-12">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
