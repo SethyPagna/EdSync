@@ -1,6 +1,7 @@
 import { createCheckout, grantEntitlement } from "@/lib/billing";
 import { normalizeCatalogFilters, type CatalogFilters, type CatalogPriceFilter } from "@/lib/catalog-filters";
 import { d1Query } from "@/lib/db/d1";
+import { sqlInPlaceholders } from "@/lib/db/sql";
 import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import type { BillingPrice, BillingProduct, Tenant, TenantPortal } from "@/types";
 
@@ -79,9 +80,8 @@ function catalogMetadata(row: CatalogRow) {
 async function activePrices(productIds: string[]) {
   const uniqueIds = Array.from(new Set(productIds));
   if (uniqueIds.length === 0) return new Map<string, BillingPrice>();
-  const placeholders = uniqueIds.map(() => "?").join(", ");
   const rows = await d1Query<BillingPrice>(
-    `SELECT * FROM billing_prices WHERE active = 1 AND product_id IN (${placeholders}) ORDER BY amount_cents ASC, created_at ASC`,
+    `SELECT * FROM billing_prices WHERE active = 1 AND product_id IN (${sqlInPlaceholders(uniqueIds)}) ORDER BY amount_cents ASC, created_at ASC`,
     uniqueIds,
   );
   const byProduct = new Map<string, BillingPrice>();
