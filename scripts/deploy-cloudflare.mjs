@@ -132,8 +132,8 @@ const pagesDeployCwd = mkdtempSync(join(tmpdir(), "edsync-pages-"));
 const pagesIndexPath = resolve(".open-next/assets/index.html");
 const appUrl =
   environment === "production"
-    ? "https://edsync-app-production.learn-learning-app.workers.dev"
-    : "https://edsync-app-preview.learn-learning-app.workers.dev";
+    ? "https://edsync.learn-app.workers.dev"
+    : "https://edsync-preview.learn-app.workers.dev";
 writeFileSync(
   pagesIndexPath,
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=${appUrl}"><title>EdSync</title></head><body><a href="${appUrl}">Open EdSync</a></body></html>`,
