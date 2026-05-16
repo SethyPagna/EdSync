@@ -228,6 +228,25 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       });
   }, []);
 
+  useEffect(() => {
+    if (!isAdminViewMode) return;
+
+    const mode = role === "teacher" ? "teacher" : "student";
+    const path = `${window.location.pathname}${window.location.search}`;
+    const auditKey = `edsync-admin-view-audit:${mode}:${path}`;
+    if (window.sessionStorage.getItem(auditKey)) return;
+
+    window.sessionStorage.setItem(auditKey, "1");
+    fetch("/api/admin/view-audit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode, path }),
+      keepalive: true,
+    }).catch(() => {
+      window.sessionStorage.removeItem(auditKey);
+    });
+  }, [isAdminViewMode, pathname, role]);
+
   const handleLogout = async () => {
     await edsync.auth.signOut();
     router.push("/auth/login");
