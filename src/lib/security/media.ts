@@ -8,6 +8,27 @@ const ALLOWED_EMBED_HOSTS = new Set([
 ]);
 
 const ALLOWED_PUBLIC_MEDIA_PROTOCOLS = new Set(["https:"]);
+const BLOCKED_PUBLIC_FILE_EXTENSIONS = new Set([
+  "apk",
+  "app",
+  "bat",
+  "bin",
+  "cmd",
+  "com",
+  "dll",
+  "dmg",
+  "exe",
+  "hta",
+  "jar",
+  "js",
+  "msi",
+  "ps1",
+  "scr",
+  "sh",
+  "svg",
+  "vbs",
+  "wsf",
+]);
 
 export type SafeMediaUrl = {
   url: string;
@@ -18,6 +39,17 @@ export type SafeMediaUrl = {
 
 function hostAllowed(hostname: string) {
   return ALLOWED_EMBED_HOSTS.has(hostname.toLowerCase());
+}
+
+function pathExtension(pathname: string) {
+  const fileName = pathname.split("/").filter(Boolean).at(-1) ?? "";
+  const extension = fileName.split(".").at(-1)?.toLowerCase() ?? "";
+  return fileName.includes(".") ? extension : "";
+}
+
+function hasBlockedExtension(url: URL) {
+  const extension = pathExtension(url.pathname);
+  return extension ? BLOCKED_PUBLIC_FILE_EXTENSIONS.has(extension) : false;
 }
 
 function youtubeEmbed(url: URL) {
@@ -51,6 +83,8 @@ export function safePublicUrl(value?: string | null) {
   try {
     const url = new URL(value);
     if (!ALLOWED_PUBLIC_MEDIA_PROTOCOLS.has(url.protocol)) return null;
+    if (url.username || url.password) return null;
+    if (hasBlockedExtension(url)) return null;
     url.hash = "";
     return url.toString();
   } catch {
@@ -96,6 +130,10 @@ export function classifySafeMediaUrl(value?: string | null): SafeMediaUrl | null
 export function safeCatalogImageUrl(value?: string | null) {
   const media = classifySafeMediaUrl(value);
   return media?.kind === "image" ? media.url : null;
+}
+
+export function safeImageUrl(value?: string | null) {
+  return safeCatalogImageUrl(value);
 }
 
 export function safeCatalogVideoUrl(value?: string | null) {
