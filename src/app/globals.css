@@ -489,9 +489,54 @@ h6 {
   box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.08);
 }
 
+.edsync-catalog-reference {
+  background:
+    radial-gradient(circle at 88% 16%, rgba(var(--emerald-rgb), 0.2), transparent 30rem),
+    radial-gradient(circle at 18% 20%, rgba(var(--blue-rgb), 0.22), transparent 28rem),
+    linear-gradient(135deg, #08111f 0%, #08131d 46%, #052923 100%);
+}
+
+.edsync-catalog-reference > section {
+  max-width: none;
+  background:
+    radial-gradient(circle at 86% 18%, rgba(20, 184, 166, 0.18), transparent 28rem),
+    radial-gradient(circle at 18% 24%, rgba(37, 99, 235, 0.16), transparent 26rem),
+    linear-gradient(135deg, #08111f 0%, #08131d 48%, #052923 100%);
+}
+
+.edsync-catalog-reference > section > :not(.edsync-workflow-bridge):not(.edsync-workflow-showcase) {
+  max-width: 80rem;
+  margin-inline: auto;
+}
+
+.edsync-catalog-reference > header {
+  background: rgba(8, 17, 31, 0.82) !important;
+  color: #f8fafc;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.08);
+}
+
+.edsync-catalog-reference > header .text-edsync-subtle {
+  color: rgba(226, 232, 240, 0.72) !important;
+}
+
+.edsync-catalog-reference > header .premium-icon-button,
+.edsync-catalog-reference > header button {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
 .edsync-launch-hero {
   position: relative;
   isolation: isolate;
+}
+
+.edsync-catalog-reference .edsync-launch-hero {
+  color: #f8fafc;
+}
+
+.edsync-catalog-reference .edsync-launch-hero .text-edsync-subtle {
+  color: rgba(226, 232, 240, 0.68) !important;
 }
 
 .edsync-launch-hero::before {
@@ -504,6 +549,41 @@ h6 {
     radial-gradient(circle at 38% 32%, rgba(var(--blue-rgb), 0.18), transparent 38%),
     radial-gradient(circle at 70% 72%, rgba(var(--emerald-rgb), 0.16), transparent 34%);
   z-index: -1;
+}
+
+.edsync-catalog-reference .edsync-launch-hero::before {
+  inset: 6% -8% 8% auto;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(var(--blue-rgb), 0.22), transparent 40%),
+    radial-gradient(circle at 74% 72%, rgba(var(--emerald-rgb), 0.22), transparent 36%);
+}
+
+.edsync-launch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.4rem;
+  border: 1px solid rgba(var(--emerald-rgb), 0.36);
+  border-radius: 999px;
+  background: rgba(var(--emerald-rgb), 0.14);
+  color: #c8f5e4;
+  padding: 0.45rem 0.78rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.edsync-launch-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(1rem, 4vw, 4rem);
+  margin-top: clamp(2rem, 6vh, 3rem);
+  max-width: 36rem;
+  color: rgba(226, 232, 240, 0.55);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .edsync-launch-deck {
@@ -521,6 +601,15 @@ h6 {
   overflow: hidden;
 }
 
+.edsync-catalog-reference .edsync-launch-deck {
+  min-height: clamp(33rem, 58vw, 43rem);
+  border-color: rgba(226, 232, 240, 0.14);
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(8, 47, 44, 0.55)),
+    radial-gradient(circle at 72% 20%, rgba(var(--emerald-rgb), 0.18), transparent 35%);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.36);
+}
+
 .edsync-launch-deck::before {
   content: "";
   position: absolute;
@@ -533,6 +622,13 @@ h6 {
   background-size: 48px 48px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 82%);
   pointer-events: none;
+}
+
+.edsync-catalog-reference .edsync-launch-deck::before {
+  border-color: rgba(226, 232, 240, 0.1);
+  background:
+    linear-gradient(90deg, rgba(94, 227, 174, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(120, 166, 255, 0.07) 1px, transparent 1px);
 }
 
 .edsync-launch-slide {
@@ -551,6 +647,12 @@ h6 {
   animation: none;
 }
 
+.edsync-catalog-reference .edsync-launch-slide {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(15, 23, 42, 0.54);
+  box-shadow: none;
+}
+
 .edsync-launch-slide::after {
   content: "";
   position: absolute;
@@ -562,6 +664,10 @@ h6 {
   pointer-events: none;
 }
 
+.edsync-catalog-reference .edsync-launch-slide::after {
+  background: radial-gradient(circle, rgba(var(--emerald-rgb), 0.24), transparent 68%);
+}
+
 .edsync-hero-appbar {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -569,6 +675,10 @@ h6 {
   gap: 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
   padding-bottom: 0.8rem;
+}
+
+.edsync-catalog-reference .edsync-hero-appbar {
+  border-bottom-color: rgba(226, 232, 240, 0.12);
 }
 
 .edsync-hero-appbar span {
@@ -588,11 +698,19 @@ h6 {
   color: var(--subtle);
 }
 
+.edsync-catalog-reference .edsync-hero-appbar strong {
+  color: rgba(226, 232, 240, 0.72);
+}
+
 .edsync-hero-studio-preview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(13rem, 0.42fr);
   gap: 1rem;
   margin-top: 1rem;
+}
+
+.edsync-catalog-reference .edsync-hero-studio-preview {
+  align-items: start;
 }
 
 .edsync-hero-editor,
@@ -601,6 +719,13 @@ h6 {
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.edsync-catalog-reference .edsync-hero-editor {
+  color: #0d1726;
+  background: #f8fbff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  transform: rotate(-2.4deg) translateY(1.2rem);
 }
 
 .edsync-hero-editor {
@@ -628,16 +753,36 @@ h6 {
   font-weight: 900;
 }
 
+.edsync-catalog-reference .edsync-hero-toolbar span {
+  background: #ffffff;
+  color: #506077;
+}
+
 .edsync-hero-canvas {
   display: grid;
   gap: 0.8rem;
   margin-top: 0.9rem;
 }
 
+.edsync-catalog-reference .edsync-hero-canvas .bg-edsync-blue\/10 {
+  background: #e8f0ff !important;
+}
+
 .edsync-hero-ai-panel {
   align-self: start;
   border-radius: 1.35rem;
   padding: 1rem;
+}
+
+.edsync-catalog-reference .edsync-hero-ai-panel {
+  border-color: rgba(94, 227, 174, 0.24);
+  background: rgba(15, 23, 42, 0.84);
+  color: #f8fafc;
+}
+
+.edsync-catalog-reference .edsync-hero-ai-panel .bg-edsync-bg {
+  background: rgba(94, 227, 174, 0.11) !important;
+  color: #d8fff0;
 }
 
 .edsync-hero-practice-strip {
@@ -652,11 +797,23 @@ h6 {
   font-weight: 800;
 }
 
+.edsync-catalog-reference .edsync-hero-practice-strip {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(7, 10, 18, 0.72);
+  color: #f8fafc;
+  transform: translate(1rem, -0.4rem);
+}
+
 .edsync-hero-practice-strip span:not(:first-child) {
   border-radius: 999px;
   background: rgba(var(--blue-rgb), 0.08);
   color: var(--blue);
   padding: 0.35rem 0.6rem;
+}
+
+.edsync-catalog-reference .edsync-hero-practice-strip span:not(:first-child) {
+  background: rgba(94, 227, 174, 0.12);
+  color: #a7f3d0;
 }
 
 .edsync-workflow-bridge,
@@ -753,6 +910,17 @@ h6 {
   min-width: 0;
 }
 
+.edsync-catalog-reference .edsync-workflow-heading h2,
+.edsync-catalog-reference .edsync-workflow-hero-row h3 {
+  color: #f8fafc;
+}
+
+.edsync-catalog-reference .edsync-workflow-heading p,
+.edsync-catalog-reference .edsync-workflow-hero-row p,
+.edsync-catalog-reference .edsync-workflow-browser > span {
+  color: rgba(226, 232, 240, 0.7) !important;
+}
+
 .edsync-workflow-stage {
   min-width: 0;
   min-height: 0;
@@ -772,6 +940,14 @@ h6 {
   animation: workflowScreenSwap 0.34s ease both;
 }
 
+.edsync-catalog-reference .edsync-workflow-screen {
+  border-color: rgba(226, 232, 240, 0.34);
+  background:
+    linear-gradient(145deg, rgba(7, 16, 29, 0.94), rgba(5, 25, 31, 0.82)),
+    radial-gradient(circle at 16% 18%, rgba(var(--blue-rgb), 0.14), transparent 36%);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.34);
+}
+
 .edsync-workflow-browser {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -781,12 +957,21 @@ h6 {
   padding-bottom: 0.9rem;
 }
 
+.edsync-catalog-reference .edsync-workflow-browser {
+  border-bottom-color: rgba(226, 232, 240, 0.22);
+}
+
 .edsync-workflow-browser span span,
 .edsync-workflow-browser > div span {
   height: 0.62rem;
   width: 0.62rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--subtle) 46%, transparent);
+}
+
+.edsync-catalog-reference .edsync-workflow-tabs span:not(.is-active) {
+  background: rgba(255, 255, 255, 0.9);
+  color: #506077;
 }
 
 .edsync-workflow-open {
@@ -1048,6 +1233,19 @@ h6 {
 
   .edsync-hero-studio-preview {
     grid-template-columns: 1fr;
+  }
+
+  .edsync-launch-rail {
+    display: flex;
+    gap: 1.4rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .edsync-launch-rail span {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
   }
 
   .edsync-workflow-showcase {
