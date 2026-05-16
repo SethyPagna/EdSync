@@ -1,22 +1,35 @@
 "use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
+import { BookOpenCheck, Clock3, Copy, Plus, Search, Trash2 } from "lucide-react";
+import { ActionMenu } from "@/components/WorkspacePrimitives";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson } from "@/types";
 import {
-  getStatusBadge,
-  getDifficultyColor,
   formatRelativeTime,
+  getDifficultyColor,
+  getStatusBadge,
 } from "@/lib/utils";
-import toast from "react-hot-toast";
+
+type LessonStatusFilter = "all" | "draft" | "published" | "archived";
+type DurationFilter = "all" | "short" | "medium" | "long";
+
+const STATUS_FILTERS: LessonStatusFilter[] = ["all", "published", "draft", "archived"];
+
+function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
+  if (durationFilter === "short") return lesson.estimated_duration <= 20;
+  if (durationFilter === "medium") return lesson.estimated_duration >= 21 && lesson.estimated_duration <= 60;
+  if (durationFilter === "long") return lesson.estimated_duration >= 61;
+  return true;
+}
 
 export default function TeacherLessons() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<
-    "all" | "draft" | "published" | "archived"
-  >("all");
-  const [durationFilter, setDurationFilter] = useState<"all" | "short" | "medium" | "long">("all");
+  const [filter, setFilter] = useState<LessonStatusFilter>("all");
+  const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
   const [search, setSearch] = useState("");
   const edsync = useMemo(() => createClient(), []);
 
@@ -74,7 +87,7 @@ export default function TeacherLessons() {
       .single();
     if (data) {
       setLessons((current) => [data, ...current]);
-      toast.success("Lesson duplicated!");
+      toast.success("Lesson duplicated");
     }
   };
 
@@ -83,191 +96,182 @@ export default function TeacherLessons() {
 
     return lessons.filter((lesson) => {
       if (filter !== "all" && lesson.status !== filter) return false;
-      if (durationFilter === "short" && lesson.estimated_duration > 20) return false;
-      if (
-        durationFilter === "medium" &&
-        (lesson.estimated_duration < 21 || lesson.estimated_duration > 60)
-      ) {
-        return false;
-      }
-      if (durationFilter === "long" && lesson.estimated_duration < 61) return false;
-      if (normalizedSearch && !lesson.title.toLowerCase().includes(normalizedSearch)) {
-        return false;
-      }
+      if (!matchesDuration(lesson, durationFilter)) return false;
+      if (normalizedSearch && !lesson.title.toLowerCase().includes(normalizedSearch)) return false;
       return true;
     });
   }, [durationFilter, filter, lessons, search]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display font-bold text-3xl text-edsync-text">
-            Lessons
-          </h1>
-          <p className="text-edsync-subtle mt-1">
-            {lessons.length} lesson{lessons.length !== 1 ? "s" : ""} total
-          </p>
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
+              Lesson library
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
+              Lessons
+            </h1>
+            <p className="mt-1 text-sm text-edsync-subtle">
+              {lessons.length} lesson{lessons.length !== 1 ? "s" : ""} total
+            </p>
+          </div>
+          <Link href="/teacher/lessons/create" className="btn-primary justify-center">
+            <Plus className="h-4 w-4" />
+            New lesson
+          </Link>
         </div>
-        <Link href="/teacher/lessons/create" className="btn-primary">
-          Create Lesson
-        </Link>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="flex-1 min-w-64">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search lessons..."
-            className="edsync-input py-2"
-          />
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <label className="relative min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search lessons..."
+              className="edsync-input py-2 pl-10"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            {STATUS_FILTERS.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setFilter(status)}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold capitalize transition ${
+                  filter === status
+                    ? "bg-edsync-blue text-white"
+                    : "border border-edsync-border bg-edsync-card text-edsync-subtle hover:text-edsync-text"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+          <select
+            value={durationFilter}
+            onChange={(event) => setDurationFilter(event.target.value as DurationFilter)}
+            className="edsync-input w-full py-2 text-sm sm:w-48"
+            aria-label="Filter by expected duration"
+          >
+            <option value="all">Any duration</option>
+            <option value="short">Short, 1-20 min</option>
+            <option value="medium">Medium, 21-60 min</option>
+            <option value="long">Long, 61+ min</option>
+          </select>
         </div>
-        <div className="flex gap-2">
-          {(["all", "published", "draft", "archived"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all capitalize ${
-                filter === f
-                  ? "bg-edsync-blue text-white"
-                  : "bg-edsync-card text-edsync-subtle hover:text-edsync-text border border-edsync-border"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        <select
-          value={durationFilter}
-          onChange={(event) => setDurationFilter(event.target.value as typeof durationFilter)}
-          className="edsync-input w-full py-2 text-sm sm:w-48"
-          aria-label="Filter by expected duration"
-        >
-          <option value="all">Any duration</option>
-          <option value="short">Short · 1-20 min</option>
-          <option value="medium">Medium · 21-60 min</option>
-          <option value="long">Long · 61+ min</option>
-        </select>
-      </div>
+      </section>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-48 bg-edsync-card rounded-2xl shimmer" />
+        <div className="grid gap-3">
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="h-24 rounded-xl bg-edsync-card shimmer" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <h3 className="font-display font-bold text-xl text-edsync-text mb-2">
+        <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card py-16 text-center">
+          <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
+          <h3 className="mb-2 font-display text-xl font-bold text-edsync-text">
             {search ? "No lessons match your search" : "No lessons yet"}
           </h3>
-          <p className="text-edsync-subtle mb-6">
-            {search
-              ? "Try a different search term"
-              : "Create your first lesson to get started"}
+          <p className="mb-6 text-sm text-edsync-subtle">
+            {search ? "Try a different search term." : "Create your first lesson to get started."}
           </p>
           {!search && (
-            <Link
-              href="/teacher/lessons/create"
-              className="btn-primary inline-flex"
-            >
-              Create First Lesson
+            <Link href="/teacher/lessons/create" className="btn-primary inline-flex">
+              Create first lesson
             </Link>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((lesson) => {
-            const badge = getStatusBadge(lesson.status);
-            return (
-              <div
-                key={lesson.id}
-                className="edsync-card hover:shadow-card-hover transition-all duration-200 hover:-translate-y-0.5 flex flex-col"
-              >
-                {/* Card Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`badge ${badge.className}`}>
-                        {badge.label}
-                      </span>
-                      {lesson.ai_generated && (
-                        <span className="badge bg-edsync-purple/10 text-edsync-purple border border-edsync-purple/20">
-                          Generated
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-display font-bold text-lg text-edsync-text mt-2 line-clamp-2">
-                      {lesson.title}
-                    </h3>
-                  </div>
-                </div>
-
-                <p className="text-edsync-subtle text-sm line-clamp-2 mb-4 flex-1">
-                  {lesson.description}
-                </p>
-
-                {/* Meta */}
-                <div className="flex items-center gap-3 text-xs text-edsync-subtle mb-4 flex-wrap">
-                  {lesson.subject && (
-                    <span className="badge bg-edsync-muted/30">
-                      {lesson.subject}
-                    </span>
-                  )}
-                  <span>{lesson.estimated_duration}min</span>
-                  <span className={getDifficultyColor(lesson.difficulty)}>
-                    ● {lesson.difficulty}
-                  </span>
-                </div>
-
-                {/* Progress bar placeholder */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-xs text-edsync-subtle mb-1">
-                    <span>Student Progress</span>
-                    <span>—</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div
-                      className="progress-bar-fill"
-                      style={{ width: "0%" }}
-                    />
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-3 border-t border-edsync-border">
-                  <Link
-                    href={`/teacher/lessons/${lesson.id}`}
-                    className="btn-primary flex-1 justify-center text-sm py-2"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => duplicateLesson(lesson)}
-                    className="btn-secondary px-3 py-2 text-sm"
-                    title="Duplicate"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    onClick={() => deleteLesson(lesson.id)}
-                    className="btn-danger px-3 py-2 text-sm border-0 bg-edsync-red/5 hover:bg-edsync-red/15"
-                    title="Delete"
-                  >
-                    Delete
-                  </button>
-                </div>
-
-                <p className="text-xs text-edsync-subtle/50 mt-2">
-                  Updated {formatRelativeTime(lesson.updated_at)}
-                </p>
-              </div>
-            );
-          })}
+        <div className="grid gap-3">
+          {filtered.map((lesson) => (
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              onDelete={() => deleteLesson(lesson.id)}
+              onDuplicate={() => duplicateLesson(lesson)}
+            />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function LessonRow({
+  lesson,
+  onDelete,
+  onDuplicate,
+}: {
+  lesson: Lesson;
+  onDelete: () => void;
+  onDuplicate: () => void;
+}) {
+  const badge = getStatusBadge(lesson.status);
+
+  return (
+    <article className="rounded-xl border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40 hover:shadow-card-hover">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="flex min-w-0 gap-3">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+            <BookOpenCheck className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`badge ${badge.className}`}>{badge.label}</span>
+              {lesson.ai_generated && (
+                <span className="badge border border-edsync-purple/20 bg-edsync-purple/10 text-edsync-purple">
+                  AI
+                </span>
+              )}
+            </div>
+            <h3 className="mt-2 truncate font-display text-lg font-bold text-edsync-text">
+              {lesson.title}
+            </h3>
+            <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
+              {lesson.description || "No description added yet."}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
+              {lesson.subject && <span className="badge bg-edsync-muted/30">{lesson.subject}</span>}
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3.5 w-3.5" />
+                {lesson.estimated_duration} min
+              </span>
+              <span className={getDifficultyColor(lesson.difficulty)}>{lesson.difficulty}</span>
+              <span>Updated {formatRelativeTime(lesson.updated_at)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/teacher/lessons/${lesson.id}`}
+            className="btn-primary flex-1 justify-center py-2 text-sm lg:flex-none"
+          >
+            Edit
+          </Link>
+          <ActionMenu label={`Actions for ${lesson.title}`}>
+            <button
+              type="button"
+              onClick={onDuplicate}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-edsync-text hover:bg-edsync-card"
+            >
+              <Copy className="h-4 w-4" />
+              Duplicate
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-edsync-red hover:bg-edsync-red/10"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+          </ActionMenu>
+        </div>
+      </div>
+    </article>
   );
 }
