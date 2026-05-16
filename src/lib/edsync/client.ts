@@ -12,7 +12,12 @@ type AuthResponse = {
     user: {
       id: string;
       email: string;
-      user_metadata: { role: "admin" | "teacher" | "student"; full_name?: string | null };
+      user_metadata: {
+        role: "admin" | "teacher" | "student";
+        full_name?: string | null;
+        tenant_slug?: string | null;
+        tenant_name?: string | null;
+      };
     } | null;
     session?: { expires_at?: string } | null;
   };
