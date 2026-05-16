@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock3,
   GraduationCap,
-  Search,
   ShieldCheck,
   Sparkles,
   UsersRound,
@@ -98,13 +97,12 @@ export default async function CatalogPage({
               {filters.portalSlug && <input type="hidden" name="portal" value={filters.portalSlug} />}
               {filters.tenantSlug && <input type="hidden" name="tenant" value={filters.tenantSlug} />}
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
+                <div>
                   <input
                     id="catalog-search"
                     name="q"
                     defaultValue={filters.query}
-                    className="edsync-input pl-9"
+                    className="edsync-input"
                     placeholder="Search subject, skill, organization, or course"
                   />
                 </div>
