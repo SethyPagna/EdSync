@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
-
-function normalizeOrganizationCode(value: string | null) {
-  return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
+import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 
 function readSettings(value: string | null) {
   if (!value) return {};
