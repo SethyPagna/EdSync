@@ -18,7 +18,7 @@ const preferenceScript = `
 
 export const metadata: Metadata = {
   title: {
-    default: "EdSync Catalog",
+    default: "EdSync",
     template: "%s | EdSync",
   },
   description:
