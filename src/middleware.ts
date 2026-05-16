@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
   if (!hasSession && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    url.search = "";
     url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return withSecurityHeaders(NextResponse.redirect(url));
   }
