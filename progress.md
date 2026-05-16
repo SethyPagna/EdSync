@@ -56,8 +56,10 @@
 - [x] Define shared `LearningObject`, `LearningBlock`, and workflow-state types.
 - [x] Add legacy adapters for Studio documents, lesson sections, quiz questions, and content blocks.
 - [x] Add tests for normalization from existing records into the shared model.
-- [ ] Export shared learning-object helpers into the first teacher lesson or Studio integration point.
-- [ ] Replace duplicated section/quiz/content-block normalization in large page files with shared adapters.
+- [x] Export shared learning-object helpers into the first teacher lesson or Studio integration point.
+- [x] Replace duplicated content-block status/type display in Studio with shared adapters.
+- [ ] Replace duplicated section and quiz normalization in large lesson page files with shared adapters.
+- [ ] Add teacher lesson package summary integration using `lessonRowsToLearningObject`.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
@@ -80,6 +82,7 @@
 | 2026-05-16 | Use one product spine from catalog or organization portal through Studio, assignment, student practice, grade events, feedback, and content improvement. | The app has many capable pages; the main maturity gap is making them behave like one learning loop. |
 | 2026-05-16 | Standardize saved states as local draft, server draft, needs review, published, assigned, archived, and conflict. | Users need consistent status language across Studio, lessons, practice, assignments, and catalog publishing. |
 | 2026-05-16 | Keep the first learning-object layer as adapters over current tables instead of a schema-breaking rewrite. | Existing routes and D1 data stay stable while Studio, lessons, quizzes, and content blocks converge through shared contracts. |
+| 2026-05-16 | Compose legacy lesson rows into learning packages before changing database schema. | Teacher/student lesson pages can adopt the shared model incrementally while current D1 rows remain compatible. |
 
 ---
 
@@ -91,6 +94,7 @@
 | 2026-05-16 | Phase 1 inventory | Route, migration, schema, API, Studio, and large-file scan | Passed |
 | 2026-05-16 | Phase 2 workflow model | Workflow, navigation, handoff, saved-state, and next-action review | Passed |
 | 2026-05-16 | Phase 3 learning-object foundation | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts` | Passed |
+| 2026-05-16 | Phase 3 lesson-package composer and Studio integration | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts src/lib/learning/lesson-package.test.ts`; `npm.cmd run lint` | Passed |
 
 ---
 
@@ -129,7 +133,10 @@
 - Added `src/lib/learning/objects.ts` with `LearningObject`, `LearningBlock`, `LearningWorkflowState`, source types, block types, state labels, and normalization helpers.
 - Added adapters for legacy Studio documents, lesson sections, quiz questions, and content blocks.
 - Added focused tests in `src/lib/learning/objects.test.ts` for state labels, tag normalization, Studio conversion, lesson section conversion, quiz conversion, content block conversion, and composed legacy objects.
-- Phase 3 remains in progress until large Studio/lesson pages consume the shared layer and duplicated normalization is removed.
+- Added `src/lib/learning/lesson-package.ts` to compose legacy lesson rows, lesson sections, and quiz questions into a package-level `LearningObject`.
+- Added `src/lib/learning/lesson-package.test.ts` for package composition and UI summary counts.
+- Updated Studio's saved block library to use shared learning-object state labels and block type mapping.
+- Phase 3 remains in progress until large teacher/student lesson pages consume the shared layer and duplicated section/quiz normalization is removed.
 
 ## Update Protocol
 
