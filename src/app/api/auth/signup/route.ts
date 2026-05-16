@@ -2,15 +2,11 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
+import { createOrganizationSlug, normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 function organizationSlug(name: string) {
-  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "organization";
-  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
-}
-
-function normalizeOrganizationCode(value?: string | null) {
-  return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return createOrganizationSlug(name, crypto.randomUUID().slice(0, 8));
 }
 
 function roleProfileFor(input: { role: "teacher" | "student"; accountType: "individual" | "organization"; organizationMode?: "join" | "create" }) {
