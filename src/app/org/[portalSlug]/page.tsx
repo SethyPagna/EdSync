@@ -62,7 +62,7 @@ export default async function OrganizationPortalPage({
           </Link>
           <div className="flex flex-wrap gap-2">
             <Link href="/catalog" className="btn-secondary justify-center px-4 py-2 text-sm">Global catalog</Link>
-            <Link href="/auth/login" className="btn-primary justify-center px-4 py-2 text-sm">Sign in</Link>
+            <Link href={`/auth/login?org=${encodeURIComponent(portal.tenant_slug)}`} className="btn-primary justify-center px-4 py-2 text-sm">Sign in</Link>
           </div>
         </div>
       </header>
