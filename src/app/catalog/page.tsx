@@ -64,7 +64,7 @@ export default async function CatalogPage({
   ).slice(0, 6);
 
   return (
-    <main className="edsync-catalog-reference premium-shell min-h-screen text-edsync-text">
+    <main id="top" className="edsync-catalog-reference premium-shell min-h-screen text-edsync-text">
       <PublicTopbar active="catalog" />
 
       <section className="mx-auto max-w-[90rem] px-4">
