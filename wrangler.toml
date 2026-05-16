@@ -1,4 +1,4 @@
-name = "edsync-learning-os"
+name = "edsync-automation-dev"
 main = "cloudflare/workers/automation.ts"
 compatibility_date = "2026-05-12"
 pages_build_output_dir = ".vercel/output/static"
@@ -24,7 +24,7 @@ binding = "EDSYNC_VECTORIZE"
 index_name = "edsync-learning-dev"
 
 [env.preview]
-name = "edsync-learning-os-preview"
+name = "edsync-automation-preview"
 
 [[env.preview.d1_databases]]
 binding = "EDSYNC_DB"
@@ -47,7 +47,7 @@ binding = "EDSYNC_VECTORIZE"
 index_name = "edsync-learning-preview"
 
 [env.production]
-name = "edsync-learning-os-production"
+name = "edsync-automation"
 
 [[env.production.d1_databases]]
 binding = "EDSYNC_DB"
