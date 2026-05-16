@@ -332,16 +332,24 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
             <div className="edsync-workflow-bridge-card">
               <div className="min-w-0">
                 <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
-                  From public page to learning evidence.
+                  Scroll into the workflow.
                 </h2>
                 <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
-                  Each scroll step swaps the stage to a real EdSync surface: catalog, Studio, AI, teacher review, student practice, and admin controls.
+                  One visitor path becomes a lesson draft, a practice attempt, and a gradebook signal.
                 </p>
               </div>
               <div className="edsync-workflow-bridge-window" aria-hidden="true">
-                {["Catalog", "Studio", "AI draft", "Practice", "Gradebook"].map((label, index) => (
-                  <span key={label} style={{ transform: `translateX(${index * 0.65}rem)` }}>
-                    {label}
+                {[
+                  ["Catalog", "/catalog/[course]", "Preview, price, enroll"],
+                  ["Studio", "/studio", "Slides, media, drafts"],
+                  ["AI insert", "/ai", "Quiz, rubric, review"],
+                  ["Practice", "/practice", "Timer, retry, explain"],
+                  ["Gradebook", "/teacher/gradebook", "Events, feedback, progress"],
+                ].map(([label, route, detail], index) => (
+                  <span key={label} style={{ transform: `translateX(${index * 0.55}rem)` }}>
+                    <strong>{label}</strong>
+                    <small>{route}</small>
+                    <em>{detail}</em>
                   </span>
                 ))}
               </div>
