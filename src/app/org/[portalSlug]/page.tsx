@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpenCheck, Building2, Clock3, Globe2 } from "lucide-react";
-import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
+import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 
 export async function generateMetadata({
@@ -10,8 +10,7 @@ export async function generateMetadata({
 }: {
   params: { portalSlug: string };
 }): Promise<Metadata> {
-  const portals = await listPublicPortals();
-  const portal = portals.find((item) => item.slug === params.portalSlug || item.tenant_slug === params.portalSlug);
+  const portal = await getOrganizationPortal(params.portalSlug);
   return {
     title: portal ? `${portal.name} Catalog` : "Organization Catalog",
     description: portal
@@ -33,8 +32,7 @@ export default async function OrganizationPortalPage({
     duration?: string;
   };
 }) {
-  const portals = await listPublicPortals();
-  const portal = portals.find((item) => item.slug === params.portalSlug || item.tenant_slug === params.portalSlug);
+  const portal = await getOrganizationPortal(params.portalSlug);
   if (!portal) notFound();
 
   const filters = normalizeCatalogFilters({
@@ -132,7 +130,7 @@ export default async function OrganizationPortalPage({
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="font-display text-2xl font-bold">Courses</h2>
             {hasFilters && (
-              <Link href={`/org/${portal.slug}`} className="text-sm font-semibold text-edsync-blue hover:underline">
+              <Link href={`/org/${portal.tenant_slug}`} className="text-sm font-semibold text-edsync-blue hover:underline">
                 Clear filters
               </Link>
             )}
