@@ -515,6 +515,24 @@ h6 {
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
+.edsync-catalog-reference > .edsync-public-topbar {
+  background: transparent !important;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.edsync-catalog-reference > .edsync-public-topbar > div {
+  max-width: 82rem;
+  padding-top: 1.35rem;
+}
+
+.edsync-catalog-reference > .edsync-public-topbar .premium-icon-button,
+.edsync-catalog-reference > .edsync-public-topbar button,
+.edsync-catalog-reference > .edsync-public-topbar .btn-primary {
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
 .edsync-catalog-reference > header .text-edsync-subtle {
   color: var(--subtle) !important;
 }
@@ -544,6 +562,11 @@ h6 {
   background: rgba(8, 17, 31, 0.82) !important;
   color: #f8fafc;
   border-bottom-color: rgba(226, 232, 240, 0.08);
+}
+
+.dark .edsync-catalog-reference > .edsync-public-topbar {
+  background: transparent !important;
+  border-bottom: 0;
 }
 
 .dark .edsync-catalog-reference > header .text-edsync-subtle {
@@ -1431,6 +1454,359 @@ h6 {
   pointer-events: none;
 }
 
+.edsync-workflow-showcase {
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(20, 184, 166, 0.2), transparent 28rem),
+    radial-gradient(circle at 78% 20%, rgba(37, 99, 235, 0.14), transparent 26rem),
+    linear-gradient(135deg, #061010 0%, #050915 54%, #02050b 100%);
+}
+
+.dark .edsync-catalog-reference .edsync-workflow-showcase {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(20, 184, 166, 0.22), transparent 28rem),
+    radial-gradient(circle at 84% 18%, rgba(79, 134, 247, 0.14), transparent 25rem),
+    linear-gradient(135deg, #061010 0%, #050914 54%, #02050b 100%);
+}
+
+.edsync-workflow-showcase .edsync-workflow-sticky {
+  top: 0;
+  min-height: 100vh;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding-block: clamp(1rem, 2vh, 1.6rem) 6rem;
+}
+
+.edsync-workflow-showcase .edsync-workflow-heading {
+  align-items: center;
+  padding-inline: max(0rem, calc((100vw - 82rem) / 2));
+}
+
+.edsync-workflow-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(226, 232, 240, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c8f5e4;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.edsync-workflow-heading nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.edsync-workflow-heading nav a {
+  color: rgba(226, 232, 240, 0.48);
+  font-size: 0.78rem;
+  font-weight: 900;
+  transition: color 0.18s ease;
+}
+
+.edsync-workflow-heading nav a:hover {
+  color: #ffffff;
+}
+
+.edsync-workflow-showcase .edsync-workflow-stage {
+  display: grid;
+  align-items: center;
+  min-height: 0;
+}
+
+.edsync-workflow-showcase .edsync-workflow-screen {
+  display: grid;
+  grid-template-columns: minmax(20rem, 0.72fr) minmax(30rem, 1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 5vw, 4rem);
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  contain: layout paint style;
+}
+
+.edsync-workflow-copy {
+  min-width: 0;
+}
+
+.edsync-workflow-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+  color: #ffffff;
+  padding: 0.38rem 0.68rem;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-copy h3 {
+  margin-top: 1.5rem;
+  max-width: 34rem;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(2.45rem, 4.1vw, 3.75rem);
+  font-weight: 850;
+  line-height: 1.02;
+  color: #ffffff;
+}
+
+.edsync-workflow-copy p {
+  margin-top: 1rem;
+  max-width: 34rem;
+  color: rgba(226, 232, 240, 0.64);
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-weight: 700;
+  line-height: 1.75;
+}
+
+.edsync-workflow-checklist {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  max-width: 31rem;
+}
+
+.edsync-workflow-checklist span {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid rgba(226, 232, 240, 0.14);
+  border-radius: 0.82rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 250, 252, 0.76);
+  padding: 0.58rem 0.78rem;
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.edsync-workflow-checklist svg {
+  color: #f3b1c3;
+}
+
+.edsync-workflow-preview {
+  min-width: 0;
+  border: 1px solid rgba(226, 232, 240, 0.18);
+  border-radius: 1.6rem;
+  background: #eef5ff;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+
+.edsync-workflow-showcase .edsync-workflow-browser {
+  border-bottom-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.8rem 1rem;
+}
+
+.edsync-workflow-showcase .edsync-workflow-product {
+  grid-template-columns: minmax(11rem, 0.42fr) minmax(0, 1fr);
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0.9rem;
+}
+
+.edsync-workflow-showcase .edsync-workflow-sidepanel {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  border-color: transparent;
+  background: #06091a;
+  padding: 0.9rem;
+}
+
+.edsync-workflow-sidepanel span {
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  padding: 0.72rem 0.78rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.edsync-workflow-sidepanel span.is-active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.edsync-workflow-showcase .edsync-workflow-canvas {
+  border: 0;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.edsync-workflow-preview-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.edsync-workflow-preview-head p {
+  color: #5a6a82;
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.edsync-workflow-preview-head h4 {
+  margin-top: 0.28rem;
+  color: #0d1726;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-weight: 850;
+}
+
+.edsync-workflow-preview-head > span {
+  border-radius: 999px;
+  background: #020617;
+  color: #ffffff;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.edsync-workflow-preview-rows {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.edsync-workflow-preview-rows span {
+  display: grid;
+  gap: 0.16rem;
+  border-radius: 0.8rem;
+  background: #edf2f8;
+  padding: 0.72rem 0.78rem;
+}
+
+.edsync-workflow-preview-rows strong {
+  color: #0d1726;
+  font-size: 0.9rem;
+}
+
+.edsync-workflow-preview-rows small,
+.edsync-workflow-preview-rows em {
+  color: #59697e;
+  font-style: normal;
+  font-weight: 760;
+}
+
+.edsync-workflow-preview-rows em {
+  color: #006f55;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-preview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.edsync-workflow-preview-metrics span {
+  border-radius: 0.8rem;
+  background: #e7eef8;
+  padding: 0.68rem;
+}
+
+.edsync-workflow-preview-metrics strong,
+.edsync-workflow-preview-metrics small {
+  display: block;
+}
+
+.edsync-workflow-preview-metrics strong {
+  color: #0d1726;
+  font-weight: 950;
+}
+
+.edsync-workflow-preview-metrics small {
+  color: #59697e;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.edsync-workflow-showcase .edsync-workflow-controls {
+  position: absolute;
+  inset-inline: max(1rem, calc((100vw - 82rem) / 2));
+  bottom: 1.1rem;
+  align-items: stretch;
+  gap: 0.55rem;
+  padding-inline: 0;
+}
+
+.edsync-workflow-showcase .premium-icon-button {
+  border-color: rgba(226, 232, 240, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.edsync-workflow-bottom-tabs {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.45rem;
+  border-top: 4px solid #f3a9bf;
+  padding-top: 0.55rem;
+}
+
+.edsync-workflow-bottom-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  border: 1px solid rgba(226, 232, 240, 0.12);
+  border-radius: 0.8rem;
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(248, 250, 252, 0.66);
+  padding: 0.68rem;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.edsync-workflow-bottom-tabs button.is-active,
+.edsync-workflow-bottom-tabs button:hover {
+  background: #ffffff;
+  color: #020617;
+  transform: translateY(-1px);
+}
+
+.edsync-workflow-bottom-tabs button > svg {
+  flex: 0 0 auto;
+}
+
+.edsync-workflow-bottom-tabs span,
+.edsync-workflow-bottom-tabs strong,
+.edsync-workflow-bottom-tabs small {
+  display: block;
+  min-width: 0;
+}
+
+.edsync-workflow-bottom-tabs strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edsync-workflow-bottom-tabs small {
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+  opacity: 0.72;
+}
+
 @media (max-width: 900px) {
   .edsync-launch-deck {
     min-height: 30rem;
@@ -1501,13 +1877,46 @@ h6 {
     align-items: start;
   }
 
+  .edsync-workflow-heading nav {
+    display: none;
+  }
+
   .edsync-workflow-screen {
     min-height: auto;
     border-radius: 1.5rem;
   }
 
+  .edsync-workflow-showcase .edsync-workflow-screen {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .edsync-workflow-copy h3 {
+    font-size: clamp(2.4rem, 13vw, 4rem);
+  }
+
+  .edsync-workflow-showcase .edsync-workflow-product {
+    grid-template-columns: 1fr;
+  }
+
   .edsync-workflow-product {
     grid-template-columns: 1fr;
+  }
+
+  .edsync-workflow-showcase .edsync-workflow-controls {
+    align-items: center;
+  }
+
+  .edsync-workflow-bottom-tabs {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .edsync-workflow-bottom-tabs button {
+    min-width: 10rem;
+    scroll-snap-align: start;
   }
 
   .edsync-workflow-scroll-steps {
