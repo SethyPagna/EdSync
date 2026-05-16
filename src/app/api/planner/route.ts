@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { sqlInPlaceholders } from "@/lib/db/sql";
 import { notifyAndEmail } from "@/lib/engagement/server";
 import {
   PLANNER_BODY_MAX_LENGTH,
@@ -168,13 +169,13 @@ export async function GET() {
     return NextResponse.json({ data: { announcements: [], events: [] }, error: null });
   }
 
-  const placeholders = classIds.map(() => "?").join(", ");
+  const classPlaceholders = sqlInPlaceholders(classIds);
   const [announcements, events] = await Promise.all([
     d1Query(
       `SELECT a.*, c.name AS class_name
          FROM announcements a
          LEFT JOIN classes c ON c.id = a.class_id
-        WHERE a.class_id IN (${placeholders})
+        WHERE a.class_id IN (${classPlaceholders})
           AND datetime(a.publish_at) <= datetime('now')
           AND (a.expires_at IS NULL OR datetime(a.expires_at) >= datetime('now'))
         ORDER BY datetime(a.publish_at) DESC, datetime(a.created_at) DESC
@@ -186,7 +187,7 @@ export async function GET() {
          FROM schedule_events e
          LEFT JOIN classes c ON c.id = e.class_id
          LEFT JOIN lessons l ON l.id = e.lesson_id
-        WHERE (e.class_id IN (${placeholders}) AND e.visibility IN ('class', 'student'))
+        WHERE (e.class_id IN (${classPlaceholders}) AND e.visibility IN ('class', 'student'))
            OR (e.owner_id = ? AND e.visibility = 'student')
         ORDER BY COALESCE(e.due_at, e.starts_at, e.created_at) ASC
         LIMIT 30`,
