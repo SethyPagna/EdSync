@@ -8,9 +8,9 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  MessageSquareText,
+  BarChart3,
   Presentation,
-  ShieldCheck,
+  Search,
   Trophy,
   Wand2,
   type LucideIcon,
@@ -34,6 +34,30 @@ type WorkflowSlide = {
 };
 
 const slides: WorkflowSlide[] = [
+  {
+    id: "catalog",
+    title: "Catalog And Organization Entry",
+    shortTitle: "Catalog",
+    headline: "Start from a public course, a school portal, or a private workspace.",
+    subtitle: "Visitors search public courses, open organization portals, enroll free or paid, then return to the right workspace after sign-in.",
+    route: "/catalog",
+    icon: Search,
+    accent: "text-edsync-cyan",
+    tabs: ["Search", "Org portal", "Enroll", "Access"],
+    metrics: [
+      { label: "Routes", value: "/catalog" },
+      { label: "Products", value: "Free + paid" },
+      { label: "Return", value: "Login next" },
+    ],
+    rows: [
+      { title: "Catalog search", detail: "Filter by price, duration, language, difficulty, and academy", status: "Discover" },
+      { title: "Organization portal", detail: "/org/[portalSlug] keeps school or partner catalog context", status: "Route" },
+      { title: "Enrollment guard", detail: "Free access or checkout starts after account sign-in", status: "Access" },
+    ],
+    sideTitle: "Visitor entry",
+    sideRows: ["Search courses", "Open org portal", "Enroll with account", "Return to course"],
+    actions: ["Search catalog", "View portals", "Start"],
+  },
   {
     id: "studio",
     title: "Studio And Lesson Builder",
@@ -84,26 +108,26 @@ const slides: WorkflowSlide[] = [
   },
   {
     id: "teacher",
-    title: "Teacher Portal",
-    shortTitle: "Teacher",
-    headline: "Plan work, review submissions, grade, and message students.",
-    subtitle: "Teacher pages connect dashboard, lesson builder, gradebook, planner, roster, discussions, notes, work, and reports.",
+    title: "Teacher Review And Assignment",
+    shortTitle: "Review",
+    headline: "Review the AI draft, check media, assign work, and keep control.",
+    subtitle: "Teachers approve generated slides and quizzes, set due dates, review submissions, send notes, and update gradebook evidence.",
     route: "/teacher/dashboard",
     icon: CalendarCheck,
     accent: "text-edsync-blue",
-    tabs: ["Dashboard", "Lessons", "Gradebook", "Planner"],
+    tabs: ["Draft", "Media", "Due date", "Gradebook"],
     metrics: [
-      { label: "Routes", value: "10" },
+      { label: "Review", value: "Teacher" },
       { label: "Gradebook", value: "Weighted" },
       { label: "Notes", value: "Student-linked" },
     ],
     rows: [
-      { title: "Lesson builder", detail: "/teacher/lessons/create uses AI/manual sections and quizzes", status: "Create" },
-      { title: "Submissions review", detail: "/teacher/work and gradebook score updates", status: "Grade" },
-      { title: "Roster and notes", detail: "Student notes, discussions, deadlines, and reports", status: "Support" },
+      { title: "Publish check", detail: "Unsafe links, videos, uploads, and missing details stay visible", status: "Review" },
+      { title: "Assignment setup", detail: "Class, due date, duration, points, and feedback rules", status: "Assign" },
+      { title: "Submissions review", detail: "Score updates, comments, notes, and grade events", status: "Grade" },
     ],
     sideTitle: "Teacher actions",
-    sideRows: ["Create assignment", "Set due date", "Update score", "Send note"],
+    sideRows: ["Approve draft", "Set due date", "Update score", "Send note"],
     actions: ["Teacher dashboard", "Open gradebook", "Plan deadline"],
   },
   {
@@ -132,51 +156,27 @@ const slides: WorkflowSlide[] = [
   },
   {
     id: "admin",
-    title: "Admin And Platform Settings",
-    shortTitle: "Admin",
-    headline: "Manage providers, portals, permissions, security, catalog, and billing.",
-    subtitle: "The admin console separates platform owner controls from tenant-scoped organization managers.",
+    title: "Progress, Evidence, And Admin Controls",
+    shortTitle: "Progress",
+    headline: "Every attempt becomes progress, feedback, recommendations, and audit evidence.",
+    subtitle: "Student activity flows into grade events, dashboards, recommendations, provider audits, portal settings, and security logs.",
     route: "/admin/dashboard",
-    icon: ShieldCheck,
+    icon: BarChart3,
     accent: "text-edsync-purple",
-    tabs: ["AI", "Portals", "Permissions", "Security"],
+    tabs: ["Progress", "Feedback", "AI audit", "Security"],
     metrics: [
-      { label: "Providers", value: "Encrypted" },
-      { label: "Catalog", value: "Publishable" },
+      { label: "Grade", value: "Event-led" },
+      { label: "Providers", value: "Fallback" },
       { label: "Audit", value: "Logged" },
     ],
     rows: [
-      { title: "AI providers", detail: "Groq, Google, Mistral, Cerebras, Cohere tests and priority", status: "Configure" },
-      { title: "Portals and catalog", detail: "Public org pages, products, pricing, entitlements", status: "Publish" },
-      { title: "Security and governance", detail: "Audit logs, feature flags, standards, automation", status: "Audit" },
+      { title: "Grade events", detail: "Attempts, overrides, excusals, and rubric changes remain auditable", status: "Record" },
+      { title: "Recommendations", detail: "Missed concepts become review cards and next-step suggestions", status: "Guide" },
+      { title: "Admin controls", detail: "AI providers, portals, permissions, security, catalog, and billing", status: "Manage" },
     ],
-    sideTitle: "Admin actions",
-    sideRows: ["Test AI provider", "Edit portal", "Toggle feature", "Review events"],
+    sideTitle: "Evidence loop",
+    sideRows: ["Save attempt", "Explain misses", "Recommend review", "Audit provider"],
     actions: ["Admin dashboard", "AI settings", "Security"],
-  },
-  {
-    id: "discussion",
-    title: "Catalog And Organizations",
-    shortTitle: "Catalog",
-    headline: "Public search, organization portals, enrollment, and course access.",
-    subtitle: "The catalog and organization routes connect visitors to free/paid products before login and return them to the right course.",
-    route: "/catalog",
-    icon: MessageSquareText,
-    accent: "text-edsync-cyan",
-    tabs: ["Search", "Org portal", "Enroll", "Access"],
-    metrics: [
-      { label: "Routes", value: "3 public" },
-      { label: "Billing", value: "Free + paid" },
-      { label: "Media", value: "Safe links" },
-    ],
-    rows: [
-      { title: "Global catalog", detail: "/catalog filters products by language, price, duration", status: "Search" },
-      { title: "Organization portal", detail: "/org/[portalSlug] scopes catalog and branding", status: "Route" },
-      { title: "Enrollment guard", detail: "Login returns to selected course and grants entitlement", status: "Access" },
-    ],
-    sideTitle: "Visitor actions",
-    sideRows: ["Search courses", "Open org portal", "Enroll free", "Start checkout"],
-    actions: ["Search catalog", "View portals", "Start"],
   },
 ];
 
@@ -329,19 +329,19 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
             <div className="edsync-workflow-bridge-card">
               <div className="min-w-0">
                 <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
-                  Scroll into the workflow.
+                  Scroll through the learning loop.
                 </h2>
                 <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
-                  One visitor path becomes a lesson draft, a practice attempt, and a gradebook signal.
+                  Watch one course move from public discovery to Studio, AI, teacher review, practice, and progress evidence.
                 </p>
               </div>
               <div className="edsync-workflow-bridge-window" aria-hidden="true">
                 {[
-                  ["Catalog", "/catalog/[course]", "Preview, price, enroll"],
-                  ["Studio", "/studio", "Slides, media, drafts"],
-                  ["AI insert", "/ai", "Quiz, rubric, review"],
+                  ["Catalog", "/catalog/[course]", "Search, preview, enroll"],
+                  ["Studio", "/studio", "Slides, media, safe links"],
+                  ["AI insert", "/ai", "Outline, quiz, rubric"],
+                  ["Review", "/teacher/work", "Approve, assign, grade"],
                   ["Practice", "/practice", "Timer, retry, explain"],
-                  ["Gradebook", "/teacher/gradebook", "Events, feedback, progress"],
                 ].map(([label, route, detail], index) => (
                   <span key={label} style={{ transform: `translateX(${index * 0.55}rem)` }}>
                     <strong>{label}</strong>
