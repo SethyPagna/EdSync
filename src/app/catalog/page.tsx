@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock3,
   Layers3,
-  Search,
   ShieldCheck,
   Sparkles,
   UsersRound,
