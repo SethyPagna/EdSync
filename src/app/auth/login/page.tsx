@@ -35,6 +35,8 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const waitingForOrganization =
+    accountType === "organization" && organizationStatus === "checking";
 
   useEffect(() => {
     const code = normalizeOrganizationCode(organizationCode);
@@ -80,6 +82,14 @@ function LoginForm() {
     const normalizedOrganizationCode = normalizeOrganizationCode(organizationCode);
     if (accountType === "organization" && !normalizedOrganizationCode) {
       toast.error("Enter your organization code first.");
+      return;
+    }
+    if (accountType === "organization" && organizationStatus === "checking") {
+      toast.error("Still checking that organization.");
+      return;
+    }
+    if (accountType === "organization" && !organizationLookup) {
+      toast.error("Choose an active organization before signing in.");
       return;
     }
 
@@ -252,10 +262,10 @@ function LoginForm() {
       </div>
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || waitingForOrganization}
         className="btn-primary w-full justify-center py-3.5"
       >
-        {loading ? "Signing in..." : "Sign in"}
+        {loading ? "Signing in..." : waitingForOrganization ? "Checking organization..." : "Sign in"}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
     </form>
