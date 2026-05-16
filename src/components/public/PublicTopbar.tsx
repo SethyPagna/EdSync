@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LibraryBig,
   LogIn,
+  Menu,
   PanelTop,
   Sparkles,
   UserPlus,
@@ -71,14 +72,14 @@ export default function PublicTopbar({
 
   return (
     <header className="sticky top-0 z-30 border-b border-edsync-border bg-edsync-bg/94 shadow-sm backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Link href="/catalog" className="group flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-edsync-blue text-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
               <GraduationCap className="h-5 w-5" />
             </span>
-            <span>
-              <span className="block font-display text-xl font-bold leading-none">EdSync</span>
+            <span className="min-w-0">
+              <span className="block truncate font-display text-xl font-bold leading-none">EdSync</span>
               <span className="mt-1 block text-xs font-semibold text-edsync-subtle">
                 {organizationName || "Catalog, portals, and learning workspaces"}
               </span>
@@ -93,7 +94,7 @@ export default function PublicTopbar({
           )}
         </div>
 
-        <nav aria-label="Public navigation" className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <nav aria-label="Public navigation" className="hidden min-w-0 items-center gap-1.5 xl:flex">
           <Link
             href="/catalog"
             className={`rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-edsync-card ${
@@ -143,7 +144,7 @@ export default function PublicTopbar({
           })}
         </nav>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden items-center gap-2 xl:flex">
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
           <Link href={orgLoginHref} className="btn-secondary justify-center px-4 py-2 text-sm">
@@ -158,6 +159,84 @@ export default function PublicTopbar({
             <UserPlus className="h-4 w-4" />
             Start
           </Link>
+        </div>
+
+        <div className="flex flex-shrink-0 items-center gap-2 xl:hidden">
+          <ThemeToggle compact />
+          <LanguageMenu compact syncCatalogFilter />
+          <details className="group relative">
+            <summary
+              className="premium-icon-button list-none marker:hidden [&::-webkit-details-marker]:hidden"
+              aria-label="Open menu"
+              title="Menu"
+            >
+              <Menu className="h-4 w-4" />
+            </summary>
+            <div className="premium-overlay animate-overlay-in absolute right-0 top-full z-50 mt-2 max-h-[calc(100vh-5.5rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-3">
+              <div className="grid gap-2">
+                <Link
+                  href="/catalog"
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-edsync-card ${
+                    active === "catalog" ? "premium-active" : "border-transparent text-edsync-subtle"
+                  }`}
+                >
+                  Catalog
+                </Link>
+                {organizationHref && (
+                  <Link
+                    href={organizationHref}
+                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-edsync-card ${
+                      active === "organization" ? "premium-active" : "border-transparent text-edsync-subtle"
+                    }`}
+                  >
+                    Organization
+                  </Link>
+                )}
+
+                {menuGroups.map((group) => {
+                  const Icon = group.icon;
+                  return (
+                    <div key={group.label} className="rounded-2xl border border-edsync-border bg-edsync-surface p-2">
+                      <div className="mb-1 flex items-center gap-2 px-2 py-1 text-xs font-bold uppercase tracking-wide text-edsync-subtle">
+                        <Icon className="h-3.5 w-3.5" />
+                        {group.label}
+                      </div>
+                      {group.links.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="group/link flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-edsync-muted"
+                        >
+                          <span>
+                            <span className="block font-semibold text-edsync-text">{link.label}</span>
+                            <span className="mt-0.5 block text-xs leading-5 text-edsync-subtle">
+                              {link.description}
+                            </span>
+                          </span>
+                          <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-edsync-blue transition group-hover/link:translate-x-0.5" />
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })}
+
+                <div className="grid gap-2 border-t border-edsync-border pt-3">
+                  <Link href={orgLoginHref} className="btn-secondary justify-center px-4 py-2 text-sm">
+                    <Building2 className="h-4 w-4" />
+                    Enter organization
+                  </Link>
+                  <Link href="/auth/login" className="btn-ghost justify-center px-3 py-2 text-sm">
+                    <LogIn className="h-4 w-4" />
+                    Sign in
+                  </Link>
+                  <Link href={orgSignupHref} className="btn-primary justify-center px-4 py-2 text-sm">
+                    <UserPlus className="h-4 w-4" />
+                    Start
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
 
