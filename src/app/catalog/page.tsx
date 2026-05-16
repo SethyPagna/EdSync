@@ -67,9 +67,9 @@ export default async function CatalogPage({
     <main className="edsync-catalog-reference premium-shell min-h-screen text-edsync-text">
       <PublicTopbar active="catalog" />
 
-      <section className="mx-auto max-w-7xl px-4">
+      <section className="mx-auto max-w-[90rem] px-4">
         <section className="edsync-launch-hero min-h-[calc(100vh-4.5rem)] overflow-hidden py-6 lg:py-10">
-          <div className="grid h-full min-h-[calc(100vh-7rem)] min-w-0 items-center gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.76fr)_minmax(560px,1.24fr)]">
+          <div className="grid h-full min-h-[calc(100vh-7rem)] min-w-0 items-center gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.68fr)_minmax(640px,1.32fr)]">
             <div className="animate-reveal-soft max-w-2xl min-w-0">
               <div className="edsync-launch-pill">
                 <Sparkles className="h-4 w-4" />
@@ -82,7 +82,7 @@ export default async function CatalogPage({
                 One flow for public courses, organization portals, Studio lessons, AI drafts, student practice, and grade evidence.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/showcase" className="btn-primary justify-center">
+                <Link href="#showcase" className="btn-primary justify-center">
                   View workflow
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -92,7 +92,7 @@ export default async function CatalogPage({
               </div>
               <div className="edsync-launch-rail" aria-hidden="true">
                 <span>Catalog</span>
-                <span>Organization</span>
+                <span>Org portals</span>
                 <span>Teacher</span>
                 <span>Student</span>
                 <span>Admin</span>
@@ -157,10 +157,10 @@ export default async function CatalogPage({
                       <section className="edsync-launch-slide-card">
                         <p>Slide 03</p>
                         <h3>Conduction vs convection</h3>
-                        <div>
-                          <span />
-                          <span />
-                          <span />
+                        <div className="edsync-launch-mini-slide">
+                          <span>Heat moves through touch</span>
+                          <span>Video check</span>
+                          <span>Quick question</span>
                         </div>
                         <small>Image + video checks stay safe before publish.</small>
                       </section>
