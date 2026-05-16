@@ -13,6 +13,7 @@ type ThemeToggleProps = {
 
 function applyTheme(theme: ThemePreference) {
   document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.dataset.theme = theme;
   window.localStorage.setItem("edsync-theme", theme);
   window.dispatchEvent(new CustomEvent("edsync-theme-change", { detail: { theme } }));
 }
@@ -26,9 +27,11 @@ export default function ThemeToggle({
 
   useEffect(() => {
     const stored = window.localStorage.getItem("edsync-theme");
-    const nextTheme: ThemePreference = stored === "dark" ? "dark" : "light";
+    const publicLaunchDefault = Boolean(document.querySelector(".edsync-public-launch"));
+    const nextTheme: ThemePreference = stored === "dark" || (!stored && publicLaunchDefault) ? "dark" : "light";
     setTheme(nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    document.documentElement.dataset.theme = nextTheme;
 
     const handleThemeEvent = (event: Event) => {
       const detail = (event as CustomEvent<{ theme?: ThemePreference }>).detail;
