@@ -39,147 +39,147 @@ type WorkflowSlide = {
 const slides: WorkflowSlide[] = [
   {
     id: "studio",
-    title: "Course Studio",
+    title: "Studio And Lesson Builder",
     shortTitle: "Studio",
-    headline: "Turn a rough idea into a lesson package.",
-    subtitle: "A teacher can write, import, design slides, build quizzes, and keep drafts in one workspace.",
-    route: "/studio",
+    headline: "Write the lesson, design slides, attach media, then assign.",
+    subtitle: "The same Studio workspace powers notes, docs, slides, sheets, lesson sections, imports, local drafts, and publish states.",
+    route: "/studio?tab=slides",
     icon: Presentation,
     accent: "text-edsync-blue",
-    tabs: ["Outline", "Slides", "Practice", "Assign"],
+    tabs: ["Rich editor", "Slides", "Media", "Drafts"],
     metrics: [
-      { label: "Draft", value: "Auto-saved" },
-      { label: "Sections", value: "12" },
-      { label: "Duration", value: "35 min" },
+      { label: "Editor", value: "Tiptap" },
+      { label: "Slides", value: "PPTX" },
+      { label: "Drafts", value: "Local + D1" },
     ],
     rows: [
-      { title: "Energy Transfer", detail: "Lesson sections, deck, and worksheet", status: "Editing" },
-      { title: "Quiz block", detail: "8 point-based questions with explanations", status: "Ready" },
-      { title: "Class handoff", detail: "Assign to Grade 8 Science by Friday", status: "Next" },
+      { title: "Rich text toolbar", detail: "Headings, tables, callouts, images, links, formatting", status: "Editing" },
+      { title: "Slide canvas", detail: "Thumbnails, speaker notes, layouts, transitions, PPTX export", status: "Design" },
+      { title: "Lesson handoff", detail: "Insert selected Studio blocks into teacher lesson sections", status: "Assign" },
     ],
-    sideTitle: "Studio actions",
-    sideRows: ["Import text or files", "Ask AI to clean up", "Insert slides and practice"],
-    actions: ["Open Studio", "Create lesson", "Generate practice"],
+    sideTitle: "Real actions",
+    sideRows: ["Save draft", "Duplicate item", "Export PPTX", "Insert into lesson"],
+    actions: ["Open Studio", "Create lesson", "Export deck"],
   },
   {
     id: "ai",
-    title: "AI Co-creator",
+    title: "AI Prompt Builder",
     shortTitle: "AI",
-    headline: "AI output arrives as editable classroom material.",
-    subtitle: "Guided fields control grade level, tone, language, standards, quiz style, and insert-back target.",
+    headline: "Generate structured outputs that can be inserted back into Studio.",
+    subtitle: "The AI surface uses guided prompt fields, provider fallback, preview contracts, and editable insert-back targets.",
     route: "/ai",
     icon: Wand2,
     accent: "text-edsync-emerald",
-    tabs: ["Prompt", "Preview", "Review", "Insert"],
+    tabs: ["Fields", "Provider", "Preview", "Insert"],
     metrics: [
-      { label: "Provider", value: "Smart" },
-      { label: "Review", value: "Required" },
-      { label: "Output", value: "Structured" },
+      { label: "Endpoint", value: "/api/ai/course-workflow" },
+      { label: "Fallback", value: "Groq + Google" },
+      { label: "Mode", value: "Review first" },
     ],
     rows: [
-      { title: "Grade 8 science", detail: "Zero-to-expert explanation", status: "Prompted" },
-      { title: "Draft slides", detail: "5 slides with speaker notes", status: "Preview" },
-      { title: "Practice set", detail: "Quiz, flashcards, and retry missed", status: "Insert" },
+      { title: "Prompt fields", detail: "Topic, grade, duration, tone, language, output type", status: "Filled" },
+      { title: "Generated package", detail: "Outline, slides, quiz, rubric, flashcards, teacher notes", status: "Preview" },
+      { title: "Save to Studio", detail: "Writes an editable local Studio draft before publish", status: "Insert" },
     ],
-    sideTitle: "Teacher control",
-    sideRows: ["Regenerate one slide", "Change tone or language", "Insert selected only"],
-    actions: ["Run AI", "Preview result", "Insert selected"],
+    sideTitle: "Controls",
+    sideRows: ["Choose provider family", "Regenerate one section", "Save as note", "Open Studio"],
+    actions: ["Run workflow", "Save to Studio", "Open AI"],
   },
   {
     id: "teacher",
-    title: "Teacher Dashboard",
+    title: "Teacher Portal",
     shortTitle: "Teacher",
-    headline: "The teacher sees the next useful action first.",
-    subtitle: "Deadlines, submissions, notes, class health, and planning signals stay grouped and readable.",
+    headline: "Plan work, review submissions, grade, and message students.",
+    subtitle: "Teacher pages connect dashboard, lesson builder, gradebook, planner, roster, discussions, notes, work, and reports.",
     route: "/teacher/dashboard",
     icon: CalendarCheck,
     accent: "text-edsync-blue",
-    tabs: ["Today", "Classes", "Review", "Plan"],
+    tabs: ["Dashboard", "Lessons", "Gradebook", "Planner"],
     metrics: [
-      { label: "Review", value: "3" },
-      { label: "Support", value: "4" },
-      { label: "Mastery", value: "81%" },
+      { label: "Routes", value: "10" },
+      { label: "Gradebook", value: "Weighted" },
+      { label: "Notes", value: "Student-linked" },
     ],
     rows: [
-      { title: "Friday quiz", detail: "23 learners assigned", status: "Scheduled" },
-      { title: "Feedback queue", detail: "3 submissions need comments", status: "Review" },
-      { title: "Intervention", detail: "4 learners missed two concepts", status: "Help" },
+      { title: "Lesson builder", detail: "/teacher/lessons/create uses AI/manual sections and quizzes", status: "Create" },
+      { title: "Submissions review", detail: "/teacher/work and gradebook score updates", status: "Grade" },
+      { title: "Roster and notes", detail: "Student notes, discussions, deadlines, and reports", status: "Support" },
     ],
-    sideTitle: "Fast actions",
-    sideRows: ["Plan deadline", "Send student note", "Open gradebook"],
-    actions: ["Review work", "Schedule", "Message"],
+    sideTitle: "Teacher actions",
+    sideRows: ["Create assignment", "Set due date", "Update score", "Send note"],
+    actions: ["Teacher dashboard", "Open gradebook", "Plan deadline"],
   },
   {
     id: "practice",
-    title: "Student Practice",
+    title: "Practice And Student Learning",
     shortTitle: "Practice",
-    headline: "Practice feels active, not like another static worksheet.",
-    subtitle: "Students can run timed sprints, retry missed items, read explanations, and save mistakes to review.",
+    headline: "Students learn through quizzes, flashcards, games, reviews, and lesson attempts.",
+    subtitle: "Practice, quizzes, games, lesson player, grades, discussions, notes, and profile are connected into one learning loop.",
     route: "/practice",
     icon: Trophy,
     accent: "text-edsync-amber",
-    tabs: ["Sprint", "Flashcards", "Retry", "Review"],
+    tabs: ["Quiz", "Sprint", "Flashcards", "Mistakes"],
     metrics: [
-      { label: "Timer", value: "08:42" },
-      { label: "Streak", value: "6" },
-      { label: "Score", value: "88%" },
+      { label: "Modes", value: "9" },
+      { label: "Timer", value: "Pause + retry" },
+      { label: "Route", value: "/practice" },
     ],
     rows: [
-      { title: "Question 5", detail: "Why does heat move from warm to cool?", status: "Answered" },
-      { title: "Missed concept", detail: "Conduction vs convection", status: "Review" },
-      { title: "Next card", detail: "Saved to mistake retry queue", status: "Ready" },
+      { title: "Practice modes", detail: "Quiz, exam, flashcards, matching, sprint, true/false", status: "Choose" },
+      { title: "Attempt summary", detail: "Elapsed time, score, missed questions, explanations", status: "Review" },
+      { title: "Review cards", detail: "Save mistakes to reviews and dashboard recommendations", status: "Repeat" },
     ],
-    sideTitle: "Learning loop",
-    sideRows: ["Pause or restart", "Retry missed only", "Save to review cards"],
-    actions: ["Start sprint", "Retry missed", "Review cards"],
+    sideTitle: "Student actions",
+    sideRows: ["Start timer", "Pause attempt", "Retry missed", "Save mistake"],
+    actions: ["Open practice", "Open quizzes", "Open games"],
   },
   {
     id: "admin",
-    title: "Admin Command",
+    title: "Admin And Platform Settings",
     shortTitle: "Admin",
-    headline: "Platform controls stay powerful but separated.",
-    subtitle: "Global admin manages providers, portals, feature flags, catalog settings, audit logs, and security.",
+    headline: "Manage providers, portals, permissions, security, catalog, and billing.",
+    subtitle: "The admin console separates platform owner controls from tenant-scoped organization managers.",
     route: "/admin/dashboard",
     icon: ShieldCheck,
     accent: "text-edsync-purple",
-    tabs: ["Health", "Portals", "AI", "Security"],
+    tabs: ["AI", "Portals", "Permissions", "Security"],
     metrics: [
-      { label: "Providers", value: "5" },
-      { label: "Portals", value: "3" },
-      { label: "Risk", value: "Low" },
+      { label: "Providers", value: "Encrypted" },
+      { label: "Catalog", value: "Publishable" },
+      { label: "Audit", value: "Logged" },
     ],
     rows: [
-      { title: "AI fallback", detail: "Groq, Google, Mistral, Cerebras, Cohere", status: "Healthy" },
-      { title: "Portal catalog", detail: "Public and organization products", status: "Live" },
-      { title: "Security events", detail: "Admin view-as and provider tests logged", status: "Audited" },
+      { title: "AI providers", detail: "Groq, Google, Mistral, Cerebras, Cohere tests and priority", status: "Configure" },
+      { title: "Portals and catalog", detail: "Public org pages, products, pricing, entitlements", status: "Publish" },
+      { title: "Security and governance", detail: "Audit logs, feature flags, standards, automation", status: "Audit" },
     ],
-    sideTitle: "Platform actions",
-    sideRows: ["Test provider", "Edit portal", "Review audit"],
-    actions: ["Open admin", "Test AI", "View security"],
+    sideTitle: "Admin actions",
+    sideRows: ["Test AI provider", "Edit portal", "Toggle feature", "Review events"],
+    actions: ["Admin dashboard", "AI settings", "Security"],
   },
   {
     id: "discussion",
-    title: "Discussion And Feedback",
-    shortTitle: "Discuss",
-    headline: "Class discussion connects back to evidence.",
-    subtitle: "Prompts, replies, teacher notes, and feedback stay tied to the lesson and student progress.",
-    route: "/student/discussions",
+    title: "Catalog And Organizations",
+    shortTitle: "Catalog",
+    headline: "Public search, organization portals, enrollment, and course access.",
+    subtitle: "The catalog and organization routes connect visitors to free/paid products before login and return them to the right course.",
+    route: "/catalog",
     icon: MessageSquareText,
     accent: "text-edsync-cyan",
-    tabs: ["Prompt", "Replies", "Notes", "Follow-up"],
+    tabs: ["Search", "Org portal", "Enroll", "Access"],
     metrics: [
-      { label: "Replies", value: "12" },
-      { label: "Unread", value: "3" },
-      { label: "Notes", value: "2" },
+      { label: "Routes", value: "3 public" },
+      { label: "Billing", value: "Free + paid" },
+      { label: "Media", value: "Safe links" },
     ],
     rows: [
-      { title: "Lesson prompt", detail: "Explain heat transfer in your kitchen", status: "Open" },
-      { title: "Student reply", detail: "Teacher note drafted for misconception", status: "Flagged" },
-      { title: "Recommendation", detail: "Review card added to dashboard", status: "Next" },
+      { title: "Global catalog", detail: "/catalog filters products by language, price, duration", status: "Search" },
+      { title: "Organization portal", detail: "/org/[portalSlug] scopes catalog and branding", status: "Route" },
+      { title: "Enrollment guard", detail: "Login returns to selected course and grants entitlement", status: "Access" },
     ],
-    sideTitle: "Feedback loop",
-    sideRows: ["Summarize replies", "Draft a note", "Recommend review"],
-    actions: ["Join discussion", "Summarize", "Add note"],
+    sideTitle: "Visitor actions",
+    sideRows: ["Search courses", "Open org portal", "Enroll free", "Start checkout"],
+    actions: ["Search catalog", "View portals", "Start"],
   },
 ];
 
@@ -331,14 +331,14 @@ export default function WorkflowShowcase() {
           <div className="edsync-workflow-bridge-card">
             <div className="min-w-0">
               <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
-                See the loop.
+                From public page to learning evidence.
               </h2>
               <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
-                Scroll once and the landing page gives way to the product: create, personalize, practice, grade, and improve.
+                Each scroll step swaps the stage to a real EdSync surface: catalog, Studio, AI, teacher review, student practice, and admin controls.
               </p>
             </div>
             <div className="edsync-workflow-bridge-window" aria-hidden="true">
-              {["Idea", "Studio", "Practice", "Progress"].map((label, index) => (
+              {["Catalog", "Studio", "AI draft", "Practice", "Gradebook"].map((label, index) => (
                 <span key={label} style={{ transform: `translateX(${index * 0.65}rem)` }}>
                   {label}
                 </span>
@@ -353,10 +353,10 @@ export default function WorkflowShowcase() {
           <div className="edsync-workflow-heading">
             <div>
               <h2 className="font-display text-4xl font-bold leading-tight sm:text-6xl">
-                One gallery. Every step.
+                Slide through the actual app.
               </h2>
               <p className="mt-3 max-w-2xl text-base leading-7 text-edsync-subtle">
-                Click the dots or keep scrolling through the actual EdSync workflow surfaces.
+                Click the dots or scroll. Each slide shows the route, controls, data, and actions users actually touch.
               </p>
             </div>
           </div>
@@ -383,7 +383,7 @@ export default function WorkflowShowcase() {
           </div>
 
           <div className="edsync-workflow-stage">
-            <WorkflowScreen slide={activeSlide} />
+            <WorkflowScreen key={activeSlide.id} slide={activeSlide} />
           </div>
         </div>
 
