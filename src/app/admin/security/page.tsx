@@ -6,8 +6,45 @@ import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type SecurityPayload = {
   securityEvents: Array<{ id: string; event_type: string; severity: string; message: string; created_at: string }>;
-  auditLogs: Array<{ id: string; action: string; entity_type: string; admin_email: string | null; created_at: string }>;
+  auditLogs: Array<{
+    id: string;
+    action: string;
+    entity_type: string;
+    entity_id: string | null;
+    metadata?: Record<string, unknown> | string | null;
+    admin_email: string | null;
+    created_at: string;
+  }>;
 };
+
+function metadataOf(value: SecurityPayload["auditLogs"][number]["metadata"]) {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function auditTitle(event: SecurityPayload["auditLogs"][number]) {
+  if (event.action === "open_view_mode") {
+    return `Opened ${event.entity_id === "student" ? "Student" : "Teacher"} view`;
+  }
+  return event.action
+    .split("_")
+    .filter(Boolean)
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function auditDetail(event: SecurityPayload["auditLogs"][number]) {
+  const metadata = metadataOf(event.metadata);
+  const path = typeof metadata.path === "string" ? metadata.path : null;
+  if (event.action === "open_view_mode") return path ? `Read-only preview: ${path}` : "Read-only preview";
+  return event.entity_id ? `${event.entity_type}: ${event.entity_id}` : event.entity_type;
+}
 
 export default function AdminSecurityPage() {
   const [payload, setPayload] = useState<SecurityPayload>({ securityEvents: [], auditLogs: [] });
@@ -53,9 +90,9 @@ export default function AdminSecurityPage() {
         </div>
         <div className="divide-y divide-edsync-border">
           {payload.auditLogs.map((event) => (
-            <div key={event.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[160px_160px_1fr_180px]">
-              <span className="font-semibold">{event.action}</span>
-              <span className="text-edsync-subtle">{event.entity_type}</span>
+            <div key={event.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[220px_minmax(0,1fr)_180px_180px]">
+              <span className="font-semibold">{auditTitle(event)}</span>
+              <span className="min-w-0 truncate text-edsync-subtle">{auditDetail(event)}</span>
               <span>{event.admin_email || "System"}</span>
               <span className="text-edsync-subtle">{new Date(event.created_at).toLocaleString()}</span>
             </div>
