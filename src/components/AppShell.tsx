@@ -109,6 +109,11 @@ function workspaceContextFromStorage(): WorkspaceContext | null {
   }
 }
 
+function sidebarCollapsedFromStorage() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("edsync-sidebar-collapsed") === "true";
+}
+
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
   { href: "/studio", label: "Studio", icon: Layers3, marker: "S" },
@@ -195,7 +200,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => sidebarCollapsedFromStorage());
   const [mobileOpen, setMobileOpen] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
@@ -210,6 +215,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     document.documentElement.classList.toggle("dark", useDark);
     setWorkspaceContext(workspaceContextFromStorage());
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
 
   useEffect(() => {
     edsync.auth.getUser().then(({ data: { user } }) => {
@@ -429,7 +438,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </Link>
         )}
         {visibleNavGroups.map((group) => {
-          const groupActive = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+          const groupActive = group.items.some((item) => {
+            const itemPath = pathWithoutQuery(item.href);
+            return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+          });
           return (
             <div key={group.label} className={collapsed ? "space-y-1" : "space-y-1.5"}>
               {!collapsed && (
