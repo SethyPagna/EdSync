@@ -156,6 +156,8 @@
 - Split the workflow showcase into a dedicated interactive component with sticky overlay-style scrolling, clickable slide dots, previous/next controls, and concrete screen previews for Studio, AI, teacher dashboard, student practice, admin command, and discussion.
 - Refined the intro again after live browser review: the hook now maps to the real EdSync spine, the first preview shows catalog, organization, Studio, practice, admin, assignment, AI review, and grade-event states without clipping, and the scroll bridge now previews actual route handoffs instead of generic labels.
 - Verification for this pass: local Chrome screenshots covered light desktop, dark desktop, mobile, workflow bridge, and the dedicated showcase page with no horizontal overflow. `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
+- Refined the intro/workflow connection so `View workflow` stays on the catalog page, the product preview is larger and clearer, organization/teacher labels no longer collide, and workflow gallery controls change slides in place instead of scrolling the page.
+- Browser verification for this pass confirmed dot navigation changes active slides with `jump: 0`, autoplay advances slides without moving scroll, and desktop/mobile intro views have no horizontal overflow. `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
 
 ## Update Protocol
 
