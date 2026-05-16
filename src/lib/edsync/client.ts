@@ -168,7 +168,9 @@ export function createClient() {
             full_name?: string;
             role?: "teacher" | "student";
             account_type?: "individual" | "organization";
+            organization_mode?: "join" | "create";
             organization_name?: string;
+            organization_code?: string;
           };
           emailRedirectTo?: string;
         };
