@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
+import { homeForRole } from "@/lib/auth/redirects";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -24,18 +25,13 @@ export function middleware(request: NextRequest) {
   if (!hasSession && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   if (hasSession && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname =
-      role === "admin"
-        ? "/admin/dashboard"
-        : role === "teacher"
-          ? "/teacher/dashboard"
-          : "/student/dashboard";
+    url.pathname = homeForRole(role);
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
