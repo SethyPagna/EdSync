@@ -29,5 +29,5 @@ export function isSafeAppPath(value: string | null | undefined) {
 }
 
 export function safeNextPath(value: string | null | undefined, role: UserRole | string | null | undefined) {
-  return isSafeAppPath(value) ? value : homeForRole(role);
+  return value && isSafeAppPath(value) ? value : homeForRole(role);
 }
