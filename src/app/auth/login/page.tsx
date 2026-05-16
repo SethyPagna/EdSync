@@ -182,7 +182,7 @@ function LoginForm() {
           />
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <Link
-              href={organizationLookup?.portalSlug ? `/org/${organizationLookup.portalSlug}` : "/catalog"}
+              href={organizationLookup?.slug ? `/org/${organizationLookup.slug}` : "/catalog"}
               className="btn-secondary justify-center px-3 py-2 text-sm"
             >
               Open portal
