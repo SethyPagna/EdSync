@@ -279,20 +279,35 @@ export default function StudentDashboard() {
     await loadDashboard();
   };
 
-  const completed = lessons.filter((lesson) => lesson.progress?.status === "completed");
-  const active = lessons.filter((lesson) => lesson.progress?.status === "in_progress");
-  const next = lessons.filter(
-    (lesson) => !lesson.progress || lesson.progress.status === "not_started",
-  );
-  const avgScore =
-    completed.filter((lesson) => lesson.progress?.score != null).length > 0
-      ? Math.round(
-          completed
-            .filter((lesson) => lesson.progress?.score != null)
-            .reduce((sum, lesson) => sum + Number(lesson.progress?.score || 0), 0) /
-            completed.filter((lesson) => lesson.progress?.score != null).length,
-        )
-      : 0;
+  const { completed, active, next, avgScore } = useMemo(() => {
+    const completedLessons: AssignedLesson[] = [];
+    const activeLessons: AssignedLesson[] = [];
+    const nextLessons: AssignedLesson[] = [];
+    let scoreTotal = 0;
+    let scoreCount = 0;
+
+    for (const lesson of lessons) {
+      const status = lesson.progress?.status;
+      if (status === "completed") {
+        completedLessons.push(lesson);
+        if (lesson.progress?.score != null) {
+          scoreTotal += Number(lesson.progress.score);
+          scoreCount += 1;
+        }
+      } else if (status === "in_progress") {
+        activeLessons.push(lesson);
+      } else {
+        nextLessons.push(lesson);
+      }
+    }
+
+    return {
+      completed: completedLessons,
+      active: activeLessons,
+      next: nextLessons,
+      avgScore: scoreCount > 0 ? Math.round(scoreTotal / scoreCount) : 0,
+    };
+  }, [lessons]);
 
   const recommendation = active[0] || next[0] || completed[0];
 
