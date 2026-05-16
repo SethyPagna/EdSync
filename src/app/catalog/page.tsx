@@ -7,7 +7,9 @@ import {
   CheckCircle2,
   Clock3,
   Layers3,
+  Search,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   UsersRound,
 } from "lucide-react";
@@ -57,7 +59,7 @@ export default async function CatalogPage({
       <section className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-stretch">
           <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
-            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="p-5 sm:p-7">
                 <h1 className="mt-5 max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl">
                   Learn, teach, and enter the right academy.
@@ -78,25 +80,26 @@ export default async function CatalogPage({
                 </div>
               </div>
               <div className="border-t border-edsync-border bg-edsync-surface p-4 lg:border-l lg:border-t-0">
-                <div className="premium-card rounded-2xl p-4">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="premium-card relative overflow-hidden rounded-2xl p-4">
+                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-edsync-blue/10 blur-2xl" />
+                  <div className="relative flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-edsync-subtle">Today in EdSync</p>
-                      <p className="mt-1 font-display text-2xl font-bold">Ready to move</p>
+                      <p className="text-sm font-semibold text-edsync-subtle">Choose a path</p>
+                      <p className="mt-1 font-display text-2xl font-bold">One entry, many portals</p>
                     </div>
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
                       <Layers3 className="h-6 w-6" />
                     </div>
                   </div>
-                  <div className="mt-4 grid gap-2">
+                  <div className="relative mt-4 grid gap-2">
                     {[
-                      ["Search", "Find lessons, courses, portals"],
-                      ["Enroll", "Free access or checkout"],
-                      ["Learn", "Dashboard, practice, progress"],
+                      ["Catalog", "Browse public courses"],
+                      ["Organization", "Enter with school or company"],
+                      ["Workspace", "Learn, teach, or manage"],
                     ].map(([title, copy], index) => (
                       <div
                         key={title}
-                        className="flex items-center gap-3 rounded-xl border border-edsync-border bg-edsync-bg/70 p-3"
+                        className="group flex items-center gap-3 rounded-xl border border-edsync-border bg-edsync-bg/75 p-3 transition hover:-translate-y-0.5 hover:border-edsync-blue/35 hover:bg-edsync-card"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-edsync-blue/10 text-xs font-bold text-edsync-blue">
                           {index + 1}
@@ -118,13 +121,14 @@ export default async function CatalogPage({
               </label>
               {filters.portalSlug && <input type="hidden" name="portal" value={filters.portalSlug} />}
               {filters.tenantSlug && <input type="hidden" name="tenant" value={filters.tenantSlug} />}
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
-                <div>
+              <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_9rem_9rem_auto_auto] [&>*]:min-w-0">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
                   <input
                     id="catalog-search"
                     name="q"
                     defaultValue={filters.query}
-                    className="edsync-input"
+                    className="edsync-input pl-9"
                     placeholder="Search subject, skill, organization, or course"
                   />
                 </div>
@@ -133,18 +137,6 @@ export default async function CatalogPage({
                   <option value="free">Free</option>
                   <option value="paid">Paid</option>
                 </select>
-                <input
-                  name="difficulty"
-                  defaultValue={filters.difficulty}
-                  className="edsync-input min-w-0"
-                  placeholder="Difficulty"
-                />
-                <input
-                  name="language"
-                  defaultValue={filters.language}
-                  className="edsync-input min-w-0"
-                  placeholder="Language"
-                />
                 <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-0">
                   <option value="">Any duration</option>
                   <option value="15">15 min</option>
@@ -152,7 +144,30 @@ export default async function CatalogPage({
                   <option value="60">60 min</option>
                   <option value="120">2 hours</option>
                 </select>
+                <details className="group relative">
+                  <summary className="btn-secondary h-full min-h-11 cursor-pointer justify-center px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                  </summary>
+                  <div className="premium-overlay animate-overlay-in absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl p-3">
+                    <div className="grid gap-2">
+                      <input
+                        name="difficulty"
+                        defaultValue={filters.difficulty}
+                        className="edsync-input min-w-0"
+                        placeholder="Difficulty"
+                      />
+                      <input
+                        name="language"
+                        defaultValue={filters.language}
+                        className="edsync-input min-w-0"
+                        placeholder="Language"
+                      />
+                    </div>
+                  </div>
+                </details>
                 <button className="btn-primary justify-center" type="submit">
+                  <Search className="h-4 w-4" />
                   Search
                 </button>
               </div>
