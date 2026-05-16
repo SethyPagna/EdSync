@@ -1,27 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import {
   ArrowRight,
   BookOpenCheck,
   Building2,
-  CalendarCheck,
-  ClipboardCheck,
-  FileText,
-  GraduationCap,
-  Presentation,
   Search,
-  ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
-  Wand2,
 } from "lucide-react";
+import CatalogLaunchHero from "@/components/catalog/CatalogLaunchHero";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
-import PublicTopbar from "@/components/public/PublicTopbar";
+import PublicLaunchChrome from "@/components/public/PublicLaunchChrome";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
-import { normalizePublicLanguage, publicCopy } from "@/lib/public-i18n";
+import { getPublicCopy } from "@/lib/public-i18n";
 
 export const metadata: Metadata = {
   title: "Catalog",
@@ -43,11 +35,7 @@ export default async function CatalogPage({
     duration?: string;
   };
 }) {
-  const cookieStore = await cookies();
-  const language = normalizePublicLanguage(
-    cookieStore.get("edsync-language")?.value || cookieStore.get("edsync-language-code")?.value,
-  );
-  const copy = publicCopy[language];
+  const copy = getPublicCopy();
   const filters = normalizeCatalogFilters(searchParams);
   const hasFilters = hasCatalogFilters(filters);
   const [items, portals] = await Promise.all([
@@ -64,136 +52,12 @@ export default async function CatalogPage({
   ).slice(0, 6);
 
   return (
-    <main id="top" className="edsync-catalog-reference premium-shell min-h-screen text-edsync-text">
-      <PublicTopbar active="catalog" />
+    <main id="top" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
+      <PublicLaunchChrome />
+
+      <CatalogLaunchHero />
 
       <section className="mx-auto max-w-[90rem] px-4">
-        <section className="edsync-launch-hero min-h-[calc(100vh-4.5rem)] overflow-hidden py-6 lg:py-10">
-          <div className="grid h-full min-h-[calc(100vh-7rem)] min-w-0 items-center gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.68fr)_minmax(640px,1.32fr)]">
-            <div className="animate-reveal-soft max-w-2xl min-w-0">
-              <div className="edsync-launch-pill">
-                <Sparkles className="h-4 w-4" />
-                Public catalog to classroom evidence
-              </div>
-              <h1 className="font-display text-5xl font-bold leading-[0.94] tracking-tight sm:text-7xl lg:text-7xl">
-                Teach. Practice. Prove progress.
-              </h1>
-              <p className="mt-6 max-w-lg text-lg leading-8 text-edsync-subtle">
-                One flow for public courses, organization portals, Studio lessons, AI drafts, student practice, and grade evidence.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="#showcase" className="btn-primary justify-center">
-                  View workflow
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/auth/signup" className="btn-secondary justify-center">
-                  Start
-                </Link>
-              </div>
-              <div className="edsync-launch-rail" aria-hidden="true">
-                <span>Catalog</span>
-                <span>Org portals</span>
-                <span>Teacher</span>
-                <span>Student</span>
-                <span>Admin</span>
-              </div>
-            </div>
-
-            <div className="edsync-launch-deck animate-reveal-soft min-w-0" aria-label="EdSync launch path preview">
-              <article className="edsync-launch-slide edsync-launch-slide-static">
-                <div className="edsync-hero-appbar">
-                  <div className="flex items-center gap-2">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <strong>{"/studio -> /teacher/lessons/create -> /practice"}</strong>
-                </div>
-
-                <div className="edsync-launch-board">
-                  <aside className="edsync-launch-board-nav">
-                    {[
-                      ["Catalog", Search, "Free + paid courses"],
-                      ["Org portal", Building2, "SSO-ready entry"],
-                      ["Teacher Studio", Presentation, "Docs, slides, media"],
-                      ["Student practice", GraduationCap, "Quiz, games, review"],
-                      ["Admin", ShieldCheck, "AI, security, portals"],
-                    ].map(([label, Icon, detail], index) => (
-                      <div key={label as string} className={index === 2 ? "is-active" : ""}>
-                        <Icon className="h-4 w-4" />
-                        <span>
-                          <strong>{label as string}</strong>
-                          <small>{detail as string}</small>
-                        </span>
-                      </div>
-                    ))}
-                  </aside>
-
-                  <div className="edsync-launch-main">
-                    <div className="edsync-launch-main-head">
-                      <div>
-                        <p>Lesson Studio</p>
-                        <h2>Energy Transfer</h2>
-                      </div>
-                      <span>Local draft saved</span>
-                    </div>
-
-                    <div className="edsync-hero-toolbar" aria-label="Studio toolbar preview">
-                      {[
-                        ["Outline", FileText],
-                        ["Slides", Presentation],
-                        ["Media", BookOpenCheck],
-                        ["AI", Wand2],
-                        ["Assign", CalendarCheck],
-                      ].map(([label, Icon]) => (
-                        <span key={label as string}>
-                          <Icon className="h-4 w-4" />
-                          {label as string}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="edsync-launch-canvas-grid">
-                      <section className="edsync-launch-slide-card">
-                        <p>Slide 03</p>
-                        <h3>Conduction vs convection</h3>
-                        <div className="edsync-launch-mini-slide">
-                          <span>Heat moves through touch</span>
-                          <span>Video check</span>
-                          <span>Quick question</span>
-                        </div>
-                        <small>Image + video checks stay safe before publish.</small>
-                      </section>
-
-                      <section className="edsync-launch-assignment-card">
-                        <div>
-                          <ClipboardCheck className="h-4 w-4" />
-                          <strong>Assign to Grade 8 Science</strong>
-                        </div>
-                        <span>Due Fri 4:00 PM</span>
-                        <span>35 min expected</span>
-                      </section>
-                    </div>
-
-                    <div className="edsync-launch-progress-row">
-                      {[
-                        ["5 slides", "Studio draft"],
-                        ["AI quiz", "Teacher review"],
-                        ["Grade event", "Progress saved"],
-                      ].map(([value, label]) => (
-                        <span key={value}>
-                          <strong>{value}</strong>
-                          <small>{label}</small>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-        </section>
-
         <WorkflowShowcase />
 
         <section id="catalog-search-panel" className="edsync-scroll-slide grid min-h-screen scroll-mt-24 content-center py-12">
