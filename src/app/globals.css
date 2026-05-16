@@ -605,9 +605,9 @@ h6 {
 }
 
 .edsync-launch-rail {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(0.75rem, 3vw, 2.5rem);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
   margin-top: clamp(2rem, 6vh, 3rem);
   max-width: 42rem;
   color: color-mix(in srgb, var(--subtle) 88%, var(--text));
@@ -615,6 +615,14 @@ h6 {
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.edsync-launch-rail span {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  padding: 0.5rem 0.72rem;
+  white-space: nowrap;
 }
 
 .dark .edsync-catalog-reference .edsync-launch-pill {
@@ -630,7 +638,7 @@ h6 {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: clamp(32rem, 50vw, 38rem);
+  min-height: clamp(34rem, 50vw, 40rem);
   border-radius: 2.25rem;
   border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
   background:
@@ -641,7 +649,7 @@ h6 {
 }
 
 .dark .edsync-catalog-reference .edsync-launch-deck {
-  min-height: clamp(32rem, 50vw, 38rem);
+  min-height: clamp(34rem, 50vw, 40rem);
   border-color: rgba(226, 232, 240, 0.14);
   background:
     linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(8, 47, 44, 0.55)),
@@ -888,31 +896,40 @@ h6 {
   line-height: 1.05;
 }
 
-.edsync-launch-slide-card div {
+.edsync-launch-mini-slide {
   display: grid;
-  grid-template-columns: 1fr 0.72fr 0.9fr;
+  grid-template-columns: 1fr 0.82fr;
   gap: 0.5rem;
   margin-top: 1rem;
 }
 
-.edsync-launch-slide-card div span {
-  min-height: 2.75rem;
+.edsync-launch-mini-slide span {
+  display: grid;
+  min-height: 3.2rem;
+  align-items: end;
   border-radius: 0.9rem;
   background:
     linear-gradient(135deg, rgba(var(--blue-rgb), 0.16), transparent),
     color-mix(in srgb, var(--blue) 9%, var(--card));
+  color: color-mix(in srgb, var(--blue) 66%, var(--text));
+  padding: 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 900;
 }
 
-.edsync-launch-slide-card div span:nth-child(2) {
+.edsync-launch-mini-slide span:nth-child(2) {
   background:
     linear-gradient(135deg, rgba(var(--emerald-rgb), 0.16), transparent),
     color-mix(in srgb, var(--emerald) 9%, var(--card));
+  color: color-mix(in srgb, var(--emerald) 66%, var(--text));
 }
 
-.edsync-launch-slide-card div span:nth-child(3) {
+.edsync-launch-mini-slide span:nth-child(3) {
+  grid-column: 1 / -1;
   background:
     linear-gradient(135deg, rgba(var(--amber-rgb), 0.16), transparent),
     color-mix(in srgb, var(--amber) 9%, var(--card));
+  color: color-mix(in srgb, var(--amber) 62%, var(--text));
 }
 
 .edsync-launch-slide-card small {
@@ -991,6 +1008,10 @@ h6 {
 .dark .edsync-catalog-reference .edsync-launch-progress-row > span {
   border-color: rgba(226, 232, 240, 0.14);
   background: rgba(7, 10, 18, 0.48);
+}
+
+.dark .edsync-catalog-reference .edsync-launch-mini-slide span {
+  color: rgba(248, 250, 252, 0.86);
 }
 
 .edsync-workflow-bridge,
