@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "edsync-app",
+  "name": "edsync-dev",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-05-12",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -11,7 +11,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "edsync-app"
+      "service": "edsync-dev"
     }
   ],
   "vars": {
@@ -27,7 +27,7 @@
     "R2_BUCKET": "edsync-assets-dev",
     "R2_PUBLIC_BASE_URL": "https://pub-648d4acbbaac4a3e96a5dea072706010.r2.dev",
     "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-648d4acbbaac4a3e96a5dea072706010.r2.dev",
-    "NEXT_PUBLIC_APP_URL": "https://edsync-app.learn-learning-app.workers.dev",
+    "NEXT_PUBLIC_APP_URL": "https://edsync-dev.learn-app.workers.dev",
     "CLOUDFLARE_QUEUE_NAME": "edsync-automation-dev",
     "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-dev",
     "CLOUDFLARE_PAGES_PROJECT": "edsync"
@@ -61,11 +61,11 @@
   ],
   "env": {
     "preview": {
-      "name": "edsync-app-preview",
+      "name": "edsync-preview",
       "services": [
         {
           "binding": "WORKER_SELF_REFERENCE",
-          "service": "edsync-app-preview"
+          "service": "edsync-preview"
         }
       ],
       "vars": {
@@ -81,7 +81,7 @@
         "R2_BUCKET": "edsync-assets-preview",
         "R2_PUBLIC_BASE_URL": "https://pub-83c176f255cf44ada09ff54097705245.r2.dev",
         "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-83c176f255cf44ada09ff54097705245.r2.dev",
-        "NEXT_PUBLIC_APP_URL": "https://edsync-app-preview.learn-learning-app.workers.dev",
+        "NEXT_PUBLIC_APP_URL": "https://edsync-preview.learn-app.workers.dev",
         "CLOUDFLARE_QUEUE_NAME": "edsync-automation-preview",
         "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-preview",
         "CLOUDFLARE_PAGES_PROJECT": "edsync"
@@ -115,11 +115,11 @@
       ]
     },
     "production": {
-      "name": "edsync-app-production",
+      "name": "edsync",
       "services": [
         {
           "binding": "WORKER_SELF_REFERENCE",
-          "service": "edsync-app-production"
+          "service": "edsync"
         }
       ],
       "vars": {
@@ -135,7 +135,7 @@
         "R2_BUCKET": "edsync-assets-prod",
         "R2_PUBLIC_BASE_URL": "https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev",
         "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev",
-        "NEXT_PUBLIC_APP_URL": "https://edsync-app-production.learn-learning-app.workers.dev",
+        "NEXT_PUBLIC_APP_URL": "https://edsync.learn-app.workers.dev",
         "CLOUDFLARE_QUEUE_NAME": "edsync-automation-prod",
         "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-prod",
         "CLOUDFLARE_PAGES_PROJECT": "edsync"
