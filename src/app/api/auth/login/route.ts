@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
+import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
-
-function normalizeOrganizationCode(value?: string | null) {
-  return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
