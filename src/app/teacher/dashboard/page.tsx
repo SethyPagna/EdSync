@@ -17,6 +17,7 @@ import {
   Sparkles,
   TrendingUp,
   UsersRound,
+  X,
 } from "lucide-react";
 
 type DashboardStats = {
@@ -149,7 +150,7 @@ export default function TeacherDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <OrganizationContextBanner />
-      <header className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+      <header className="premium-panel rounded-2xl p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
@@ -210,7 +211,7 @@ export default function TeacherDashboard() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <section className="premium-surface rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Today</h2>
@@ -253,7 +254,7 @@ export default function TeacherDashboard() {
                 <Link
                   key={item.title}
                   href={item.href}
-                  className="group rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/40 hover:bg-edsync-card"
+                  className="premium-card group rounded-2xl p-4 transition hover:-translate-y-0.5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -261,7 +262,7 @@ export default function TeacherDashboard() {
                       <p className="mt-2 font-display text-2xl font-bold text-edsync-text">{item.value}</p>
                       <p className="mt-1 text-xs text-edsync-subtle">{item.copy}</p>
                     </div>
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-current/10 ${item.tone}`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-current/10 ${item.tone}`}>
                       <Icon className="h-5 w-5" />
                     </div>
                   </div>
@@ -271,7 +272,7 @@ export default function TeacherDashboard() {
           </div>
         </section>
 
-        <aside className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <aside className="premium-surface rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Quick actions</h2>
@@ -279,7 +280,7 @@ export default function TeacherDashboard() {
             </div>
             <CalendarClock className="h-5 w-5 text-edsync-blue" />
           </div>
-          <div className="grid gap-2">
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
             <Link href="/teacher/lessons/create" className="btn-secondary justify-center text-sm">
               <Plus className="h-4 w-4" /> Create lesson
             </Link>
@@ -294,7 +295,7 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <section className="premium-surface rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Recent lessons</h2>
@@ -314,7 +315,7 @@ export default function TeacherDashboard() {
                 />
               ))
             ) : recentLessons.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
+              <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
                 <ClipboardList className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
                 <p className="font-semibold text-edsync-text">No lessons yet</p>
                 <p className="mt-1 text-sm text-edsync-subtle">
@@ -334,7 +335,7 @@ export default function TeacherDashboard() {
                   <Link
                     key={lesson.id}
                     href={`/teacher/lessons/${lesson.id}`}
-                    className="flex items-center gap-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 transition hover:border-edsync-blue/50 sm:gap-4 sm:p-4"
+                    className="flex items-center gap-3 rounded-2xl border border-edsync-border bg-edsync-surface p-3 transition hover:border-edsync-blue/50 hover:bg-edsync-card sm:gap-4 sm:p-4"
                   >
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
                       <BookOpenCheck className="h-5 w-5" />
@@ -366,7 +367,7 @@ export default function TeacherDashboard() {
         </section>
 
         <aside className="space-y-5">
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <section className="premium-surface rounded-2xl p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold">Alerts</h2>
               {alerts.length > 0 && (
@@ -408,10 +409,10 @@ export default function TeacherDashboard() {
                       <button
                         type="button"
                         onClick={() => dismissAlert(alert.id)}
-                        className="text-lg leading-none opacity-50 hover:opacity-100"
+                        className="rounded-lg p-1.5 opacity-60 transition hover:bg-edsync-card hover:opacity-100"
                         aria-label="Dismiss alert"
                       >
-                        x
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -420,7 +421,7 @@ export default function TeacherDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <section className="premium-surface rounded-2xl p-4 sm:p-5">
             <h2 className="font-display text-xl font-bold">Classes</h2>
             <p className="mt-1 text-sm text-edsync-subtle">
               Share join codes with students.
