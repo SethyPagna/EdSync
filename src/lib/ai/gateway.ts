@@ -173,7 +173,7 @@ async function callOpenAiCompatible(provider: RuntimeProvider, options: AIChatOp
     headers: {
       Authorization: `Bearer ${provider.apiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://edsync-two.vercel.app",
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://edsync.learn-app.workers.dev",
       "X-Title": "EdSync",
     },
     signal: AbortSignal.timeout ? AbortSignal.timeout(Number(provider.timeout_ms || 25000)) : undefined,
