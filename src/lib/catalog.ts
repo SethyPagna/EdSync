@@ -1,9 +1,11 @@
 import { createCheckout, grantEntitlement } from "@/lib/billing";
+import { normalizeCatalogFilters, type CatalogFilters, type CatalogPriceFilter } from "@/lib/catalog-filters";
 import { d1Query } from "@/lib/db/d1";
 import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import type { BillingPrice, BillingProduct, Tenant, TenantPortal } from "@/types";
 
-type CatalogRow = BillingProduct & {
+type CatalogRow = Omit<BillingProduct, "metadata"> & {
+  metadata: Record<string, unknown> | string | null;
   tenant_name: string;
   tenant_slug: string;
   portal_id: string | null;
@@ -64,12 +66,23 @@ function portalCatalogSettings(row: CatalogRow) {
   }
 }
 
+function catalogMetadata(row: CatalogRow) {
+  if (!row.metadata) return {};
+  if (typeof row.metadata === "object") return row.metadata;
+  try {
+    return JSON.parse(row.metadata) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 async function activePrices(productIds: string[]) {
-  if (productIds.length === 0) return new Map<string, BillingPrice>();
-  const placeholders = productIds.map(() => "?").join(", ");
+  const uniqueIds = Array.from(new Set(productIds));
+  if (uniqueIds.length === 0) return new Map<string, BillingPrice>();
+  const placeholders = uniqueIds.map(() => "?").join(", ");
   const rows = await d1Query<BillingPrice>(
     `SELECT * FROM billing_prices WHERE active = 1 AND product_id IN (${placeholders}) ORDER BY amount_cents ASC, created_at ASC`,
-    productIds,
+    uniqueIds,
   );
   const byProduct = new Map<string, BillingPrice>();
   for (const row of rows) {
@@ -79,7 +92,7 @@ async function activePrices(productIds: string[]) {
 }
 
 function toPublicItem(row: CatalogRow, price?: BillingPrice | null): PublicCatalogItem {
-  const metadata = sanitizeCatalogMetadata(row.metadata);
+  const metadata = sanitizeCatalogMetadata(catalogMetadata(row));
   const fallbackThumb = metadata.thumbnailUrl || row.lesson_thumbnail_url || null;
   const safeMetadata = sanitizeCatalogMetadata({ ...metadata, thumbnailUrl: fallbackThumb });
   const amountCents = price?.amount_cents ?? 0;
@@ -118,30 +131,69 @@ function toPublicItem(row: CatalogRow, price?: BillingPrice | null): PublicCatal
   };
 }
 
+function textFilterMatches(value: string | null | undefined, filter: string) {
+  return !filter || String(value ?? "").toLowerCase() === filter.toLowerCase();
+}
+
+function matchesCatalogFilters(item: PublicCatalogItem, filters: CatalogFilters) {
+  if (filters.price === "free" && !item.price.isFree) return false;
+  if (filters.price === "paid" && item.price.isFree) return false;
+  if (!textFilterMatches(item.metadata.category, filters.category)) return false;
+  if (!textFilterMatches(item.metadata.difficulty, filters.difficulty)) return false;
+  if (!textFilterMatches(item.metadata.language, filters.language)) return false;
+  if (filters.maxDuration && item.lesson.durationMinutes && item.lesson.durationMinutes > filters.maxDuration) {
+    return false;
+  }
+  if (filters.maxDuration && !item.lesson.durationMinutes) return false;
+  return true;
+}
+
+function dedupeCatalogRows(rows: CatalogRow[]) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = row.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function listPublicCatalog(input: {
   query?: string | null;
   portalSlug?: string | null;
   tenantSlug?: string | null;
   featuredOnly?: boolean;
+  price?: CatalogPriceFilter;
+  category?: string | null;
+  difficulty?: string | null;
+  language?: string | null;
+  maxDuration?: number | string | null;
 } = {}) {
+  const filters = normalizeCatalogFilters(input);
   const params: unknown[] = [];
   const where = ["bp.status = 'active'"];
 
-  if (input.portalSlug) {
+  if (filters.portalSlug) {
     where.push("tp.slug = ?");
     where.push("tp.audience IN ('public', 'customer', 'partner')");
-    params.push(input.portalSlug);
+    params.push(filters.portalSlug);
   }
 
-  if (input.tenantSlug) {
+  if (filters.tenantSlug) {
     where.push("t.slug = ?");
-    params.push(input.tenantSlug);
+    params.push(filters.tenantSlug);
   }
 
-  if (input.query) {
-    where.push("(lower(bp.title) LIKE lower(?) OR lower(COALESCE(bp.description, '')) LIKE lower(?) OR lower(COALESCE(l.subject, '')) LIKE lower(?))");
-    const like = `%${input.query.trim()}%`;
-    params.push(like, like, like);
+  if (filters.query) {
+    where.push(`(
+      lower(bp.title) LIKE lower(?)
+      OR lower(COALESCE(bp.description, '')) LIKE lower(?)
+      OR lower(COALESCE(l.subject, '')) LIKE lower(?)
+      OR lower(COALESCE(t.name, '')) LIKE lower(?)
+      OR lower(COALESCE(tp.name, '')) LIKE lower(?)
+    )`);
+    const like = `%${filters.query}%`;
+    params.push(like, like, like, like, like);
   }
 
   const rows = await d1Query<CatalogRow>(
@@ -157,21 +209,23 @@ export async function listPublicCatalog(input: {
        LEFT JOIN lessons l ON l.id = bp.course_id
       WHERE ${where.join(" AND ")}
       ORDER BY bp.updated_at DESC
-      LIMIT 100`,
+      LIMIT 200`,
     params,
   );
 
-  const prices = await activePrices(rows.map((row) => row.id));
-  return rows
+  const dedupedRows = filters.portalSlug ? rows : dedupeCatalogRows(rows);
+  const prices = await activePrices(dedupedRows.map((row) => row.id));
+  return dedupedRows
     .map((row) => ({ row, item: toPublicItem(row, prices.get(row.id)) }))
     .filter(({ row, item }) => {
       const portalSettings = portalCatalogSettings(row);
-      if (input.portalSlug && portalSettings.enabled === false) return false;
-      const visible = input.portalSlug
+      if (filters.portalSlug && portalSettings.enabled === false) return false;
+      const visible = filters.portalSlug
         ? item.metadata.visibility === "public" || item.metadata.visibility === "portal"
         : item.metadata.visibility === "public";
       if (!visible) return false;
-      if ((input.featuredOnly || portalSettings.featuredOnly) && !item.metadata.featured) return false;
+      if ((filters.featuredOnly || portalSettings.featuredOnly) && !item.metadata.featured) return false;
+      if (!matchesCatalogFilters(item, filters)) return false;
       return true;
     })
     .map(({ item }) => item);
