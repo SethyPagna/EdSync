@@ -14,6 +14,8 @@ const EVENT_TYPES = new Set<PlannerEventType>([
   "other",
 ]);
 
+export function normalizePlannerText(value: unknown, label: string, maxLength: number, required?: true): string;
+export function normalizePlannerText(value: unknown, label: string, maxLength: number, required: false): string | null;
 export function normalizePlannerText(value: unknown, label: string, maxLength: number, required = true) {
   const text = String(value ?? "").trim();
   if (!text) {
