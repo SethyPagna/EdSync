@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import {
   ArrowRight,
   BookOpenCheck,
-  Building2,
   Clock3,
   Globe2,
   Search,
