@@ -55,7 +55,12 @@ export default async function OrganizationPortalPage({
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
-      <PublicTopbar active="organization" organizationName={portal.name} organizationSlug={portal.tenant_slug} />
+      <PublicTopbar
+        active="organization"
+        organizationName={portal.name}
+        organizationCode={portal.tenant_slug}
+        portalSlug={portal.slug}
+      />
 
       <section className="mx-auto max-w-7xl px-4 py-8">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
