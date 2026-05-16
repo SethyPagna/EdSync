@@ -7,6 +7,20 @@ import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import { resolveTenantContext } from "@/lib/tenancy";
 
+function catalogMediaWarnings(
+  source: Record<string, unknown> | undefined,
+  sanitized: ReturnType<typeof sanitizeCatalogMetadata>,
+) {
+  const warnings: string[] = [];
+  if (typeof source?.thumbnailUrl === "string" && source.thumbnailUrl.trim() && !sanitized.thumbnailUrl) {
+    warnings.push("Unsafe thumbnail URL was removed.");
+  }
+  if (typeof source?.previewVideoUrl === "string" && source.previewVideoUrl.trim() && !sanitized.previewVideoUrl) {
+    warnings.push("Unsafe preview video URL was removed.");
+  }
+  return warnings;
+}
+
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
@@ -90,6 +104,7 @@ export async function POST(request: Request) {
   if (body.action === "update_catalog") {
     if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
     const metadata = sanitizeCatalogMetadata(body.metadata);
+    const warnings = catalogMediaWarnings(body.metadata, metadata);
     const status = body.status === "active" || body.status === "archived" || body.status === "draft" ? body.status : "draft";
     await d1Query(
       "UPDATE billing_products SET status = ?, metadata = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?",
@@ -108,7 +123,7 @@ export async function POST(request: Request) {
         [context.tenant.id, body.productId],
       );
     }
-    return NextResponse.json({ data: { id: body.productId }, error: null });
+    return NextResponse.json({ data: { id: body.productId, warnings }, error: null });
   }
 
   if (body.action === "update_product") {
@@ -116,6 +131,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
     }
     const metadata = sanitizeCatalogMetadata(body.metadata);
+    const warnings = catalogMediaWarnings(body.metadata, metadata);
     const status = body.status === "active" || body.status === "archived" || body.status === "draft" ? body.status : "draft";
     await d1Query(
       `UPDATE billing_products
@@ -145,7 +161,7 @@ export async function POST(request: Request) {
         [context.tenant.id, body.productId],
       );
     }
-    return NextResponse.json({ data: { id: body.productId }, error: null });
+    return NextResponse.json({ data: { id: body.productId, warnings }, error: null });
   }
 
   if (body.action === "delete_product") {
@@ -244,6 +260,8 @@ export async function POST(request: Request) {
 
   if (!body.title) return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
   const id = crypto.randomUUID();
+  const metadata = sanitizeCatalogMetadata(body.metadata);
+  const warnings = catalogMediaWarnings(body.metadata, metadata);
   await d1Query(
     `INSERT INTO billing_products (
        id, tenant_id, title, description, product_type, course_id, status, metadata, created_at, updated_at
@@ -255,7 +273,7 @@ export async function POST(request: Request) {
       body.description ?? null,
       ["course", "bundle", "membership", "subscription"].includes(body.productType || "") ? body.productType : "course",
       body.courseId ?? null,
-      sanitizeCatalogMetadata(body.metadata),
+      metadata,
     ],
   );
   if (body.portalId) {
@@ -265,5 +283,5 @@ export async function POST(request: Request) {
       [crypto.randomUUID(), context.tenant.id, body.portalId, id],
     );
   }
-  return NextResponse.json({ data: { id }, error: null });
+  return NextResponse.json({ data: { id, warnings }, error: null });
 }
