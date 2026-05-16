@@ -56,9 +56,9 @@ export default async function PublicTopbar({
         <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
-          <Link href={signupHref} className="btn-primary justify-center px-4 py-2 text-sm">
+          <Link href={signupHref} className="btn-primary !hidden justify-center px-3 py-2 text-sm sm:!inline-flex sm:px-4">
             <UserPlus className="h-4 w-4" />
-            {copy.start}
+            <span>{copy.start}</span>
           </Link>
         </div>
       </div>
