@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Check, Languages } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export const EDSYNC_LANGUAGES = [
   { name: "English", code: "en" },
@@ -37,9 +36,6 @@ export default function LanguageMenu({
   align = "right",
   className = "",
 }: LanguageMenuProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [language, setLanguage] = useState<LanguageName>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
@@ -56,10 +52,12 @@ export default function LanguageMenu({
     window.localStorage.setItem("edsync-language", nextLanguage);
     document.documentElement.lang = languageCodeFor(nextLanguage);
 
-    if (syncCatalogFilter && (pathname.startsWith("/catalog") || pathname.startsWith("/org/"))) {
-      const params = new URLSearchParams(searchParams.toString());
+    if (syncCatalogFilter) {
+      const { pathname, search } = window.location;
+      if (!pathname.startsWith("/catalog") && !pathname.startsWith("/org/")) return;
+      const params = new URLSearchParams(search);
       params.set("language", nextLanguage);
-      router.push(`${pathname}?${params.toString()}`);
+      window.location.assign(`${pathname}?${params.toString()}`);
     }
   };
 
