@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpenCheck,
+  CalendarClock,
   ClipboardList,
   Plus,
   Sparkles,
@@ -146,126 +147,158 @@ export default function TeacherDashboard() {
   const firstName = profile?.full_name?.split(" ")[0] || "Teacher";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <OrganizationContextBanner />
-      <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-6">
-          <div className="mb-8 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-edsync-amber">
-                Teacher command center
-              </p>
-              <h1 className="mt-2 font-display text-4xl font-bold">
-                Good to see you, {firstName}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-edsync-subtle">
-                Review class health, act on learning evidence, and create the
-                next lesson from one focused workspace.
-              </p>
-            </div>
-            <Link href="/teacher/lessons/create" className="btn-primary hidden sm:flex">
+      <header className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
+              Teacher home
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">
+              Good to see you, {firstName}
+            </h1>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:flex">
+            <Link href="/teacher/lessons/create" className="btn-primary justify-center">
               <Plus className="h-4 w-4" />
               New lesson
             </Link>
+            <Link href="/studio" className="btn-secondary justify-center">
+              <Sparkles className="h-4 w-4" />
+              Open Studio
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Students",
+              value: stats.totalStudents,
+              icon: UsersRound,
+              tone: "text-edsync-blue",
+            },
+            {
+              label: "Lessons",
+              value: stats.activeLessons,
+              icon: BookOpenCheck,
+              tone: "text-edsync-emerald",
+            },
+            {
+              label: "Score",
+              value: stats.avgScore ? `${stats.avgScore}%` : "N/A",
+              icon: TrendingUp,
+              tone: "text-edsync-amber",
+            },
+            {
+              label: "AI chats",
+              value: stats.interactions,
+              icon: Sparkles,
+              tone: "text-edsync-cyan",
+            },
+          ].map((item) => (
+            <MetricTile
+              key={item.label}
+              label={item.label}
+              value={loading ? "..." : item.value}
+              icon={item.icon}
+              tone={item.tone}
+            />
+          ))}
+        </div>
+      </header>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold">Today</h2>
+              <p className="text-sm text-edsync-subtle">Start with the most useful next action.</p>
+            </div>
+            <Link href="/teacher/planner" className="btn-ghost text-sm">
+              Planner <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-3">
             {[
               {
-                label: "Students",
-                value: stats.totalStudents,
+                href: "/teacher/analytics",
+                title: "Review support",
+                value: `${stats.lowConfidence}`,
+                copy: "students need attention",
+                icon: AlertTriangle,
+                tone: "text-edsync-amber",
+              },
+              {
+                href: "/teacher/students",
+                title: "Classes",
+                value: `${classes.length}`,
+                copy: "active spaces",
                 icon: UsersRound,
                 tone: "text-edsync-blue",
               },
               {
-                label: "Published lessons",
-                value: stats.activeLessons,
-                icon: BookOpenCheck,
+                href: "/teacher/work",
+                title: "Work queue",
+                value: "Open",
+                copy: "assignments and tasks",
+                icon: ClipboardList,
                 tone: "text-edsync-emerald",
               },
-              {
-                label: "Average score",
-                value: stats.avgScore ? `${stats.avgScore}%` : "N/A",
-                icon: TrendingUp,
-                tone: "text-edsync-amber",
-              },
-              {
-                label: "AI tutor chats",
-                value: stats.interactions,
-                icon: Sparkles,
-                tone: "text-edsync-cyan",
-              },
-            ].map((item) => (
-              <MetricTile
-                key={item.label}
-                label={item.label}
-                value={loading ? "..." : item.value}
-                icon={item.icon}
-                tone={item.tone}
-              />
-            ))}
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="group rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/40 hover:bg-edsync-card"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-edsync-text">{item.title}</p>
+                      <p className="mt-2 font-display text-2xl font-bold text-edsync-text">{item.value}</p>
+                      <p className="mt-1 text-xs text-edsync-subtle">{item.copy}</p>
+                    </div>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-current/10 ${item.tone}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-xl border border-edsync-border bg-edsync-card p-6">
-          <div className="mb-5 flex items-center justify-between">
+        <aside className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="font-display text-xl font-bold">Today&apos;s queue</p>
-              <p className="text-sm text-edsync-subtle">Highest signal actions</p>
+              <h2 className="font-display text-xl font-bold">Quick actions</h2>
+              <p className="text-sm text-edsync-subtle">Common tasks.</p>
             </div>
-            <AlertTriangle className="h-5 w-5 text-edsync-amber" />
+            <CalendarClock className="h-5 w-5 text-edsync-blue" />
           </div>
-          <div className="space-y-3">
-            <Link
-              href="/teacher/analytics"
-              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
-            >
-              <div className="flex justify-between gap-4">
-                <p className="text-sm font-semibold text-edsync-text">
-                  Review interventions
-                </p>
-                <span className="text-sm font-bold text-edsync-amber">
-                  {stats.lowConfidence}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-edsync-subtle">
-                Low-confidence reflections need teacher attention.
-              </p>
+          <div className="grid gap-2">
+            <Link href="/teacher/lessons/create" className="btn-secondary justify-center text-sm">
+              <Plus className="h-4 w-4" /> Create lesson
             </Link>
-            <Link
-              href="/teacher/students"
-              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
-            >
-              <p className="text-sm font-semibold text-edsync-text">
-                Manage classes and assignments
-              </p>
-              <p className="mt-1 text-xs text-edsync-subtle">
-                Share join codes, assign lessons, and check enrollment.
-              </p>
+            <Link href="/teacher/gradebook" className="btn-secondary justify-center text-sm">
+              <ClipboardList className="h-4 w-4" /> Gradebook
             </Link>
-            <Link
-              href="/teacher/reports"
-              className="block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
-            >
-              <p className="text-sm font-semibold text-edsync-text">
-                Export learning evidence
-              </p>
-              <p className="mt-1 text-xs text-edsync-subtle">
-                Prepare class reports for grading and parent updates.
-              </p>
+            <Link href="/teacher/reports" className="btn-secondary justify-center text-sm">
+              <TrendingUp className="h-4 w-4" /> Reports
             </Link>
           </div>
-        </div>
-      </header>
+        </aside>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Recent lessons</h2>
-              <p className="text-sm text-edsync-subtle">
-                Drafts, published lessons, and recent updates.
-              </p>
+              <p className="text-sm text-edsync-subtle">Drafts and recent updates.</p>
             </div>
             <Link href="/teacher/lessons" className="btn-ghost text-sm">
               View all <ArrowRight className="h-4 w-4" />
@@ -301,9 +334,9 @@ export default function TeacherDashboard() {
                   <Link
                     key={lesson.id}
                     href={`/teacher/lessons/${lesson.id}`}
-                    className="flex items-center gap-4 rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50"
+                    className="flex items-center gap-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 transition hover:border-edsync-blue/50 sm:gap-4 sm:p-4"
                   >
-                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
                       <BookOpenCheck className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -317,7 +350,7 @@ export default function TeacherDashboard() {
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-edsync-subtle">
+                      <p className="mt-1 truncate text-xs text-edsync-subtle">
                         {lesson.subject || "General"} - {lesson.estimated_duration} min -
                         Updated {formatRelativeTime(lesson.updated_at)}
                       </p>
@@ -332,8 +365,8 @@ export default function TeacherDashboard() {
           </div>
         </section>
 
-        <aside className="space-y-6">
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+        <aside className="space-y-5">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold">Alerts</h2>
               {alerts.length > 0 && (
@@ -387,7 +420,7 @@ export default function TeacherDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
             <h2 className="font-display text-xl font-bold">Classes</h2>
             <p className="mt-1 text-sm text-edsync-subtle">
               Share join codes with students.
