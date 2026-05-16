@@ -98,6 +98,7 @@
 | 2026-05-16 | Phase 3 teacher lesson package summary | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test -- src/lib/learning/lesson-package.test.ts` | Passed |
 | 2026-05-16 | Public intro launch redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; headless Chrome and Playwright screenshots at desktop/mobile/gallery viewports | Passed |
 | 2026-05-16 | Interactive workflow showcase redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; Playwright screenshots at hero, workflow desktop, and workflow mobile viewports | Passed |
+| 2026-05-16 | Public intro performance pass | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; desktop/mobile workflow smoke review | Passed |
 
 ---
 
