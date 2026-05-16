@@ -79,7 +79,7 @@ export default async function CatalogPage({
                 A clean learning loop for courses, AI drafts, student practice, feedback, and progress.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="#workflow-transition" className="btn-primary justify-center">
+                <Link href="/showcase" className="btn-primary justify-center">
                   Watch workflow
                   <ArrowRight className="h-4 w-4" />
                 </Link>
