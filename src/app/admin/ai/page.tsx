@@ -8,7 +8,6 @@ import {
   Bot,
   CheckCircle2,
   KeyRound,
-  MoreVertical,
   Pencil,
   Plus,
   RefreshCw,
@@ -18,7 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { InfoPopover } from "@/components/WorkspacePrimitives";
+import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
 
 type ProviderMetaEntry = {
   label: string;
@@ -255,6 +254,73 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">{children}</label>;
 }
 
+function ProviderActionMenu({
+  provider,
+  testing,
+  busy,
+  onEdit,
+  onTest,
+  onToggle,
+  onReset,
+  onDelete,
+}: {
+  provider: Provider;
+  testing: boolean;
+  busy: boolean;
+  onEdit: () => void;
+  onTest: () => void;
+  onToggle: () => void;
+  onReset: () => void;
+  onDelete: () => void;
+}) {
+  const keyIssue = keyStateAction(provider);
+  return (
+    <ActionMenu label={`Provider actions for ${provider.name}`}>
+      <button type="button" onClick={onEdit} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text">
+        <Pencil className="h-4 w-4" />
+        Edit provider
+      </button>
+      <button
+        type="button"
+        onClick={onTest}
+        disabled={testing || Boolean(keyIssue)}
+        className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text disabled:cursor-not-allowed disabled:opacity-50"
+        title={keyIssue || "Run provider health check"}
+      >
+        <TestTube2 className="h-4 w-4" />
+        {testing ? "Testing..." : "Test health"}
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={busy}
+        className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text disabled:opacity-50"
+      >
+        <ShieldCheck className="h-4 w-4" />
+        {provider.enabled ? "Pause fallback" : "Enable fallback"}
+      </button>
+      <button
+        type="button"
+        onClick={onReset}
+        disabled={busy}
+        className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text disabled:opacity-50"
+      >
+        <RefreshCw className="h-4 w-4" />
+        Reset health
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={busy}
+        className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-edsync-red hover:bg-edsync-red/10 disabled:opacity-50"
+      >
+        <Trash2 className="h-4 w-4" />
+        Delete provider
+      </button>
+    </ActionMenu>
+  );
+}
+
 export default function AdminAIPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [providerMeta, setProviderMeta] = useState<Record<string, ProviderMetaEntry>>(FALLBACK_META);
@@ -269,6 +335,10 @@ export default function AdminAIPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   const providerOptions = useMemo(() => Object.keys(providerMeta), [providerMeta]);
+  const setupIssues = useMemo(
+    () => providers.filter((provider) => provider.key_state !== "ready" || !provider.endpoint_effective).length,
+    [providers],
+  );
 
   const loadProviders = async () => {
     setLoading(true);
@@ -413,10 +483,14 @@ export default function AdminAIPage() {
 
   return (
     <div className="space-y-6 p-5 lg:p-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="premium-panel rounded-2xl p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">AI command center</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">AI Providers</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
+            Configure encrypted provider keys, routing priority, health checks, cooldowns, and automatic fallback from one place.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <InfoPopover label="AI routing help">
@@ -427,10 +501,16 @@ export default function AdminAIPage() {
             <span className="sr-only">Refresh providers</span>
           </button>
         </div>
+        </div>
+        {setupIssues > 0 && (
+          <div className="mt-4 rounded-2xl border border-edsync-amber/25 bg-edsync-amber/10 px-4 py-3 text-sm font-semibold text-edsync-amber">
+            {setupIssues} provider{setupIssues === 1 ? "" : "s"} need a saved key, readable encryption, or endpoint before health tests can run.
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="edsync-card p-4">
+        <div className="premium-card rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-edsync-subtle">Enabled routes</p>
             <ShieldCheck className="h-4 w-4 text-edsync-blue" />
@@ -438,7 +518,7 @@ export default function AdminAIPage() {
           <p className="mt-2 text-3xl font-bold">{summary.enabled}</p>
           <p className="text-xs text-edsync-subtle">{summary.total} stored</p>
         </div>
-        <div className="edsync-card p-4">
+        <div className="premium-card rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-edsync-subtle">Healthy</p>
             <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
@@ -446,7 +526,7 @@ export default function AdminAIPage() {
           <p className="mt-2 text-3xl font-bold">{summary.healthy}</p>
           <p className="text-xs text-edsync-subtle">{summary.errors} errors</p>
         </div>
-        <div className="edsync-card p-4">
+        <div className="premium-card rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-edsync-subtle">Capabilities</p>
             <Bot className="h-4 w-4 text-edsync-cyan" />
@@ -454,7 +534,7 @@ export default function AdminAIPage() {
           <p className="mt-2 text-3xl font-bold">{summary.chat}</p>
           <p className="text-xs text-edsync-subtle">{summary.embed} embed</p>
         </div>
-        <div className="edsync-card p-4">
+        <div className="premium-card rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-edsync-subtle">Recent runs</p>
             <Activity className="h-4 w-4 text-edsync-amber" />
@@ -468,7 +548,7 @@ export default function AdminAIPage() {
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-4">
-          <div className="edsync-card overflow-hidden p-0">
+          <div className="premium-surface overflow-visible rounded-2xl p-0">
             <div className="border-b border-edsync-border px-4 py-3">
               <h2 className="font-display text-xl font-bold">Routing Stack</h2>
             </div>
@@ -498,52 +578,18 @@ export default function AdminAIPage() {
                   </div>
                   {keyStateAction(provider) && <p className="mt-2 text-xs text-edsync-amber">{keyStateAction(provider)}</p>}
                   {provider.last_error && <p className="mt-2 text-xs text-edsync-red">{provider.last_error}</p>}
-                  <details className="mt-3 rounded-lg border border-edsync-border">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-semibold text-edsync-text" aria-label={`Provider actions for ${provider.name}`}>
-                      <span className="sr-only">Actions</span>
-                      <MoreVertical className="h-4 w-4 text-edsync-subtle" />
-                    </summary>
-                    <div className="grid grid-cols-2 gap-2 border-t border-edsync-border p-2">
-                    <button type="button" onClick={() => editProvider(provider)} className="btn-secondary justify-center px-3 py-2">
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => testProvider(provider)}
-                      className="btn-secondary justify-center px-3 py-2"
-                      disabled={testingId === provider.id}
-                    >
-                      <TestTube2 className="h-4 w-4" />
-                      {testingId === provider.id ? "Testing" : "Test"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => patchProviderAction(provider, "toggle", !provider.enabled)}
-                      className={`${provider.enabled ? "btn-secondary" : "btn-primary"} justify-center px-3 py-2`}
-                      disabled={busyId === provider.id}
-                    >
-                      {provider.enabled ? "Pause" : "Enable"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => patchProviderAction(provider, "reset_status")}
-                      className="btn-secondary justify-center px-3 py-2"
-                      disabled={busyId === provider.id}
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteProvider(provider)}
-                      className="btn-danger col-span-2 justify-center px-3 py-2"
-                      disabled={busyId === provider.id}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </button>
-                    </div>
-                  </details>
+                  <div className="mt-3 flex justify-end">
+                    <ProviderActionMenu
+                      provider={provider}
+                      testing={testingId === provider.id}
+                      busy={busyId === provider.id}
+                      onEdit={() => editProvider(provider)}
+                      onTest={() => testProvider(provider)}
+                      onToggle={() => patchProviderAction(provider, "toggle", !provider.enabled)}
+                      onReset={() => patchProviderAction(provider, "reset_status")}
+                      onDelete={() => deleteProvider(provider)}
+                    />
+                  </div>
                 </div>
               ))}
               {!loading && providers.length === 0 && (
@@ -598,52 +644,16 @@ export default function AdminAIPage() {
                         {keyStateAction(provider) && <p className="mt-2 max-w-[220px] text-xs text-edsync-amber">{keyStateAction(provider)}</p>}
                       </td>
                       <td className="px-4 py-3">
-                        <details className="relative">
-                          <summary className="btn-secondary w-fit cursor-pointer list-none px-3 py-2" aria-label={`Provider actions for ${provider.name}`}>
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </summary>
-                          <div className="absolute right-0 z-10 mt-2 grid w-48 gap-2 rounded-lg border border-edsync-border bg-edsync-card p-2 shadow-xl">
-                            <button type="button" onClick={() => editProvider(provider)} className="btn-secondary justify-start px-3 py-2">
-                              <Pencil className="h-4 w-4" />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => testProvider(provider)}
-                              className="btn-secondary justify-start px-3 py-2"
-                              disabled={testingId === provider.id}
-                            >
-                              <TestTube2 className="h-4 w-4" />
-                              {testingId === provider.id ? "Testing" : "Test"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => patchProviderAction(provider, "toggle", !provider.enabled)}
-                              className={`${provider.enabled ? "btn-secondary" : "btn-primary"} justify-start px-3 py-2`}
-                              disabled={busyId === provider.id}
-                            >
-                              {provider.enabled ? "Pause" : "Enable"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => patchProviderAction(provider, "reset_status")}
-                              className="btn-secondary justify-start px-3 py-2"
-                              disabled={busyId === provider.id}
-                            >
-                              Reset health
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteProvider(provider)}
-                              className="btn-danger justify-start px-3 py-2"
-                              disabled={busyId === provider.id}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </button>
-                          </div>
-                        </details>
+                        <ProviderActionMenu
+                          provider={provider}
+                          testing={testingId === provider.id}
+                          busy={busyId === provider.id}
+                          onEdit={() => editProvider(provider)}
+                          onTest={() => testProvider(provider)}
+                          onToggle={() => patchProviderAction(provider, "toggle", !provider.enabled)}
+                          onReset={() => patchProviderAction(provider, "reset_status")}
+                          onDelete={() => deleteProvider(provider)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -655,7 +665,7 @@ export default function AdminAIPage() {
             </div>
           </div>
 
-          <div className="edsync-card p-4">
+          <div className="premium-surface rounded-2xl p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-xl font-bold">Recent AI Runs</h2>
@@ -669,7 +679,7 @@ export default function AdminAIPage() {
             </div>
             <div className="grid gap-2">
               {recentRuns.slice(0, 8).map((run) => (
-                <div key={run.id} className="grid gap-2 rounded-lg border border-edsync-border px-3 py-2 text-sm md:grid-cols-[140px_1fr_120px_120px]">
+                <div key={run.id} className="grid gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-sm md:grid-cols-[140px_1fr_120px_120px]">
                   <span className={run.success ? "font-semibold text-edsync-emerald" : "font-semibold text-edsync-red"}>
                     {run.success ? "Success" : "Failed"}
                   </span>
@@ -684,7 +694,7 @@ export default function AdminAIPage() {
           </div>
         </section>
 
-        <aside className="edsync-card h-fit p-4 2xl:sticky 2xl:top-6">
+        <aside className="premium-surface h-fit rounded-2xl p-4 2xl:sticky 2xl:top-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit Provider" : "Add Provider"}</h2>
