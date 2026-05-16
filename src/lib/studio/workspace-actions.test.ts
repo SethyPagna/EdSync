@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   addSheetColumn,
   addSheetRow,
+  applySlideTheme,
   csvToSheet,
   deleteSheetColumn,
   deleteSheetRow,
   deleteSlide,
   duplicateSlide,
   moveSlide,
+  normalizeStudioSlide,
   sheetToCsv,
+  updateSlide,
   updateSheetCell,
   type StudioSlideSummary,
 } from "@/lib/studio/workspace-actions";
@@ -62,5 +65,34 @@ describe("Studio workspace actions", () => {
     expect(duplicated[1].title).toBe("One copy");
     expect(deleteSlide(duplicated, duplicated[1].id)).toHaveLength(2);
     expect(moveSlide(slides, "two", "up").map((slide) => slide.id)).toEqual(["two", "one"]);
+  });
+
+  it("normalizes slide authoring metadata and applies themes without losing content", () => {
+    const normalized = normalizeStudioSlide(slides[0]);
+    expect(normalized.kind).toBe("content");
+    expect(normalized.transition).toBe("fade");
+    expect(normalized.animation).toBe("rise");
+
+    const updated = updateSlide(slides, "one", {
+      kind: "quiz",
+      layout: "quiz",
+      body: "What is the central idea?",
+      transition: "slide_left",
+      animation: "scale",
+    });
+    expect(updated[0]).toMatchObject({
+      kind: "quiz",
+      layout: "quiz",
+      body: "What is the central idea?",
+      transition: "slide_left",
+      animation: "scale",
+    });
+
+    const themed = applySlideTheme(updated, { id: "focus-dark", colors: { primary: "#60a5fa" } });
+    expect(themed[0]).toMatchObject({
+      body: "What is the central idea?",
+      accent: "#60a5fa",
+      themeId: "focus-dark",
+    });
   });
 });
