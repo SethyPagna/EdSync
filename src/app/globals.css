@@ -303,7 +303,9 @@ h6 {
   .animate-slide-in,
   .animate-float,
   .animate-overlay-in,
-  .animate-reveal-soft {
+  .animate-reveal-soft,
+  .edsync-workflow-screen,
+  .edsync-scroll-slide {
     animation: none;
   }
 }
@@ -560,6 +562,103 @@ h6 {
   pointer-events: none;
 }
 
+.edsync-hero-appbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  padding-bottom: 0.8rem;
+}
+
+.edsync-hero-appbar span {
+  display: inline-block;
+  height: 0.6rem;
+  width: 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--subtle) 42%, transparent);
+}
+
+.edsync-hero-appbar strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--subtle);
+}
+
+.edsync-hero-studio-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 0.42fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.edsync-hero-editor,
+.edsync-hero-ai-panel,
+.edsync-hero-practice-strip {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.edsync-hero-editor {
+  border-radius: 1.45rem;
+  padding: 1rem;
+}
+
+.edsync-hero-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.edsync-hero-toolbar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--subtle);
+  padding: 0.44rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.edsync-hero-canvas {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
+.edsync-hero-ai-panel {
+  align-self: start;
+  border-radius: 1.35rem;
+  padding: 1rem;
+}
+
+.edsync-hero-practice-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  border-radius: 999px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.edsync-hero-practice-strip span:not(:first-child) {
+  border-radius: 999px;
+  background: rgba(var(--blue-rgb), 0.08);
+  color: var(--blue);
+  padding: 0.35rem 0.6rem;
+}
+
 .edsync-workflow-bridge,
 .edsync-workflow-showcase {
   margin-inline: calc(50% - 50vw);
@@ -670,6 +769,7 @@ h6 {
   padding: clamp(1rem, 2vw, 1.35rem);
   overflow: hidden;
   contain: layout paint style;
+  animation: workflowScreenSwap 0.34s ease both;
 }
 
 .edsync-workflow-browser {
@@ -857,6 +957,12 @@ h6 {
     animation-timeline: view();
     animation-range: entry 0% exit 82%;
   }
+
+  .edsync-scroll-slide {
+    animation: catalogSlideReveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 42%;
+  }
 }
 
 @keyframes workflowBridge {
@@ -873,6 +979,45 @@ h6 {
     opacity: 0.2;
     transform: translateY(-44px) scale(1.04);
   }
+}
+
+@keyframes workflowScreenSwap {
+  from {
+    opacity: 0;
+    transform: translateX(26px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes catalogSlideReveal {
+  0% {
+    opacity: 0.25;
+    transform: translateY(80px) scale(0.94);
+  }
+  38%,
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.edsync-scroll-slide {
+  position: relative;
+  transform-origin: center top;
+}
+
+.edsync-scroll-slide::before {
+  content: "";
+  position: absolute;
+  inset: 8% -3rem auto;
+  height: 14rem;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(var(--blue-rgb), 0.12), transparent 62%);
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {
@@ -898,6 +1043,10 @@ h6 {
   }
 
   .edsync-workflow-bridge-card {
+    grid-template-columns: 1fr;
+  }
+
+  .edsync-hero-studio-preview {
     grid-template-columns: 1fr;
   }
 
