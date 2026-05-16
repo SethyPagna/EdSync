@@ -5,10 +5,19 @@ import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/s
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
-  const { email, password } = (await request.json()) as {
+  const body = (await request.json().catch(() => null)) as {
     email?: string;
     password?: string;
-  };
+  } | null;
+
+  if (!body) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Invalid login request.", status: 400 },
+    }, { status: 400 });
+  }
+
+  const { email, password } = body;
 
   if (!email || !password) {
     return NextResponse.json({
