@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BookOpenCheck, Building2, Clock3, Globe2 } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Building2, Clock3, Globe2, Search } from "lucide-react";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
+import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 
 export async function generateMetadata({
   params,
@@ -21,16 +22,29 @@ export async function generateMetadata({
 
 export default async function OrganizationPortalPage({
   params,
+  searchParams,
 }: {
   params: { portalSlug: string };
+  searchParams?: {
+    q?: string;
+    price?: string;
+    difficulty?: string;
+    language?: string;
+    duration?: string;
+  };
 }) {
   const portals = await listPublicPortals();
   const portal = portals.find((item) => item.slug === params.portalSlug);
   if (!portal) notFound();
 
+  const filters = normalizeCatalogFilters({
+    ...searchParams,
+    portal: portal.slug,
+    tenant: portal.tenant_slug,
+  });
+  const hasFilters = hasCatalogFilters({ ...filters, portalSlug: null, tenantSlug: null });
   const items = await listPublicCatalog({
-    portalSlug: portal.slug,
-    tenantSlug: portal.tenant_slug,
+    ...filters,
   });
 
   return (
@@ -70,6 +84,41 @@ export default async function OrganizationPortalPage({
               <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.audience}</span>
               <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{items.length} courses</span>
             </div>
+            <form className="mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+              <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
+                <label className="relative">
+                  <span className="sr-only">Search this academy</span>
+                  <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
+                  <input
+                    name="q"
+                    defaultValue={filters.query}
+                    className="edsync-input pl-9"
+                    placeholder="Search this academy"
+                  />
+                </label>
+                <select name="price" defaultValue={filters.price} className="edsync-input min-w-28">
+                  <option value="all">All prices</option>
+                  <option value="free">Free</option>
+                  <option value="paid">Paid</option>
+                </select>
+                <input
+                  name="difficulty"
+                  defaultValue={filters.difficulty}
+                  className="edsync-input min-w-28"
+                  placeholder="Difficulty"
+                />
+                <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-32">
+                  <option value="">Any duration</option>
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="60">60 min</option>
+                  <option value="120">2 hours</option>
+                </select>
+                <button type="submit" className="btn-primary justify-center">
+                  Filter
+                </button>
+              </div>
+            </form>
           </div>
           <div className="rounded-lg border border-edsync-border bg-edsync-card p-5">
             <Globe2 className="mb-3 h-7 w-7 text-edsync-blue" />
@@ -80,7 +129,16 @@ export default async function OrganizationPortalPage({
           </div>
         </div>
 
-        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-display text-2xl font-bold">Courses</h2>
+            {hasFilters && (
+              <Link href={`/org/${portal.slug}`} className="text-sm font-semibold text-edsync-blue hover:underline">
+                Clear filters
+              </Link>
+            )}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
             <Link key={item.id} href={item.detailUrl} className="group overflow-hidden rounded-lg border border-edsync-border bg-edsync-card transition hover:border-edsync-blue/40 hover:shadow-card-hover">
               <div className="aspect-video bg-edsync-surface">
@@ -117,6 +175,7 @@ export default async function OrganizationPortalPage({
               </div>
             </Link>
           ))}
+          </div>
         </section>
 
         {items.length === 0 && (
