@@ -9,6 +9,7 @@ import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRo
 
 type Role = "teacher" | "student";
 type AccountType = "organization" | "individual";
+type OrganizationMode = "join" | "create";
 type SignupStep = "space" | "role" | "account";
 
 const roleDetails = {
@@ -32,7 +33,9 @@ function SignupForm() {
   const edsync = useMemo(() => createClient(), []);
   const [step, setStep] = useState<SignupStep>("space");
   const [accountType, setAccountType] = useState<AccountType>("organization");
+  const [organizationMode, setOrganizationMode] = useState<OrganizationMode>("join");
   const [organizationName, setOrganizationName] = useState("");
+  const [organizationCode, setOrganizationCode] = useState("");
   const [role, setRole] = useState<Role>(initialRole);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,7 +65,9 @@ function SignupForm() {
           full_name: fullName,
           role,
           account_type: accountType,
-          organization_name: accountType === "organization" ? organizationName : undefined,
+          organization_mode: accountType === "organization" ? organizationMode : undefined,
+          organization_name: accountType === "organization" && organizationMode === "create" ? organizationName : undefined,
+          organization_code: accountType === "organization" && organizationMode === "join" ? organizationCode : undefined,
         },
         emailRedirectTo: `${window.location.origin}/auth/login`,
       },
@@ -104,7 +109,11 @@ function SignupForm() {
             theme: "light",
             text_size: "medium",
             onboarding_space: accountType,
-            onboarding_organization: accountType === "organization" ? organizationName : null,
+            onboarding_organization: accountType === "organization"
+              ? organizationMode === "create"
+                ? organizationName
+                : organizationCode
+              : null,
           },
           subjects: [],
           interests: [],
@@ -192,23 +201,57 @@ function SignupForm() {
             })}
           </div>
           {accountType === "organization" && (
-            <div>
+            <div className="space-y-3 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {([
+                  ["join", "Join existing"],
+                  ["create", "Create new"],
+                ] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setOrganizationMode(mode)}
+                    className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                      organizationMode === mode
+                        ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
+                        : "border-edsync-border bg-edsync-card text-edsync-subtle hover:border-edsync-blue/50"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-                Organization name
+                {organizationMode === "join" ? "Organization code" : "Organization name"}
               </label>
               <input
                 type="text"
-                value={organizationName}
-                onChange={(event) => setOrganizationName(event.target.value)}
-                placeholder="Example Academy"
+                value={organizationMode === "join" ? organizationCode : organizationName}
+                onChange={(event) => {
+                  if (organizationMode === "join") {
+                    setOrganizationCode(event.target.value);
+                  } else {
+                    setOrganizationName(event.target.value);
+                  }
+                }}
+                placeholder={organizationMode === "join" ? "example-academy" : "Example Academy"}
                 className="edsync-input"
               />
+              <p className="text-xs leading-5 text-edsync-subtle">
+                {organizationMode === "join"
+                  ? "Use the code or slug shared by your school, company, or academy."
+                  : "Create an organization you own and manage."}
+              </p>
             </div>
           )}
           <button
             type="button"
             onClick={() => {
-              if (accountType === "organization" && !organizationName.trim()) {
+              if (accountType === "organization" && organizationMode === "join" && !organizationCode.trim()) {
+                toast.error("Enter your organization code first.");
+                return;
+              }
+              if (accountType === "organization" && organizationMode === "create" && !organizationName.trim()) {
                 toast.error("Enter your organization name first.");
                 return;
               }
@@ -226,7 +269,9 @@ function SignupForm() {
         <div className="space-y-4">
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
-              ? `Organization workspace: ${organizationName}`
+              ? organizationMode === "create"
+                ? `New organization: ${organizationName}`
+                : `Joining organization: ${organizationCode}`
               : "Individual workspace"}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -269,7 +314,9 @@ function SignupForm() {
         <div className="space-y-5">
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
-              ? `${organizationName} - ${roleDetails[role].label}`
+              ? organizationMode === "create"
+                ? `${organizationName} - ${roleDetails[role].label}`
+                : `${organizationCode} - ${roleDetails[role].label}`
               : `Individual - ${roleDetails[role].label}`}
           </div>
 
