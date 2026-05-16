@@ -4,13 +4,10 @@ import { memo, startTransition, useCallback, useEffect, useRef, useState } from 
 import Link from "next/link";
 import {
   ArrowRight,
-  Bot,
   CalendarCheck,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  FileText,
   MessageSquareText,
   Presentation,
   ShieldCheck,
@@ -183,99 +180,84 @@ const slides: WorkflowSlide[] = [
   },
 ];
 
-const WorkflowScreen = memo(function WorkflowScreen({ slide }: { slide: WorkflowSlide }) {
+const WorkflowScreen = memo(function WorkflowScreen({
+  slide,
+  index,
+}: {
+  slide: WorkflowSlide;
+  index: number;
+}) {
   const ActiveIcon = slide.icon;
 
   return (
     <article className="edsync-workflow-screen" aria-label={slide.title}>
-      <div className="edsync-workflow-browser">
-        <div className="flex gap-1.5" aria-hidden="true">
-          <span />
-          <span />
-          <span />
+      <div className="edsync-workflow-copy">
+        <div className="edsync-workflow-count">
+          <ActiveIcon className="h-4 w-4" />
+          {String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
         </div>
-        <span className="truncate text-xs font-bold text-edsync-subtle">{slide.route}</span>
-        <Link href={slide.route} className="edsync-workflow-open">
-          Open
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+        <h3>{slide.headline}</h3>
+        <p>{slide.subtitle}</p>
+        <div className="edsync-workflow-checklist">
+          {slide.sideRows.slice(0, 3).map((row) => (
+            <span key={row}>
+              <CheckCircle2 className="h-4 w-4" />
+              {row}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <div className="edsync-workflow-hero-row">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-edsync-bg ${slide.accent}`}>
-              <ActiveIcon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-edsync-subtle">{slide.title}</p>
-              <h3 className="font-display text-3xl font-bold leading-tight sm:text-5xl">{slide.headline}</h3>
+      <div className="edsync-workflow-preview">
+        <div className="edsync-workflow-browser">
+          <div className="flex gap-1.5" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className="truncate text-xs font-bold text-edsync-subtle">{slide.route}</span>
+          <Link href={slide.route} className="edsync-workflow-open">
+            Open
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        <div className="edsync-workflow-product">
+          <aside className="edsync-workflow-sidepanel">
+            {slide.tabs.map((tab, tabIndex) => (
+              <span key={tab} className={tabIndex === 0 ? "is-active" : ""}>
+                {tab}
+              </span>
+            ))}
+          </aside>
+
+          <div className="edsync-workflow-canvas">
+            <div className="edsync-workflow-preview-head">
+              <div>
+                <p>{slide.title}</p>
+                <h4>{slide.sideTitle}</h4>
+              </div>
+              <span>{slide.metrics[0]?.value}</span>
+            </div>
+            <div className="edsync-workflow-preview-rows">
+              {slide.rows.map((row) => (
+                <span key={row.title}>
+                  <strong>{row.title}</strong>
+                  <small>{row.detail}</small>
+                  <em>{row.status}</em>
+                </span>
+              ))}
+            </div>
+            <div className="edsync-workflow-preview-metrics">
+              {slide.metrics.map((metric) => (
+                <span key={metric.label}>
+                  <strong>{metric.value}</strong>
+                  <small>{metric.label}</small>
+                </span>
+              ))}
             </div>
           </div>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">{slide.subtitle}</p>
         </div>
-      </div>
-
-      <div className="edsync-workflow-tabs" aria-label={`${slide.title} preview tabs`}>
-        {slide.tabs.map((tab, index) => (
-          <span key={tab} className={index === 0 ? "is-active" : ""}>
-            {tab}
-          </span>
-        ))}
-      </div>
-
-      <div className="edsync-workflow-product">
-        <div className="edsync-workflow-canvas">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {slide.metrics.map((metric) => (
-              <div key={metric.label} className="edsync-workflow-stat">
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 grid gap-3">
-            {slide.rows.map((row, index) => (
-              <div key={row.title} className="edsync-workflow-row">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-edsync-blue/10 text-edsync-blue">
-                  {index === 0 ? <FileText className="h-4 w-4" /> : index === 1 ? <Bot className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-bold text-edsync-text">{row.title}</span>
-                  <span className="block truncate text-sm text-edsync-subtle">{row.detail}</span>
-                </span>
-                <span className="edsync-workflow-status">{row.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <aside className="edsync-workflow-sidepanel">
-          <div className="flex items-center justify-between gap-3">
-            <h4 className="font-display text-xl font-bold">{slide.sideTitle}</h4>
-            <Clock3 className="h-4 w-4 text-edsync-subtle" />
-          </div>
-          <div className="mt-4 grid gap-2">
-            {slide.sideRows.map((row) => (
-              <div key={row} className="edsync-workflow-side-row">
-                <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
-                <span>{row}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 grid gap-2">
-            {slide.actions.map((action, index) => (
-              <button
-                key={action}
-                type="button"
-                className={index === 0 ? "btn-primary justify-center px-3 py-2 text-sm" : "btn-secondary justify-center px-3 py-2 text-sm"}
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-        </aside>
       </div>
     </article>
   );
@@ -377,38 +359,50 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
         <div className="edsync-workflow-sticky">
           <div className="edsync-workflow-heading">
             <div>
-              <h2 className="font-display text-4xl font-bold leading-tight sm:text-6xl">
-                Slide through the actual app.
-              </h2>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-edsync-subtle">
-                The gallery advances automatically. Use the dots or arrows to inspect each route without moving the page.
-              </p>
+              <span className="edsync-workflow-eyebrow">
+                <Wand2 className="h-4 w-4" />
+                Scroll workflow
+              </span>
             </div>
+            <nav aria-label="Workflow sections">
+              <a href="#top">Hero</a>
+              <a href="#showcase">Workflow</a>
+              <a href="#catalog-search-panel">Workspace</a>
+            </nav>
+          </div>
+
+          <div className="edsync-workflow-stage">
+            <WorkflowScreen key={activeSlide.id} slide={activeSlide} index={activeIndex} />
           </div>
 
           <div className="edsync-workflow-controls" aria-label="Workflow gallery controls">
             <button type="button" className="premium-icon-button" onClick={() => goToSlide(activeIndex - 1)} aria-label="Previous workflow slide">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <div className="edsync-workflow-dots">
-              {slides.map((slide, index) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => goToSlide(index)}
-                  className={activeIndex === index ? "is-active" : ""}
-                  aria-label={`Show ${slide.title}`}
-                  aria-current={activeIndex === index ? "true" : undefined}
-                />
-              ))}
+            <div className="edsync-workflow-bottom-tabs">
+              {slides.map((slide, index) => {
+                const SlideIcon = slide.icon;
+                return (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => goToSlide(index)}
+                    className={activeIndex === index ? "is-active" : ""}
+                    aria-label={`Show ${slide.title}`}
+                    aria-current={activeIndex === index ? "true" : undefined}
+                  >
+                    <SlideIcon className="h-4 w-4" />
+                    <span>
+                      <strong>{slide.shortTitle}</strong>
+                      <small>{String(index + 1).padStart(2, "0")}</small>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <button type="button" className="premium-icon-button" onClick={() => goToSlide(activeIndex + 1)} aria-label="Next workflow slide">
               <ChevronRight className="h-4 w-4" />
             </button>
-          </div>
-
-          <div className="edsync-workflow-stage">
-            <WorkflowScreen key={activeSlide.id} slide={activeSlide} />
           </div>
         </div>
 
