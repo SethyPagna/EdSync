@@ -19,7 +19,7 @@
 | --- | --- | --- | --- |
 | 1 | Product Inventory And Baseline | Complete | Existing features, routes, and data models are mapped in `docs/BASELINE_INVENTORY.md`. |
 | 2 | Workflow Map And Navigation Model | Complete | Teacher workflow, navigation handoffs, and saved states are mapped in `docs/WORKFLOW_NAVIGATION_MODEL.md`. |
-| 3 | Core Learning Object Architecture | Not started | Shared content model powers lessons, slides, quizzes, discussions, and activities. |
+| 3 | Core Learning Object Architecture | In progress | Shared content model foundation exists; page and API adoption is next. |
 | 4 | Studio Component Refactor | Not started | Studio is split into maintainable modules. |
 | 5 | Template System Foundation | Not started | Reusable generated/manual templates are modeled and searchable. |
 | 6 | Template Application And Auto Update | Not started | Template changes update full lesson packages while preserving content. |
@@ -53,9 +53,11 @@
 - [x] Define the teacher idea-to-assignment workflow.
 - [x] Define canonical handoffs between Studio, Lessons, Slides, Practice, Discussions, and Analytics.
 - [x] Define saved-state labels and where they appear in navigation.
-- [ ] Define shared `LearningObject`, `LearningBlock`, and workflow-state types.
-- [ ] Add legacy adapters for Studio documents, lesson sections, quiz questions, and content blocks.
-- [ ] Add tests for normalization from existing records into the shared model.
+- [x] Define shared `LearningObject`, `LearningBlock`, and workflow-state types.
+- [x] Add legacy adapters for Studio documents, lesson sections, quiz questions, and content blocks.
+- [x] Add tests for normalization from existing records into the shared model.
+- [ ] Export shared learning-object helpers into the first teacher lesson or Studio integration point.
+- [ ] Replace duplicated section/quiz/content-block normalization in large page files with shared adapters.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
@@ -77,6 +79,7 @@
 | 2026-05-16 | Start architecture work by extracting large teacher lesson, student lesson, and Studio files before adding more heavy UI. | The largest files are 2355, 2111, 1782, and 1394 lines and concentrate too much logic. |
 | 2026-05-16 | Use one product spine from catalog or organization portal through Studio, assignment, student practice, grade events, feedback, and content improvement. | The app has many capable pages; the main maturity gap is making them behave like one learning loop. |
 | 2026-05-16 | Standardize saved states as local draft, server draft, needs review, published, assigned, archived, and conflict. | Users need consistent status language across Studio, lessons, practice, assignments, and catalog publishing. |
+| 2026-05-16 | Keep the first learning-object layer as adapters over current tables instead of a schema-breaking rewrite. | Existing routes and D1 data stay stable while Studio, lessons, quizzes, and content blocks converge through shared contracts. |
 
 ---
 
@@ -87,6 +90,7 @@
 | 2026-05-16 | Planning docs | Manual Markdown review | Passed |
 | 2026-05-16 | Phase 1 inventory | Route, migration, schema, API, Studio, and large-file scan | Passed |
 | 2026-05-16 | Phase 2 workflow model | Workflow, navigation, handoff, saved-state, and next-action review | Passed |
+| 2026-05-16 | Phase 3 learning-object foundation | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts` | Passed |
 
 ---
 
@@ -119,6 +123,13 @@
 - Student flows are grouped into home, learn, practice, discuss, reflect, and feedback.
 - Handoff payloads require shared metadata such as tenant, owner, source, title, audience, objectives, tags, language, duration, difficulty, status, and version.
 - Saved states are standardized as `Local draft`, `Server draft`, `Needs review`, `Published`, `Assigned`, `Archived`, and `Conflict`.
+
+## Phase 3 Foundation Summary
+
+- Added `src/lib/learning/objects.ts` with `LearningObject`, `LearningBlock`, `LearningWorkflowState`, source types, block types, state labels, and normalization helpers.
+- Added adapters for legacy Studio documents, lesson sections, quiz questions, and content blocks.
+- Added focused tests in `src/lib/learning/objects.test.ts` for state labels, tag normalization, Studio conversion, lesson section conversion, quiz conversion, content block conversion, and composed legacy objects.
+- Phase 3 remains in progress until large Studio/lesson pages consume the shared layer and duplicated normalization is removed.
 
 ## Update Protocol
 
