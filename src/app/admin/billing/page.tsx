@@ -141,12 +141,26 @@ export default function AdminBillingPage() {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState<PriceDraft>(emptyPrice);
   const [message, setMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const load = () =>
-    fetch("/api/billing")
+  const load = () => {
+    setLoading(true);
+    setLoadError("");
+    return fetch("/api/billing")
       .then((res) => res.json())
-      .then((json: { data: BillingPayload | null }) => setPayload(json.data));
+      .then((json: { data: BillingPayload | null; error?: string | null }) => {
+        if (json.error || !json.data) throw new Error(json.error || "Catalog and billing data unavailable.");
+        setPayload(json.data);
+        setLoadError("");
+      })
+      .catch((error) => {
+        setLoadError(error instanceof Error ? error.message : "Catalog and billing data unavailable.");
+        setPayload(null);
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     load();
@@ -311,6 +325,23 @@ export default function AdminBillingPage() {
       {message && (
         <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">
           {message}
+        </div>
+      )}
+
+      {loading && (
+        <div className="rounded-lg border border-edsync-border bg-edsync-card p-6 text-sm text-edsync-subtle">
+          Loading catalog and billing controls...
+        </div>
+      )}
+
+      {loadError && !loading && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{loadError}</span>
+            <button type="button" className="btn-secondary w-fit px-3 py-2 text-sm" onClick={load}>
+              Retry
+            </button>
+          </div>
         </div>
       )}
 
