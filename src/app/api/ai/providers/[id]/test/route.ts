@@ -20,6 +20,20 @@ async function enqueueProviderTest(providerId: string, provider: string, status:
   }
 }
 
+function statusForProviderTestError(message: string) {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("api key") ||
+    normalized.includes("endpoint") ||
+    normalized.includes("encryption") ||
+    normalized.includes("decrypt")
+  ) {
+    return 422;
+  }
+  if (normalized.includes("busy") || normalized.includes("rate")) return 429;
+  return 502;
+}
+
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireAdmin();
   if (auth.response) return auth.response;
@@ -68,6 +82,6 @@ export async function POST(_request: Request, { params }: { params: { id: string
     return NextResponse.json({
       data: { success: false, provider: updated ? serializeProvider(updated) : null },
       error: message,
-    }, { status: 400 });
+    }, { status: statusForProviderTestError(message) });
   }
 }
