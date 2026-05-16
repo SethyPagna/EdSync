@@ -1,7 +1,6 @@
 name = "edsync-automation-dev"
 main = "cloudflare/workers/automation.ts"
 compatibility_date = "2026-05-12"
-pages_build_output_dir = ".vercel/output/static"
 
 [[d1_databases]]
 binding = "EDSYNC_DB"
