@@ -85,7 +85,7 @@ export default async function OrganizationPortalPage({
               <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{items.length} courses</span>
             </div>
             <form className="mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
-              <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
                 <label className="relative">
                   <span className="sr-only">Search this academy</span>
                   <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
@@ -96,7 +96,7 @@ export default async function OrganizationPortalPage({
                     placeholder="Search this academy"
                   />
                 </label>
-                <select name="price" defaultValue={filters.price} className="edsync-input min-w-28">
+                <select name="price" defaultValue={filters.price} className="edsync-input min-w-0">
                   <option value="all">All prices</option>
                   <option value="free">Free</option>
                   <option value="paid">Paid</option>
@@ -104,10 +104,10 @@ export default async function OrganizationPortalPage({
                 <input
                   name="difficulty"
                   defaultValue={filters.difficulty}
-                  className="edsync-input min-w-28"
+                  className="edsync-input min-w-0"
                   placeholder="Difficulty"
                 />
-                <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-32">
+                <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-0">
                   <option value="">Any duration</option>
                   <option value="15">15 min</option>
                   <option value="30">30 min</option>
