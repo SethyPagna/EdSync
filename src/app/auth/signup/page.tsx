@@ -12,6 +12,10 @@ type AccountType = "organization" | "individual";
 type OrganizationMode = "join" | "create";
 type SignupStep = "space" | "role" | "account";
 
+function normalizeOrganizationCode(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 const roleDetails = {
   teacher: {
     label: "Teacher",
@@ -28,14 +32,15 @@ const roleDetails = {
 function SignupForm() {
   const searchParams = useSearchParams();
   const preset = searchParams.get("role");
+  const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const initialRole: Role = preset === "teacher" ? "teacher" : "student";
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
   const [step, setStep] = useState<SignupStep>("space");
-  const [accountType, setAccountType] = useState<AccountType>("organization");
+  const [accountType, setAccountType] = useState<AccountType>(presetOrganization ? "organization" : "individual");
   const [organizationMode, setOrganizationMode] = useState<OrganizationMode>("join");
   const [organizationName, setOrganizationName] = useState("");
-  const [organizationCode, setOrganizationCode] = useState("");
+  const [organizationCode, setOrganizationCode] = useState(presetOrganization);
   const [role, setRole] = useState<Role>(initialRole);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -99,6 +104,7 @@ function SignupForm() {
     }
 
     if (data.session && data.user) {
+      const tenantSlug = data.user.user_metadata?.tenant_slug || normalizeOrganizationCode(organizationCode);
       await edsync.from("profiles").upsert(
         {
           id: data.user.id,
@@ -121,8 +127,19 @@ function SignupForm() {
         { onConflict: "id" },
       );
 
+      window.localStorage.setItem(
+        "edsync-auth-workspace",
+        JSON.stringify({
+          type: accountType,
+          organizationCode: accountType === "organization" ? tenantSlug : null,
+          organizationName: data.user.user_metadata?.tenant_name || organizationName || null,
+          signedInAt: new Date().toISOString(),
+        }),
+      );
+
       toast.success("Account created.");
-      router.push(role === "teacher" ? "/teacher/dashboard" : "/student/dashboard");
+      const destination = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
+      router.push(accountType === "organization" && tenantSlug ? `${destination}?tenant=${encodeURIComponent(tenantSlug)}` : destination);
       router.refresh();
     }
   };
