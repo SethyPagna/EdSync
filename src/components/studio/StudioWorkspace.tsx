@@ -57,6 +57,11 @@ import {
   updateContentBlock,
 } from "@/lib/studio/content-blocks";
 import {
+  contentBlockToLearningBlock,
+  getLearningStateLabel,
+  normalizeLearningWorkflowState,
+} from "@/lib/learning/objects";
+import {
   archiveStudioItem,
   hardDeleteStudioItem,
   listStudioHistory,
@@ -337,6 +342,15 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const visibleContentBlocks = useMemo(
     () => contentBlocks.filter((block) => includeArchivedBlocks || block.status !== "archived").slice(0, 8),
     [contentBlocks, includeArchivedBlocks],
+  );
+  const visibleLearningBlocks = useMemo(
+    () =>
+      visibleContentBlocks.map((block) => ({
+        block,
+        learningBlock: contentBlockToLearningBlock(block),
+        stateLabel: getLearningStateLabel(normalizeLearningWorkflowState(block.status)),
+      })),
+    [visibleContentBlocks],
   );
 
   const updateDraft = (next: StudioDraftValue) => {
@@ -1244,7 +1258,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       Saved blocks, worksheets, and deck patterns appear here after you use Save Block.
                     </div>
                   )}
-                  {visibleContentBlocks.map((block) => (
+                  {visibleLearningBlocks.map(({ block, learningBlock, stateLabel }) => (
                     <div key={block.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
                       <button
                         type="button"
@@ -1253,7 +1267,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       >
                         <span className="block text-sm font-semibold">{block.title}</span>
                         <span className="mt-1 block text-xs capitalize text-edsync-subtle">
-                          {block.status} block - v{block.version}
+                          {stateLabel} - {learningBlock.type.replace("_", " ")} - v{block.version}
                         </span>
                       </button>
                       <div className="mt-3 flex flex-wrap gap-2">
