@@ -9,9 +9,7 @@ import {
   LogIn,
   Menu,
   PanelTop,
-  Sparkles,
   UserPlus,
-  UsersRound,
 } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -63,12 +61,9 @@ export default function PublicTopbar({
 }: PublicTopbarProps) {
   const resolvedOrganizationCode = organizationCode || organizationSlug || portalSlug;
   const organizationHref = portalSlug ? `/org/${portalSlug}` : null;
-  const orgLoginHref = resolvedOrganizationCode
-    ? `/auth/login?org=${encodeURIComponent(resolvedOrganizationCode)}`
-    : "/auth/login?mode=organization";
   const orgSignupHref = resolvedOrganizationCode
     ? `/auth/signup?org=${encodeURIComponent(resolvedOrganizationCode)}`
-    : "/auth/signup?mode=organization";
+    : "/auth/signup";
 
   return (
     <header className="sticky top-0 z-30 border-b border-edsync-border bg-edsync-bg/94 shadow-sm backdrop-blur-xl">
@@ -147,10 +142,6 @@ export default function PublicTopbar({
         <div className="hidden items-center gap-2 xl:flex">
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
-          <Link href={orgLoginHref} className="btn-secondary justify-center px-4 py-2 text-sm">
-            <Building2 className="h-4 w-4" />
-            Enter organization
-          </Link>
           <Link href="/auth/login" className="btn-ghost justify-center px-3 py-2 text-sm">
             <LogIn className="h-4 w-4" />
             Sign in
@@ -221,10 +212,6 @@ export default function PublicTopbar({
                 })}
 
                 <div className="grid gap-2 border-t border-edsync-border pt-3">
-                  <Link href={orgLoginHref} className="btn-secondary justify-center px-4 py-2 text-sm">
-                    <Building2 className="h-4 w-4" />
-                    Enter organization
-                  </Link>
                   <Link href="/auth/login" className="btn-ghost justify-center px-3 py-2 text-sm">
                     <LogIn className="h-4 w-4" />
                     Sign in
@@ -237,23 +224,6 @@ export default function PublicTopbar({
               </div>
             </div>
           </details>
-        </div>
-      </div>
-
-      <div className="hidden border-t border-edsync-border/70 bg-edsync-surface/65 md:block">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-2 text-xs font-semibold text-edsync-subtle">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-edsync-card px-2.5 py-1 shadow-sm">
-            <Building2 className="h-3.5 w-3.5 text-edsync-emerald" />
-            Organization portals
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-edsync-card px-2.5 py-1 shadow-sm">
-            <UsersRound className="h-3.5 w-3.5 text-edsync-amber" />
-            Teacher and student workspaces
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-edsync-card px-2.5 py-1 shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-edsync-blue" />
-            Studio, practice, and progress
-          </span>
         </div>
       </div>
     </header>
