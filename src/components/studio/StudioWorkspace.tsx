@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   ArrowDown,
@@ -38,6 +39,11 @@ import {
   AI_PROMPT_CONTRACTS,
   DESIGN_BLOCKS,
   DESIGN_TEMPLATES,
+  LESSON_SLIDE_ANIMATIONS,
+  LESSON_SLIDE_KINDS,
+  LESSON_SLIDE_LAYOUTS,
+  LESSON_SLIDE_TRANSITIONS,
+  LESSON_TEMPLATE_PRESETS,
   PRACTICE_MODES,
   SLIDE_THEMES,
   STUDIO_TABS,
@@ -69,6 +75,7 @@ import {
 import {
   addSheetColumn,
   addSheetRow,
+  applySlideTheme,
   createSlide,
   csvToSheet,
   deleteSheetColumn,
@@ -76,8 +83,11 @@ import {
   deleteSlide,
   duplicateSlide,
   moveSlide,
+  normalizeStudioSlide,
   sheetToCsv,
+  updateSlide,
   updateSheetCell as updateSheetCellValue,
+  type StudioSlideSummary,
 } from "@/lib/studio/workspace-actions";
 import type { StudioItemKind } from "@/types";
 
@@ -94,7 +104,7 @@ type StudioDraftValue = {
   html: string;
   plainText: string;
   sheet: string[][];
-  slides: Array<{ id: string; title: string; notes: string; accent: string }>;
+  slides: StudioSlideSummary[];
 };
 
 const defaultDraft: StudioDraftValue = {
@@ -106,9 +116,48 @@ const defaultDraft: StudioDraftValue = {
     ["Accuracy", "Some errors", "Mostly accurate", "Precise and complete"],
   ],
   slides: [
-    { id: "slide-1", title: "Lesson Title", notes: "Open with the learning goal.", accent: "#2563eb" },
-    { id: "slide-2", title: "Key Idea", notes: "Explain the concept with one example.", accent: "#10b981" },
-    { id: "slide-3", title: "Practice", notes: "Ask students to try, compare, and revise.", accent: "#f59e0b" },
+    {
+      id: "slide-1",
+      title: "Lesson Title",
+      body: "Name the outcome and why it matters.",
+      notes: "Open with the learning goal.",
+      accent: "#2563eb",
+      kind: "content",
+      layout: "title",
+      themeId: "clear-classroom",
+      transition: "fade",
+      transitionDurationMs: 450,
+      animation: "rise",
+      animationDurationMs: 480,
+    },
+    {
+      id: "slide-2",
+      title: "Key Idea",
+      body: "Explain the concept with one concrete example.",
+      notes: "Pause after the example and ask students to restate the pattern.",
+      accent: "#10b981",
+      kind: "content",
+      layout: "content",
+      themeId: "clear-classroom",
+      transition: "fade",
+      transitionDurationMs: 450,
+      animation: "fade_in",
+      animationDurationMs: 420,
+    },
+    {
+      id: "slide-3",
+      title: "Practice",
+      body: "Students try, compare, and revise.",
+      notes: "Use this as a quick check before moving on.",
+      accent: "#f59e0b",
+      kind: "interactive",
+      layout: "activity",
+      themeId: "warm-workshop",
+      transition: "slide_left",
+      transitionDurationMs: 520,
+      animation: "scale",
+      animationDurationMs: 360,
+    },
   ],
 };
 
@@ -164,7 +213,7 @@ function serverItemToDraft(item: StudioServerItem): StudioDraftValue {
     plainText: item.plainText || (typeof item.content.plainText === "string" ? item.content.plainText : defaultDraft.plainText),
     sheet: Array.isArray(item.content.sheet) ? (item.content.sheet as string[][]) : defaultDraft.sheet,
     slides: Array.isArray(item.content.slides)
-      ? (item.content.slides as StudioDraftValue["slides"])
+      ? (item.content.slides as StudioDraftValue["slides"]).map(normalizeStudioSlide)
       : defaultDraft.slides,
   };
 }
@@ -270,12 +319,16 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   }, [draft]);
 
   const activeSlide = useMemo(
-    () => draft.slides.find((slide) => slide.id === selectedSlideId) ?? draft.slides[0],
+    () => normalizeStudioSlide(draft.slides.find((slide) => slide.id === selectedSlideId) ?? draft.slides[0]),
     [draft.slides, selectedSlideId],
   );
   const activeSlideIndex = useMemo(
     () => Math.max(draft.slides.findIndex((slide) => slide.id === selectedSlideId), 0),
     [draft.slides, selectedSlideId],
+  );
+  const activeSlideTheme = useMemo(
+    () => SLIDE_THEMES.find((theme) => theme.id === activeSlide.themeId) ?? SLIDE_THEMES[0],
+    [activeSlide.themeId],
   );
   const sheetColumnCount = useMemo(
     () => Math.max(...draft.sheet.map((row) => row.length), 1),
@@ -301,6 +354,18 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     const nextSlide = createSlide(draft.slides, SLIDE_THEMES[draft.slides.length % SLIDE_THEMES.length].colors.primary);
     updateDraft({ ...draft, slides: [...draft.slides, nextSlide] });
     setSelectedSlideId(nextSlide.id);
+  };
+
+  const updateActiveSlide = (patch: Partial<StudioSlideSummary>) => {
+    updateDraft({ ...draft, slides: updateSlide(draft.slides, activeSlide.id, patch) });
+  };
+
+  const applyLessonTemplate = (templateId: string) => {
+    const preset = LESSON_TEMPLATE_PRESETS.find((item) => item.id === templateId);
+    const theme = SLIDE_THEMES.find((item) => item.id === preset?.themeId);
+    if (!preset || !theme) return;
+    updateDraft({ ...draft, slides: applySlideTheme(draft.slides, theme) });
+    setStatusMessage(`${preset.label} template applied`);
   };
 
   const updateSheetCell = (rowIndex: number, columnIndex: number, value: string) => {
@@ -870,103 +935,237 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               )}
 
               {activeKind === "slide" && (
-                <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)]">
-                  <div className="space-y-2">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-semibold text-edsync-subtle">
+                    <span>Modules</span>
+                    <ArrowRight className="h-3 w-3" />
+                    <span>{itemTitle || "Untitled lesson"}</span>
+                    <ArrowRight className="h-3 w-3" />
+                    <span className="text-edsync-blue">Slide {activeSlideIndex + 1}</span>
+                    <span className="ml-auto rounded-full bg-edsync-surface px-2 py-1 capitalize">
+                      {activeSlide.kind} - {activeSlide.layout?.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)_260px]">
+                    <div className="space-y-2">
+                      <div className="rounded-lg border border-edsync-border bg-edsync-card p-2">
+                        <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-edsync-subtle">
+                          Slides
+                        </p>
                     {draft.slides.map((slide, index) => (
                       <button
                         key={slide.id}
                         type="button"
                         onClick={() => setSelectedSlideId(slide.id)}
-                        className={`w-full rounded-lg border p-3 text-left transition ${
+                        className={`mb-2 w-full rounded-lg border p-2 text-left transition ${
                           selectedSlideId === slide.id
                             ? "border-edsync-blue bg-edsync-blue/10"
                             : "border-edsync-border bg-edsync-card hover:border-edsync-blue/40"
                         }`}
                       >
-                        <span className="text-xs font-semibold text-edsync-subtle">Slide {index + 1}</span>
-                        <span className="mt-1 block truncate font-semibold">{slide.title}</span>
+                        <span
+                          className="block aspect-video rounded-md border border-edsync-border p-2 text-xs shadow-inner"
+                          style={{ backgroundColor: slide.accent || activeSlideTheme.colors.background }}
+                        >
+                          <span className="rounded bg-white/85 px-1.5 py-0.5 font-bold text-slate-900">
+                            {index + 1}
+                          </span>
+                          <span className="mt-5 block truncate font-semibold text-white drop-shadow-sm">
+                            {slide.title}
+                          </span>
+                        </span>
+                        <span className="mt-2 flex items-center justify-between gap-2 text-xs">
+                          <span className="truncate font-semibold">{slide.title}</span>
+                          <span className="capitalize text-edsync-subtle">{slide.kind ?? "content"}</span>
+                        </span>
                       </button>
                     ))}
-                    <button type="button" onClick={addSlide} className="btn-secondary w-full justify-center py-2 text-sm">
-                      <Plus className="h-4 w-4" />
-                      Add slide
-                    </button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button type="button" onClick={duplicateSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
-                        <Copy className="h-4 w-4" />
-                        Copy
+                      </div>
+                      <button type="button" onClick={addSlide} className="btn-secondary w-full justify-center py-2 text-sm">
+                        <Plus className="h-4 w-4" />
+                        Add slide
                       </button>
-                      <button type="button" onClick={deleteSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </button>
-                      <button type="button" onClick={() => moveSelectedSlide("up")} className="btn-secondary justify-center py-2 text-sm">
-                        <ArrowUp className="h-4 w-4" />
-                        Up
-                      </button>
-                      <button type="button" onClick={() => moveSelectedSlide("down")} className="btn-secondary justify-center py-2 text-sm">
-                        <ArrowDown className="h-4 w-4" />
-                        Down
-                      </button>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
-                    <div className="aspect-video rounded-lg border border-edsync-border bg-edsync-surface p-8 shadow-inner">
-                      <div className="flex h-full flex-col justify-between">
-                        <div>
-                          <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: activeSlide.accent }}>
-                            EdSync slide
-                          </span>
-                          <input
-                            className="mt-6 w-full bg-transparent font-display text-4xl font-bold outline-none"
-                            value={activeSlide.title}
-                            onChange={(event) =>
-                              updateDraft({
-                                ...draft,
-                                slides: draft.slides.map((slide) =>
-                                  slide.id === activeSlide.id ? { ...slide, title: event.target.value } : slide,
-                                ),
-                              })
-                            }
-                          />
-                        </div>
-                        <p className="text-sm text-edsync-subtle">Drag-ready canvas, objects, themes, transitions, and slideshow controls.</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={duplicateSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
+                          <Copy className="h-4 w-4" />
+                          Copy
+                        </button>
+                        <button type="button" onClick={deleteSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </button>
+                        <button type="button" onClick={() => moveSelectedSlide("up")} className="btn-secondary justify-center py-2 text-sm">
+                          <ArrowUp className="h-4 w-4" />
+                          Up
+                        </button>
+                        <button type="button" onClick={() => moveSelectedSlide("down")} className="btn-secondary justify-center py-2 text-sm">
+                          <ArrowDown className="h-4 w-4" />
+                          Down
+                        </button>
                       </div>
                     </div>
-                    <textarea
-                      className="edsync-input mt-3 min-h-24"
-                      value={activeSlide.notes}
-                      onChange={(event) =>
-                        updateDraft({
-                          ...draft,
-                          slides: draft.slides.map((slide) =>
-                            slide.id === activeSlide.id ? { ...slide, notes: event.target.value } : slide,
-                          ),
-                        })
-                      }
-                    />
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {SLIDE_THEMES.map((theme) => (
-                        <button
-                          key={theme.id}
-                          type="button"
-                          className="rounded-lg border border-edsync-border px-3 py-2 text-sm font-semibold hover:border-edsync-blue/40"
-                          onClick={() =>
-                            updateDraft({
-                              ...draft,
-                              slides: draft.slides.map((slide) =>
-                                slide.id === activeSlide.id ? { ...slide, accent: theme.colors.primary } : slide,
-                              ),
-                            })
-                          }
-                        >
-                          {theme.name}
+
+                    <div className="rounded-lg border border-edsync-border bg-edsync-card p-3">
+                      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-2">
+                        {[
+                          { label: "Text", icon: FileText, patch: { layout: "content" as const } },
+                          { label: "Image", icon: ImageIcon, patch: { layout: "image_focus" as const } },
+                          { label: "Video", icon: MonitorPlay, patch: { layout: "image_focus" as const, kind: "interactive" as const } },
+                          { label: "Shape", icon: Shapes, patch: { layout: "two_column" as const } },
+                          { label: "Quiz", icon: CheckCircle2, patch: { layout: "quiz" as const, kind: "quiz" as const } },
+                        ].map((tool) => {
+                          const Icon = tool.icon;
+                          return (
+                            <button
+                              key={tool.label}
+                              type="button"
+                              onClick={() => updateActiveSlide(tool.patch)}
+                              className="inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-bold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+                            >
+                              <Icon className="h-4 w-4" />
+                              {tool.label}
+                            </button>
+                          );
+                        })}
+                        <button type="button" onClick={() => setPresenting(true)} className="btn-primary ml-auto px-3 py-2 text-sm">
+                          <MonitorPlay className="h-4 w-4" />
+                          Preview
                         </button>
-                      ))}
-                      <button type="button" onClick={() => setPresenting(true)} className="btn-primary px-3 py-2 text-sm">
-                        <MonitorPlay className="h-4 w-4" />
-                        Present
-                      </button>
+                      </div>
+
+                      <div
+                        className="aspect-video rounded-lg border p-8 shadow-inner"
+                        style={{
+                          backgroundColor: activeSlideTheme.colors.background,
+                          color: activeSlideTheme.colors.foreground,
+                          borderColor: activeSlide.accent,
+                        }}
+                      >
+                        <div className="flex h-full flex-col justify-between">
+                          <div>
+                            <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: activeSlide.accent }}>
+                              {activeSlide.kind === "quiz" ? "Quiz slide" : activeSlide.kind === "interactive" ? "Interactive slide" : "Content slide"}
+                            </span>
+                            <input
+                              className="mt-6 w-full bg-transparent font-display text-4xl font-bold outline-none"
+                              value={activeSlide.title}
+                              onChange={(event) => updateActiveSlide({ title: event.target.value })}
+                            />
+                            <textarea
+                              className="mt-4 min-h-24 w-full resize-none bg-transparent text-lg leading-7 outline-none placeholder:text-current/50"
+                              value={activeSlide.body}
+                              onChange={(event) => updateActiveSlide({ body: event.target.value })}
+                              placeholder="Add slide body, media notes, quiz prompt, or activity instructions..."
+                            />
+                          </div>
+                          <p className="text-sm opacity-70">
+                            {activeSlide.layout?.replace("_", " ")} layout - {activeSlide.transition} transition - {activeSlide.animation} animation
+                          </p>
+                        </div>
+                      </div>
+                      <textarea
+                        className="edsync-input mt-3 min-h-24"
+                        value={activeSlide.notes}
+                        onChange={(event) => updateActiveSlide({ notes: event.target.value })}
+                        placeholder="Speaker notes..."
+                      />
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-edsync-border bg-edsync-card p-3">
+                      <div>
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-edsync-subtle">Type</p>
+                        <div className="grid gap-2">
+                          {LESSON_SLIDE_KINDS.map((kind) => (
+                            <button
+                              key={kind.kind}
+                              type="button"
+                              onClick={() => updateActiveSlide({ kind: kind.kind })}
+                              className={`rounded-lg border px-3 py-2 text-left text-sm ${
+                                activeSlide.kind === kind.kind
+                                  ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
+                                  : "border-edsync-border bg-edsync-surface text-edsync-subtle"
+                              }`}
+                            >
+                              <span className="font-semibold">{kind.label}</span>
+                              <span className="mt-1 block text-xs">{kind.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-edsync-subtle">Layout</p>
+                        <select
+                          className="edsync-input"
+                          value={activeSlide.layout}
+                          onChange={(event) => updateActiveSlide({ layout: event.target.value as StudioSlideSummary["layout"] })}
+                        >
+                          {LESSON_SLIDE_LAYOUTS.map((layout) => (
+                            <option key={layout.layout} value={layout.layout}>{layout.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-edsync-subtle">Templates</p>
+                        <div className="grid gap-2">
+                          {LESSON_TEMPLATE_PRESETS.map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => applyLessonTemplate(preset.id)}
+                              className="rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-left text-sm hover:border-edsync-blue/40"
+                            >
+                              <span className="font-semibold">{preset.label}</span>
+                              <span className="mt-1 block text-xs text-edsync-subtle">{preset.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                        <label className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">
+                          Transition
+                          <select
+                            className="edsync-input mt-2"
+                            value={activeSlide.transition}
+                            onChange={(event) => {
+                              const selected = LESSON_SLIDE_TRANSITIONS.find((item) => item.transition === event.target.value);
+                              updateActiveSlide({
+                                transition: selected?.transition,
+                                transitionDurationMs: selected?.durationMs,
+                              });
+                            }}
+                          >
+                            {LESSON_SLIDE_TRANSITIONS.map((transition) => (
+                              <option key={transition.transition} value={transition.transition}>{transition.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">
+                          Animation
+                          <select
+                            className="edsync-input mt-2"
+                            value={activeSlide.animation}
+                            onChange={(event) => {
+                              const selected = LESSON_SLIDE_ANIMATIONS.find((item) => item.animation === event.target.value);
+                              updateActiveSlide({
+                                animation: selected?.animation,
+                                animationDurationMs: selected?.durationMs,
+                              });
+                            }}
+                          >
+                            {LESSON_SLIDE_ANIMATIONS.map((animation) => (
+                              <option key={animation.animation} value={animation.animation}>{animation.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <Link href="/ai?task=create-slide-deck" className="btn-secondary w-full justify-center py-2 text-sm">
+                        <Sparkles className="h-4 w-4" />
+                        AI Co-creator
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -1171,8 +1370,15 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
           </div>
         </section>
       </div>
-      {presenting && (
-        <div className="fixed inset-0 z-50 bg-slate-950 p-4 text-white">
+      <AnimatePresence>
+        {presenting && (
+        <motion.div
+          className="fixed inset-0 z-50 bg-slate-950 p-4 text-white"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: Math.max(activeSlide.transitionDurationMs ?? 0, 180) / 1000 }}
+        >
           <div className="mx-auto flex h-full max-w-6xl flex-col">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
@@ -1187,13 +1393,31 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             </div>
             <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="flex items-center justify-center rounded-2xl bg-white p-8 text-slate-950">
-                <div className="aspect-video w-full max-w-5xl rounded-xl border border-slate-200 p-10 shadow-2xl">
+                <motion.div
+                  key={activeSlide.id}
+                  className="aspect-video w-full max-w-5xl rounded-xl border border-slate-200 p-10 shadow-2xl"
+                  initial={{
+                    opacity: activeSlide.animation === "none" ? 1 : 0,
+                    y: activeSlide.animation === "rise" ? 24 : 0,
+                    x: activeSlide.transition === "slide_left" ? 32 : 0,
+                    scale: activeSlide.animation === "scale" ? 0.96 : 1,
+                  }}
+                  animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+                  transition={{
+                    duration: Math.max(activeSlide.animationDurationMs ?? 0, 120) / 1000,
+                    ease: "easeOut",
+                  }}
+                  style={{
+                    backgroundColor: activeSlideTheme.colors.background,
+                    color: activeSlideTheme.colors.foreground,
+                  }}
+                >
                   <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: activeSlide.accent }}>
                     EdSync slideshow
                   </span>
                   <h3 className="mt-10 font-display text-6xl font-bold">{activeSlide.title}</h3>
-                  <p className="mt-8 max-w-2xl text-lg text-slate-600">Use this native preview to rehearse pacing, notes, and slide flow before publishing.</p>
-                </div>
+                  <p className="mt-8 max-w-2xl text-lg opacity-80">{activeSlide.body || "Use this native preview to rehearse pacing, notes, and slide flow before publishing."}</p>
+                </motion.div>
               </div>
               <aside className="rounded-2xl border border-white/10 bg-white/10 p-4">
                 <p className="text-sm font-semibold text-white/70">Speaker notes</p>
@@ -1217,8 +1441,9 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               </aside>
             </div>
           </div>
-        </div>
-      )}
+        </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
