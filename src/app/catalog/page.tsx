@@ -61,13 +61,17 @@ export default async function CatalogPage({
   ).slice(0, 6);
 
   return (
-    <main className="premium-shell min-h-screen text-edsync-text">
+    <main className="edsync-catalog-reference premium-shell min-h-screen text-edsync-text">
       <PublicTopbar active="catalog" />
 
       <section className="mx-auto max-w-7xl px-4">
         <section className="edsync-launch-hero min-h-[calc(100vh-4.5rem)] overflow-hidden py-6 lg:py-10">
           <div className="grid h-full min-h-[calc(100vh-7rem)] min-w-0 items-center gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.86fr)_minmax(430px,1fr)]">
             <div className="animate-reveal-soft max-w-2xl min-w-0">
+              <div className="edsync-launch-pill">
+                <Bot className="h-4 w-4" />
+                Launching your learning loop
+              </div>
               <h1 className="font-display text-5xl font-bold leading-[0.92] tracking-tight sm:text-7xl lg:text-8xl">
                 Build. Practice. Improve.
               </h1>
@@ -82,6 +86,12 @@ export default async function CatalogPage({
                 <Link href="/auth/signup" className="btn-secondary justify-center">
                   Start
                 </Link>
+              </div>
+              <div className="edsync-launch-rail" aria-hidden="true">
+                <span>Catalog</span>
+                <span>Studio</span>
+                <span>Practice</span>
+                <span>Progress</span>
               </div>
             </div>
 
