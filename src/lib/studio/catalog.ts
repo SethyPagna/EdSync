@@ -73,6 +73,82 @@ export const SLIDE_THEMES: SlideTheme[] = [
   },
 ];
 
+export type LessonSlideKind = "content" | "quiz" | "interactive";
+export type LessonSlideLayout =
+  | "title"
+  | "content"
+  | "two_column"
+  | "image_focus"
+  | "quiz"
+  | "activity";
+export type LessonSlideTransition = "none" | "fade" | "slide_left";
+export type LessonSlideAnimation = "none" | "fade_in" | "rise" | "scale";
+
+export const LESSON_SLIDE_KINDS: Array<{
+  kind: LessonSlideKind;
+  label: string;
+  description: string;
+}> = [
+  { kind: "content", label: "Content", description: "Teach an idea with text, media, and examples." },
+  { kind: "quiz", label: "Quiz", description: "Ask a scored check with answers and feedback." },
+  { kind: "interactive", label: "Interactive", description: "Prompt discussion, practice, reflection, or activity." },
+];
+
+export const LESSON_SLIDE_LAYOUTS: Array<{
+  layout: LessonSlideLayout;
+  label: string;
+  description: string;
+}> = [
+  { layout: "title", label: "Title", description: "Opening slide with a clear outcome." },
+  { layout: "content", label: "Content", description: "Main idea, explanation, and example." },
+  { layout: "two_column", label: "Two Column", description: "Compare, contrast, or show steps beside evidence." },
+  { layout: "image_focus", label: "Image Focus", description: "Media-led slide with a short caption." },
+  { layout: "quiz", label: "Quiz", description: "Question stem, options, and explanation." },
+  { layout: "activity", label: "Activity", description: "Student action, timing, and collaboration prompt." },
+];
+
+export const LESSON_SLIDE_TRANSITIONS: Array<{
+  transition: LessonSlideTransition;
+  label: string;
+  durationMs: number;
+}> = [
+  { transition: "none", label: "None", durationMs: 0 },
+  { transition: "fade", label: "Fade", durationMs: 450 },
+  { transition: "slide_left", label: "Slide Left", durationMs: 520 },
+];
+
+export const LESSON_SLIDE_ANIMATIONS: Array<{
+  animation: LessonSlideAnimation;
+  label: string;
+  durationMs: number;
+}> = [
+  { animation: "none", label: "None", durationMs: 0 },
+  { animation: "fade_in", label: "Fade In", durationMs: 420 },
+  { animation: "rise", label: "Rise", durationMs: 480 },
+  { animation: "scale", label: "Scale", durationMs: 360 },
+];
+
+export const LESSON_TEMPLATE_PRESETS = [
+  {
+    id: "corporate",
+    label: "Corporate",
+    themeId: "clear-classroom",
+    description: "Polished training decks with crisp contrast and compact text.",
+  },
+  {
+    id: "kid-friendly",
+    label: "Kid-Friendly",
+    themeId: "warm-workshop",
+    description: "Warmer colors, activity prompts, and softer pacing.",
+  },
+  {
+    id: "focus-dark",
+    label: "Dark Mode",
+    themeId: "focus-dark",
+    description: "High-focus presentation mode for projectors and review sessions.",
+  },
+] as const;
+
 export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "course-cover",
