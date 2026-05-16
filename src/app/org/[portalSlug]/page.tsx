@@ -61,6 +61,7 @@ export default async function OrganizationPortalPage({
           <div className="flex flex-wrap gap-2">
             <Link href="/catalog" className="btn-secondary justify-center px-4 py-2 text-sm">Global catalog</Link>
             <Link href={`/auth/login?org=${encodeURIComponent(portal.tenant_slug)}`} className="btn-primary justify-center px-4 py-2 text-sm">Sign in</Link>
+            <Link href={`/auth/signup?org=${encodeURIComponent(portal.tenant_slug)}`} className="btn-secondary justify-center px-4 py-2 text-sm">Create account</Link>
           </div>
         </div>
       </header>
@@ -81,6 +82,15 @@ export default async function OrganizationPortalPage({
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.audience}</span>
               <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{items.length} courses</span>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href={`/auth/login?org=${encodeURIComponent(portal.tenant_slug)}`} className="btn-primary justify-center">
+                Enter organization
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href={`/auth/signup?org=${encodeURIComponent(portal.tenant_slug)}`} className="btn-secondary justify-center">
+                Join as teacher or student
+              </Link>
             </div>
             <form className="mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
