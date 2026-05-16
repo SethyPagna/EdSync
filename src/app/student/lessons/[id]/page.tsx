@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import { sanitizeHtml } from "@/lib/security/html";
+import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type {
   Lesson,
   LessonSection,
@@ -113,16 +114,23 @@ function TextContent({ content }: { content: string }) {
 
 function ImageContent({ content, title }: { content: string; title: string }) {
   const [imgUrl, caption] = content.split("|||");
+  const safeUrl = safeImageUrl(imgUrl);
   if (!imgUrl)
     return (
       <div className="py-4 text-center text-edsync-subtle">
         <p className="text-sm">Image content — no URL set</p>
       </div>
     );
+  if (!safeUrl)
+    return (
+      <div className="py-4 text-center text-edsync-subtle">
+        <p className="text-sm">Image blocked by media safety policy.</p>
+      </div>
+    );
   return (
     <div className="py-2">
       <Image
-        src={imgUrl}
+        src={safeUrl}
         alt={caption || title}
         width={1200}
         height={675}
@@ -140,18 +148,7 @@ function ImageContent({ content, title }: { content: string; title: string }) {
 
 function VideoContent({ content }: { content: string }) {
   const [rawUrl, caption] = content.split("|||");
-  const getEmbed = (raw: string) => {
-    const ytMatch = raw.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/,
-    );
-    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-    const vmMatch = raw.match(/vimeo\.com\/(\d+)/);
-    if (vmMatch) return `https://player.vimeo.com/video/${vmMatch[1]}`;
-    return raw;
-  };
-  const embed = rawUrl ? getEmbed(rawUrl) : "";
-  const isEmbeddable =
-    embed.includes("youtube.com/embed") || embed.includes("vimeo.com/video");
+  const media = classifySafeMediaUrl(rawUrl);
 
   if (!rawUrl)
     return (
@@ -159,27 +156,39 @@ function VideoContent({ content }: { content: string }) {
         <p className="text-sm">No video URL set</p>
       </div>
     );
+  if (!media)
+    return (
+      <div className="py-4 text-center text-edsync-subtle">
+        <p className="text-sm">Video blocked by media safety policy.</p>
+      </div>
+    );
   return (
     <div className="py-2">
-      {isEmbeddable ? (
+      {media.embedUrl ? (
         <div className="aspect-video rounded-xl overflow-hidden border border-edsync-border bg-black">
           <iframe
-            src={embed}
+            src={media.embedUrl}
             className="w-full h-full"
             allowFullScreen
             allow="accelerometer; autoplay; encrypted-media; gyroscope"
           />
         </div>
+      ) : media.kind === "video" ? (
+        <video
+          controls
+          className="aspect-video w-full rounded-xl border border-edsync-border bg-black object-contain"
+          src={media.url}
+        />
       ) : (
         <a
-          href={rawUrl}
+          href={media.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 p-4 bg-edsync-surface border border-edsync-border rounded-xl hover:border-edsync-blue transition-colors"
         >
           <div>
             <p className="font-medium text-edsync-text">Watch Video</p>
-            <p className="text-xs text-edsync-subtle truncate">{rawUrl}</p>
+            <p className="text-xs text-edsync-subtle truncate">{media.url}</p>
           </div>
         </a>
       )}
