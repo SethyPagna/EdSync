@@ -7,7 +7,11 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 type EnrollPayload = {
   data?: {
+    entitlementId?: string | null;
     loginUrl?: string;
+    mode?: "active" | "enrolled" | "manual" | "redirect";
+    provider?: string;
+    transactionId?: string;
     url?: string | null;
   };
   error?: string | null;
@@ -31,6 +35,7 @@ export default function CatalogEnrollButton({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [doneLabel, setDoneLabel] = useState("Enrolled");
 
   const enroll = async () => {
     setLoading(true);
@@ -56,6 +61,23 @@ export default function CatalogEnrollButton({
         return;
       }
 
+      if (payload.data?.mode === "manual") {
+        setDoneLabel("Request sent");
+        setDone(true);
+        toast.success("Checkout request created. Your organization can activate access after review.");
+        router.refresh();
+        return;
+      }
+
+      if (payload.data?.mode === "active") {
+        setDoneLabel("Already enrolled");
+        setDone(true);
+        toast.success("You already have access.");
+        router.refresh();
+        return;
+      }
+
+      setDoneLabel("Enrolled");
       setDone(true);
       toast.success(isFree ? "You are enrolled." : "Enrollment is active.");
       router.refresh();
@@ -77,7 +99,7 @@ export default function CatalogEnrollButton({
       {done ? (
         <>
           <CheckCircle2 className="h-4 w-4" />
-          Enrolled
+          {doneLabel}
         </>
       ) : loading ? (
         "Working..."
