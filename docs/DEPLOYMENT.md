@@ -21,12 +21,12 @@ Create EdSync-specific resources so AllChess and LEARN remain isolated:
 - AI Gateways: `edsync-dev`, `edsync-preview`, `edsync-prod`
 - Turnstile site: `EdSync app`
 - Workers:
-  - `edsync-app`
-  - `edsync-app-preview`
-  - `edsync-app-production`
-  - `edsync-learning-os`
-  - `edsync-learning-os-preview`
-  - `edsync-learning-os-production`
+  - `edsync-dev`
+  - `edsync-preview`
+  - `edsync`
+  - `edsync-automation-dev`
+  - `edsync-automation-preview`
+  - `edsync-automation`
 
 Object keys must still include environment and owner scope, for example
 `prod/users/{userId}/lesson-assets/{fileName}`.
@@ -98,14 +98,15 @@ npm.cmd run deploy:vercel -- --prod
 ```
 
 The script validates required env keys, runs typecheck/build unless
-`--skip-build` is provided, pulls Vercel environment settings, builds, and
-deploys the prebuilt output.
+`--skip-build` is provided, pulls Vercel environment settings, and deploys the
+source for a remote Vercel build. Use `--prebuilt` only when local Vercel
+packaging is explicitly needed.
 
 ## Cloudflare Workers And Pages
 
-Use the short EdSync Pages project name `edsync` and the full app Worker
-`edsync-app-production` unless the account already has a different EdSync Pages
-project configured in `CLOUDFLARE_PAGES_PROJECT`.
+Use the short EdSync Pages project name `edsync` and the app Worker name
+`edsync`. Preview uses `edsync-preview`, and the queue/background Worker uses
+`edsync-automation`.
 
 ```powershell
 npm.cmd run deploy:cloudflare
