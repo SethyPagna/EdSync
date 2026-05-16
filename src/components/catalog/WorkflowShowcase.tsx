@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -131,22 +131,110 @@ const slides: WorkflowSlide[] = [
   },
 ];
 
+const WorkflowScreen = memo(function WorkflowScreen({ slide }: { slide: WorkflowSlide }) {
+  const ActiveIcon = slide.icon;
+
+  return (
+    <article className="edsync-workflow-screen">
+      <div className="edsync-workflow-browser">
+        <span />
+        <span />
+        <span />
+      </div>
+
+      <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-edsync-bg ${slide.accent}`}>
+              <ActiveIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <h3 className="font-display text-3xl font-bold">{slide.title}</h3>
+              <p className="text-sm font-semibold text-edsync-subtle">{slide.route}</p>
+            </div>
+          </div>
+          <p className="mt-5 max-w-2xl text-sm leading-6 text-edsync-subtle">{slide.subtitle}</p>
+        </div>
+        <Link href={slide.route} className="btn-primary w-fit justify-center px-4 py-2 text-sm">
+          Open
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
+      <div className="mt-7 grid gap-3 sm:grid-cols-3">
+        {slide.stats.map((stat) => (
+          <div key={stat.label} className="edsync-workflow-stat">
+            <span>{stat.label}</span>
+            <strong>{stat.value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="edsync-workflow-canvas">
+          {slide.rows.map((row, index) => (
+            <div key={row} className="edsync-workflow-row">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue/10 text-edsync-blue">
+                {index === 0 ? <FileText className="h-4 w-4" /> : index === 1 ? <Bot className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+              </span>
+              <span className="font-semibold text-edsync-text">{row}</span>
+              <span className="ml-auto h-2 max-w-[7rem] flex-1 rounded-full bg-edsync-border">
+                <span className="block h-full rounded-full bg-edsync-blue/30" style={{ width: `${82 - index * 16}%` }} />
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="edsync-workflow-sidepanel">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Actions</span>
+            <Clock3 className="h-4 w-4 text-edsync-subtle" />
+          </div>
+          <div className="mt-4 grid gap-2">
+            {slide.actions.map((action, index) => (
+              <button
+                key={action}
+                type="button"
+                className={index === 0 ? "btn-primary justify-center px-3 py-2 text-sm" : "btn-secondary justify-center px-3 py-2 text-sm"}
+              >
+                {action}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+});
+
 export default function WorkflowShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const activeIndexRef = useRef(0);
   const activeSlide = slides[activeIndex] ?? slides[0];
-  const ActiveIcon = activeSlide.icon;
+
+  const setActiveSlide = useCallback((index: number) => {
+    const safeIndex = (index + slides.length) % slides.length;
+    if (activeIndexRef.current === safeIndex) return;
+    activeIndexRef.current = safeIndex;
+    startTransition(() => setActiveIndex(safeIndex));
+  }, []);
 
   useEffect(() => {
+    if (!window.matchMedia("(min-width: 901px)").matches) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-        const index = Number(visible?.target.getAttribute("data-step-index"));
-        if (Number.isFinite(index)) setActiveIndex(index);
+        let bestIndex = -1;
+        let bestRatio = 0;
+        for (const entry of entries) {
+          if (!entry.isIntersecting || entry.intersectionRatio <= bestRatio) continue;
+          bestRatio = entry.intersectionRatio;
+          bestIndex = Number(entry.target.getAttribute("data-step-index"));
+        }
+        if (Number.isFinite(bestIndex) && bestIndex >= 0) setActiveSlide(bestIndex);
       },
-      { rootMargin: "-40% 0px -45% 0px", threshold: [0.2, 0.55, 0.9] },
+      { rootMargin: "-38% 0px -42% 0px", threshold: 0.45 },
     );
 
     stepRefs.current.forEach((node) => {
@@ -154,13 +242,13 @@ export default function WorkflowShowcase() {
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [setActiveSlide]);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     const safeIndex = (index + slides.length) % slides.length;
-    setActiveIndex(safeIndex);
+    setActiveSlide(safeIndex);
     stepRefs.current[safeIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
+  }, [setActiveSlide]);
 
   return (
     <section id="showcase" className="edsync-workflow-showcase scroll-mt-24">
@@ -204,76 +292,8 @@ export default function WorkflowShowcase() {
           </div>
         </div>
 
-        <div className="edsync-workflow-stage" aria-live="polite">
-          <article key={activeSlide.id} className="edsync-workflow-screen">
-            <div className="edsync-workflow-browser">
-              <span />
-              <span />
-              <span />
-            </div>
-
-            <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-edsync-bg ${activeSlide.accent}`}>
-                    <ActiveIcon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <h3 className="font-display text-3xl font-bold">{activeSlide.title}</h3>
-                    <p className="text-sm font-semibold text-edsync-subtle">{activeSlide.route}</p>
-                  </div>
-                </div>
-                <p className="mt-5 max-w-2xl text-sm leading-6 text-edsync-subtle">{activeSlide.subtitle}</p>
-              </div>
-              <Link href={activeSlide.route} className="btn-primary w-fit justify-center px-4 py-2 text-sm">
-                Open
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              {activeSlide.stats.map((stat) => (
-                <div key={stat.label} className="edsync-workflow-stat">
-                  <span>{stat.label}</span>
-                  <strong>{stat.value}</strong>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <div className="edsync-workflow-canvas">
-                {activeSlide.rows.map((row, index) => (
-                  <div key={row} className="edsync-workflow-row">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue/10 text-edsync-blue">
-                      {index === 0 ? <FileText className="h-4 w-4" /> : index === 1 ? <Bot className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                    </span>
-                    <span className="font-semibold text-edsync-text">{row}</span>
-                    <span className="ml-auto h-2 max-w-[7rem] flex-1 rounded-full bg-edsync-border">
-                      <span className="block h-full rounded-full bg-edsync-blue/30" style={{ width: `${82 - index * 16}%` }} />
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="edsync-workflow-sidepanel">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Actions</span>
-                  <Clock3 className="h-4 w-4 text-edsync-subtle" />
-                </div>
-                <div className="mt-4 grid gap-2">
-                  {activeSlide.actions.map((action, index) => (
-                    <button
-                      key={action}
-                      type="button"
-                      className={index === 0 ? "btn-primary justify-center px-3 py-2 text-sm" : "btn-secondary justify-center px-3 py-2 text-sm"}
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </article>
+        <div className="edsync-workflow-stage">
+          <WorkflowScreen slide={activeSlide} />
         </div>
       </div>
 
