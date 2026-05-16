@@ -4,7 +4,12 @@ import { cookies } from "next/headers";
 import {
   ArrowRight,
   BookOpenCheck,
+  Bot,
   Building2,
+  Clock3,
+  FileText,
+  Image as ImageIcon,
+  PlayCircle,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -82,27 +87,82 @@ export default async function CatalogPage({
 
             <div className="edsync-launch-deck animate-reveal-soft min-w-0" aria-label="EdSync launch path preview">
               <article className="edsync-launch-slide edsync-launch-slide-static">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-edsync-bg text-edsync-blue">
-                    <BookOpenCheck className="h-5 w-5" />
-                  </span>
-                  <span className="text-xs font-bold text-edsync-subtle">Launch</span>
+                <div className="edsync-hero-appbar">
+                  <div className="flex items-center gap-2">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <strong>/teacher/lessons/create</strong>
                 </div>
-                <div className="mt-8">
-                  <h2 className="font-display text-4xl font-bold">One loop, shown step by step.</h2>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-edsync-subtle">
-                    Scroll into the animated tour to see how each workspace connects.
-                  </p>
-                </div>
-                <div className="mt-7 grid gap-3">
-                  {["Create a lesson package", "Generate practice and feedback", "Track evidence and next steps"].map((row, index) => (
-                    <div key={row} className="flex items-center gap-3 rounded-2xl bg-edsync-bg/80 p-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-edsync-blue/10 text-xs font-bold text-edsync-blue">
-                        {index + 1}
+
+                <div className="edsync-hero-studio-preview">
+                  <div className="edsync-hero-editor">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-edsync-subtle">Lesson Studio</p>
+                        <h2 className="font-display text-3xl font-bold">Energy Transfer</h2>
+                      </div>
+                      <span className="rounded-full bg-edsync-blue/10 px-3 py-1 text-xs font-black text-edsync-blue">
+                        Draft saved
                       </span>
-                      <span className="font-semibold text-edsync-text">{row}</span>
                     </div>
-                  ))}
+                    <div className="edsync-hero-toolbar" aria-label="Studio toolbar preview">
+                      {[
+                        ["Heading", FileText],
+                        ["Image", ImageIcon],
+                        ["Video", PlayCircle],
+                        ["Quiz", BookOpenCheck],
+                      ].map(([label, Icon]) => (
+                        <span key={label as string}>
+                          <Icon className="h-4 w-4" />
+                          {label as string}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="edsync-hero-canvas">
+                      <div className="rounded-2xl bg-edsync-blue/10 p-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-edsync-blue">Slide 03</p>
+                        <h3 className="mt-2 font-display text-2xl font-bold">Conduction vs convection</h3>
+                        <p className="mt-2 text-sm leading-6 text-edsync-subtle">
+                          Explain heat movement with an example students can see at home.
+                        </p>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        {["5 slides", "8 quiz items", "10 flashcards"].map((label) => (
+                          <span key={label} className="rounded-2xl border border-edsync-border bg-edsync-card p-3 text-sm font-bold">
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside className="edsync-hero-ai-panel">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-edsync-emerald" />
+                      <strong>AI draft</strong>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-edsync-subtle">
+                      Grade 8, 35 min, student-friendly, zero-to-expert.
+                    </p>
+                    <div className="mt-4 grid gap-2">
+                      {["Clean notes", "Create quiz", "Insert to Studio"].map((label) => (
+                        <span key={label} className="rounded-xl bg-edsync-bg px-3 py-2 text-sm font-bold">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  </aside>
+                </div>
+
+                <div className="edsync-hero-practice-strip">
+                  <span className="flex items-center gap-2 font-black">
+                    <Clock3 className="h-4 w-4 text-edsync-amber" />
+                    Practice sprint 08:42
+                  </span>
+                  <span>Retry missed</span>
+                  <span>Save to review</span>
                 </div>
               </article>
             </div>
@@ -111,7 +171,7 @@ export default async function CatalogPage({
 
         <WorkflowShowcase />
 
-        <section id="catalog-search-panel" className="grid min-h-screen scroll-mt-24 content-center py-12">
+        <section id="catalog-search-panel" className="edsync-scroll-slide grid min-h-screen scroll-mt-24 content-center py-12">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
             <div className="flex flex-col gap-3 pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -191,6 +251,15 @@ export default async function CatalogPage({
               <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
                 {paidCount} {copy.paid.toLowerCase()}
               </span>
+              {["AI lessons", "Practice sprint", "Organization portal", "Teacher gradebook"].map((sample) => (
+                <Link
+                  key={sample}
+                  href={`/catalog?q=${encodeURIComponent(sample)}`}
+                  className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
+                >
+                  {sample}
+                </Link>
+              ))}
             </div>
           </div>
         </section>
@@ -228,7 +297,7 @@ export default async function CatalogPage({
           </section>
         )}
 
-        <section id="catalog-results" className="mt-8 scroll-mt-32">
+        <section id="catalog-results" className="edsync-scroll-slide mt-8 min-h-screen scroll-mt-32 py-12">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
