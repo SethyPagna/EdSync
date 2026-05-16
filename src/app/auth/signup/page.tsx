@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
+import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
 
 type Role = "teacher" | "student";
@@ -17,10 +18,6 @@ type OrganizationLookup = {
   portalName: string | null;
   ssoEnabled: boolean;
 };
-
-function normalizeOrganizationCode(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
 
 const roleDetails = {
   teacher: {
