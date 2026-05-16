@@ -41,20 +41,20 @@ export default async function CatalogDetailPage({
   if (!item) notFound();
 
   return (
-    <main className="min-h-screen bg-edsync-bg text-edsync-text">
+    <main className="premium-shell min-h-screen text-edsync-text">
       <PublicTopbar
         active="course"
         organizationName={item.portal?.name || item.organization.name}
         organizationSlug={item.organization.slug}
       />
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <Link href="/catalog" className="btn-ghost w-fit px-0">
             Back to catalog
           </Link>
-          <div className="overflow-hidden rounded-lg border border-edsync-border bg-edsync-card">
-            <div className="aspect-video bg-edsync-surface">
+          <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
+            <div className="relative aspect-video overflow-hidden bg-edsync-surface">
               {item.metadata.previewEmbedUrl ? (
                 <iframe
                   className="h-full w-full"
@@ -72,17 +72,22 @@ export default async function CatalogDetailPage({
                   aria-label={`${item.title} thumbnail`}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/15 to-edsync-emerald/15">
+                <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/20 via-edsync-surface to-edsync-emerald/20">
                   <BookOpenCheck className="h-16 w-16 text-edsync-blue" />
                 </div>
               )}
+              <div className="absolute inset-x-4 bottom-4 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-edsync-surface/90 px-3 py-1.5 text-xs font-bold text-edsync-text shadow-sm backdrop-blur">
+                  {item.price.label}
+                </span>
+                {item.metadata.category && (
+                  <span className="rounded-full bg-edsync-blue px-3 py-1.5 text-xs font-bold text-white shadow-sm">
+                    {item.metadata.category}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="p-5">
-              <div className="flex flex-wrap gap-2">
-                <span className="badge bg-edsync-blue/10 text-edsync-blue">{item.productType}</span>
-                <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{item.price.label}</span>
-                {item.metadata.category && <span className="badge bg-edsync-amber/10 text-edsync-amber">{item.metadata.category}</span>}
-              </div>
               <h1 className="mt-4 font-display text-4xl font-bold leading-tight">{item.title}</h1>
               <p className="mt-4 text-base leading-7 text-edsync-subtle">
                 {item.metadata.previewSummary || item.description || "This public course is available through EdSync."}
@@ -91,17 +96,17 @@ export default async function CatalogDetailPage({
           </div>
 
           <section className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+            <div className="premium-card rounded-2xl p-4">
               <Clock3 className="mb-3 h-5 w-5 text-edsync-blue" />
               <p className="font-semibold">Duration</p>
               <p className="text-sm text-edsync-subtle">{item.lesson.durationMinutes || "Flexible"} minutes</p>
             </div>
-            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+            <div className="premium-card rounded-2xl p-4">
               <GraduationCap className="mb-3 h-5 w-5 text-edsync-emerald" />
               <p className="font-semibold">Level</p>
               <p className="text-sm text-edsync-subtle">{item.metadata.difficulty || item.lesson.gradeLevel || "Open"}</p>
             </div>
-            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+            <div className="premium-card rounded-2xl p-4">
               <Languages className="mb-3 h-5 w-5 text-edsync-amber" />
               <p className="font-semibold">Language</p>
               <p className="text-sm text-edsync-subtle">{item.metadata.language}</p>
@@ -120,7 +125,7 @@ export default async function CatalogDetailPage({
               Checkout was cancelled. You can restart anytime.
             </div>
           )}
-          <div className="rounded-lg border border-edsync-border bg-edsync-card p-5">
+          <div className="premium-panel rounded-2xl p-5">
             <p className="text-sm font-semibold text-edsync-subtle">Enrollment</p>
             <p className="mt-2 font-display text-4xl font-bold">{item.price.label}</p>
             <p className="mt-2 text-sm leading-6 text-edsync-subtle">
@@ -132,7 +137,7 @@ export default async function CatalogDetailPage({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+            <div className="premium-card rounded-2xl p-4">
               <div className="flex items-start gap-3">
                 <UserRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-blue" />
                 <div>
@@ -143,7 +148,7 @@ export default async function CatalogDetailPage({
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+            <div className="premium-card rounded-2xl p-4">
               <div className="flex items-start gap-3">
                 <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-emerald" />
                 <div>
@@ -156,7 +161,7 @@ export default async function CatalogDetailPage({
             </div>
           </div>
 
-          <div className="rounded-lg border border-edsync-border bg-edsync-card p-5">
+          <div className="premium-card rounded-2xl p-5">
             <div className="flex gap-3">
               <Building2 className="h-5 w-5 flex-shrink-0 text-edsync-blue" />
               <div>
@@ -174,7 +179,7 @@ export default async function CatalogDetailPage({
             </div>
           </div>
 
-          <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4">
+          <div className="premium-surface rounded-2xl p-4">
             <div className="flex gap-3">
               <ShieldCheck className="h-5 w-5 flex-shrink-0 text-edsync-emerald" />
               <p className="text-sm leading-6 text-edsync-subtle">
