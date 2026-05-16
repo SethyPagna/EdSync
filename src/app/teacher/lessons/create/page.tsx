@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
 import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
 import { createClient } from "@/lib/edsync/client";
-import { safeVideoEmbedUrl } from "@/lib/security/media";
+import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -1442,11 +1442,12 @@ export default function CreateLesson() {
                       const [imgUrl, imgCaption] = (sec.content || "").split(
                         "|||",
                       );
+                      const imagePreview = safeImageUrl(imgUrl);
                       return (
                         <div className="space-y-2">
                           <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-blue">
                             <strong>Image Section</strong> — Paste an image URL,
-                            or use the search term below to find one
+                            or upload an approved image in the editor.
                           </div>
                           <input
                             value={imgUrl || ""}
@@ -1474,9 +1475,9 @@ export default function CreateLesson() {
                             className="edsync-input py-2 text-sm"
                             placeholder="Caption / description for students..."
                           />
-                          {imgUrl && imgUrl.startsWith("https://") && (
+                          {imagePreview && (
                             <Image
-                              src={imgUrl}
+                              src={imagePreview}
                               alt="Preview"
                               width={960}
                               height={540}
@@ -1488,6 +1489,11 @@ export default function CreateLesson() {
                               }}
                             />
                           )}
+                          {imgUrl && !imagePreview && (
+                            <p className="rounded-lg border border-edsync-red/30 bg-edsync-red/10 px-3 py-2 text-xs text-edsync-red">
+                              Use a safe HTTPS image ending in PNG, JPG, JPEG, WEBP, or GIF. SVG, scripts, credentials, and executable links are blocked.
+                            </p>
+                          )}
                         </div>
                       );
                     })()
@@ -1496,12 +1502,12 @@ export default function CreateLesson() {
                       const [vidUrl, vidCaption] = (sec.content || "").split(
                         "|||",
                       );
-                      const embed = safeVideoEmbedUrl(vidUrl);
+                      const media = classifySafeMediaUrl(vidUrl);
                       return (
                         <div className="space-y-2">
                           <div className="p-3 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl text-xs text-edsync-purple">
                             <strong>Video Section</strong> — Paste a
-                            YouTube/Vimeo URL
+                            YouTube, Vimeo, or direct HTTPS video URL.
                           </div>
                           <input
                             value={vidUrl || ""}
@@ -1529,27 +1535,28 @@ export default function CreateLesson() {
                             className="edsync-input py-2 text-sm"
                             placeholder="What this video covers..."
                           />
-                          {embed && (
+                          {media?.embedUrl && (
                             <div className="aspect-video rounded-xl overflow-hidden border border-edsync-border bg-black mt-1">
                               <iframe
-                                src={embed}
+                                src={media.embedUrl}
                                 className="w-full h-full"
                                 allowFullScreen
+                                allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                               />
                             </div>
                           )}
-                          {vidUrl &&
-                            !embed &&
-                            vidUrl.includes("youtube.com/results") && (
-                              <a
-                                href={vidUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-edsync-blue hover:underline block mt-1"
-                              >
-                                Search YouTube for this topic →
-                              </a>
-                            )}
+                          {media?.kind === "video" && !media.embedUrl && (
+                            <video
+                              src={media.url}
+                              controls
+                              className="mt-1 aspect-video w-full rounded-xl border border-edsync-border bg-black"
+                            />
+                          )}
+                          {vidUrl && !media && (
+                            <p className="rounded-lg border border-edsync-red/30 bg-edsync-red/10 px-3 py-2 text-xs text-edsync-red">
+                              Use a safe HTTPS YouTube/Vimeo URL or direct MP4, WEBM, or MOV file. Scripts, SVG, credentials, and executable links are blocked.
+                            </p>
+                          )}
                         </div>
                       );
                     })()
