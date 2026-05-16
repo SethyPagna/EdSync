@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { notifyAndEmail } from "@/lib/engagement/server";
+import {
+  PLANNER_BODY_MAX_LENGTH,
+  PLANNER_LOCATION_MAX_LENGTH,
+  PLANNER_TITLE_MAX_LENGTH,
+  normalizePlannerDateTime,
+  normalizePlannerEventType,
+  normalizePlannerPriority,
+  normalizePlannerText,
+  validatePlannerDateOrder,
+} from "@/lib/planner-validation";
 
 type PlannerPayload = {
   kind?: "announcement" | "event";
@@ -192,8 +202,31 @@ export async function POST(request: Request) {
   if (!user) return jsonError("Authentication required.", 401);
 
   const body = (await request.json()) as PlannerPayload;
-  const title = body.title?.trim();
-  if (!title) return jsonError("Title is required.", 400);
+  let title: string;
+  let bodyText: string | null;
+  let description: string | null;
+  let startsAt: string | null;
+  let endsAt: string | null;
+  let dueAt: string | null;
+  let location: string | null;
+  let priority: "low" | "normal" | "high";
+  let eventType: "deadline" | "class" | "office_hours" | "study" | "announcement" | "other";
+
+  try {
+    title = normalizePlannerText(body.title, "Title", PLANNER_TITLE_MAX_LENGTH);
+    bodyText = normalizePlannerText(body.body, "Body", PLANNER_BODY_MAX_LENGTH, false);
+    description = normalizePlannerText(body.description ?? body.body, "Details", PLANNER_BODY_MAX_LENGTH, false);
+    startsAt = normalizePlannerDateTime(body.startsAt, "Start time");
+    endsAt = normalizePlannerDateTime(body.endsAt, "End time");
+    dueAt = normalizePlannerDateTime(body.dueAt, "Due time");
+    location = normalizePlannerText(body.location, "Location", PLANNER_LOCATION_MAX_LENGTH, false);
+    priority = normalizePlannerPriority(body.priority);
+    eventType = normalizePlannerEventType(body.eventType, dueAt ? "deadline" : "class");
+    validatePlannerDateOrder({ startsAt, endsAt });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Planner payload is invalid.";
+    return jsonError(message, 400);
+  }
 
   const role = user.user_metadata.role;
   const now = new Date().toISOString();
@@ -209,11 +242,11 @@ export async function POST(request: Request) {
         eventId,
         user.id,
         title,
-        body.description ?? body.body ?? null,
-        body.startsAt ?? null,
-        body.endsAt ?? null,
-        body.dueAt ?? null,
-        body.location ?? null,
+        description,
+        startsAt,
+        endsAt,
+        dueAt,
+        location,
       ],
     );
     return NextResponse.json({ data: { id: eventId }, error: null });
@@ -224,7 +257,6 @@ export async function POST(request: Request) {
 
   const students = await getClassStudents(classRow.id);
   if (body.kind === "announcement") {
-    const bodyText = body.body?.trim();
     if (!bodyText) return jsonError("Announcement body is required.", 400);
 
     const announcementId = crypto.randomUUID();
@@ -239,9 +271,9 @@ export async function POST(request: Request) {
         classRow.id,
         title,
         bodyText,
-        body.priority ?? "normal",
-        body.startsAt ?? now,
-        body.endsAt ?? null,
+        priority,
+        startsAt ?? now,
+        endsAt,
         JSON.stringify({ className: classRow.name, type: "announcement" }),
       ],
     );
@@ -252,14 +284,15 @@ export async function POST(request: Request) {
       title,
       message: bodyText,
       actionUrl: "/student/dashboard",
-      priority: body.priority ?? "normal",
+      priority,
       metadata: { type: "announcement", announcementId, classId: classRow.id },
     });
 
     return NextResponse.json({ data: { id: announcementId, notified: students.length }, error: null });
   }
 
-  const eventType = body.eventType ?? (body.dueAt ? "deadline" : "class");
+  if (eventType === "deadline" && !dueAt) return jsonError("Due time is required for deadlines.", 400);
+
   const eventId = crypto.randomUUID();
   await d1Query(
     `INSERT INTO schedule_events (
@@ -272,27 +305,27 @@ export async function POST(request: Request) {
       classRow.id,
       body.lessonId ?? null,
       title,
-      body.description ?? body.body ?? null,
+      description,
       eventType,
-      body.startsAt ?? null,
-      body.endsAt ?? null,
-      body.dueAt ?? null,
-      body.location ?? null,
+      startsAt,
+      endsAt,
+      dueAt,
+      location,
       JSON.stringify({ className: classRow.name, type: eventType }),
     ],
   );
 
-  if (eventType === "deadline" || body.priority === "high") {
+  if (eventType === "deadline" || priority === "high") {
     await notifyClassStudents({
       students,
       actorId: user.id,
       title: eventType === "deadline" ? `Deadline: ${title}` : title,
-      message: body.dueAt
-        ? `${title} is due ${body.dueAt}.`
-        : body.description || "A new class event was added to your schedule.",
+      message: dueAt
+        ? `${title} is due ${dueAt}.`
+        : description || "A new class event was added to your schedule.",
       actionUrl: "/student/dashboard",
-      priority: eventType === "deadline" ? "high" : body.priority ?? "normal",
-      metadata: { type: eventType, eventId, classId: classRow.id, dueAt: body.dueAt ?? null },
+      priority: eventType === "deadline" ? "high" : priority,
+      metadata: { type: eventType, eventId, classId: classRow.id, dueAt },
     });
   }
 
