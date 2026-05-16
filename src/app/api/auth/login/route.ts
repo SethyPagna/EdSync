@@ -4,10 +4,16 @@ import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
+function normalizeOrganizationCode(value?: string | null) {
+  return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     email?: string;
     password?: string;
+    account_type?: "individual" | "organization";
+    organization_code?: string;
   } | null;
 
   if (!body) {
@@ -27,6 +33,8 @@ export async function POST(request: Request) {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const accountType = body.account_type === "organization" ? "organization" : "individual";
+  const organizationCode = normalizeOrganizationCode(body.organization_code);
   const rate = await enforceRateLimit({
     request,
     scope: "auth_login",
@@ -77,10 +85,53 @@ export async function POST(request: Request) {
     });
   }
 
+  let tenantContext: { id: string; slug: string; name: string } | null = null;
+  if (accountType === "organization") {
+    if (!organizationCode) {
+      return NextResponse.json({
+        data: { user: null, session: null },
+        error: { message: "Organization code is required.", status: 400 },
+      }, { status: 400 });
+    }
+
+    const [membership] = await d1Query<{ id: string; slug: string; name: string }>(
+      `SELECT t.id, t.slug, t.name
+         FROM tenants t
+         JOIN tenant_memberships tm ON tm.tenant_id = t.id
+        WHERE lower(t.slug) = lower(?)
+          AND tm.user_id = ?
+          AND tm.status = 'active'
+          AND t.status = 'active'
+        LIMIT 1`,
+      [organizationCode, account.id],
+    );
+
+    if (!membership && !account.is_admin) {
+      await logSecurityEvent({
+        request,
+        eventType: "organization_login_denied",
+        severity: "warning",
+        subject: normalizedEmail,
+        message: "User attempted organization login without active membership.",
+      });
+      return NextResponse.json({
+        data: { user: null, session: null },
+        error: { message: "You do not have active access to this organization.", status: 403 },
+      }, { status: 403 });
+    }
+
+    tenantContext = membership ?? null;
+  }
+
   const user: SessionUser = {
     id: account.id,
     email: account.email,
-    user_metadata: { role: account.is_admin ? "admin" : account.role, full_name: account.full_name },
+    user_metadata: {
+      role: account.is_admin ? "admin" : account.role,
+      full_name: account.full_name,
+      tenant_slug: tenantContext?.slug,
+      tenant_name: tenantContext?.name,
+    },
   };
   const session = await createSession(user);
   const response = NextResponse.json({
