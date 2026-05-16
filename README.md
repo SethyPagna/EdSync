@@ -34,6 +34,8 @@ background automation.
 ## Deployment
 
 - Vercel project name: `EdSync`
+- Cloudflare app Worker link: `https://edsync.learn-app.workers.dev`
+- Cloudflare Pages redirect link: `https://edsync.pages.dev`
 - Cloudflare D1 database names should follow `edsync-dev-d1`,
   `edsync-preview-d1`, and `edsync-prod-d1`.
 - Cloudflare R2 bucket names should follow `edsync-assets-dev`,
