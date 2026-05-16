@@ -297,80 +297,119 @@ export default function StudentDashboard() {
   const recommendation = active[0] || next[0] || completed[0];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-7 p-5 sm:p-6">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <OrganizationContextBanner />
-      <header className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-6">
-          <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-edsync-emerald">
-                Student learning cockpit
-              </p>
-              <h1 className="mt-2 font-display text-4xl font-bold">
-                Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-edsync-subtle">
-                Continue assigned lessons, track mastery, and use AI guidance
-                when a concept feels unclear.
-              </p>
-            </div>
-            <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4">
-              <div className="flex items-center gap-3">
-                <Flame className="h-5 w-5 text-edsync-amber" />
-                <div>
-                  <p className="font-display text-2xl font-bold">
-                    {profile?.streak_days ?? 0}
-                  </p>
-                  <p className="text-xs text-edsync-subtle">day streak</p>
-                </div>
+      <header className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
+              Student home
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">
+              Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
+            </h1>
+          </div>
+          <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Flame className="h-5 w-5 text-edsync-amber" />
+              <div>
+                <p className="font-display text-2xl font-bold">
+                  {profile?.streak_days ?? 0}
+                </p>
+                <p className="text-xs text-edsync-subtle">day streak</p>
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                label: "Total XP",
-                value: profile?.total_xp ?? 0,
-                icon: Sparkles,
-                tone: "text-edsync-cyan",
-              },
-              {
-                label: "In progress",
-                value: active.length,
-                icon: BookOpenCheck,
-                tone: "text-edsync-blue",
-              },
-              {
-                label: "Completed",
-                value: completed.length,
-                icon: CheckCircle2,
-                tone: "text-edsync-emerald",
-              },
-              {
-                label: "Average score",
-                value: avgScore ? `${avgScore}%` : "N/A",
-                icon: GraduationCap,
-                tone: "text-edsync-amber",
-              },
-            ].map((item) => (
-              <MetricTile
-                key={item.label}
-                label={item.label}
-                value={loading ? "..." : item.value}
-                icon={item.icon}
-                tone={item.tone}
-              />
-            ))}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "XP",
+              value: profile?.total_xp ?? 0,
+              icon: Sparkles,
+              tone: "text-edsync-cyan",
+            },
+            {
+              label: "Active",
+              value: active.length,
+              icon: BookOpenCheck,
+              tone: "text-edsync-blue",
+            },
+            {
+              label: "Done",
+              value: completed.length,
+              icon: CheckCircle2,
+              tone: "text-edsync-emerald",
+            },
+            {
+              label: "Score",
+              value: avgScore ? `${avgScore}%` : "N/A",
+              icon: GraduationCap,
+              tone: "text-edsync-amber",
+            },
+          ].map((item) => (
+            <MetricTile
+              key={item.label}
+              label={item.label}
+              value={loading ? "..." : item.value}
+              icon={item.icon}
+              tone={item.tone}
+            />
+          ))}
+        </div>
+      </header>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold">Continue learning</h2>
+              <p className="text-sm text-edsync-subtle">Your next recommended step.</p>
+            </div>
+            <Link href="/practice" className="btn-secondary justify-center text-sm">
+              Practice
+            </Link>
           </div>
+          {recommendation ? (
+            <Link
+              href={`/student/lessons/${recommendation.id}`}
+              className="group block rounded-lg border border-edsync-border bg-edsync-surface p-4 transition hover:border-edsync-blue/50 hover:bg-edsync-card"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+                  <BookOpenCheck className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-2xl font-bold text-edsync-text">
+                    {recommendation.title}
+                  </p>
+                  <p className="mt-1 text-sm text-edsync-subtle">
+                    {recommendation.subject || "General"} - {recommendation.estimated_duration} min
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                      {recommendation.progress?.status?.replace("_", " ") || "not started"}
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
+                      Open lesson <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
+              <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
+              <p className="font-semibold text-edsync-text">No lesson assigned yet</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Join a class to get started.</p>
+            </div>
+          )}
         </section>
 
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
           <h2 className="font-display text-xl font-bold">Join a class</h2>
-          <p className="mt-1 text-sm text-edsync-subtle">
-            Enter the join code your teacher shared.
-          </p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-1">
             <input
               value={joinCode}
               onChange={(event) => setJoinCode(event.target.value)}
@@ -387,41 +426,16 @@ export default function StudentDashboard() {
               Join
             </button>
           </div>
-          <div className="mt-5 rounded-lg border border-edsync-border bg-edsync-surface p-4">
-            <p className="text-sm font-semibold text-edsync-text">
-              Recommended next step
-            </p>
-            {recommendation ? (
-              <>
-                <p className="mt-1 text-sm text-edsync-subtle">
-                  {recommendation.progress?.status === "completed"
-                    ? "Review your strongest completed lesson."
-                    : "Continue the lesson that best matches your current path."}
-                </p>
-                <Link
-                  href={`/student/lessons/${recommendation.id}`}
-                  className="btn-secondary mt-4 w-full justify-center text-sm"
-                >
-                  Open {recommendation.title.slice(0, 28)}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </>
-            ) : (
-              <p className="mt-1 text-sm text-edsync-subtle">
-                Join a class to receive your first lesson.
-              </p>
-            )}
-          </div>
         </section>
-      </header>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Learning path</h2>
               <p className="text-sm text-edsync-subtle">
-                Assigned lessons sorted by what needs attention.
+                Grouped by what needs attention.
               </p>
             </div>
           </div>
@@ -453,12 +467,11 @@ export default function StudentDashboard() {
           )}
         </section>
 
-        <aside className="space-y-6">
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+        <aside className="space-y-5">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-xl font-bold">Announcements</h2>
-                <p className="text-sm text-edsync-subtle">Teacher updates.</p>
               </div>
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
@@ -486,11 +499,10 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
+          <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-xl font-bold">Schedule</h2>
-                <p className="text-sm text-edsync-subtle">Deadlines and study time.</p>
               </div>
               <CalendarClock className="h-5 w-5 text-edsync-blue" />
             </div>
@@ -548,11 +560,11 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <details className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden">
               <div>
                 <h2 className="font-display text-xl font-bold">Goals</h2>
-                <p className="text-sm text-edsync-subtle">Small weekly targets.</p>
+                <p className="text-sm text-edsync-subtle">{goals.length} active</p>
               </div>
               <button
                 type="button"
@@ -561,8 +573,8 @@ export default function StudentDashboard() {
               >
                 New
               </button>
-            </div>
-            <div className="space-y-3">
+            </summary>
+            <div className="mt-4 space-y-3">
               {goals.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   Create a goal to make your next study session concrete.
@@ -599,13 +611,13 @@ export default function StudentDashboard() {
                 })
               )}
             </div>
-          </section>
+          </details>
 
-          <section className="rounded-xl border border-edsync-border bg-edsync-card p-6">
-            <h2 className="font-display text-xl font-bold">Recent reflections</h2>
-            <p className="mt-1 text-sm text-edsync-subtle">
-              Confidence notes and AI next steps.
-            </p>
+          <details className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+            <summary className="cursor-pointer list-none marker:hidden">
+              <h2 className="font-display text-xl font-bold">Reflections</h2>
+              <p className="mt-1 text-sm text-edsync-subtle">{reflections.length} recent notes</p>
+            </summary>
             <div className="mt-4 space-y-3">
               {reflections.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
@@ -637,7 +649,7 @@ export default function StudentDashboard() {
                 ))
               )}
             </div>
-          </section>
+          </details>
         </aside>
       </div>
     </div>
