@@ -1,0 +1,533 @@
+# EdSync Comprehensive Improvement Plan
+
+**Goal:** Improve EdSync across workflow, design, architecture, content diversity, AI response handling, lesson generation, slides, discussions, quizzes, activities, templates, imports, and progress tracking.
+
+**Planning Date:** 2026-05-16
+
+**Working Rules:**
+- Work directly on `main`.
+- Commit each edited, added, or removed file separately.
+- Push `main` after every successful commit.
+- Keep secrets out of tracked files.
+- Preserve EdSync Cloudflare resources separately from AllChess and LEARN.
+
+**Current Foundation:**
+- Next.js 14 App Router and TypeScript.
+- Cloudflare D1, R2, AI Gateway, Workers, Queues, Vectorize, and Turnstile.
+- Role-aware teacher, student, admin, catalog, Studio, lesson, practice, quiz, discussion, notes, docs, sheets, and slides surfaces.
+- Studio already supports notes, docs, sheets, slides, practice, drafts, save/publish/archive/delete, content blocks, simple slide themes, transitions, animations, and AI entry points.
+- Existing improvement plan: `docs/superpowers/plans/2026-05-16-edsync-lessons-slides-platform.md`.
+
+**Primary Outcomes:**
+- Teachers can generate, import, manually build, revise, and publish polished lessons.
+- Lessons can become well-designed slides, PPT exports, discussions, quizzes, worksheets, practice sets, activities, rubrics, and review cards.
+- Templates are reusable, importable, versioned, tenant-aware, and can update existing lessons without destroying teacher edits.
+- AI output is structured, validated, repairable, previewable, and safe to insert selectively.
+- Architecture is modular enough for steady expansion without turning Studio into one oversized component.
+
+---
+
+## Phase 1: Product Inventory And Baseline
+
+**Target:** Create a trustworthy map of what EdSync already has before expanding it.
+
+**Mini Phases:**
+- 1.1 Catalog all teacher, student, admin, Studio, AI, practice, discussion, and catalog routes.
+- 1.2 Map current database tables that support lessons, documents, content blocks, practice, grades, discussions, and assets.
+- 1.3 Identify duplicated concepts such as lesson sections, slide summaries, content blocks, activity blocks, and practice items.
+- 1.4 Record current verification commands and known local blockers.
+
+**Subtargets:**
+- Produce a route inventory grouped by role.
+- Produce a data model inventory grouped by feature.
+- Mark each existing capability as `keep`, `refactor`, `merge`, or `replace`.
+- Record current gaps in `progress.md`.
+
+**Acceptance Checks:**
+- `progress.md` contains a baseline inventory link or summary.
+- No product area is planned twice under different names.
+- Existing user-facing features remain accounted for.
+
+---
+
+## Phase 2: Workflow Map And Navigation Model
+
+**Target:** Make the teacher workflow coherent from idea to published learning experience.
+
+**Mini Phases:**
+- 2.1 Define the end-to-end workflow: plan, generate, edit, design, assess, publish, assign, discuss, review, improve.
+- 2.2 Standardize navigation between Studio, Lessons, Slides, Practice, Quizzes, Discussions, Notes, Docs, Sheets, and Analytics.
+- 2.3 Add clear saved states: local draft, server draft, published, archived, needs review, assigned.
+- 2.4 Create handoff points between teacher creation tools and student learning views.
+
+**Subtargets:**
+- Teacher can start from a topic, file, URL, blank lesson, template, previous lesson, or content block.
+- Teacher can move from lesson to slides, quiz, discussion, worksheet, and assignment without re-entering the topic.
+- Student receives a clean assigned view with lesson, activity, discussion, quiz, and practice links.
+
+**Acceptance Checks:**
+- Every creation surface has a clear next action.
+- The same item title, objective, tags, and audience metadata follow the item through related tools.
+- Breadcrumbs or contextual links show where the user came from and where to go next.
+
+---
+
+## Phase 3: Core Learning Object Architecture
+
+**Target:** Introduce a shared content model that can power lessons, slides, quizzes, discussions, and activities.
+
+**Mini Phases:**
+- 3.1 Define a `LearningObject` concept with tenant, owner, title, objectives, audience, source, tags, status, version, and metadata.
+- 3.2 Define `LearningBlock` types: text, media, callout, example, activity, discussion, quiz, reflection, rubric, table, slide, embed, attachment, and teacher note.
+- 3.3 Define conversion rules between blocks and Studio documents, slides, quizzes, discussions, practice sets, and printable worksheets.
+- 3.4 Add migration path from existing `studio_documents` and `content_blocks`.
+
+**Subtargets:**
+- Shared types live in focused files instead of inside one large UI component.
+- Blocks are serializable, versioned, and safe to validate server-side.
+- Legacy Studio items continue to load through adapters.
+
+**Acceptance Checks:**
+- Existing Studio drafts and saved documents still open.
+- New content can be represented without losing lesson structure.
+- Tests cover normalization from legacy slide/document data into the new model.
+
+---
+
+## Phase 4: Studio Component Refactor
+
+**Target:** Split Studio into maintainable modules while preserving behavior.
+
+**Mini Phases:**
+- 4.1 Extract state and persistence helpers from `src/components/studio/StudioWorkspace.tsx`.
+- 4.2 Extract document editor, sheet editor, slide editor, practice picker, template sidebar, history panel, and library panel.
+- 4.3 Extract slide-specific helpers into typed utility modules.
+- 4.4 Add component-level tests for critical Studio interactions.
+
+**Subtargets:**
+- `StudioWorkspace.tsx` becomes an orchestrator, not the home of every feature.
+- Each panel has clear props and no hidden cross-panel mutation.
+- Draft save and server save logic remain stable.
+
+**Acceptance Checks:**
+- `npm.cmd run typecheck` passes.
+- Existing Studio save, publish, archive, restore, export, import, and draft behavior still works.
+- Large UI files are reduced into focused components.
+
+---
+
+## Phase 5: Template System Foundation
+
+**Target:** Build a real template engine for generated and manual lessons.
+
+**Mini Phases:**
+- 5.1 Define template records: id, tenantId, ownerId, type, name, description, version, status, theme tokens, layout rules, supported block types, sample content, and compatibility rules.
+- 5.2 Support template types: lesson, slide deck, section, activity, quiz, discussion, worksheet, rubric, certificate, course cover, and full course package.
+- 5.3 Add global EdSync templates and tenant-owned custom templates.
+- 5.4 Add template preview data that shows what will change before applying.
+
+**Subtargets:**
+- Teacher can select a template when creating manually.
+- AI generation can target a template.
+- Template metadata supports age group, subject, tone, pacing, accessibility, and output type.
+
+**Acceptance Checks:**
+- Template selection does not overwrite existing content unexpectedly.
+- Templates are searchable by type, subject, grade, and purpose.
+- Tests cover template parsing and compatibility.
+
+---
+
+## Phase 6: Template Application And Auto Update
+
+**Target:** Applying or changing a template updates the whole lesson package consistently.
+
+**Mini Phases:**
+- 6.1 Build a template application engine that maps template slots to learning blocks.
+- 6.2 Preserve teacher-authored content while updating layout, theme, spacing, activity framing, and slide styling.
+- 6.3 Add a diff preview for template changes.
+- 6.4 Support package-wide updates across lesson page, slides, worksheet, quiz styling, discussion prompt framing, and certificate styling.
+
+**Subtargets:**
+- Teacher can switch from `corporate` to `kid-friendly` and see the whole package update.
+- Teacher can accept all changes or apply selected changes.
+- Teacher edits are marked as protected unless explicitly remapped.
+
+**Acceptance Checks:**
+- Template changes update every compatible child artifact.
+- Protected content survives repeated template changes.
+- Tests cover apply, reapply, partial apply, and rollback.
+
+---
+
+## Phase 7: Template Import, Export, And Marketplace Readiness
+
+**Target:** Let teams import and export templates safely.
+
+**Mini Phases:**
+- 7.1 Define a portable `.edsync-template.json` format with schema version and integrity metadata.
+- 7.2 Add import validation with clear error messages for unsupported fields, missing slots, unsafe HTML, or invalid colors.
+- 7.3 Add export for tenant templates and selected built-in templates.
+- 7.4 Prepare template sharing rules for future marketplace or district libraries.
+
+**Subtargets:**
+- Imported templates can include lesson layouts, slide layouts, theme tokens, prompt contracts, and sample content.
+- Unsafe scripts, event handlers, secrets, and external tracking code are rejected.
+- Admins can approve imported templates before teacher use.
+
+**Acceptance Checks:**
+- Valid template files import and appear in the template library.
+- Invalid template files fail with actionable messages.
+- Exported templates can be re-imported without data loss.
+
+---
+
+## Phase 8: AI Prompt Contract System
+
+**Target:** Replace loose prompts with targeted prompt contracts for each tool.
+
+**Mini Phases:**
+- 8.1 Define prompt contracts for lesson, slide deck, PPT outline, discussion, quiz, worksheet, activity, rubric, flashcards, study guide, reflection, and course package.
+- 8.2 Add prompt inputs: topic, source text, grade/audience, language, tone, duration, standards, template, accessibility needs, difficulty, pacing, and assessment type.
+- 8.3 Add system prompts with strict JSON schemas and compact fallback instructions.
+- 8.4 Add prompt versioning so output changes are traceable.
+
+**Subtargets:**
+- Each AI action has a visible purpose and expected output shape.
+- Teachers can choose quick, balanced, advanced, scaffolded, exam-style, project-based, or discussion-first generation.
+- AI generation records prompt version, model/provider, template id, and source hash.
+
+**Acceptance Checks:**
+- No user-facing AI route depends on unstructured prose when structured data is required.
+- Prompt contracts are tested with schema fixtures.
+- Output metadata can explain how content was generated.
+
+---
+
+## Phase 9: AI Response Validation, Repair, And Selective Import
+
+**Target:** Make AI output reliable enough for classroom content workflows.
+
+**Mini Phases:**
+- 9.1 Create strict validators for lesson packages, slide decks, quizzes, discussions, activities, worksheets, rubrics, and template imports.
+- 9.2 Add automatic JSON repair only before validation, never after invalid content is accepted.
+- 9.3 Add local fallback drafts for common AI failure modes.
+- 9.4 Add selective import UI where teachers choose which sections, slides, questions, activities, and prompts to insert.
+
+**Subtargets:**
+- Responses can be accepted, repaired, regenerated, partially imported, or rejected.
+- Validation errors are grouped by field and shown in teacher-friendly language.
+- AI output never silently drops required fields.
+
+**Acceptance Checks:**
+- Malformed JSON returns a clear repair path.
+- Incomplete AI output cannot publish without review.
+- Teachers can import only selected generated artifacts.
+
+---
+
+## Phase 10: Lesson Builder Upgrade
+
+**Target:** Make lessons comprehensive, editable, and presentation-ready.
+
+**Mini Phases:**
+- 10.1 Support lesson structures: direct instruction, workshop, flipped classroom, inquiry, project-based, case study, exam review, microlearning, and self-paced module.
+- 10.2 Add lesson blocks: objectives, prerequisites, vocabulary, misconception alert, worked example, guided practice, independent practice, discussion, reflection, exit ticket, homework, rubric, and extension.
+- 10.3 Add lesson pacing controls with estimated minutes and teacher notes.
+- 10.4 Add standards alignment and accessibility checks.
+
+**Subtargets:**
+- Manual lessons and generated lessons use the same structure.
+- Teachers can reorder, duplicate, hide, lock, and convert blocks.
+- Lessons can generate child artifacts without losing source linkage.
+
+**Acceptance Checks:**
+- A lesson can be created manually from a blank template.
+- A lesson can be generated from source text and then edited manually.
+- A lesson can produce slides, quiz, discussion, worksheet, and practice set.
+
+---
+
+## Phase 11: Slide And PPT Design System
+
+**Target:** Produce well-designed slides and exportable PPT-style decks.
+
+**Mini Phases:**
+- 11.1 Define slide layouts: title, agenda, objective, section divider, concept, two-column, image focus, quote, timeline, process, comparison, quiz, activity, discussion, summary, exit ticket, and closing.
+- 11.2 Add design tokens for typography, color, spacing, contrast, background, accent, badge, and notes.
+- 11.3 Add slide quality rules for text density, contrast, hierarchy, image fit, title length, and speaker note completeness.
+- 11.4 Add PPT export through `pptxgenjs` with template-aware layout mapping.
+
+**Subtargets:**
+- AI-generated slides use layouts instead of plain text dumps.
+- Teacher can apply one deck template and update all slides.
+- PPT export matches the web preview closely enough for classroom use.
+
+**Acceptance Checks:**
+- Generated deck includes speaker notes and activity prompts where relevant.
+- PPT export opens with correct slide count, titles, and theme styling.
+- Slide validation flags overcrowded slides before export.
+
+---
+
+## Phase 12: Discussion Engine
+
+**Target:** Turn lessons into structured discussions that fit classroom and online learning.
+
+**Mini Phases:**
+- 12.1 Add discussion templates: debate, Socratic seminar, think-pair-share, case response, peer review, reflection, misconception check, and exit discussion.
+- 12.2 Generate prompts with roles, timing, grouping, sentence starters, moderation guidance, and teacher look-fors.
+- 12.3 Add discussion links back to lesson objectives and evidence blocks.
+- 12.4 Add student response summaries and teacher analytics.
+
+**Subtargets:**
+- Teachers can generate a discussion from any lesson section.
+- Discussions can include rubric criteria and participation expectations.
+- AI can suggest follow-up prompts based on student responses.
+
+**Acceptance Checks:**
+- Discussion prompts include objective, prompt, student action, teacher notes, and assessment criteria.
+- Student discussion view is clean and role-appropriate.
+- Teacher can review participation without leaving the lesson context.
+
+---
+
+## Phase 13: Quiz And Assessment Engine
+
+**Target:** Expand quizzes beyond basic multiple choice.
+
+**Mini Phases:**
+- 13.1 Support question types: multiple choice, multi-select, true/false, fill blank, short answer, matching, ordering, numeric, image-based, code/text analysis, and rubric-scored response.
+- 13.2 Add diagnostic, micro-check, practice, final quiz, exam, and mastery review modes.
+- 13.3 Add feedback rules: immediate explanation, delayed feedback, hints, retry, partial credit, and remediation.
+- 13.4 Add item analytics for difficulty, discrimination, missed concepts, and recommended reteach blocks.
+
+**Subtargets:**
+- Generated quizzes are Bloom-balanced and tied to objectives.
+- Teachers can manually edit every question and explanation.
+- Students can retry weak concepts through practice review cards.
+
+**Acceptance Checks:**
+- Quiz validation enforces correct answers and scoring rules.
+- Generated quizzes include explanations and difficulty.
+- Gradebook receives accurate score and attempt data.
+
+---
+
+## Phase 14: Activity And Practice Diversity
+
+**Target:** Add varied learning activities rather than only reading and quizzes.
+
+**Mini Phases:**
+- 14.1 Add activities: sorting, matching, drag sequence, flashcards, timed sprint, mistake retry, worksheet, lab, role play, case study, simulation prompt, peer critique, project checkpoint, and reflection journal.
+- 14.2 Add group formats: solo, pairs, small group, whole class, asynchronous, and teacher-led.
+- 14.3 Add activity metadata: duration, materials, grouping, evidence, scoring, accessibility, and classroom management notes.
+- 14.4 Add conversion from lesson blocks into activity sets.
+
+**Subtargets:**
+- Teachers can generate activities from source lessons.
+- Activities can become student assignments.
+- Practice engine reuses generated activity and quiz data when appropriate.
+
+**Acceptance Checks:**
+- Activity library includes at least twelve distinct activity types.
+- Each activity has teacher instructions and student instructions.
+- Activities can be assigned and tracked.
+
+---
+
+## Phase 15: Media, Import, And Source Handling
+
+**Target:** Let EdSync ingest diverse sources safely.
+
+**Mini Phases:**
+- 15.1 Improve import flows for text, URL, PDF, document, slides, CSV, images, video links, and existing EdSync content.
+- 15.2 Extract source metadata, citations, attachments, and suggested objectives.
+- 15.3 Add source chunking and retrieval for long materials.
+- 15.4 Preserve source references when generating lessons, slides, quizzes, and discussions.
+
+**Subtargets:**
+- Teachers can import a source and generate a lesson package from it.
+- Extracted content is sanitized and bounded.
+- Generated outputs can show source traceability where available.
+
+**Acceptance Checks:**
+- Large source input is chunked rather than silently truncated.
+- Unsafe uploaded content is rejected or sanitized.
+- Source references remain attached to generated artifacts.
+
+---
+
+## Phase 16: Collaboration, Versioning, And Review
+
+**Target:** Support professional lesson development workflows.
+
+**Mini Phases:**
+- 16.1 Add version snapshots for lessons, templates, slides, quizzes, and discussions.
+- 16.2 Add change history with author, time, action, and affected blocks.
+- 16.3 Add review states: draft, needs review, approved, published, assigned, archived.
+- 16.4 Add teacher/admin comments for content review.
+
+**Subtargets:**
+- Teachers can compare versions and restore prior versions.
+- Admins can approve shared templates and published content.
+- Version history supports AI-generated and manual changes.
+
+**Acceptance Checks:**
+- Each save creates meaningful history metadata.
+- Restore does not corrupt linked child artifacts.
+- Review workflow can block publishing when required.
+
+---
+
+## Phase 17: Personalization And Accessibility
+
+**Target:** Make content adaptable for different learners and contexts.
+
+**Mini Phases:**
+- 17.1 Add learner profile inputs: reading level, language, accommodations, interest themes, pacing, and support level.
+- 17.2 Add teacher controls for simplify, extend, translate, scaffold, add examples, add visuals, and add checks for understanding.
+- 17.3 Add accessibility checks for contrast, heading structure, alt text, captions, keyboard use, and cognitive load.
+- 17.4 Add differentiated versions of lessons, quizzes, activities, and slides.
+
+**Subtargets:**
+- Teachers can generate multiple versions without losing the master version.
+- Student-facing content follows accessibility basics.
+- AI prompts include accommodations only when appropriate and safe.
+
+**Acceptance Checks:**
+- Differentiated versions keep objective alignment.
+- Accessibility warnings are shown before publish.
+- Translated or simplified content remains editable.
+
+---
+
+## Phase 18: Analytics And Continuous Improvement
+
+**Target:** Use student and teacher activity to improve lessons.
+
+**Mini Phases:**
+- 18.1 Track engagement with lessons, slides, discussions, quizzes, practice, and assignments.
+- 18.2 Add objective-level analytics and weak concept detection.
+- 18.3 Recommend reteach blocks, practice sets, discussion prompts, and slide revisions.
+- 18.4 Add teacher-facing review summaries after assignments.
+
+**Subtargets:**
+- Analytics connect learning outcomes to lesson components.
+- Teachers can see which slide, section, or question caused confusion.
+- AI recommendations are optional and explainable.
+
+**Acceptance Checks:**
+- Events are tenant-safe and role-safe.
+- Analytics screens avoid exposing private student data unnecessarily.
+- Recommendations link back to specific evidence.
+
+---
+
+## Phase 19: Quality Gates, Testing, And Deployment Workflow
+
+**Target:** Make changes safer as EdSync becomes broader.
+
+**Mini Phases:**
+- 19.1 Standardize unit tests for validators, template application, AI contracts, conversion helpers, and scoring.
+- 19.2 Add browser tests for Studio creation, template switching, slide preview, selective AI import, quiz creation, discussion creation, and publish flow.
+- 19.3 Add build verification: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, `npm.cmd run build`.
+- 19.4 Add deployment checks for Vercel and Cloudflare app/worker paths.
+
+**Subtargets:**
+- Every phase that changes behavior includes targeted tests.
+- Browser-level workflows cover the most important teacher and student paths.
+- Deployment scripts keep EdSync resources separate from AllChess and LEARN.
+
+**Acceptance Checks:**
+- Verification commands pass before deployment.
+- Failed AI/provider/deployment checks produce actionable logs.
+- New migrations include rollback or forward-fix notes.
+
+---
+
+## Phase 20: Launch Readiness And Operating Rhythm
+
+**Target:** Turn the improvements into a repeatable delivery system.
+
+**Mini Phases:**
+- 20.1 Define release slices: foundation, templates, AI contracts, lesson builder, slides/PPT, activities, analytics, and polish.
+- 20.2 Update `progress.md` after every implementation pass.
+- 20.3 Keep a decision log for architecture, data model, AI prompt contracts, and template rules.
+- 20.4 Run final smoke tests for teacher, student, admin, Studio, lesson, slide, quiz, discussion, and deployment flows.
+
+**Subtargets:**
+- Each release slice has a visible user outcome.
+- Progress is understandable without reading every commit.
+- Future agents can continue from the tracker without rediscovering the whole system.
+
+**Acceptance Checks:**
+- `progress.md` reflects completed phases, blockers, next target, and verification status.
+- Documentation names the current architecture and major tradeoffs.
+- Main is pushed after successful commits.
+
+---
+
+## Cross-Phase Architecture Targets
+
+- Keep AI contracts, validators, template engines, and conversion helpers outside UI components.
+- Keep tenant-aware database access server-side.
+- Use typed adapters when reading older Studio content.
+- Treat generated content as drafts until validated and accepted.
+- Prefer reusable block transformations over one-off conversion code.
+- Keep prompt versions and template versions visible in metadata.
+- Maintain EdSync-specific Cloudflare resources and never reuse AllChess or LEARN bindings.
+
+## Cross-Phase Design Targets
+
+- Use the real working experience as the first screen, not a marketing shell.
+- Keep creation tools dense, scannable, and teacher-focused.
+- Use icons for tool actions and concise labels for modes.
+- Avoid nested cards and oversized decorative surfaces in operational tools.
+- Make slide, PPT, lesson, quiz, discussion, and activity outputs feel intentionally designed.
+- Ensure text fits in panels, buttons, cards, slides, and mobile layouts.
+- Add accessibility checks before publish and export.
+
+## Cross-Phase AI Targets
+
+- Every generation feature has a prompt contract, schema, validator, and repair path.
+- Responses are previewed before insertion.
+- Teachers can accept all, accept selected parts, regenerate, or discard.
+- AI should generate complete classroom-ready packages, not disconnected fragments.
+- Fallback drafts should keep teachers moving when a provider truncates or fails.
+- Store enough metadata to audit generated content without storing secrets.
+
+## Cross-Phase Template Targets
+
+- Templates define structure, layout, style, prompt behavior, sample content, and compatibility.
+- Templates can be applied to blank manual lessons and generated lessons.
+- Template changes update all compatible child artifacts.
+- Teacher-authored content is protected by default.
+- Imported templates are validated before use.
+- Templates are versioned so published content can remain stable.
+
+## Recommended Release Order
+
+1. Finish baseline inventory and Studio refactor planning.
+2. Build shared learning object types and validators.
+3. Build template foundation and template application engine.
+4. Build AI prompt contracts and response validation.
+5. Upgrade lesson builder and selective import.
+6. Upgrade slides and PPT export.
+7. Expand discussions, quizzes, and activities.
+8. Add source import depth, collaboration, accessibility, analytics, and release hardening.
+
+## Default Verification Commands
+
+```powershell
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test
+npm.cmd run build
+```
+
+## Tracking Files
+
+- `plan.md`: comprehensive roadmap and targets.
+- `progress.md`: phase status, current target, blockers, verification, and decision log.
+- `docs/superpowers/plans/2026-05-16-edsync-lessons-slides-platform.md`: existing detailed implementation plan for the Studio lesson and slide slice.
