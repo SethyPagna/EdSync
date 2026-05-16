@@ -1,4 +1,5 @@
 import { assertTableName, deserializeRow, serializeRow, type TableName } from "./schema";
+import { sqlInPlaceholders } from "./sql";
 
 export type DataFilter =
   | { op: "eq" | "neq" | "gte" | "lte"; column: string; value: unknown }
@@ -137,8 +138,10 @@ async function embedRelations(table: TableName, columns: string | undefined, row
   if (table === "lesson_assignments" && columns.includes("lessons(title)")) {
     const ids = Array.from(new Set(rows.map((row) => row.lesson_id).filter(Boolean)));
     if (ids.length > 0) {
-      const placeholders = ids.map(() => "?").join(", ");
-      const lessons = await d1Query("SELECT id, title FROM lessons WHERE id IN (" + placeholders + ")", ids);
+      const lessons = await d1Query(
+        `SELECT id, title FROM lessons WHERE id IN (${sqlInPlaceholders(ids)})`,
+        ids,
+      );
       const byId = new Map(lessons.map((lesson) => [lesson.id, lesson]));
       return rows.map((row) => ({ ...row, lessons: byId.get(row.lesson_id) ?? null }));
     }
@@ -147,8 +150,10 @@ async function embedRelations(table: TableName, columns: string | undefined, row
   if (table === "lesson_assignments" && columns.includes("classes(name)")) {
     const ids = Array.from(new Set(rows.map((row) => row.class_id).filter(Boolean)));
     if (ids.length > 0) {
-      const placeholders = ids.map(() => "?").join(", ");
-      const classes = await d1Query("SELECT id, name FROM classes WHERE id IN (" + placeholders + ")", ids);
+      const classes = await d1Query(
+        `SELECT id, name FROM classes WHERE id IN (${sqlInPlaceholders(ids)})`,
+        ids,
+      );
       const byId = new Map(classes.map((klass) => [klass.id, klass]));
       return rows.map((row) => ({ ...row, classes: byId.get(row.class_id) ?? null }));
     }
