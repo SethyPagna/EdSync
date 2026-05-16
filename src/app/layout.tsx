@@ -3,6 +3,18 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import PwaRegister from "@/components/PwaRegister";
 
+const preferenceScript = `
+(() => {
+  try {
+    const theme = window.localStorage.getItem("edsync-theme");
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    const language = window.localStorage.getItem("edsync-language") || "English";
+    const codes = { English: "en", Korean: "ko", Khmer: "km", Chinese: "zh", Japanese: "ja", Spanish: "es", French: "fr", Vietnamese: "vi", Thai: "th" };
+    document.documentElement.lang = codes[language] || "en";
+  } catch {}
+})();
+`;
+
 export const metadata: Metadata = {
   title: {
     default: "EdSync Catalog",
@@ -21,6 +33,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: preferenceScript }} />
+      </head>
       <body
         className="min-h-screen bg-edsync-bg font-body text-edsync-text antialiased"
         suppressHydrationWarning
