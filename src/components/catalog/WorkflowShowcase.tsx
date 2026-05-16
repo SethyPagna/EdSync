@@ -23,12 +23,16 @@ type WorkflowSlide = {
   id: string;
   title: string;
   shortTitle: string;
+  headline: string;
   subtitle: string;
   route: string;
   icon: LucideIcon;
   accent: string;
-  rows: string[];
-  stats: { label: string; value: string }[];
+  tabs: string[];
+  metrics: { label: string; value: string }[];
+  rows: { title: string; detail: string; status: string }[];
+  sideTitle: string;
+  sideRows: string[];
   actions: string[];
 };
 
@@ -37,97 +41,145 @@ const slides: WorkflowSlide[] = [
     id: "studio",
     title: "Course Studio",
     shortTitle: "Studio",
-    subtitle: "Build the source lesson, slides, practice set, and assignment package in one workspace.",
+    headline: "Turn a rough idea into a lesson package.",
+    subtitle: "A teacher can write, import, design slides, build quizzes, and keep drafts in one workspace.",
     route: "/studio",
     icon: Presentation,
     accent: "text-edsync-blue",
-    rows: ["Energy Transfer lesson", "7 slides generated", "Quiz and rubric attached"],
-    stats: [
-      { label: "Duration", value: "35m" },
-      { label: "Blocks", value: "12" },
-      { label: "State", value: "Draft" },
+    tabs: ["Outline", "Slides", "Practice", "Assign"],
+    metrics: [
+      { label: "Draft", value: "Auto-saved" },
+      { label: "Sections", value: "12" },
+      { label: "Duration", value: "35 min" },
     ],
-    actions: ["Edit sections", "Generate slides", "Assign"],
+    rows: [
+      { title: "Energy Transfer", detail: "Lesson sections, deck, and worksheet", status: "Editing" },
+      { title: "Quiz block", detail: "8 point-based questions with explanations", status: "Ready" },
+      { title: "Class handoff", detail: "Assign to Grade 8 Science by Friday", status: "Next" },
+    ],
+    sideTitle: "Studio actions",
+    sideRows: ["Import text or files", "Ask AI to clean up", "Insert slides and practice"],
+    actions: ["Open Studio", "Create lesson", "Generate practice"],
   },
   {
     id: "ai",
     title: "AI Co-creator",
     shortTitle: "AI",
-    subtitle: "Prompt with grade level, language, duration, tone, standards, and output type before importing.",
+    headline: "AI output arrives as editable classroom material.",
+    subtitle: "Guided fields control grade level, tone, language, standards, quiz style, and insert-back target.",
     route: "/ai",
     icon: Wand2,
     accent: "text-edsync-emerald",
-    rows: ["Grade 8 Science", "Student-friendly tone", "Quiz + flashcards + rubric"],
-    stats: [
+    tabs: ["Prompt", "Preview", "Review", "Insert"],
+    metrics: [
       { label: "Provider", value: "Smart" },
-      { label: "Review", value: "On" },
-      { label: "Output", value: "JSON" },
+      { label: "Review", value: "Required" },
+      { label: "Output", value: "Structured" },
     ],
-    actions: ["Preview", "Insert selected", "Regenerate"],
+    rows: [
+      { title: "Grade 8 science", detail: "Zero-to-expert explanation", status: "Prompted" },
+      { title: "Draft slides", detail: "5 slides with speaker notes", status: "Preview" },
+      { title: "Practice set", detail: "Quiz, flashcards, and retry missed", status: "Insert" },
+    ],
+    sideTitle: "Teacher control",
+    sideRows: ["Regenerate one slide", "Change tone or language", "Insert selected only"],
+    actions: ["Run AI", "Preview result", "Insert selected"],
   },
   {
     id: "teacher",
-    title: "Teacher Flow",
+    title: "Teacher Dashboard",
     shortTitle: "Teacher",
-    subtitle: "See today’s work, feedback queues, class readiness, deadline signals, and next teaching actions.",
+    headline: "The teacher sees the next useful action first.",
+    subtitle: "Deadlines, submissions, notes, class health, and planning signals stay grouped and readable.",
     route: "/teacher/dashboard",
     icon: CalendarCheck,
     accent: "text-edsync-blue",
-    rows: ["3 submissions need review", "4 learners need support", "Friday quiz ready"],
-    stats: [
-      { label: "Active", value: "23" },
+    tabs: ["Today", "Classes", "Review", "Plan"],
+    metrics: [
+      { label: "Review", value: "3" },
+      { label: "Support", value: "4" },
       { label: "Mastery", value: "81%" },
-      { label: "Alerts", value: "4" },
     ],
-    actions: ["Review", "Plan deadline", "Send note"],
+    rows: [
+      { title: "Friday quiz", detail: "23 learners assigned", status: "Scheduled" },
+      { title: "Feedback queue", detail: "3 submissions need comments", status: "Review" },
+      { title: "Intervention", detail: "4 learners missed two concepts", status: "Help" },
+    ],
+    sideTitle: "Fast actions",
+    sideRows: ["Plan deadline", "Send student note", "Open gradebook"],
+    actions: ["Review work", "Schedule", "Message"],
   },
   {
     id: "practice",
     title: "Student Practice",
     shortTitle: "Practice",
-    subtitle: "Students move through timed quizzes, flashcards, mistake retry, explanations, and review cards.",
+    headline: "Practice feels active, not like another static worksheet.",
+    subtitle: "Students can run timed sprints, retry missed items, read explanations, and save mistakes to review.",
     route: "/practice",
     icon: Trophy,
     accent: "text-edsync-amber",
-    rows: ["Sprint mode running", "2 missed saved to review", "Explanation unlocked"],
-    stats: [
+    tabs: ["Sprint", "Flashcards", "Retry", "Review"],
+    metrics: [
       { label: "Timer", value: "08:42" },
       { label: "Streak", value: "6" },
       { label: "Score", value: "88%" },
     ],
-    actions: ["Pause", "Retry missed", "Save review"],
+    rows: [
+      { title: "Question 5", detail: "Why does heat move from warm to cool?", status: "Answered" },
+      { title: "Missed concept", detail: "Conduction vs convection", status: "Review" },
+      { title: "Next card", detail: "Saved to mistake retry queue", status: "Ready" },
+    ],
+    sideTitle: "Learning loop",
+    sideRows: ["Pause or restart", "Retry missed only", "Save to review cards"],
+    actions: ["Start sprint", "Retry missed", "Review cards"],
   },
   {
     id: "admin",
     title: "Admin Command",
     shortTitle: "Admin",
-    subtitle: "Platform controls stay separate: portals, providers, feature flags, security, and governance.",
+    headline: "Platform controls stay powerful but separated.",
+    subtitle: "Global admin manages providers, portals, feature flags, catalog settings, audit logs, and security.",
     route: "/admin/dashboard",
     icon: ShieldCheck,
     accent: "text-edsync-purple",
-    rows: ["AI provider fallback healthy", "Portal catalog published", "Security audit logged"],
-    stats: [
+    tabs: ["Health", "Portals", "AI", "Security"],
+    metrics: [
       { label: "Providers", value: "5" },
       { label: "Portals", value: "3" },
       { label: "Risk", value: "Low" },
     ],
-    actions: ["Test provider", "Edit portal", "Audit"],
+    rows: [
+      { title: "AI fallback", detail: "Groq, Google, Mistral, Cerebras, Cohere", status: "Healthy" },
+      { title: "Portal catalog", detail: "Public and organization products", status: "Live" },
+      { title: "Security events", detail: "Admin view-as and provider tests logged", status: "Audited" },
+    ],
+    sideTitle: "Platform actions",
+    sideRows: ["Test provider", "Edit portal", "Review audit"],
+    actions: ["Open admin", "Test AI", "View security"],
   },
   {
     id: "discussion",
-    title: "Class Discussion",
+    title: "Discussion And Feedback",
     shortTitle: "Discuss",
-    subtitle: "Prompts, replies, teacher notes, and feedback connect back to lessons and interventions.",
+    headline: "Class discussion connects back to evidence.",
+    subtitle: "Prompts, replies, teacher notes, and feedback stay tied to the lesson and student progress.",
     route: "/student/discussions",
     icon: MessageSquareText,
     accent: "text-edsync-cyan",
-    rows: ["Prompt linked to lesson", "12 replies collected", "Teacher note drafted"],
-    stats: [
+    tabs: ["Prompt", "Replies", "Notes", "Follow-up"],
+    metrics: [
       { label: "Replies", value: "12" },
       { label: "Unread", value: "3" },
       { label: "Notes", value: "2" },
     ],
-    actions: ["Reply", "Summarize", "Intervene"],
+    rows: [
+      { title: "Lesson prompt", detail: "Explain heat transfer in your kitchen", status: "Open" },
+      { title: "Student reply", detail: "Teacher note drafted for misconception", status: "Flagged" },
+      { title: "Recommendation", detail: "Review card added to dashboard", status: "Next" },
+    ],
+    sideTitle: "Feedback loop",
+    sideRows: ["Summarize replies", "Draft a note", "Recommend review"],
+    actions: ["Join discussion", "Summarize", "Add note"],
   },
 ];
 
@@ -135,62 +187,84 @@ const WorkflowScreen = memo(function WorkflowScreen({ slide }: { slide: Workflow
   const ActiveIcon = slide.icon;
 
   return (
-    <article className="edsync-workflow-screen">
+    <article className="edsync-workflow-screen" aria-label={slide.title}>
       <div className="edsync-workflow-browser">
-        <span />
-        <span />
-        <span />
-      </div>
-
-      <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-edsync-bg ${slide.accent}`}>
-              <ActiveIcon className="h-5 w-5" />
-            </span>
-            <div>
-              <h3 className="font-display text-3xl font-bold">{slide.title}</h3>
-              <p className="text-sm font-semibold text-edsync-subtle">{slide.route}</p>
-            </div>
-          </div>
-          <p className="mt-5 max-w-2xl text-sm leading-6 text-edsync-subtle">{slide.subtitle}</p>
+        <div className="flex gap-1.5" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </div>
-        <Link href={slide.route} className="btn-primary w-fit justify-center px-4 py-2 text-sm">
+        <span className="truncate text-xs font-bold text-edsync-subtle">{slide.route}</span>
+        <Link href={slide.route} className="edsync-workflow-open">
           Open
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      <div className="mt-7 grid gap-3 sm:grid-cols-3">
-        {slide.stats.map((stat) => (
-          <div key={stat.label} className="edsync-workflow-stat">
-            <span>{stat.label}</span>
-            <strong>{stat.value}</strong>
+      <div className="edsync-workflow-hero-row">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-edsync-bg ${slide.accent}`}>
+              <ActiveIcon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-edsync-subtle">{slide.title}</p>
+              <h3 className="font-display text-3xl font-bold leading-tight sm:text-5xl">{slide.headline}</h3>
+            </div>
           </div>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">{slide.subtitle}</p>
+        </div>
+      </div>
+
+      <div className="edsync-workflow-tabs" aria-label={`${slide.title} preview tabs`}>
+        {slide.tabs.map((tab, index) => (
+          <span key={tab} className={index === 0 ? "is-active" : ""}>
+            {tab}
+          </span>
         ))}
       </div>
 
-      <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="edsync-workflow-product">
         <div className="edsync-workflow-canvas">
-          {slide.rows.map((row, index) => (
-            <div key={row} className="edsync-workflow-row">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue/10 text-edsync-blue">
-                {index === 0 ? <FileText className="h-4 w-4" /> : index === 1 ? <Bot className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-              </span>
-              <span className="font-semibold text-edsync-text">{row}</span>
-              <span className="ml-auto h-2 max-w-[7rem] flex-1 rounded-full bg-edsync-border">
-                <span className="block h-full rounded-full bg-edsync-blue/30" style={{ width: `${82 - index * 16}%` }} />
-              </span>
-            </div>
-          ))}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {slide.metrics.map((metric) => (
+              <div key={metric.label} className="edsync-workflow-stat">
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {slide.rows.map((row, index) => (
+              <div key={row.title} className="edsync-workflow-row">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-edsync-blue/10 text-edsync-blue">
+                  {index === 0 ? <FileText className="h-4 w-4" /> : index === 1 ? <Bot className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-bold text-edsync-text">{row.title}</span>
+                  <span className="block truncate text-sm text-edsync-subtle">{row.detail}</span>
+                </span>
+                <span className="edsync-workflow-status">{row.status}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="edsync-workflow-sidepanel">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Actions</span>
+        <aside className="edsync-workflow-sidepanel">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="font-display text-xl font-bold">{slide.sideTitle}</h4>
             <Clock3 className="h-4 w-4 text-edsync-subtle" />
           </div>
           <div className="mt-4 grid gap-2">
+            {slide.sideRows.map((row) => (
+              <div key={row} className="edsync-workflow-side-row">
+                <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
+                <span>{row}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 grid gap-2">
             {slide.actions.map((action, index) => (
               <button
                 key={action}
@@ -201,7 +275,7 @@ const WorkflowScreen = memo(function WorkflowScreen({ slide }: { slide: Workflow
               </button>
             ))}
           </div>
-        </div>
+        </aside>
       </div>
     </article>
   );
@@ -234,7 +308,7 @@ export default function WorkflowShowcase() {
         }
         if (Number.isFinite(bestIndex) && bestIndex >= 0) setActiveSlide(bestIndex);
       },
-      { rootMargin: "-38% 0px -42% 0px", threshold: 0.45 },
+      { rootMargin: "-36% 0px -44% 0px", threshold: 0.5 },
     );
 
     stepRefs.current.forEach((node) => {
@@ -251,64 +325,81 @@ export default function WorkflowShowcase() {
   }, [setActiveSlide]);
 
   return (
-    <section id="showcase" className="edsync-workflow-showcase scroll-mt-24">
-      <div className="edsync-workflow-sticky">
-        <div className="edsync-workflow-copy">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-edsync-blue">View workflow</p>
-          <h2 className="mt-3 font-display text-4xl font-bold leading-tight sm:text-6xl">
-            Product screens, not promises.
-          </h2>
-          <p className="mt-4 max-w-xl text-base leading-7 text-edsync-subtle">
-            Scroll or click through the real surfaces: Studio, AI, teacher work, student practice, admin controls, and discussion.
-          </p>
+    <>
+      <section id="workflow-transition" className="edsync-workflow-bridge" aria-label="Workflow transition">
+        <div className="edsync-workflow-bridge-sticky">
+          <div className="edsync-workflow-bridge-card">
+            <div className="min-w-0">
+              <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
+                See the loop.
+              </h2>
+              <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
+                Scroll once and the landing page gives way to the product: create, personalize, practice, grade, and improve.
+              </p>
+            </div>
+            <div className="edsync-workflow-bridge-window" aria-hidden="true">
+              {["Idea", "Studio", "Practice", "Progress"].map((label, index) => (
+                <span key={label} style={{ transform: `translateX(${index * 0.65}rem)` }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {slides.map((slide, index) => (
-              <button
-                key={slide.id}
-                type="button"
-                onClick={() => goToSlide(index)}
-                className={`edsync-workflow-dot ${activeIndex === index ? "is-active" : ""}`}
-                aria-label={`Show ${slide.title}`}
-                aria-current={activeIndex === index ? "true" : undefined}
-              >
-                <span />
-                {slide.shortTitle}
-              </button>
-            ))}
+      <section id="showcase" className="edsync-workflow-showcase scroll-mt-24">
+        <div className="edsync-workflow-sticky">
+          <div className="edsync-workflow-heading">
+            <div>
+              <h2 className="font-display text-4xl font-bold leading-tight sm:text-6xl">
+                One gallery. Every step.
+              </h2>
+              <p className="mt-3 max-w-2xl text-base leading-7 text-edsync-subtle">
+                Click the dots or keep scrolling through the actual EdSync workflow surfaces.
+              </p>
+            </div>
           </div>
 
-          <div className="mt-6 flex gap-2">
+          <div className="edsync-workflow-controls" aria-label="Workflow gallery controls">
             <button type="button" className="premium-icon-button" onClick={() => goToSlide(activeIndex - 1)} aria-label="Previous workflow slide">
               <ChevronLeft className="h-4 w-4" />
             </button>
+            <div className="edsync-workflow-dots">
+              {slides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => goToSlide(index)}
+                  className={activeIndex === index ? "is-active" : ""}
+                  aria-label={`Show ${slide.title}`}
+                  aria-current={activeIndex === index ? "true" : undefined}
+                />
+              ))}
+            </div>
             <button type="button" className="premium-icon-button" onClick={() => goToSlide(activeIndex + 1)} aria-label="Next workflow slide">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <Link href="#catalog-search-panel" className="btn-secondary ml-1 justify-center px-4 py-2 text-sm">
-              Open catalog
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+          </div>
+
+          <div className="edsync-workflow-stage">
+            <WorkflowScreen slide={activeSlide} />
           </div>
         </div>
 
-        <div className="edsync-workflow-stage">
-          <WorkflowScreen slide={activeSlide} />
+        <div className="edsync-workflow-scroll-steps" aria-hidden="true">
+          {slides.map((slide, index) => (
+            <div
+              key={slide.id}
+              ref={(node) => {
+                stepRefs.current[index] = node;
+              }}
+              data-step-index={index}
+              className="edsync-workflow-step"
+            />
+          ))}
         </div>
-      </div>
-
-      <div className="edsync-workflow-scroll-steps" aria-hidden="true">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            ref={(node) => {
-              stepRefs.current[index] = node;
-            }}
-            data-step-index={index}
-            className="edsync-workflow-step"
-          />
-        ))}
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
