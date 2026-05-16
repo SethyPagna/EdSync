@@ -6,11 +6,13 @@ import {
   Building2,
   CheckCircle2,
   Clock3,
-  GraduationCap,
+  Layers3,
+  Search,
   ShieldCheck,
   Sparkles,
   UsersRound,
 } from "lucide-react";
+import PublicTopbar from "@/components/public/PublicTopbar";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 
@@ -51,46 +53,71 @@ export default async function CatalogPage({
 
   return (
     <main className="min-h-screen bg-edsync-bg text-edsync-text">
-      <header className="border-b border-edsync-border bg-edsync-surface/95">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="font-display text-xl font-bold">EdSync</p>
-              <p className="text-xs text-edsync-subtle">Catalog and academies</p>
-            </div>
-          </Link>
-          <nav className="flex flex-wrap items-center gap-2">
-            <Link href="#organizations" className="btn-ghost px-3 py-2 text-sm">
-              Organizations
-            </Link>
-            <Link href="/auth/login" className="btn-secondary justify-center px-4 py-2 text-sm">
-              Sign in
-            </Link>
-            <Link href="/auth/signup" className="btn-primary justify-center px-4 py-2 text-sm">
-              Create workspace
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <PublicTopbar active="catalog" />
 
-      <section className="mx-auto max-w-7xl px-5 py-8 sm:py-10">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
-          <div className="rounded-xl border border-edsync-border bg-edsync-card p-5 sm:p-7">
-            <p className="inline-flex rounded-lg border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-1.5 text-sm font-semibold text-edsync-blue">
-              Public learning catalog
-            </p>
-            <h1 className="mt-5 max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl">
-              Find a course, join an academy, or start your own workspace.
-            </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">
-              Browse EdSync courses across public organizations. Sign in only when
-              you are ready to enroll, teach, manage an academy, or continue your
-              individual learning space.
-            </p>
-            <form className="mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-stretch">
+          <div className="overflow-hidden rounded-2xl border border-edsync-border bg-edsync-card shadow-sm">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div className="p-5 sm:p-7">
+                <p className="inline-flex items-center gap-2 rounded-full border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-1.5 text-sm font-semibold text-edsync-blue">
+                  <Search className="h-4 w-4" />
+                  Public learning catalog
+                </p>
+                <h1 className="mt-5 max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl">
+                  Discover courses and enter the right learning space.
+                </h1>
+                <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">
+                  Search public courses, organization academies, and free or paid programs. EdSync keeps
+                  individual and organization learning connected without mixing their data.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link href="#catalog-results" className="btn-primary justify-center">
+                    Browse courses
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link href="#organizations" className="btn-secondary justify-center">
+                    <Building2 className="h-4 w-4" />
+                    Find organization
+                  </Link>
+                </div>
+              </div>
+              <div className="border-t border-edsync-border bg-edsync-surface p-4 lg:border-l lg:border-t-0">
+                <div className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-edsync-subtle">Today in EdSync</p>
+                      <p className="mt-1 font-display text-2xl font-bold">Catalog ready</p>
+                    </div>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                      <Layers3 className="h-6 w-6" />
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    {[
+                      ["Search", "Find lessons, courses, portals"],
+                      ["Enroll", "Free access or checkout"],
+                      ["Learn", "Dashboard, practice, progress"],
+                    ].map(([title, copy], index) => (
+                      <div
+                        key={title}
+                        className="flex items-center gap-3 rounded-lg border border-edsync-border bg-edsync-bg/60 p-3"
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-edsync-blue/10 text-xs font-bold text-edsync-blue">
+                          {index + 1}
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold text-edsync-text">{title}</span>
+                          <span className="block text-xs text-edsync-subtle">{copy}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <form className="border-t border-edsync-border bg-edsync-surface p-3">
               <label className="sr-only" htmlFor="catalog-search">
                 Search catalog
               </label>
@@ -135,19 +162,6 @@ export default async function CatalogPage({
                 </button>
               </div>
             </form>
-            {categories.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <Link
-                    key={category}
-                    href={`/catalog?category=${encodeURIComponent(category)}`}
-                    className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue"
-                  >
-                    {category}
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
 
           <aside className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
@@ -158,15 +172,56 @@ export default async function CatalogPage({
             ].map((metric) => {
               const Icon = metric.icon;
               return (
-                <div key={metric.label} className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-                  <Icon className={`mb-4 h-7 w-7 ${metric.tone}`} />
-                  <p className="font-display text-3xl font-bold">{metric.value}</p>
+                <div key={metric.label} className="rounded-xl border border-edsync-border bg-edsync-card p-5 shadow-sm">
+                  <Icon className={`mb-4 h-8 w-8 ${metric.tone}`} />
+                  <p className="font-display text-4xl font-bold">{metric.value}</p>
                   <p className="text-sm text-edsync-subtle">{metric.label}</p>
                 </div>
               );
             })}
           </aside>
         </div>
+
+        <div className="mt-4 rounded-xl border border-edsync-border bg-edsync-card p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-edsync-text">Quick paths</p>
+              <p className="text-sm text-edsync-subtle">Choose the way you are using EdSync today.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/auth/signup?mode=individual" className="btn-secondary justify-center px-4 py-2 text-sm">
+                Individual
+              </Link>
+              <Link href="/auth/login?mode=organization" className="btn-secondary justify-center px-4 py-2 text-sm">
+                Enter organization
+              </Link>
+              <Link href="/auth/login?next=/teacher/dashboard" className="btn-secondary justify-center px-4 py-2 text-sm">
+                Teacher portal
+              </Link>
+              <Link href="/auth/login?next=/student/dashboard" className="btn-secondary justify-center px-4 py-2 text-sm">
+                Student portal
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {categories.length > 0 && (
+          <section className="mt-5">
+            <div className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <Link
+                    key={category}
+                    href={`/catalog?category=${encodeURIComponent(category)}`}
+                    className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue"
+                  >
+                    {category}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {featured.length > 0 && (
           <section className="mt-8">
@@ -182,7 +237,7 @@ export default async function CatalogPage({
           </section>
         )}
 
-        <section className="mt-8">
+        <section id="catalog-results" className="mt-8 scroll-mt-32">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold">All public courses</h2>
