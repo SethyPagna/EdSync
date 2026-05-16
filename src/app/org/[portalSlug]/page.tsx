@@ -7,6 +7,7 @@ import {
   Clock3,
   Globe2,
   Search,
+  SlidersHorizontal,
   UsersRound,
 } from "lucide-react";
 import PublicTopbar from "@/components/public/PublicTopbar";
@@ -94,13 +95,14 @@ export default async function OrganizationPortalPage({
               </div>
             </div>
             <form className="border-t border-edsync-border bg-edsync-surface/85 p-3">
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
+              <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_9rem_9rem_auto_auto] [&>*]:min-w-0">
                 <label className="relative">
                   <span className="sr-only">Search this academy</span>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
                   <input
                     name="q"
                     defaultValue={filters.query}
-                    className="edsync-input"
+                    className="edsync-input pl-9"
                     placeholder="Search this academy"
                   />
                 </label>
@@ -109,12 +111,6 @@ export default async function OrganizationPortalPage({
                   <option value="free">Free</option>
                   <option value="paid">Paid</option>
                 </select>
-                <input
-                  name="difficulty"
-                  defaultValue={filters.difficulty}
-                  className="edsync-input min-w-0"
-                  placeholder="Difficulty"
-                />
                 <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-0">
                   <option value="">Any duration</option>
                   <option value="15">15 min</option>
@@ -122,6 +118,28 @@ export default async function OrganizationPortalPage({
                   <option value="60">60 min</option>
                   <option value="120">2 hours</option>
                 </select>
+                <details className="group relative">
+                  <summary className="btn-secondary h-full min-h-11 cursor-pointer justify-center px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                  </summary>
+                  <div className="premium-overlay animate-overlay-in absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl p-3">
+                    <div className="grid gap-2">
+                      <input
+                        name="difficulty"
+                        defaultValue={filters.difficulty}
+                        className="edsync-input min-w-0"
+                        placeholder="Difficulty"
+                      />
+                      <input
+                        name="language"
+                        defaultValue={filters.language}
+                        className="edsync-input min-w-0"
+                        placeholder="Language"
+                      />
+                    </div>
+                  </div>
+                </details>
                 <button type="submit" className="btn-primary justify-center">
                   <Search className="h-4 w-4" />
                   Search
