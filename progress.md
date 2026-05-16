@@ -97,6 +97,7 @@
 | 2026-05-16 | Phase 3 lesson-package composer and Studio integration | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts src/lib/learning/lesson-package.test.ts`; `npm.cmd run lint` | Passed |
 | 2026-05-16 | Phase 3 teacher lesson package summary | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test -- src/lib/learning/lesson-package.test.ts` | Passed |
 | 2026-05-16 | Public intro launch redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; headless Chrome and Playwright screenshots at desktop/mobile/gallery viewports | Passed |
+| 2026-05-16 | Interactive workflow showcase redesign | `npm.cmd run typecheck`; `npm.cmd run lint`; Playwright screenshots at hero, workflow desktop, and workflow mobile viewports | Passed |
 
 ---
 
@@ -147,6 +148,7 @@
 - Added a horizontal product gallery that previews Studio, teacher workflow, student practice, admin command, and discussion surfaces.
 - Tightened mobile header behavior so the public topbar keeps theme/language controls visible without clipping.
 - Added responsive motion and overflow safeguards for desktop and mobile.
+- Split the workflow showcase into a dedicated interactive component with sticky overlay-style scrolling, clickable slide dots, previous/next controls, and concrete screen previews for Studio, AI, teacher dashboard, student practice, admin command, and discussion.
 
 ## Update Protocol
 
