@@ -1150,11 +1150,9 @@ export default function StudentLesson() {
           try {
             parsed = JSON.parse(jsonMatch[0]);
           } catch {
-            console.log("Error parsing JSON:", response);
             throw new Error("Invalid JSON structure in AI response");
           }
         } else {
-          console.log("AI response:", response);
           throw new Error("No JSON found in AI response");
         }
       }
