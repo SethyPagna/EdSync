@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
-  const body = (await request.json()) as {
+  const body = (await request.json().catch(() => null)) as {
     action?:
       | "create_product"
       | "create_price"
@@ -63,7 +63,11 @@ export async function POST(request: Request) {
     metadata?: Record<string, unknown>;
     status?: "draft" | "active" | "archived";
     portalId?: string | null;
-  };
+  } | null;
+
+  if (!body) {
+    return NextResponse.json({ data: null, error: "Invalid billing request." }, { status: 400 });
+  }
 
   if (body.action === "checkout") {
     if (!body.priceId) return NextResponse.json({ data: null, error: "Price is required." }, { status: 400 });
