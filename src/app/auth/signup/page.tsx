@@ -57,6 +57,12 @@ function SignupForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const organizationLabel =
+    organizationMode === "create"
+      ? organizationName
+      : organizationLookup?.name || organizationCode;
+  const waitingForOrganization =
+    accountType === "organization" && organizationMode === "join" && organizationStatus === "checking";
 
   useEffect(() => {
     if (preset === "teacher" || preset === "student") {
@@ -334,15 +340,24 @@ function SignupForm() {
                 toast.error("Enter your organization code first.");
                 return;
               }
+              if (accountType === "organization" && organizationMode === "join" && organizationStatus === "checking") {
+                toast.error("Still checking that organization.");
+                return;
+              }
+              if (accountType === "organization" && organizationMode === "join" && !organizationLookup) {
+                toast.error("Choose an active organization before continuing.");
+                return;
+              }
               if (accountType === "organization" && organizationMode === "create" && !organizationName.trim()) {
                 toast.error("Enter your organization name first.");
                 return;
               }
               setStep("role");
             }}
+            disabled={waitingForOrganization}
             className="btn-primary w-full justify-center py-3.5"
           >
-            Continue
+            {waitingForOrganization ? "Checking organization..." : "Continue"}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -353,8 +368,8 @@ function SignupForm() {
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
               ? organizationMode === "create"
-                ? `New organization: ${organizationName}`
-                : `Joining organization: ${organizationCode}`
+                ? `New organization: ${organizationLabel}`
+                : `Joining organization: ${organizationLabel}`
               : "Individual workspace"}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -398,8 +413,8 @@ function SignupForm() {
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
               ? organizationMode === "create"
-                ? `${organizationName} - ${roleDetails[role].label}`
-                : `${organizationCode} - ${roleDetails[role].label}`
+                ? `${organizationLabel} - ${roleDetails[role].label}`
+                : `${organizationLabel} - ${roleDetails[role].label}`
               : `Individual - ${roleDetails[role].label}`}
           </div>
 
