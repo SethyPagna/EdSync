@@ -5,9 +5,9 @@ import { Check, Languages } from "lucide-react";
 import {
   DEFAULT_PUBLIC_LANGUAGE,
   EDSYNC_LANGUAGES,
+  getPublicCopy,
   languageCodeFor,
   normalizePublicLanguage,
-  publicCopy,
   type PublicLanguageName,
 } from "@/lib/public-i18n";
 
@@ -61,13 +61,14 @@ export default function LanguageMenu({
       window.location.assign(nextSearch ? `${pathname}?${nextSearch}` : pathname);
     }
   };
+  const copy = getPublicCopy();
 
   return (
     <details ref={detailsRef} className={`group relative inline-block ${className}`}>
       <summary
         className={`${compact ? "premium-icon-button" : "btn-secondary px-4 py-2 text-sm"} list-none marker:hidden [&::-webkit-details-marker]:hidden`}
-        aria-label={publicCopy[language].language}
-        title={publicCopy[language].language}
+        aria-label={copy.language}
+        title={copy.language}
       >
         <Languages className="h-4 w-4" />
         {!compact && <span>{language}</span>}
@@ -79,7 +80,7 @@ export default function LanguageMenu({
       >
         <div className="px-2 pb-2 pt-1">
           <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">
-            {publicCopy[language].language}
+            {copy.language}
           </p>
         </div>
         <div className="grid gap-1">
