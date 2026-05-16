@@ -93,12 +93,22 @@ export function classifySafeMediaUrl(value?: string | null): SafeMediaUrl | null
   return { url: safe, kind: "link", embedUrl: null, provider: "link" };
 }
 
+export function safeCatalogImageUrl(value?: string | null) {
+  const media = classifySafeMediaUrl(value);
+  return media?.kind === "image" ? media.url : null;
+}
+
+export function safeCatalogVideoUrl(value?: string | null) {
+  const media = classifySafeMediaUrl(value);
+  return media?.kind === "video" ? media.url : null;
+}
+
 export function sanitizeCatalogMetadata(metadata: Record<string, unknown> | null | undefined) {
   const source = metadata ?? {};
   const visibility = source.visibility === "public" || source.visibility === "portal" ? source.visibility : "private";
   const enrollmentMode = source.enrollmentMode === "paid" ? "paid" : source.enrollmentMode === "free" ? "free" : "closed";
-  const thumbnailUrl = safePublicUrl(typeof source.thumbnailUrl === "string" ? source.thumbnailUrl : null);
-  const previewVideoUrl = safePublicUrl(typeof source.previewVideoUrl === "string" ? source.previewVideoUrl : null);
+  const thumbnailUrl = safeCatalogImageUrl(typeof source.thumbnailUrl === "string" ? source.thumbnailUrl : null);
+  const previewVideoUrl = safeCatalogVideoUrl(typeof source.previewVideoUrl === "string" ? source.previewVideoUrl : null);
   const previewEmbedUrl = safeVideoEmbedUrl(previewVideoUrl);
 
   return {
@@ -114,4 +124,3 @@ export function sanitizeCatalogMetadata(metadata: Record<string, unknown> | null
     previewEmbedUrl,
   };
 }
-
