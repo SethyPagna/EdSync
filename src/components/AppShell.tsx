@@ -83,6 +83,10 @@ function sessionRoleFromCookie() {
   return role === "admin" || role === "teacher" || role === "student" ? role : null;
 }
 
+function pathWithoutQuery(href: string) {
+  return href.split("?")[0];
+}
+
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
   { href: "/studio", label: "Studio", icon: Layers3, marker: "S" },
@@ -126,8 +130,8 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/email", label: "Email", icon: MessageSquareText },
   { href: "/admin/security", label: "Security", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
-  { href: "/admin/view/teacher", label: "View Teacher", icon: GraduationCap },
-  { href: "/admin/view/student", label: "View Student", icon: BookOpenCheck },
+  { href: "/teacher/dashboard?adminView=teacher", label: "View Teacher", icon: GraduationCap },
+  { href: "/student/dashboard?adminView=student", label: "View Student", icon: BookOpenCheck },
 ];
 
 function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
@@ -142,7 +146,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
       { label: "Intelligence", items: pick(["/admin/ai"]) },
       { label: "Governance", items: pick(["/admin/governance", "/admin/security"]) },
       { label: "System", items: pick(["/admin/billing", "/admin/settings"]) },
-      { label: "View As", items: pick(["/admin/view/teacher", "/admin/view/student"]) },
+      { label: "View As", items: pick(["/teacher/dashboard?adminView=teacher", "/student/dashboard?adminView=student"]) },
     ];
   }
 
@@ -262,7 +266,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const renderNavItem = (item: ShellNavItem) => {
     const Icon = item.icon;
-    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    const itemPath = pathWithoutQuery(item.href);
+    const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
     return (
       <Link
         key={item.href}
