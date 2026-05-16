@@ -633,6 +633,10 @@ h6 {
   animation-delay: calc(var(--slide-index) * -4s);
 }
 
+.edsync-launch-slide-static {
+  animation: galleryLift 7s ease-in-out infinite;
+}
+
 .edsync-launch-slide::after {
   content: "";
   position: absolute;
@@ -721,6 +725,169 @@ h6 {
   background: color-mix(in srgb, var(--card) 86%, transparent);
   padding: 0.75rem;
   font-size: 0.875rem;
+}
+
+.edsync-workflow-showcase {
+  position: relative;
+  min-height: 520vh;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(1rem, calc((100vw - 80rem) / 2));
+}
+
+.edsync-workflow-sticky {
+  position: sticky;
+  top: 4.5rem;
+  min-height: calc(100vh - 4.5rem);
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(24rem, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 4vw, 3rem);
+  padding-block: clamp(2rem, 5vw, 4rem);
+  isolation: isolate;
+}
+
+.edsync-workflow-sticky::before {
+  content: "";
+  position: absolute;
+  inset: 8% 0 10% auto;
+  width: min(50rem, 62vw);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 32%, rgba(var(--blue-rgb), 0.14), transparent 36%),
+    radial-gradient(circle at 72% 70%, rgba(var(--emerald-rgb), 0.12), transparent 34%);
+  filter: blur(28px);
+  z-index: -1;
+}
+
+.edsync-workflow-copy {
+  min-width: 0;
+}
+
+.edsync-workflow-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  color: var(--subtle);
+  padding: 0.5rem 0.78rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.edsync-workflow-dot:hover,
+.edsync-workflow-dot.is-active {
+  border-color: rgba(var(--blue-rgb), 0.35);
+  background: rgba(var(--blue-rgb), 0.11);
+  color: var(--blue);
+  transform: translateY(-1px);
+}
+
+.edsync-workflow-dot span {
+  height: 0.48rem;
+  width: 0.48rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.edsync-workflow-stage {
+  min-width: 0;
+  perspective: 1200px;
+}
+
+.edsync-workflow-screen {
+  min-height: min(34rem, calc(100vh - 9rem));
+  border: 1px solid var(--border);
+  border-radius: 2rem;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--surface) 88%, transparent)),
+    radial-gradient(circle at 14% 16%, rgba(var(--blue-rgb), 0.08), transparent 32%);
+  box-shadow: var(--shadow-soft);
+  padding: clamp(1rem, 2.6vw, 1.45rem);
+  animation: overlayIn 0.38s ease both;
+  overflow: hidden;
+}
+
+.edsync-workflow-browser {
+  display: flex;
+  gap: 0.42rem;
+}
+
+.edsync-workflow-browser span {
+  height: 0.65rem;
+  width: 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--subtle) 46%, transparent);
+}
+
+.edsync-workflow-stat {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 1.1rem;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  padding: 0.85rem;
+}
+
+.edsync-workflow-stat span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.edsync-workflow-stat strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.edsync-workflow-canvas,
+.edsync-workflow-sidepanel {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 1.35rem;
+  background: color-mix(in srgb, var(--bg) 70%, var(--card) 30%);
+  padding: 1rem;
+}
+
+.edsync-workflow-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 1.1rem;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  padding: 0.8rem;
+}
+
+.edsync-workflow-row + .edsync-workflow-row {
+  margin-top: 0.7rem;
+}
+
+.edsync-workflow-sidepanel {
+  align-self: stretch;
+}
+
+.edsync-workflow-scroll-steps {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  pointer-events: none;
+}
+
+.edsync-workflow-step {
+  min-height: 86vh;
 }
 
 .edsync-hero-stage {
@@ -838,6 +1005,29 @@ h6 {
 
   .edsync-screen-gallery {
     grid-auto-columns: minmax(17rem, 86vw);
+  }
+
+  .edsync-workflow-showcase {
+    min-height: auto;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+
+  .edsync-workflow-sticky {
+    position: relative;
+    top: auto;
+    min-height: auto;
+    grid-template-columns: 1fr;
+    padding-block: 3rem;
+  }
+
+  .edsync-workflow-screen {
+    min-height: auto;
+    border-radius: 1.5rem;
+  }
+
+  .edsync-workflow-scroll-steps {
+    display: none;
   }
 
   .edsync-hero-stage {
