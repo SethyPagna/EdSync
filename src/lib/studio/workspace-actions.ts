@@ -1,8 +1,23 @@
+import type {
+  LessonSlideAnimation,
+  LessonSlideKind,
+  LessonSlideLayout,
+  LessonSlideTransition,
+} from "@/lib/studio/catalog";
+
 export type StudioSlideSummary = {
   id: string;
   title: string;
   notes: string;
   accent: string;
+  body?: string;
+  kind?: LessonSlideKind;
+  layout?: LessonSlideLayout;
+  themeId?: string;
+  transition?: LessonSlideTransition;
+  transitionDurationMs?: number;
+  animation?: LessonSlideAnimation;
+  animationDurationMs?: number;
 };
 
 const CSV_NEEDS_QUOTING = /[",\r\n]/;
@@ -118,9 +133,52 @@ export function createSlide(slides: StudioSlideSummary[], accent: string) {
   return {
     id: `slide-${Date.now()}-${slides.length + 1}`,
     title: "New Slide",
+    body: "Add the main teaching point, prompt, or media note.",
     notes: "Add speaker notes or teaching guidance.",
     accent,
+    kind: "content" as const,
+    layout: "content" as const,
+    transition: "fade" as const,
+    transitionDurationMs: 450,
+    animation: "rise" as const,
+    animationDurationMs: 480,
   };
+}
+
+export function normalizeStudioSlide(slide: StudioSlideSummary): StudioSlideSummary {
+  return {
+    ...slide,
+    body: slide.body ?? "",
+    kind: slide.kind ?? "content",
+    layout: slide.layout ?? "content",
+    transition: slide.transition ?? "fade",
+    transitionDurationMs: slide.transitionDurationMs ?? 450,
+    animation: slide.animation ?? "rise",
+    animationDurationMs: slide.animationDurationMs ?? 480,
+  };
+}
+
+export function updateSlide(
+  slides: StudioSlideSummary[],
+  slideId: string,
+  patch: Partial<StudioSlideSummary>,
+) {
+  return slides.map((slide) =>
+    slide.id === slideId ? normalizeStudioSlide({ ...slide, ...patch }) : { ...slide },
+  );
+}
+
+export function applySlideTheme(
+  slides: StudioSlideSummary[],
+  theme: { id: string; colors: { primary: string } },
+) {
+  return slides.map((slide) =>
+    normalizeStudioSlide({
+      ...slide,
+      accent: theme.colors.primary,
+      themeId: theme.id,
+    }),
+  );
 }
 
 export function duplicateSlide(slides: StudioSlideSummary[], slideId: string) {
