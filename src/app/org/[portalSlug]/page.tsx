@@ -11,7 +11,7 @@ export async function generateMetadata({
   params: { portalSlug: string };
 }): Promise<Metadata> {
   const portals = await listPublicPortals();
-  const portal = portals.find((item) => item.slug === params.portalSlug);
+  const portal = portals.find((item) => item.slug === params.portalSlug || item.tenant_slug === params.portalSlug);
   return {
     title: portal ? `${portal.name} Catalog` : "Organization Catalog",
     description: portal
@@ -34,7 +34,7 @@ export default async function OrganizationPortalPage({
   };
 }) {
   const portals = await listPublicPortals();
-  const portal = portals.find((item) => item.slug === params.portalSlug);
+  const portal = portals.find((item) => item.slug === params.portalSlug || item.tenant_slug === params.portalSlug);
   if (!portal) notFound();
 
   const filters = normalizeCatalogFilters({
