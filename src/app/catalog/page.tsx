@@ -52,24 +52,20 @@ export default async function CatalogPage({
   ).slice(0, 6);
 
   return (
-    <main className="min-h-screen bg-edsync-bg text-edsync-text">
+    <main className="premium-shell min-h-screen text-edsync-text">
       <PublicTopbar active="catalog" />
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-stretch">
-          <div className="overflow-hidden rounded-2xl border border-edsync-border bg-edsync-card shadow-sm">
+          <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
             <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
               <div className="p-5 sm:p-7">
-                <p className="inline-flex items-center gap-2 rounded-full border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-1.5 text-sm font-semibold text-edsync-blue">
-                  <Search className="h-4 w-4" />
-                  Public learning catalog
-                </p>
                 <h1 className="mt-5 max-w-4xl font-display text-4xl font-bold leading-tight sm:text-6xl">
-                  Discover courses and enter the right learning space.
+                  Learn, teach, and enter the right academy.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">
-                  Search public courses, organization academies, and free or paid programs. EdSync keeps
-                  individual and organization learning connected without mixing their data.
+                  Browse public courses or go straight into your organization. EdSync keeps personal learning,
+                  academy portals, and course access clear.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link href="#catalog-results" className="btn-primary justify-center">
@@ -83,11 +79,11 @@ export default async function CatalogPage({
                 </div>
               </div>
               <div className="border-t border-edsync-border bg-edsync-surface p-4 lg:border-l lg:border-t-0">
-                <div className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+                <div className="premium-card rounded-2xl p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-edsync-subtle">Today in EdSync</p>
-                      <p className="mt-1 font-display text-2xl font-bold">Catalog ready</p>
+                      <p className="mt-1 font-display text-2xl font-bold">Ready to move</p>
                     </div>
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
                       <Layers3 className="h-6 w-6" />
@@ -101,7 +97,7 @@ export default async function CatalogPage({
                     ].map(([title, copy], index) => (
                       <div
                         key={title}
-                        className="flex items-center gap-3 rounded-lg border border-edsync-border bg-edsync-bg/60 p-3"
+                        className="flex items-center gap-3 rounded-xl border border-edsync-border bg-edsync-bg/70 p-3"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-edsync-blue/10 text-xs font-bold text-edsync-blue">
                           {index + 1}
@@ -117,7 +113,7 @@ export default async function CatalogPage({
               </div>
             </div>
 
-            <form className="border-t border-edsync-border bg-edsync-surface p-3">
+            <form className="border-t border-edsync-border bg-edsync-surface/85 p-3">
               <label className="sr-only" htmlFor="catalog-search">
                 Search catalog
               </label>
@@ -172,7 +168,7 @@ export default async function CatalogPage({
             ].map((metric) => {
               const Icon = metric.icon;
               return (
-                <div key={metric.label} className="rounded-xl border border-edsync-border bg-edsync-card p-5 shadow-sm">
+                <div key={metric.label} className="premium-card animate-reveal-soft rounded-2xl p-5">
                   <Icon className={`mb-4 h-8 w-8 ${metric.tone}`} />
                   <p className="font-display text-4xl font-bold">{metric.value}</p>
                   <p className="text-sm text-edsync-subtle">{metric.label}</p>
@@ -182,7 +178,7 @@ export default async function CatalogPage({
           </aside>
         </div>
 
-        <div className="mt-4 rounded-xl border border-edsync-border bg-edsync-card p-4">
+        <div className="premium-surface mt-4 rounded-2xl p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold text-edsync-text">Quick paths</p>
@@ -207,13 +203,13 @@ export default async function CatalogPage({
 
         {categories.length > 0 && (
           <section className="mt-5">
-            <div className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+            <div className="premium-surface rounded-2xl p-4">
               <div className="flex flex-wrap gap-2">
                 {categories.map((category) => (
                   <Link
                     key={category}
                     href={`/catalog?category=${encodeURIComponent(category)}`}
-                    className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue"
+                    className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
                   >
                     {category}
                   </Link>
@@ -257,7 +253,7 @@ export default async function CatalogPage({
             ))}
           </div>
           {items.length === 0 && (
-            <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-card p-10 text-center">
+            <div className="premium-surface rounded-2xl border-dashed p-10 text-center">
               <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No public courses found</p>
               <p className="mt-2 text-sm text-edsync-subtle">
@@ -282,7 +278,7 @@ export default async function CatalogPage({
               <Link
                 key={portal.id}
                 href={`/org/${portal.slug}`}
-                className="group rounded-lg border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40 hover:shadow-card-hover"
+                className="premium-card group rounded-2xl p-4"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
@@ -303,13 +299,13 @@ export default async function CatalogPage({
             ))}
           </div>
           {portals.length === 0 && (
-            <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-card p-6 text-sm text-edsync-subtle">
+            <div className="premium-surface rounded-2xl border-dashed p-6 text-sm text-edsync-subtle">
               Public organization portals will appear here after admins publish them.
             </div>
           )}
         </section>
 
-        <section className="mt-10 grid gap-3 rounded-xl border border-edsync-border bg-edsync-surface p-5 md:grid-cols-3">
+        <section className="premium-surface mt-10 grid gap-3 rounded-2xl p-5 md:grid-cols-3">
           {[
             { icon: UsersRound, title: "Individuals", copy: "Create a personal teacher or learner workspace." },
             { icon: Building2, title: "Organizations", copy: "Run tenant-scoped academies, catalogs, roles, and portals." },
@@ -317,7 +313,7 @@ export default async function CatalogPage({
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="rounded-lg border border-edsync-border bg-edsync-card p-4">
+              <div key={item.title} className="premium-card rounded-2xl p-4">
                 <Icon className="mb-3 h-5 w-5 text-edsync-blue" />
                 <p className="font-semibold text-edsync-text">{item.title}</p>
                 <p className="mt-1 text-sm leading-6 text-edsync-subtle">{item.copy}</p>
@@ -340,27 +336,35 @@ function CatalogCard({
   return (
     <Link
       href={item.detailUrl}
-      className={`group overflow-hidden rounded-lg border bg-edsync-card transition hover:border-edsync-blue/40 hover:shadow-card-hover ${
-        featured ? "border-edsync-blue/30" : "border-edsync-border"
+      className={`premium-card group overflow-hidden rounded-2xl ${
+        featured ? "border-edsync-blue/40" : ""
       }`}
     >
-      <div className="aspect-video bg-edsync-surface">
+      <div className="relative aspect-video overflow-hidden bg-edsync-surface">
         {item.metadata.thumbnailUrl ? (
           <div
-            className="h-full w-full bg-cover bg-center"
+            className="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
             style={{ backgroundImage: `url(${item.metadata.thumbnailUrl})` }}
             aria-label={`${item.title} thumbnail`}
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/15 to-edsync-emerald/15">
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/20 via-edsync-surface to-edsync-emerald/20">
             <BookOpenCheck className="h-12 w-12 text-edsync-blue" />
           </div>
         )}
+        <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
+          <span className="rounded-full bg-edsync-surface/90 px-2.5 py-1 text-xs font-bold text-edsync-text shadow-sm backdrop-blur">
+            {item.price.label}
+          </span>
+          {featured && (
+            <span className="rounded-full bg-edsync-blue px-2.5 py-1 text-xs font-bold text-white shadow-sm">
+              Featured
+            </span>
+          )}
+        </div>
       </div>
       <div className="p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {featured && <span className="badge bg-edsync-blue/10 text-edsync-blue">Featured</span>}
-          <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{item.price.label}</span>
           {item.metadata.category && (
             <span className="badge bg-edsync-amber/10 text-edsync-amber">{item.metadata.category}</span>
           )}
