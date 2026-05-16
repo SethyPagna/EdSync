@@ -7,6 +7,8 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import LanguageMenu from "@/components/LanguageMenu";
+import ThemeToggle from "@/components/ThemeToggle";
 import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
@@ -159,10 +161,10 @@ function LoginForm() {
               key={item.key}
               type="button"
               onClick={() => setAccountType(item.key)}
-              className={`rounded-lg border p-4 text-left transition ${
+              className={`rounded-2xl border p-4 text-left shadow-sm transition ${
                 selected
-                  ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
-                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                  ? "premium-active text-edsync-text"
+                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
               }`}
             >
               <Icon className="mb-3 h-5 w-5" />
@@ -174,7 +176,7 @@ function LoginForm() {
       </div>
 
       {accountType === "organization" && (
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+        <div className="premium-surface rounded-2xl p-3">
           <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
             Organization code
           </label>
@@ -271,21 +273,21 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="grid min-h-screen bg-edsync-bg lg:grid-cols-[1fr_520px]">
-      <section className="hidden border-r border-edsync-border bg-edsync-surface/40 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
+    <main className="premium-shell grid min-h-screen lg:grid-cols-[1fr_520px]">
+      <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <span className="font-display text-xl font-bold">EdSync</span>
         </Link>
-        <div>
-          <p className="mb-4 inline-flex rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
-            Secure workspace
-          </p>
+        <div className="premium-panel rounded-[1.65rem] p-7">
           <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Learning work, organized.
+            Enter your learning workspace.
           </h1>
+          <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
+            Choose an organization when your school or company manages access, or continue with your individual space.
+          </p>
         </div>
         <div className="flex items-center gap-3 text-sm text-edsync-subtle">
           <ShieldCheck className="h-5 w-5 text-edsync-emerald" />
@@ -295,15 +297,19 @@ export default function LoginPage() {
 
       <section className="flex items-center justify-center px-5 py-10">
         <div className="w-full max-w-md">
-          <div className="mb-8 lg:hidden">
+          <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <span className="font-display text-xl font-bold">EdSync</span>
             </Link>
+            <div className="flex items-center gap-2">
+              <ThemeToggle compact />
+              <LanguageMenu compact />
+            </div>
           </div>
-          <div className="edsync-card p-7">
+          <div className="premium-panel animate-reveal-soft rounded-[1.65rem] p-7">
             <h2 className="font-display text-3xl font-bold">Welcome back</h2>
             <div className="mt-7">
               <Suspense
