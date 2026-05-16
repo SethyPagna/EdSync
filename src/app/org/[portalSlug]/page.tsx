@@ -55,23 +55,19 @@ export default async function OrganizationPortalPage({
   });
 
   return (
-    <main className="min-h-screen bg-edsync-bg text-edsync-text">
+    <main className="premium-shell min-h-screen text-edsync-text">
       <PublicTopbar active="organization" organizationName={portal.name} organizationSlug={portal.tenant_slug} />
 
       <section className="mx-auto max-w-7xl px-4 py-8">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="overflow-hidden rounded-2xl border border-edsync-border bg-edsync-card shadow-sm">
+          <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
             <div className="p-5 sm:p-7">
-              <p className="inline-flex items-center gap-2 rounded-full border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-1.5 text-sm font-semibold text-edsync-blue">
-                <Building2 className="h-4 w-4" />
-                Organization academy
-              </p>
               <h1 className="mt-4 font-display text-4xl font-bold leading-tight sm:text-5xl">
                 {portal.name}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">
-                Browse public courses and programs from {portal.tenant_name}. Enter the organization first
-                when your school, cohort, or company manages your access.
+                Browse {portal.tenant_name} courses, then enter the organization when your school,
+                cohort, or company manages your access.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.audience}</span>
@@ -93,7 +89,7 @@ export default async function OrganizationPortalPage({
                 </Link>
               </div>
             </div>
-            <form className="border-t border-edsync-border bg-edsync-surface p-3">
+            <form className="border-t border-edsync-border bg-edsync-surface/85 p-3">
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(8rem,1fr))_auto] [&>*]:min-w-0">
                 <label className="relative">
                   <span className="sr-only">Search this academy</span>
@@ -130,14 +126,14 @@ export default async function OrganizationPortalPage({
             </form>
           </div>
           <div className="grid gap-3">
-            <div className="rounded-xl border border-edsync-border bg-edsync-card p-5 shadow-sm">
+            <div className="premium-card rounded-2xl p-5">
               <Globe2 className="mb-3 h-8 w-8 text-edsync-blue" />
               <p className="font-semibold">Scoped portal</p>
               <p className="mt-2 text-sm leading-6 text-edsync-subtle">
                 Courses, branding, access, and reports stay inside this academy.
               </p>
             </div>
-            <div className="rounded-xl border border-edsync-border bg-edsync-card p-5 shadow-sm">
+            <div className="premium-card rounded-2xl p-5">
               <UsersRound className="mb-3 h-8 w-8 text-edsync-emerald" />
               <p className="font-semibold">Member flow</p>
               <p className="mt-2 text-sm leading-6 text-edsync-subtle">
@@ -161,30 +157,32 @@ export default async function OrganizationPortalPage({
               <Link
                 key={item.id}
                 href={item.detailUrl}
-                className="group overflow-hidden rounded-lg border border-edsync-border bg-edsync-card transition hover:border-edsync-blue/40 hover:shadow-card-hover"
+                className="premium-card group overflow-hidden rounded-2xl"
               >
-                <div className="aspect-video bg-edsync-surface">
+                <div className="relative aspect-video overflow-hidden bg-edsync-surface">
                   {item.metadata.thumbnailUrl ? (
                     <div
-                      className="h-full w-full bg-cover bg-center"
+                      className="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
                       style={{ backgroundImage: `url(${item.metadata.thumbnailUrl})` }}
                       aria-label={`${item.title} thumbnail`}
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/15 to-edsync-emerald/15">
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/20 via-edsync-surface to-edsync-emerald/20">
                       <BookOpenCheck className="h-12 w-12 text-edsync-blue" />
                     </div>
                   )}
-                </div>
-                <div className="p-5">
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{item.price.label}</span>
+                  <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-edsync-surface/90 px-2.5 py-1 text-xs font-bold text-edsync-text shadow-sm backdrop-blur">
+                      {item.price.label}
+                    </span>
                     {item.metadata.category && (
-                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                      <span className="rounded-full bg-edsync-blue px-2.5 py-1 text-xs font-bold text-white shadow-sm">
                         {item.metadata.category}
                       </span>
                     )}
                   </div>
+                </div>
+                <div className="p-5">
                   <h2 className="font-display text-xl font-bold">{item.title}</h2>
                   <p className="mt-2 line-clamp-3 text-sm leading-6 text-edsync-subtle">
                     {item.metadata.previewSummary ||
@@ -207,7 +205,7 @@ export default async function OrganizationPortalPage({
         </section>
 
         {items.length === 0 && (
-          <div className="mt-8 rounded-lg border border-dashed border-edsync-border bg-edsync-card p-10 text-center">
+          <div className="premium-surface mt-8 rounded-2xl border-dashed p-10 text-center">
             <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
             <p className="font-semibold text-edsync-text">No public courses in this portal yet</p>
             <p className="mt-2 text-sm text-edsync-subtle">Check back later or browse the global catalog.</p>
