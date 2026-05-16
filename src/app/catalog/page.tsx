@@ -64,14 +64,14 @@ export default async function CatalogPage({
           <div className="grid h-full min-h-[calc(100vh-7rem)] min-w-0 items-center gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.86fr)_minmax(430px,1fr)]">
             <div className="animate-reveal-soft max-w-2xl min-w-0">
               <h1 className="font-display text-5xl font-bold leading-[0.92] tracking-tight sm:text-7xl lg:text-8xl">
-                Learning that moves.
+                Build. Practice. Improve.
               </h1>
               <p className="mt-6 max-w-lg text-lg leading-8 text-edsync-subtle">
-                Launch courses, practice, feedback, and progress from one clean workspace.
+                A clean learning loop for courses, AI drafts, student practice, feedback, and progress.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="#catalog-search-panel" className="btn-primary justify-center">
-                  Explore courses
+                <Link href="#workflow-transition" className="btn-primary justify-center">
+                  Watch workflow
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link href="/auth/signup" className="btn-secondary justify-center">
@@ -89,13 +89,13 @@ export default async function CatalogPage({
                   <span className="text-xs font-bold text-edsync-subtle">Launch</span>
                 </div>
                 <div className="mt-8">
-                  <h2 className="font-display text-4xl font-bold">From idea to progress.</h2>
+                  <h2 className="font-display text-4xl font-bold">One loop, shown step by step.</h2>
                   <p className="mt-2 text-sm font-semibold leading-6 text-edsync-subtle">
-                    The full workflow now has its own interactive showcase below.
+                    Scroll into the animated tour to see how each workspace connects.
                   </p>
                 </div>
                 <div className="mt-7 grid gap-3">
-                  {["Find or create a course", "Build slides, practice, and discussion", "Assign and track learning"].map((row, index) => (
+                  {["Create a lesson package", "Generate practice and feedback", "Track evidence and next steps"].map((row, index) => (
                     <div key={row} className="flex items-center gap-3 rounded-2xl bg-edsync-bg/80 p-3">
                       <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-edsync-blue/10 text-xs font-bold text-edsync-blue">
                         {index + 1}
