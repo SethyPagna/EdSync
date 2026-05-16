@@ -17,7 +17,7 @@
 
 | Phase | Name | Status | Target Outcome |
 | --- | --- | --- | --- |
-| 1 | Product Inventory And Baseline | Not started | Existing features, routes, and data models are mapped. |
+| 1 | Product Inventory And Baseline | Complete | Existing features, routes, and data models are mapped in `docs/BASELINE_INVENTORY.md`. |
 | 2 | Workflow Map And Navigation Model | Not started | Teacher workflow is coherent from idea to assignment. |
 | 3 | Core Learning Object Architecture | Not started | Shared content model powers lessons, slides, quizzes, discussions, and activities. |
 | 4 | Studio Component Refactor | Not started | Studio is split into maintainable modules. |
@@ -42,19 +42,22 @@
 
 ## Current Focus
 
-**Next Target:** Phase 1, Product Inventory And Baseline.
+**Next Target:** Phase 2, Workflow Map And Navigation Model.
 
 **Immediate Tasks:**
-- [ ] Inventory routes by role and feature.
-- [ ] Inventory data models and migrations.
-- [ ] Inventory AI endpoints, prompt contracts, and validators.
-- [ ] Inventory Studio, lesson, slide, practice, quiz, discussion, and template capabilities.
-- [ ] Mark capabilities as `keep`, `refactor`, `merge`, or `replace`.
+- [x] Inventory routes by role and feature.
+- [x] Inventory data models and migrations.
+- [x] Inventory AI endpoints, prompt contracts, and validators.
+- [x] Inventory Studio, lesson, slide, practice, quiz, discussion, and template capabilities.
+- [x] Mark capabilities as `keep`, `refactor`, `merge`, or `replace`.
+- [ ] Define the teacher idea-to-assignment workflow.
+- [ ] Define canonical handoffs between Studio, Lessons, Slides, Practice, Discussions, and Analytics.
+- [ ] Define saved-state labels and where they appear in navigation.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
 - A related detailed plan already exists at `docs/superpowers/plans/2026-05-16-edsync-lessons-slides-platform.md`.
-- The worktree had pre-existing uncommitted edits in `src/app/catalog/page.tsx`, `src/app/globals.css`, and `src/lib/public-i18n.ts`, plus temporary screenshot files. Those were not created by this planning pass.
+- Phase 1 inventory is recorded at `docs/BASELINE_INVENTORY.md`.
 
 ---
 
@@ -66,6 +69,8 @@
 | 2026-05-16 | Treat generated and manual lessons as the same editable learning package model. | This avoids separate workflows that drift apart and makes templates reusable. |
 | 2026-05-16 | Protect teacher-authored content when templates are reapplied. | Template changes should improve design without destroying classroom edits. |
 | 2026-05-16 | Require schema validation and selective import for AI output. | AI content should be useful drafts, not unchecked writes into lessons. |
+| 2026-05-16 | Treat `/studio` as the canonical authoring workspace and keep `/notes`, `/docs`, `/sheets`, `/slides`, `/practice`, `/quizzes`, and `/games` as stable entry routes. | The inventory shows these routes already exist and can converge around one workflow without breaking links. |
+| 2026-05-16 | Start architecture work by extracting large teacher lesson, student lesson, and Studio files before adding more heavy UI. | The largest files are 2355, 2111, 1782, and 1394 lines and concentrate too much logic. |
 
 ---
 
@@ -74,12 +79,13 @@
 | Date | Scope | Command | Result |
 | --- | --- | --- | --- |
 | 2026-05-16 | Planning docs | Manual Markdown review | Passed |
+| 2026-05-16 | Phase 1 inventory | Route, migration, schema, API, Studio, and large-file scan | Passed |
 
 ---
 
 ## Blockers
 
-- None for planning.
+- None for Phase 1.
 
 ## Risks To Watch
 
@@ -88,6 +94,16 @@
 - Template auto-update can overwrite teacher intent unless protected fields and previews are implemented early.
 - PPT export can diverge from web preview unless slide layout tokens are shared.
 - Analytics must remain tenant-safe and role-safe.
+- Public language copy currently includes mojibake in several non-English entries and should be corrected during the i18n polish pass.
+- Generic data access and tenant read scoping remain architecture risks for later phases.
+
+## Phase 1 Baseline Summary
+
+- Route inventory is grouped by public/auth, admin, teacher, student, Studio/tooling, and API groups in `docs/BASELINE_INVENTORY.md`.
+- Data model inventory is grouped by identity/tenancy, lessons/progress, work/grades/discussions, Studio/practice, media/import/standards, AI/automation/security, and billing/certifications/offline/analytics.
+- Capability decisions are marked as `keep`, `refactor`, or `merge`.
+- Major overlap areas are lesson sections vs Studio documents/content blocks, slide summaries vs lesson slides, practice items vs quiz/work questions, prompt contracts vs workflow prompts, and public org selection vs auth organization mode.
+- The first refactor candidates are `src/app/teacher/lessons/[id]/page.tsx`, `src/app/student/lessons/[id]/page.tsx`, `src/app/teacher/lessons/create/page.tsx`, and `src/components/studio/StudioWorkspace.tsx`.
 
 ## Update Protocol
 
