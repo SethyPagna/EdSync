@@ -51,17 +51,27 @@ const priorityActions = [
 
 export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/summary", { cache: "no-store" })
+    const controller = new AbortController();
+    fetch("/api/admin/summary", { cache: "no-store", signal: controller.signal })
       .then((response) => response.json())
-      .then((payload) => setSummary(payload.data));
+      .then((payload) => {
+        setSummary(payload.data);
+        setError(null);
+      })
+      .catch((reason) => {
+        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        setError("Could not load platform summary.");
+      });
+    return () => controller.abort();
   }, []);
 
   return (
     <div className="space-y-6 p-5 lg:p-8">
       <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
-        <section className="rounded-lg border border-edsync-border bg-edsync-card p-5 sm:p-6">
+        <section className="premium-panel rounded-2xl p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Platform owner console</p>
@@ -79,6 +89,11 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
           </div>
+          {error && (
+            <div className="mt-4 rounded-2xl border border-edsync-red/25 bg-edsync-red/10 px-4 py-3 text-sm font-semibold text-edsync-red">
+              {error}
+            </div>
+          )}
         </section>
       </header>
 
@@ -110,11 +125,19 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          <section className="edsync-card overflow-hidden p-0">
+          <section className="premium-surface overflow-hidden rounded-2xl p-0">
             <div className="border-b border-edsync-border p-4">
               <h2 className="font-display text-xl font-bold">Recent admin audit</h2>
             </div>
             <div className="divide-y divide-edsync-border">
+              {!summary &&
+                [...Array(4)].map((_, index) => (
+                  <div key={index} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_160px_190px]">
+                    <span className="h-4 animate-pulse rounded bg-edsync-muted" />
+                    <span className="h-4 animate-pulse rounded bg-edsync-muted" />
+                    <span className="h-4 animate-pulse rounded bg-edsync-muted" />
+                  </div>
+                ))}
               {(summary?.recentAudit ?? []).map((item) => (
                 <div key={item.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[minmax(0,1fr)_160px_190px] md:items-center">
                   <span className="font-semibold text-edsync-text">{item.action}</span>
@@ -135,7 +158,7 @@ export default function AdminDashboardPage() {
             <Link
               key={action.href}
               href={action.href}
-              className="block rounded-lg border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40"
+              className="premium-card group block rounded-2xl p-4 transition hover:-translate-y-0.5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
