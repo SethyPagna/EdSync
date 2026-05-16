@@ -11,6 +11,12 @@ type Role = "teacher" | "student";
 type AccountType = "organization" | "individual";
 type OrganizationMode = "join" | "create";
 type SignupStep = "space" | "role" | "account";
+type OrganizationLookup = {
+  slug: string;
+  name: string;
+  portalName: string | null;
+  ssoEnabled: boolean;
+};
 
 function normalizeOrganizationCode(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -41,6 +47,10 @@ function SignupForm() {
   const [organizationMode, setOrganizationMode] = useState<OrganizationMode>("join");
   const [organizationName, setOrganizationName] = useState("");
   const [organizationCode, setOrganizationCode] = useState(presetOrganization);
+  const [organizationLookup, setOrganizationLookup] = useState<OrganizationLookup | null>(null);
+  const [organizationStatus, setOrganizationStatus] = useState<"idle" | "checking" | "found" | "missing">(
+    presetOrganization ? "checking" : "idle",
+  );
   const [role, setRole] = useState<Role>(initialRole);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,6 +63,45 @@ function SignupForm() {
       setRole(preset);
     }
   }, [preset]);
+
+  useEffect(() => {
+    const code = normalizeOrganizationCode(organizationCode);
+    if (accountType !== "organization" || organizationMode !== "join" || !code) {
+      setOrganizationLookup(null);
+      setOrganizationStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      setOrganizationStatus("checking");
+      fetch(`/api/auth/organizations?code=${encodeURIComponent(code)}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload) => {
+          if (!payload?.data) {
+            setOrganizationLookup(null);
+            setOrganizationStatus("missing");
+            return;
+          }
+          setOrganizationLookup(payload.data as OrganizationLookup);
+          setOrganizationStatus("found");
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setOrganizationLookup(null);
+            setOrganizationStatus("missing");
+          }
+        });
+    }, 300);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [accountType, organizationCode, organizationMode]);
 
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -259,6 +308,23 @@ function SignupForm() {
                   ? "Use the code or slug shared by your school, company, or academy."
                   : "Create an organization you own and manage."}
               </p>
+              {organizationMode === "join" && organizationStatus !== "idle" && (
+                <div
+                  className={`rounded-lg border px-3 py-2 text-xs ${
+                    organizationStatus === "found"
+                      ? "border-edsync-emerald/30 bg-edsync-emerald/10 text-edsync-emerald"
+                      : organizationStatus === "checking"
+                        ? "border-edsync-blue/25 bg-edsync-blue/10 text-edsync-blue"
+                        : "border-edsync-amber/30 bg-edsync-amber/10 text-edsync-amber"
+                  }`}
+                >
+                  {organizationStatus === "found"
+                    ? `Found ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
+                    : organizationStatus === "checking"
+                      ? "Checking organization..."
+                      : "No active organization found for that code yet."}
+                </div>
+              )}
             </div>
           )}
           <button
