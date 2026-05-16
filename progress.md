@@ -59,7 +59,7 @@
 - [x] Export shared learning-object helpers into the first teacher lesson or Studio integration point.
 - [x] Replace duplicated content-block status/type display in Studio with shared adapters.
 - [ ] Replace duplicated section and quiz normalization in large lesson page files with shared adapters.
-- [ ] Add teacher lesson package summary integration using `lessonRowsToLearningObject`.
+- [x] Add teacher lesson package summary integration using `lessonRowsToLearningObject`.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
@@ -95,6 +95,7 @@
 | 2026-05-16 | Phase 2 workflow model | Workflow, navigation, handoff, saved-state, and next-action review | Passed |
 | 2026-05-16 | Phase 3 learning-object foundation | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts` | Passed |
 | 2026-05-16 | Phase 3 lesson-package composer and Studio integration | `npm.cmd run typecheck`; `npm.cmd run test -- src/lib/learning/objects.test.ts src/lib/learning/lesson-package.test.ts`; `npm.cmd run lint` | Passed |
+| 2026-05-16 | Phase 3 teacher lesson package summary | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test -- src/lib/learning/lesson-package.test.ts` | Passed |
 
 ---
 
@@ -136,6 +137,7 @@
 - Added `src/lib/learning/lesson-package.ts` to compose legacy lesson rows, lesson sections, and quiz questions into a package-level `LearningObject`.
 - Added `src/lib/learning/lesson-package.test.ts` for package composition and UI summary counts.
 - Updated Studio's saved block library to use shared learning-object state labels and block type mapping.
+- Updated the teacher lesson editor header to summarize the current lesson through `lessonRowsToLearningObject`, including shared state, block count, and package duration.
 - Phase 3 remains in progress until large teacher/student lesson pages consume the shared layer and duplicated section/quiz normalization is removed.
 
 ## Update Protocol
