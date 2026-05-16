@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
+import { lessonRowsToLearningObject, summarizeLearningObject } from "@/lib/learning/lesson-package";
+import { getLearningStateLabel } from "@/lib/learning/objects";
 import { sanitizeHtml } from "@/lib/security/html";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type {
@@ -1641,6 +1643,14 @@ export default function TeacherLessonDetail() {
     activity: { icon: "A", color: "emerald" },
     discussion: { icon: "D", color: "cyan" },
   };
+  const lessonPackage = useMemo(
+    () => (lesson ? lessonRowsToLearningObject({ lesson, sections, questions }) : null),
+    [lesson, sections, questions],
+  );
+  const packageSummary = useMemo(
+    () => (lessonPackage ? summarizeLearningObject(lessonPackage) : null),
+    [lessonPackage],
+  );
 
   if (loading)
     return (
@@ -1693,6 +1703,19 @@ export default function TeacherLessonDetail() {
               {sections.length} sections ·{" "}
               {questions.filter((q) => !q.section_id).length} questions
             </p>
+            {lessonPackage && packageSummary && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-edsync-subtle">
+                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1">
+                  {getLearningStateLabel(lessonPackage.state)}
+                </span>
+                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1">
+                  {packageSummary.total} learning blocks
+                </span>
+                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1">
+                  {packageSummary.estimatedMinutes} min package
+                </span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
