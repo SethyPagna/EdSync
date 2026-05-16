@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Search, ShieldCheck, UserCog, UsersRound } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 type AdminUser = {
   id: string;
@@ -143,7 +144,7 @@ export default function AdminUsersPage() {
                   </div>
                   <p className="capitalize text-edsync-subtle">{user.is_admin ? "platform admin" : user.role}</p>
                   <p className="text-edsync-subtle">
-                    {user.last_active_at ? new Date(user.last_active_at).toLocaleDateString() : "Never active"}
+                    {user.last_active_at ? formatDate(user.last_active_at) : "Never active"}
                   </p>
                   <button
                     type="button"
