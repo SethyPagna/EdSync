@@ -29,6 +29,16 @@ export default function ThemeToggle({
     const nextTheme: ThemePreference = stored === "dark" ? "dark" : "light";
     setTheme(nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
+
+    const handleThemeEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ theme?: ThemePreference }>).detail;
+      if (detail?.theme === "dark" || detail?.theme === "light") {
+        setTheme(detail.theme);
+      }
+    };
+
+    window.addEventListener("edsync-theme-change", handleThemeEvent);
+    return () => window.removeEventListener("edsync-theme-change", handleThemeEvent);
   }, []);
 
   const toggleTheme = () => {
