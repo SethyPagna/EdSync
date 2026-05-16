@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, Clock3, MailOpen, Trash2 } from "lucide-react";
 import type { Notification } from "@/types";
@@ -27,6 +27,7 @@ function priorityClass(priority: Notification["priority"]) {
 }
 
 export default function NotificationMenu() {
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
@@ -44,6 +45,26 @@ export default function NotificationMenu() {
     const timer = window.setInterval(load, 60_000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   const markAllRead = async () => {
     if (unread === 0) return;
@@ -93,12 +114,13 @@ export default function NotificationMenu() {
   };
 
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="relative rounded-lg border border-edsync-border bg-edsync-card p-2 text-edsync-text hover:border-edsync-blue/40"
+        className="premium-icon-button relative"
         aria-label="Open notifications"
+        aria-expanded={open}
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
@@ -109,7 +131,7 @@ export default function NotificationMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-edsync-border bg-edsync-surface shadow-2xl shadow-slate-200/60 dark:shadow-black/30">
+        <div className="premium-overlay animate-overlay-in absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-2xl">
           <div className="flex items-center justify-between border-b border-edsync-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-edsync-text">Notifications</p>
@@ -128,8 +150,9 @@ export default function NotificationMenu() {
 
           <div className="max-h-96 overflow-y-auto p-2">
             {items.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-edsync-subtle">
-                Nothing new yet.
+              <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card/60 px-4 py-8 text-center text-sm text-edsync-subtle">
+                <Bell className="mx-auto mb-3 h-7 w-7 text-edsync-blue" />
+                Nothing new.
               </div>
             ) : (
               items.map((item) => (
