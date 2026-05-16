@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import NotificationMenu from "@/components/NotificationMenu";
-import type { Profile, UserPreferences } from "@/types";
+import LanguageMenu from "@/components/LanguageMenu";
+import ThemeToggle, { type ThemePreference } from "@/components/ThemeToggle";
+import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
   BarChart3,
@@ -19,12 +21,10 @@ import {
   Layers3,
   LogOut,
   Menu,
-  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   Sparkles,
-  Sun,
   ShieldCheck,
   StickyNote,
   MessageSquareText,
@@ -197,7 +197,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
@@ -209,7 +208,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const stored = window.localStorage.getItem("edsync-theme");
     const useDark = stored === "dark";
     document.documentElement.classList.toggle("dark", useDark);
-    setDarkMode(useDark);
     setWorkspaceContext(workspaceContextFromStorage());
   }, []);
 
@@ -232,7 +230,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             const useDark = theme === "dark";
             document.documentElement.classList.toggle("dark", useDark);
             window.localStorage.setItem("edsync-theme", theme);
-            setDarkMode(useDark);
           }
         });
     });
@@ -277,12 +274,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     router.refresh();
   };
 
-  const toggleTheme = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
-    const theme: UserPreferences["theme"] = next ? "dark" : "light";
-    window.localStorage.setItem("edsync-theme", theme);
+  const handleThemeChange = (theme: ThemePreference) => {
     if (profile) {
       const preferences = { ...(profile.preferences ?? { text_size: "medium" }), theme };
       setProfile({ ...profile, preferences });
@@ -317,10 +309,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         href={item.href}
         onClick={() => setMobileOpen(false)}
         title={collapsed ? item.label : undefined}
-        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
+        className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
           isActive
-            ? "bg-edsync-blue/12 text-edsync-blue ring-1 ring-edsync-blue/25"
-            : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+            ? "premium-active"
+            : "border-transparent text-edsync-subtle hover:border-edsync-border hover:bg-edsync-card hover:text-edsync-text"
         } ${collapsed ? "justify-center" : ""}`}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
@@ -345,12 +337,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-72 flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/60 transition-all duration-300 dark:shadow-black/20`}
+      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-72 flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
     >
-      <div className="flex items-center gap-3 border-b border-edsync-border px-4 py-4">
+      <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
           <div
-            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${copy.gradient}`}
+            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${copy.gradient} shadow-sm`}
           >
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
@@ -374,9 +366,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </div>
 
       {!collapsed && (
-        <div className="mx-4 mt-4 rounded-xl border border-edsync-border bg-edsync-card/70 p-3">
+        <div className="premium-surface mx-4 mt-4 rounded-2xl p-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-edsync-surface text-sm font-bold text-edsync-text">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-surface text-sm font-bold text-edsync-text shadow-sm">
               {generateInitials(profile?.full_name || profile?.email || role)}
             </div>
             <div className="min-w-0">
@@ -389,12 +381,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             </div>
           </div>
           {role === "admin" && (
-            <div className="mt-3 rounded-lg border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
+            <div className="mt-3 rounded-xl border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
               Read-only view mode is audited.
             </div>
           )}
           {workspaceContext && (
-            <div className="mt-3 rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-xs text-edsync-subtle">
+            <div className="mt-3 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs text-edsync-subtle">
               <p className="font-semibold text-edsync-text">
                 {workspaceContext.type === "organization" ? "Organization" : "Individual workspace"}
               </p>
@@ -428,7 +420,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             href="/admin/dashboard"
             onClick={() => setMobileOpen(false)}
             title={collapsed ? "Back to Admin" : undefined}
-            className={`mb-2 flex items-center gap-3 rounded-xl border border-edsync-blue/25 bg-edsync-blue/10 px-3 py-3 text-sm font-bold text-edsync-blue transition-all hover:bg-edsync-blue/15 ${
+            className={`mb-2 flex items-center gap-3 rounded-xl border border-edsync-blue/25 bg-edsync-blue/10 px-3 py-3 text-sm font-bold text-edsync-blue shadow-sm transition-all hover:bg-edsync-blue/15 ${
               collapsed ? "justify-center" : ""
             }`}
           >
@@ -456,19 +448,14 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </nav>
 
       <div className="border-t border-edsync-border p-3">
-        <div className={`mb-1 flex items-center ${collapsed ? "justify-center" : "justify-between px-3 py-1"}`}>
+        <div className={`mb-2 flex items-center ${collapsed ? "justify-center" : "justify-between px-3 py-1"}`}>
           {!collapsed && <span className="text-sm font-semibold text-edsync-subtle">Alerts</span>}
           <NotificationMenu />
         </div>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text ${collapsed ? "justify-center" : ""}`}
-          aria-label="Toggle theme"
-        >
-          {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          {!collapsed && (darkMode ? "Light theme" : "Dark theme")}
-        </button>
+        <div className={`mb-1 grid gap-2 ${collapsed ? "place-items-center" : ""}`}>
+          <ThemeToggle compact={collapsed} className={collapsed ? "" : "w-full justify-start"} onThemeChange={handleThemeChange} />
+          <LanguageMenu compact={collapsed} className={collapsed ? "" : "w-full"} align="left" />
+        </div>
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
@@ -494,12 +481,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   );
 
   return (
-    <div className="min-h-screen bg-edsync-bg text-edsync-text">
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg px-4 py-3 shadow-sm lg:hidden">
+    <div className="premium-shell min-h-screen text-edsync-text">
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg/95 px-4 py-3 shadow-sm backdrop-blur-xl lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="rounded-lg border border-edsync-border bg-edsync-card p-2 text-edsync-text"
+          className="rounded-xl border border-edsync-border bg-edsync-card p-2 text-edsync-text shadow-sm"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
@@ -508,7 +495,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           <Brain className={`h-5 w-5 ${copy.accent}`} />
           EdSync
         </Link>
-        <NotificationMenu />
+        <div className="flex items-center gap-2">
+          <LanguageMenu compact />
+          <NotificationMenu />
+        </div>
       </div>
 
       <div>
