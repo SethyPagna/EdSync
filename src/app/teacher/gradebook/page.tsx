@@ -2,10 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { ClipboardList, GraduationCap, Plus, TrendingUp } from "lucide-react";
 
 type ClassRow = { id: string; name: string };
 type StudentRow = { id: string; full_name: string | null; email: string; class_id: string };
-type GradeRow = { studentId: string; name: string; email: string; overall: number | null; scores: Array<{ title: string; percent: number | null; status: string }> };
+type GradeRow = {
+  studentId: string;
+  name: string;
+  email: string;
+  overall: number | null;
+  scores: Array<{ title: string; percent: number | null; status: string }>;
+};
+
+function gradeText(value: number | null) {
+  return value === null ? "Not graded" : `${value}%`;
+}
 
 export default function TeacherGradebookPage() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
@@ -19,6 +30,13 @@ export default function TeacherGradebookPage() {
     () => students.filter((student) => !classId || student.class_id === classId),
     [classId, students],
   );
+
+  const classLabel = classes.find((item) => item.id === classId)?.name || "All classes";
+  const gradedRows = rows.filter((row) => row.overall !== null);
+  const average =
+    gradedRows.length > 0
+      ? Math.round(gradedRows.reduce((sum, row) => sum + Number(row.overall), 0) / gradedRows.length)
+      : null;
 
   const loadRoster = useCallback(async () => {
     const response = await fetch("/api/teacher/roster", { cache: "no-store" });
@@ -72,62 +90,153 @@ export default function TeacherGradebookPage() {
   };
 
   return (
-    <div className="space-y-5 p-5 lg:p-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Gradebook</h1>
-          <p className="mt-2 text-sm text-edsync-subtle">Review weighted progress and add manual scores.</p>
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
+              Assessment
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-bold">Gradebook</h1>
+            <p className="mt-1 text-sm text-edsync-subtle">
+              {classLabel}, {rows.length} learner{rows.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <select
+            className="edsync-input w-full lg:max-w-xs"
+            value={classId}
+            onChange={(event) => setClassId(event.target.value)}
+          >
+            <option value="">All classes</option>
+            {classes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <select className="edsync-input max-w-xs" value={classId} onChange={(event) => setClassId(event.target.value)}>
-          <option value="">All classes</option>
-          {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
-      </div>
 
-      <form onSubmit={addScore} className="edsync-card grid gap-3 p-4 md:grid-cols-5">
-        <select className="edsync-input" value={form.studentId} onChange={(event) => setForm({ ...form, studentId: event.target.value })} required>
-          <option value="">Student</option>
-          {filteredStudents.map((student) => (
-            <option key={`${student.class_id}-${student.id}`} value={student.id}>{student.full_name || student.email}</option>
-          ))}
-        </select>
-        <input className="edsync-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Score title" required />
-        <input className="edsync-input" value={form.earned} onChange={(event) => setForm({ ...form, earned: event.target.value })} placeholder="Earned" type="number" required />
-        <input className="edsync-input" value={form.possible} onChange={(event) => setForm({ ...form, possible: event.target.value })} placeholder="Possible" type="number" required />
-        <button className="btn-primary justify-center" type="submit">Add score</button>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <SummaryTile icon={TrendingUp} label="Class average" value={gradeText(average)} tone="text-edsync-blue" />
+          <SummaryTile icon={GraduationCap} label="Graded learners" value={gradedRows.length} tone="text-edsync-emerald" />
+          <SummaryTile icon={ClipboardList} label="Open rows" value={Math.max(0, rows.length - gradedRows.length)} tone="text-edsync-amber" />
+        </div>
+      </section>
+
+      <form
+        onSubmit={addScore}
+        className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5"
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold">Add score</h2>
+            <p className="text-sm text-edsync-subtle">Record a quick manual score.</p>
+          </div>
+          <Plus className="h-5 w-5 text-edsync-blue" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-5">
+          <select
+            className="edsync-input"
+            value={form.studentId}
+            onChange={(event) => setForm({ ...form, studentId: event.target.value })}
+            required
+          >
+            <option value="">Student</option>
+            {filteredStudents.map((student) => (
+              <option key={`${student.class_id}-${student.id}`} value={student.id}>
+                {student.full_name || student.email}
+              </option>
+            ))}
+          </select>
+          <input
+            className="edsync-input"
+            value={form.title}
+            onChange={(event) => setForm({ ...form, title: event.target.value })}
+            placeholder="Score title"
+            required
+          />
+          <input
+            className="edsync-input"
+            value={form.earned}
+            onChange={(event) => setForm({ ...form, earned: event.target.value })}
+            placeholder="Earned"
+            type="number"
+            required
+          />
+          <input
+            className="edsync-input"
+            value={form.possible}
+            onChange={(event) => setForm({ ...form, possible: event.target.value })}
+            placeholder="Possible"
+            type="number"
+            required
+          />
+          <button className="btn-primary justify-center" type="submit">
+            Save
+          </button>
+        </div>
       </form>
 
-      <div className="edsync-card overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="border-b border-edsync-border text-xs uppercase text-edsync-subtle">
-            <tr>
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Overall</th>
-              <th className="px-4 py-3">Recent scores</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-edsync-border">
-            {loading ? (
-              <tr>
-                <td className="px-4 py-6 text-edsync-subtle" colSpan={3}>
-                  Loading gradebook...
-                </td>
-              </tr>
-            ) : rows.map((row) => (
-              <tr key={row.studentId}>
-                <td className="px-4 py-3">
-                  <p className="font-semibold">{row.name}</p>
-                  <p className="text-xs text-edsync-subtle">{row.email}</p>
-                </td>
-                <td className="px-4 py-3 text-2xl font-bold">{row.overall ?? "—"}{row.overall !== null ? "%" : ""}</td>
-                <td className="px-4 py-3 text-edsync-subtle">
-                  {row.scores.slice(0, 3).map((score) => `${score.title}: ${score.percent ?? "—"}%`).join(" · ") || "No scores yet"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!loading && rows.length === 0 && <p className="p-4 text-sm text-edsync-subtle">No gradebook rows yet.</p>}
+      <section className="rounded-xl border border-edsync-border bg-edsync-card">
+        <div className="border-b border-edsync-border p-4 sm:p-5">
+          <h2 className="font-display text-xl font-bold">Learners</h2>
+        </div>
+        <div className="divide-y divide-edsync-border">
+          {loading ? (
+            <p className="p-5 text-sm text-edsync-subtle">Loading gradebook...</p>
+          ) : rows.length === 0 ? (
+            <p className="p-5 text-sm text-edsync-subtle">No gradebook rows yet.</p>
+          ) : (
+            rows.map((row) => (
+              <article key={row.studentId} className="grid gap-3 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-edsync-text">{row.name}</p>
+                  <p className="mt-1 truncate text-xs text-edsync-subtle">{row.email}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {row.scores.slice(0, 3).map((score) => (
+                      <span key={`${row.studentId}-${score.title}`} className="badge bg-edsync-surface text-edsync-subtle">
+                        {score.title}: {gradeText(score.percent)}
+                      </span>
+                    ))}
+                    {row.scores.length === 0 && (
+                      <span className="text-sm text-edsync-subtle">No scores yet</span>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-center">
+                  <p className="font-display text-2xl font-bold text-edsync-text">{gradeText(row.overall)}</p>
+                  <p className="mt-1 text-xs text-edsync-subtle">overall</p>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SummaryTile({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: typeof TrendingUp;
+  label: string;
+  value: React.ReactNode;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-edsync-subtle">{label}</p>
+          <p className="mt-2 font-display text-2xl font-bold text-edsync-text">{value}</p>
+        </div>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-current/10 ${tone}`}>
+          <Icon className="h-5 w-5" />
+        </div>
       </div>
     </div>
   );
