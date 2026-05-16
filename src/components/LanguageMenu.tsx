@@ -2,20 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Languages } from "lucide-react";
-
-export const EDSYNC_LANGUAGES = [
-  { name: "English", code: "en" },
-  { name: "Korean", code: "ko" },
-  { name: "Khmer", code: "km" },
-  { name: "Chinese", code: "zh" },
-  { name: "Japanese", code: "ja" },
-  { name: "Spanish", code: "es" },
-  { name: "French", code: "fr" },
-  { name: "Vietnamese", code: "vi" },
-  { name: "Thai", code: "th" },
-] as const;
-
-type LanguageName = (typeof EDSYNC_LANGUAGES)[number]["name"];
+import {
+  DEFAULT_PUBLIC_LANGUAGE,
+  EDSYNC_LANGUAGES,
+  languageCodeFor,
+  normalizePublicLanguage,
+  publicCopy,
+  type PublicLanguageName,
+} from "@/lib/public-i18n";
 
 type LanguageMenuProps = {
   compact?: boolean;
@@ -24,10 +18,12 @@ type LanguageMenuProps = {
   className?: string;
 };
 
-const DEFAULT_LANGUAGE: LanguageName = "English";
-
-function languageCodeFor(name: string) {
-  return EDSYNC_LANGUAGES.find((language) => language.name === name)?.code ?? "en";
+function cookieLanguage() {
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("edsync-language="))
+    ?.split("=")[1];
+  return match ? decodeURIComponent(match) : null;
 }
 
 export default function LanguageMenu({
@@ -37,21 +33,22 @@ export default function LanguageMenu({
   className = "",
 }: LanguageMenuProps) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const [language, setLanguage] = useState<LanguageName>(DEFAULT_LANGUAGE);
+  const [language, setLanguage] = useState<PublicLanguageName>(DEFAULT_PUBLIC_LANGUAGE);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("edsync-language") || DEFAULT_LANGUAGE;
-    const nextLanguage = EDSYNC_LANGUAGES.some((item) => item.name === stored)
-      ? (stored as LanguageName)
-      : DEFAULT_LANGUAGE;
+    const stored = window.localStorage.getItem("edsync-language") || cookieLanguage() || DEFAULT_PUBLIC_LANGUAGE;
+    const nextLanguage = normalizePublicLanguage(stored);
     setLanguage(nextLanguage);
     document.documentElement.lang = languageCodeFor(nextLanguage);
   }, []);
 
-  const chooseLanguage = (nextLanguage: LanguageName) => {
+  const chooseLanguage = (nextLanguage: PublicLanguageName) => {
+    const code = languageCodeFor(nextLanguage);
     setLanguage(nextLanguage);
     window.localStorage.setItem("edsync-language", nextLanguage);
-    document.documentElement.lang = languageCodeFor(nextLanguage);
+    document.cookie = `edsync-language=${encodeURIComponent(nextLanguage)}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `edsync-language-code=${encodeURIComponent(code)}; path=/; max-age=31536000; samesite=lax`;
+    document.documentElement.lang = code;
     window.dispatchEvent(new CustomEvent("edsync-language-change", { detail: { language: nextLanguage } }));
     detailsRef.current?.removeAttribute("open");
 
@@ -59,8 +56,9 @@ export default function LanguageMenu({
       const { pathname, search } = window.location;
       if (!pathname.startsWith("/catalog") && !pathname.startsWith("/org/")) return;
       const params = new URLSearchParams(search);
-      params.set("language", nextLanguage);
-      window.location.assign(`${pathname}?${params.toString()}`);
+      params.delete("language");
+      const nextSearch = params.toString();
+      window.location.assign(nextSearch ? `${pathname}?${nextSearch}` : pathname);
     }
   };
 
@@ -68,8 +66,8 @@ export default function LanguageMenu({
     <details ref={detailsRef} className={`group relative inline-block ${className}`}>
       <summary
         className={`${compact ? "premium-icon-button" : "btn-secondary px-4 py-2 text-sm"} list-none marker:hidden [&::-webkit-details-marker]:hidden`}
-        aria-label="Choose language"
-        title="Choose language"
+        aria-label={publicCopy[language].language}
+        title={publicCopy[language].language}
       >
         <Languages className="h-4 w-4" />
         {!compact && <span>{language}</span>}
@@ -80,7 +78,9 @@ export default function LanguageMenu({
         }`}
       >
         <div className="px-2 pb-2 pt-1">
-          <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Language</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">
+            {publicCopy[language].language}
+          </p>
         </div>
         <div className="grid gap-1">
           {EDSYNC_LANGUAGES.map((item) => {
