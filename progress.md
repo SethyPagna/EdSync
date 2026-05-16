@@ -18,7 +18,7 @@
 | Phase | Name | Status | Target Outcome |
 | --- | --- | --- | --- |
 | 1 | Product Inventory And Baseline | Complete | Existing features, routes, and data models are mapped in `docs/BASELINE_INVENTORY.md`. |
-| 2 | Workflow Map And Navigation Model | Not started | Teacher workflow is coherent from idea to assignment. |
+| 2 | Workflow Map And Navigation Model | Complete | Teacher workflow, navigation handoffs, and saved states are mapped in `docs/WORKFLOW_NAVIGATION_MODEL.md`. |
 | 3 | Core Learning Object Architecture | Not started | Shared content model powers lessons, slides, quizzes, discussions, and activities. |
 | 4 | Studio Component Refactor | Not started | Studio is split into maintainable modules. |
 | 5 | Template System Foundation | Not started | Reusable generated/manual templates are modeled and searchable. |
@@ -42,7 +42,7 @@
 
 ## Current Focus
 
-**Next Target:** Phase 2, Workflow Map And Navigation Model.
+**Next Target:** Phase 3, Core Learning Object Architecture.
 
 **Immediate Tasks:**
 - [x] Inventory routes by role and feature.
@@ -50,14 +50,18 @@
 - [x] Inventory AI endpoints, prompt contracts, and validators.
 - [x] Inventory Studio, lesson, slide, practice, quiz, discussion, and template capabilities.
 - [x] Mark capabilities as `keep`, `refactor`, `merge`, or `replace`.
-- [ ] Define the teacher idea-to-assignment workflow.
-- [ ] Define canonical handoffs between Studio, Lessons, Slides, Practice, Discussions, and Analytics.
-- [ ] Define saved-state labels and where they appear in navigation.
+- [x] Define the teacher idea-to-assignment workflow.
+- [x] Define canonical handoffs between Studio, Lessons, Slides, Practice, Discussions, and Analytics.
+- [x] Define saved-state labels and where they appear in navigation.
+- [ ] Define shared `LearningObject`, `LearningBlock`, and workflow-state types.
+- [ ] Add legacy adapters for Studio documents, lesson sections, quiz questions, and content blocks.
+- [ ] Add tests for normalization from existing records into the shared model.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
 - A related detailed plan already exists at `docs/superpowers/plans/2026-05-16-edsync-lessons-slides-platform.md`.
 - Phase 1 inventory is recorded at `docs/BASELINE_INVENTORY.md`.
+- Phase 2 workflow and navigation model is recorded at `docs/WORKFLOW_NAVIGATION_MODEL.md`.
 
 ---
 
@@ -71,6 +75,8 @@
 | 2026-05-16 | Require schema validation and selective import for AI output. | AI content should be useful drafts, not unchecked writes into lessons. |
 | 2026-05-16 | Treat `/studio` as the canonical authoring workspace and keep `/notes`, `/docs`, `/sheets`, `/slides`, `/practice`, `/quizzes`, and `/games` as stable entry routes. | The inventory shows these routes already exist and can converge around one workflow without breaking links. |
 | 2026-05-16 | Start architecture work by extracting large teacher lesson, student lesson, and Studio files before adding more heavy UI. | The largest files are 2355, 2111, 1782, and 1394 lines and concentrate too much logic. |
+| 2026-05-16 | Use one product spine from catalog or organization portal through Studio, assignment, student practice, grade events, feedback, and content improvement. | The app has many capable pages; the main maturity gap is making them behave like one learning loop. |
+| 2026-05-16 | Standardize saved states as local draft, server draft, needs review, published, assigned, archived, and conflict. | Users need consistent status language across Studio, lessons, practice, assignments, and catalog publishing. |
 
 ---
 
@@ -80,12 +86,13 @@
 | --- | --- | --- | --- |
 | 2026-05-16 | Planning docs | Manual Markdown review | Passed |
 | 2026-05-16 | Phase 1 inventory | Route, migration, schema, API, Studio, and large-file scan | Passed |
+| 2026-05-16 | Phase 2 workflow model | Workflow, navigation, handoff, saved-state, and next-action review | Passed |
 
 ---
 
 ## Blockers
 
-- None for Phase 1.
+- None for Phase 2.
 
 ## Risks To Watch
 
@@ -104,6 +111,14 @@
 - Capability decisions are marked as `keep`, `refactor`, or `merge`.
 - Major overlap areas are lesson sections vs Studio documents/content blocks, slide summaries vs lesson slides, practice items vs quiz/work questions, prompt contracts vs workflow prompts, and public org selection vs auth organization mode.
 - The first refactor candidates are `src/app/teacher/lessons/[id]/page.tsx`, `src/app/student/lessons/[id]/page.tsx`, `src/app/teacher/lessons/create/page.tsx`, and `src/components/studio/StudioWorkspace.tsx`.
+
+## Phase 2 Workflow Summary
+
+- The canonical product spine is visitor discovery, auth/organization context, role dashboard, Studio authoring, lesson package creation, assignment, student learning, grade events, feedback, recommendations, and content improvement.
+- Teacher creation flows now have a defined path from topic/file/template/previous lesson to Studio source, lesson package, slides, practice, discussion, publish, assign, review, and improve.
+- Student flows are grouped into home, learn, practice, discuss, reflect, and feedback.
+- Handoff payloads require shared metadata such as tenant, owner, source, title, audience, objectives, tags, language, duration, difficulty, status, and version.
+- Saved states are standardized as `Local draft`, `Server draft`, `Needs review`, `Published`, `Assigned`, `Archived`, and `Conflict`.
 
 ## Update Protocol
 
