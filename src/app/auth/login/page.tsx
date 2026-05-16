@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
+import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
@@ -16,10 +17,6 @@ type OrganizationLookup = {
   portalName: string | null;
   ssoEnabled: boolean;
 };
-
-function normalizeOrganizationCode(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
 
 function LoginForm() {
   const searchParams = useSearchParams();
