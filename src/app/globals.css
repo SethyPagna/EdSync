@@ -2961,10 +2961,19 @@ h6 {
     grid-template-columns: 1fr;
     gap: 1.25rem;
     overflow: visible;
+    width: min(100%, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+  }
+
+  .edsync-workflow-copy,
+  .edsync-workflow-preview {
+    width: min(100%, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
   }
 
   .edsync-workflow-copy h3 {
-    max-width: 100%;
+    width: min(100%, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
     font-size: clamp(2rem, 10.5vw, 2.7rem);
     line-height: 1.02;
     letter-spacing: -0.045em;
