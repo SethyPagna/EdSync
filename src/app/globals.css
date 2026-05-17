@@ -792,6 +792,7 @@ html[data-theme="light"] .edsync-public-launch .edsync-workflow-bridge-window sp
 
 .edsync-public-launch .edsync-workflow-showcase {
   color: #f8fafc;
+  scroll-margin-top: 0;
   background:
     radial-gradient(circle at 18% 18%, rgba(147, 240, 202, 0.18), transparent 28rem),
     radial-gradient(circle at 84% 20%, rgba(155, 188, 255, 0.15), transparent 25rem),
@@ -2509,6 +2510,7 @@ h6 {
 
 .edsync-workflow-showcase {
   color: #f8fafc;
+  scroll-margin-top: 0;
   background:
     radial-gradient(circle at 22% 18%, rgba(20, 184, 166, 0.2), transparent 28rem),
     radial-gradient(circle at 78% 20%, rgba(37, 99, 235, 0.14), transparent 26rem),
