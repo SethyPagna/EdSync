@@ -930,7 +930,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   .edsync-launch-copy h1 {
     max-width: 21rem;
     margin-top: 0;
-    font-size: clamp(3.18rem, 15.8vw, 4.05rem);
+    font-size: clamp(2.78rem, 13.8vw, 3.62rem);
     letter-spacing: -0.05em;
   }
 
