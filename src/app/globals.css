@@ -884,10 +884,14 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
     left: 0.5rem;
     right: 0.5rem;
     transform: none;
-    display: grid;
-    grid-template-columns: 1fr;
-    align-items: start;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 0.55rem;
+  }
+
+  .edsync-launch-actions {
+    flex: 0 0 auto;
   }
 
   .edsync-launch-brand strong {
