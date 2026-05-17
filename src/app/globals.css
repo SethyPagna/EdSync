@@ -33,31 +33,6 @@
 
 /* LEARN-style public launch surface */
 .edsync-public-launch {
-  --launch-bg: #020712;
-  --launch-ink: #f8fafc;
-  --launch-muted: rgba(226, 232, 240, 0.66);
-  --launch-line: rgba(226, 232, 240, 0.14);
-  --launch-panel: rgba(13, 23, 38, 0.74);
-  --launch-panel-strong: rgba(4, 10, 22, 0.88);
-  --launch-accent: #93f0ca;
-  --launch-blue: #9bbcff;
-  --bg: #020712;
-  --surface: rgba(13, 23, 38, 0.74);
-  --card: rgba(4, 10, 22, 0.88);
-  --border: rgba(226, 232, 240, 0.14);
-  --muted: rgba(226, 232, 240, 0.1);
-  --text: #f8fafc;
-  --subtle: rgba(226, 232, 240, 0.66);
-  min-height: 100vh;
-  overflow-x: clip;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(20, 184, 166, 0.24), transparent 28rem),
-    radial-gradient(circle at 78% 10%, rgba(37, 99, 235, 0.18), transparent 25rem),
-    linear-gradient(135deg, #071323 0%, #031512 48%, #020712 100%);
-  color: var(--launch-ink);
-}
-
-html[data-theme="light"] .edsync-public-launch {
   --launch-bg: #eaf2ff;
   --launch-ink: #0c1526;
   --launch-muted: #51627b;
@@ -73,6 +48,8 @@ html[data-theme="light"] .edsync-public-launch {
   --muted: rgba(36, 88, 220, 0.08);
   --text: #0c1526;
   --subtle: #51627b;
+  min-height: 100vh;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 18% 18%, rgba(20, 184, 166, 0.12), transparent 25rem),
     radial-gradient(circle at 78% 12%, rgba(37, 99, 235, 0.16), transparent 24rem),
@@ -80,14 +57,36 @@ html[data-theme="light"] .edsync-public-launch {
   color: var(--launch-ink);
 }
 
+html.dark .edsync-public-launch,
+html[data-theme="dark"] .edsync-public-launch {
+  --launch-bg: #020712;
+  --launch-ink: #f8fafc;
+  --launch-muted: rgba(226, 232, 240, 0.66);
+  --launch-line: rgba(226, 232, 240, 0.14);
+  --launch-panel: rgba(13, 23, 38, 0.74);
+  --launch-panel-strong: rgba(4, 10, 22, 0.88);
+  --launch-accent: #93f0ca;
+  --launch-blue: #9bbcff;
+  --bg: #020712;
+  --surface: rgba(13, 23, 38, 0.74);
+  --card: rgba(4, 10, 22, 0.88);
+  --border: rgba(226, 232, 240, 0.14);
+  --muted: rgba(226, 232, 240, 0.1);
+  --text: #f8fafc;
+  --subtle: rgba(226, 232, 240, 0.66);
+  background:
+    radial-gradient(circle at 18% 20%, rgba(20, 184, 166, 0.24), transparent 28rem),
+    radial-gradient(circle at 78% 10%, rgba(37, 99, 235, 0.18), transparent 25rem),
+    linear-gradient(135deg, #071323 0%, #031512 48%, #020712 100%);
+}
+
 .edsync-launch-chrome {
   position: absolute;
-  top: clamp(1rem, 3vw, 2rem);
-  left: 50%;
+  top: clamp(5.4rem, 13vh, 8.6rem);
+  left: max(1.25rem, calc((100vw - 82rem) / 2));
+  right: max(1.25rem, calc((100vw - 82rem) / 2));
   z-index: 50;
   display: flex;
-  width: min(82rem, calc(100vw - 2rem));
-  transform: translateX(-50%);
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -110,15 +109,19 @@ html[data-theme="light"] .edsync-public-launch {
 
 .edsync-launch-brand-mark {
   display: grid;
-  height: 2.6rem;
-  width: 2.6rem;
+  height: 2.75rem;
+  width: 2.75rem;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid var(--launch-line);
-  border-radius: 0.82rem;
-  background: var(--launch-panel-strong);
+  border-radius: 0.78rem;
+  background: #070d1d;
   color: var(--launch-accent);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme="dark"] .edsync-launch-brand-mark {
+  background: var(--launch-panel-strong);
 }
 
 .edsync-launch-brand strong,
@@ -151,10 +154,10 @@ html[data-theme="light"] .edsync-public-launch {
 .edsync-launch-actions > .premium-icon-button,
 .edsync-launch-actions summary.premium-icon-button {
   border-color: var(--launch-line);
-  background: var(--launch-panel);
+  background: var(--launch-panel-strong);
   color: var(--launch-ink);
   backdrop-filter: blur(18px);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 14px 34px rgba(21, 36, 61, 0.11);
 }
 
 .edsync-launch-actions .premium-overlay {
@@ -170,7 +173,7 @@ html[data-theme="light"] .edsync-public-launch {
   min-height: 2.7rem;
   border: 1px solid var(--launch-line);
   border-radius: 0.62rem;
-  background: var(--launch-panel);
+  background: var(--launch-panel-strong);
   color: var(--launch-ink);
   padding: 0 1rem;
   font-size: 0.86rem;
@@ -190,7 +193,7 @@ html[data-theme="light"] .edsync-public-launch {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  padding: clamp(6rem, 11vh, 8rem) max(1rem, calc((100vw - 82rem) / 2)) clamp(3.5rem, 7vh, 5rem);
+  padding: clamp(8rem, 18vh, 11rem) max(1.25rem, calc((100vw - 82rem) / 2)) clamp(3.5rem, 7vh, 5rem);
   isolation: isolate;
 }
 
@@ -208,7 +211,7 @@ html[data-theme="light"] .edsync-public-launch {
 
 .edsync-launch-hero-inner {
   display: grid;
-  min-height: calc(100vh - 11rem);
+  min-height: calc(100vh - 15rem);
   align-items: center;
   gap: clamp(2rem, 5vw, 5rem);
   grid-template-columns: minmax(18rem, 0.72fr) minmax(34rem, 1.08fr);
@@ -706,6 +709,8 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   .edsync-launch-chrome {
     position: absolute;
     top: 1rem;
+    left: 1rem;
+    right: 1rem;
   }
 
   .edsync-launch-brand small {
@@ -713,7 +718,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   }
 
   .edsync-launch-hero-v2 {
-    padding-top: 5.4rem;
+    padding-top: 7.6rem;
   }
 
   .edsync-launch-hero-inner,
@@ -744,10 +749,13 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
 
 @media (max-width: 640px) {
   .edsync-launch-chrome {
-    width: calc(100vw - 1rem);
     left: 0.5rem;
     right: 0.5rem;
     transform: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 0.55rem;
   }
 
   .edsync-launch-brand strong {
@@ -3080,11 +3088,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   .edsync-public-launch .edsync-launch-chrome {
     left: 0.5rem;
     right: 0.5rem;
-    width: auto;
     transform: none;
   }
 
   .edsync-public-launch .edsync-launch-actions {
+    justify-self: start;
     flex-shrink: 0;
     gap: 0.32rem;
   }
@@ -3111,7 +3119,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   .edsync-public-launch .edsync-launch-copy p {
-    max-width: calc(100vw - 2rem);
+    max-width: 22rem;
+    overflow-wrap: anywhere;
   }
 
   .edsync-public-launch .edsync-launch-mode-row {
