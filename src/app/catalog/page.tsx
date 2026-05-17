@@ -35,8 +35,8 @@ export default async function CatalogPage({
     duration?: string;
   };
 }) {
-  const copy = getPublicCopy();
   const filters = normalizeCatalogFilters(searchParams);
+  const copy = getPublicCopy(filters.language);
   const hasFilters = hasCatalogFilters(filters);
   const [items, portals] = await Promise.all([
     listPublicCatalog({
