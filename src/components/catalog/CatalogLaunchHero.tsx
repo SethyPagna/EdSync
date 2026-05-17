@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
   TimerReset,
+  Trophy,
 } from "lucide-react";
 
 export default function CatalogLaunchHero() {
@@ -23,11 +24,11 @@ export default function CatalogLaunchHero() {
         <div className="edsync-launch-copy">
           <div className="edsync-launch-status">
             <Sparkles className="h-4 w-4" />
-            One path: catalog to classroom evidence
+            Catalog to classroom evidence
           </div>
           <h1 id="edsync-public-title">Teach. Practice. Prove progress.</h1>
           <p>
-            Build lessons, generate practice, assign work, and keep the grade evidence in one clean loop.
+            Public courses, organization portals, Studio lessons, AI drafts, student practice, and grade evidence stay in one loop.
           </p>
           <div className="edsync-launch-cta-row">
             <Link href="#workflow-transition" className="edsync-launch-primary">
@@ -41,8 +42,9 @@ export default function CatalogLaunchHero() {
           <div className="edsync-launch-mode-row" aria-label="EdSync workspace modes">
             <span>Catalog</span>
             <span>Studio</span>
+            <span>AI</span>
             <span>Practice</span>
-            <span>Progress</span>
+            <span>Gradebook</span>
           </div>
         </div>
 
@@ -54,18 +56,18 @@ export default function CatalogLaunchHero() {
                 <span />
                 <span />
               </div>
-              <strong>/catalog → /studio → /practice → /teacher/gradebook</strong>
+              <strong>/catalog -&gt; /studio -&gt; /practice -&gt; /teacher/gradebook</strong>
               <em>Live workspace preview</em>
             </div>
 
             <div className="edsync-launch-preview-grid">
               <aside className="edsync-launch-preview-nav">
                 {[
-                  ["Catalog", Search, "Find public courses"],
-                  ["Studio", Presentation, "Slides, docs, media"],
-                  ["AI Tutor", Bot, "Generate quiz draft"],
-                  ["Practice", GraduationCap, "Retry missed"],
-                  ["Admin", ShieldCheck, "Providers, portals"],
+                  ["Catalog", Search, "Course + org entry"],
+                  ["Studio", Presentation, "Lesson editor"],
+                  ["AI", Bot, "Drafts to review"],
+                  ["Practice", GraduationCap, "Timer + retries"],
+                  ["Progress", ShieldCheck, "Grade evidence"],
                 ].map(([label, Icon, detail], index) => (
                   <span key={label as string} className={index === 1 ? "is-active" : ""}>
                     <Icon className="h-4 w-4" />
@@ -80,7 +82,7 @@ export default function CatalogLaunchHero() {
               <section className="edsync-launch-workspace">
                 <div className="edsync-launch-workspace-head">
                   <div>
-                    <small>Lesson Studio</small>
+                    <small>Studio lesson editor</small>
                     <h2>Energy Transfer</h2>
                   </div>
                   <span>
@@ -112,34 +114,38 @@ export default function CatalogLaunchHero() {
                       <span>Heat moves through touch</span>
                       <span>
                         <Play className="h-4 w-4" />
-                        Video check
+                        Vimeo check
                       </span>
-                      <span>Quick question</span>
+                      <span>Quick question: 4 pts</span>
                     </div>
-                    <p>Image, video, and links are checked before publish.</p>
+                    <p>Images, video embeds, links, and quiz blocks are checked before publish.</p>
                   </article>
 
                   <aside className="edsync-launch-side-stack">
                     <span>
-                      <ClipboardCheck className="h-4 w-4" />
-                      Assign to Grade 8 Science
+                      <Bot className="h-4 w-4" />
+                      AI draft: quiz + rubric
                     </span>
                     <span>
                       <TimerReset className="h-4 w-4" />
-                      35 min expected
+                      Due Fri, 35 min target
                     </span>
                     <span>
-                      <Bot className="h-4 w-4" />
-                      AI quiz needs review
+                      <Trophy className="h-4 w-4" />
+                      Retry missed saved
+                    </span>
+                    <span>
+                      <ClipboardCheck className="h-4 w-4" />
+                      Grade event ready
                     </span>
                   </aside>
                 </div>
 
                 <div className="edsync-launch-proof-row">
                   {[
-                    ["5 slides", "Studio draft"],
+                    ["5 slides", "Draft saved"],
                     ["12 questions", "Practice ready"],
-                    ["Grade event", "Progress saved"],
+                    ["8 students", "Evidence queued"],
                   ].map(([value, label]) => (
                     <span key={value}>
                       <strong>{value}</strong>
