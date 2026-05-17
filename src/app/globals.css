@@ -281,14 +281,15 @@ html[data-theme="dark"] .edsync-launch-brand-mark {
 }
 
 .edsync-launch-primary {
-  background: #ffffff;
-  color: #06111f;
+  background: #2458dc;
+  color: #ffffff;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
 }
 
-html[data-theme="light"] .edsync-launch-primary {
-  background: #2458dc;
-  color: #ffffff;
+html.dark .edsync-launch-primary,
+html[data-theme="dark"] .edsync-launch-primary {
+  background: #ffffff;
+  color: #06111f;
 }
 
 .edsync-launch-secondary {
