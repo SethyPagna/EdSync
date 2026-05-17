@@ -331,6 +331,7 @@ html[data-theme="light"] .edsync-launch-primary {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
   padding: clamp(0.85rem, 1.7vw, 1.2rem);
   box-shadow: 0 42px 90px rgba(0, 0, 0, 0.34);
+  transform: translateZ(0);
 }
 
 .edsync-launch-preview-frame::before {
@@ -627,7 +628,7 @@ html[data-theme="light"] .edsync-launch-primary {
 }
 
 .edsync-public-launch .edsync-workflow-bridge {
-  min-height: 120vh;
+  min-height: 96vh;
 }
 
 .edsync-public-launch .edsync-workflow-bridge-sticky {
@@ -727,7 +728,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   }
 
   .edsync-launch-copy h1 {
-    font-size: clamp(3.25rem, 15vw, 5rem);
+    font-size: clamp(3rem, 13vw, 4.8rem);
   }
 
   .edsync-launch-preview-grid,
@@ -744,6 +745,10 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   .edsync-launch-preview-nav > span {
     min-width: 10rem;
     scroll-snap-align: start;
+  }
+
+  .edsync-launch-preview-frame {
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
   }
 }
 
@@ -771,8 +776,8 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   }
 
   .edsync-launch-preview-wrap {
-    margin-inline: -0.5rem;
-    max-width: calc(100vw - 1rem);
+    margin-inline: 0;
+    max-width: 100%;
     overflow: hidden;
   }
 
@@ -785,8 +790,38 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
     overflow: hidden;
   }
 
+  .edsync-launch-hero-v2 {
+    padding-inline: 0.9rem;
+  }
+
+  .edsync-launch-copy h1 {
+    max-width: 21rem;
+    font-size: clamp(2.85rem, 14vw, 3.75rem);
+    letter-spacing: -0.05em;
+  }
+
+  .edsync-launch-copy p {
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .edsync-launch-preview-frame {
+    border-radius: 1.15rem;
+    padding: 0.55rem;
+  }
+
+  .edsync-launch-preview-grid {
+    padding: 0.6rem;
+  }
+
+  .edsync-launch-preview-nav {
+    display: none;
+  }
+
   .edsync-launch-preview-bar {
     grid-template-columns: auto minmax(0, 1fr);
+    border-radius: 0.85rem 0.85rem 0 0;
+    padding: 0.58rem 0.7rem;
   }
 
   .edsync-launch-preview-bar em {
@@ -804,6 +839,37 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
 
   .edsync-launch-workspace-head > span {
     width: fit-content;
+  }
+
+  .edsync-launch-workspace {
+    padding: 0.72rem;
+  }
+
+  .edsync-launch-workspace-head h2 {
+    font-size: 1.55rem;
+  }
+
+  .edsync-launch-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+  }
+
+  .edsync-launch-toolbar span {
+    flex: 0 0 auto;
+  }
+
+  .edsync-launch-side-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edsync-launch-side-stack span {
+    align-items: start;
+    font-size: 0.72rem;
+  }
+
+  .edsync-launch-proof-row {
+    grid-template-columns: 1fr;
   }
 
   .edsync-launch-mode-row {
@@ -2495,6 +2561,223 @@ h6 {
   font-weight: 950;
 }
 
+.edsync-workflow-app-mock {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.edsync-workflow-mock-toolbar,
+.edsync-workflow-editor-ribbon {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+}
+
+.edsync-workflow-editor-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.edsync-workflow-mock-toolbar span,
+.edsync-workflow-editor-ribbon span {
+  min-width: 0;
+  border: 1px solid #d9e4f2;
+  border-radius: 0.7rem;
+  background: #f8fbff;
+  color: #25344a;
+  padding: 0.58rem 0.72rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.edsync-workflow-mock-toolbar span:not(.is-wide) {
+  white-space: nowrap;
+}
+
+.edsync-workflow-mock-grid,
+.edsync-workflow-ai-grid,
+.edsync-workflow-assignment-grid,
+.edsync-workflow-admin-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.edsync-workflow-admin-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.edsync-workflow-course-card,
+.edsync-workflow-ai-grid section,
+.edsync-workflow-assignment-grid section,
+.edsync-workflow-admin-grid section,
+.edsync-workflow-practice-card {
+  display: grid;
+  gap: 0.24rem;
+  border: 1px solid #dce7f5;
+  border-radius: 1rem;
+  background: #f8fbff;
+  padding: 0.85rem;
+}
+
+.edsync-workflow-course-card strong,
+.edsync-workflow-ai-grid strong,
+.edsync-workflow-assignment-grid strong,
+.edsync-workflow-admin-grid strong,
+.edsync-workflow-practice-card strong {
+  color: #0d1726;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-course-card small,
+.edsync-workflow-course-card em,
+.edsync-workflow-ai-grid small,
+.edsync-workflow-ai-grid span,
+.edsync-workflow-assignment-grid small,
+.edsync-workflow-assignment-grid span,
+.edsync-workflow-admin-grid small,
+.edsync-workflow-admin-grid span,
+.edsync-workflow-practice-card small {
+  color: #5f6f85;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 790;
+}
+
+.edsync-workflow-course-card em,
+.edsync-workflow-ai-grid span,
+.edsync-workflow-assignment-grid span,
+.edsync-workflow-admin-grid span {
+  color: #006f55;
+  font-weight: 950;
+}
+
+.edsync-workflow-slide-editor {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+.edsync-workflow-slide-editor aside {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+}
+
+.edsync-workflow-slide-editor aside span {
+  display: grid;
+  min-height: 2.4rem;
+  place-items: center;
+  border: 1px solid #dce7f5;
+  border-radius: 0.7rem;
+  background: #f8fbff;
+  color: #607087;
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-slide-editor aside span.is-active {
+  background: #2458dc;
+  color: #ffffff;
+}
+
+.edsync-workflow-slide-editor section {
+  border: 1px solid #dce7f5;
+  border-radius: 1rem;
+  background: #f8fbff;
+  padding: 0.9rem;
+}
+
+.edsync-workflow-slide-editor section small {
+  color: #74849b;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.edsync-workflow-slide-editor section strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #0d1726;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1.55rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-slide-editor section div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.edsync-workflow-slide-editor section div span {
+  display: grid;
+  min-height: 3.25rem;
+  align-items: end;
+  border-radius: 0.75rem;
+  background: #dfeaff;
+  color: #2458dc;
+  padding: 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-slide-editor section div span:nth-child(2) {
+  background: #ddf7ee;
+  color: #006f55;
+}
+
+.edsync-workflow-slide-editor section div span:nth-child(3) {
+  background: #fff0cf;
+  color: #9a5c00;
+}
+
+.edsync-workflow-practice-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: #06101b;
+}
+
+.edsync-workflow-practice-card strong {
+  color: #ffffff;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.edsync-workflow-practice-card small {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.edsync-workflow-practice-card > span {
+  border-radius: 999px;
+  background: rgba(147, 240, 202, 0.16);
+  color: #b8f7d9;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.edsync-workflow-bar-chart {
+  display: flex;
+  align-items: end;
+  gap: 0.55rem;
+  min-height: 7rem;
+  border-radius: 1rem;
+  background: #edf2f8;
+  padding: 0.8rem;
+}
+
+.edsync-workflow-bar-chart span {
+  flex: 1;
+  border-radius: 999px 999px 0.35rem 0.35rem;
+  background: linear-gradient(180deg, #2458dc, #82e9c0);
+}
+
 .edsync-workflow-preview-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2658,7 +2941,7 @@ h6 {
     position: relative;
     top: auto;
     min-height: auto;
-    padding-block: 3rem;
+    padding-block: 3rem 2rem;
   }
 
   .edsync-workflow-heading {
@@ -2692,7 +2975,10 @@ h6 {
   }
 
   .edsync-workflow-showcase .edsync-workflow-controls {
+    position: static;
+    inset: auto;
     align-items: center;
+    margin-top: 1.25rem;
   }
 
   .edsync-workflow-bottom-tabs {
@@ -2705,6 +2991,32 @@ h6 {
   .edsync-workflow-bottom-tabs button {
     min-width: 10rem;
     scroll-snap-align: start;
+  }
+
+  .edsync-workflow-mock-toolbar,
+  .edsync-workflow-mock-grid,
+  .edsync-workflow-ai-grid,
+  .edsync-workflow-assignment-grid,
+  .edsync-workflow-admin-grid,
+  .edsync-workflow-preview-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .edsync-workflow-slide-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .edsync-workflow-slide-editor aside {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .edsync-workflow-slide-editor aside span {
+    min-width: 3rem;
+  }
+
+  .edsync-workflow-slide-editor section div {
+    grid-template-columns: 1fr;
   }
 
   .edsync-workflow-scroll-steps {
