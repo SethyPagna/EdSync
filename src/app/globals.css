@@ -332,6 +332,7 @@ html[data-theme="light"] .edsync-launch-primary {
   padding: clamp(0.85rem, 1.7vw, 1.2rem);
   box-shadow: 0 42px 90px rgba(0, 0, 0, 0.34);
   transform: translateZ(0);
+  animation: launchPreviewLift 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 
 .edsync-launch-preview-frame::before {
@@ -547,14 +548,17 @@ html[data-theme="light"] .edsync-launch-primary {
 
 .edsync-launch-focus-media span:nth-child(1) {
   background: #dfeaff;
+  animation: launchTilePulse 5.8s ease-in-out infinite;
 }
 
 .edsync-launch-focus-media span:nth-child(2) {
   background: #dff8ef;
+  animation: launchTilePulse 5.8s ease-in-out 0.65s infinite;
 }
 
 .edsync-launch-focus-media span:nth-child(3) {
   background: #fff0cf;
+  animation: launchTilePulse 5.8s ease-in-out 1.3s infinite;
 }
 
 .edsync-launch-focus-copy {
@@ -902,18 +906,29 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
 
   .edsync-launch-hero-v2 {
     padding-inline: 0.9rem;
+    padding-top: 6.35rem;
   }
 
   .edsync-launch-copy h1 {
     max-width: 21rem;
-    font-size: clamp(3.4rem, 17vw, 4.45rem);
+    margin-top: 0;
+    font-size: clamp(3.18rem, 15.8vw, 4.05rem);
     letter-spacing: -0.05em;
   }
 
   .edsync-launch-copy p {
-    max-width: 17rem;
+    max-width: 15rem;
+    margin-top: 1rem;
     font-size: 0.98rem;
     line-height: 1.42;
+  }
+
+  .edsync-launch-status {
+    display: none;
+  }
+
+  .edsync-launch-cta-row {
+    margin-top: 1.45rem;
   }
 
   .edsync-launch-preview-frame {
@@ -957,7 +972,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   }
 
   .edsync-launch-workspace-head h2 {
-    font-size: 1.4rem;
+    font-size: 1.25rem;
   }
 
   .edsync-launch-workspace-head > span {
@@ -965,7 +980,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   }
 
   .edsync-launch-focus-card {
-    min-height: 12.5rem;
+    min-height: 10.8rem;
     margin-top: 0.7rem;
     border-radius: 1rem;
   }
@@ -981,7 +996,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
   }
 
   .edsync-launch-focus-copy strong {
-    font-size: 2.25rem;
+    font-size: 2rem;
   }
 
   .edsync-launch-focus-copy p {
@@ -1176,6 +1191,29 @@ h6 {
   }
 }
 
+@keyframes launchPreviewLift {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes launchTilePulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    filter: saturate(1);
+  }
+  50% {
+    transform: translateY(-4px);
+    filter: saturate(1.08);
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -1300,6 +1338,8 @@ h6 {
   .animate-float,
   .animate-overlay-in,
   .animate-reveal-soft,
+  .edsync-launch-preview-frame,
+  .edsync-launch-focus-media span,
   .edsync-workflow-screen,
   .edsync-scroll-slide {
     animation: none;
