@@ -165,6 +165,8 @@
 - Verification for this pass: local in-app browser QA confirmed no conventional public topbar, dark/light toggle persistence, language menu full-name options, in-place workflow tab switching, and no desktop horizontal overflow. Headless Chrome desktop/mobile screenshots were reviewed; mobile headless Chrome appears to enforce a wider CSS layout than the captured bitmap, so final live smoke should still check a real narrow browser viewport after deploy.
 - Continued public launch polish on 2026-05-17: tightened the workflow story into shorter product-specific slide copy, replaced the workflow mini nav with a compact auto-playing gallery label, widened the app preview area, shortened the intro-to-workflow bridge, and moved mobile theme/language/sign-in controls into a compact top-right cluster.
 - Verification for this pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local desktop, mobile, and workflow screenshots were reviewed after restarting the Next dev server.
+- Continued public language and performance polish on 2026-05-17: replaced mojibake public translations with clean UTF-8 copy, made `/catalog?language=...` render localized public copy, made the language menu update the catalog language query, split lightweight language metadata away from the full translation table to keep the client bundle small, and tuned mobile hero type for longer translated hooks.
+- Verification for this pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Build output kept `/catalog` at `104 kB` first-load JS, and local Spanish desktop/mobile screenshots plus workflow-anchor screenshots were reviewed.
 
 ## Update Protocol
 
