@@ -15,6 +15,42 @@ export type PublicLanguageCode = (typeof EDSYNC_LANGUAGES)[number]["code"];
 
 export const DEFAULT_PUBLIC_LANGUAGE: PublicLanguageName = "English";
 
+type PublicCopy = {
+  brandSubhead: string;
+  language: string;
+  signIn: string;
+  start: string;
+  catalogLabel: string;
+  heroTitle: string;
+  heroCopy: string;
+  begin: string;
+  scroll: string;
+  stepHeading: string;
+  stepCopy: string;
+  steps: [string, string][];
+  searchHeading: string;
+  searchCopy: string;
+  searchPlaceholder: string;
+  allPrices: string;
+  free: string;
+  paid: string;
+  anyDuration: string;
+  filters: string;
+  difficulty: string;
+  searchButton: string;
+  clearFilters: string;
+  categories: string;
+  featured: string;
+  featuredSubhead: string;
+  courses: string;
+  coursesSubhead: string;
+  emptyTitle: string;
+  emptyCopy: string;
+  createWorkspace: string;
+  academies: string;
+  academiesSubhead: string;
+};
+
 export function languageCodeFor(name: string) {
   return EDSYNC_LANGUAGES.find((language) => language.name === name)?.code ?? "en";
 }
@@ -27,19 +63,19 @@ export function normalizePublicLanguage(value?: string | null): PublicLanguageNa
   return byCode?.name ?? DEFAULT_PUBLIC_LANGUAGE;
 }
 
-export function getPublicCopy() {
-  return publicCopy.English;
+export function getPublicCopy(language?: string | null): PublicCopy {
+  return publicCopy[normalizePublicLanguage(language)];
 }
 
-export const publicCopy = {
+export const publicCopy: Record<PublicLanguageName, PublicCopy> = {
   English: {
     brandSubhead: "Learning spaces for courses, practice, and progress",
     language: "Language",
     signIn: "Sign in",
     start: "Start",
     catalogLabel: "Public catalog",
-    heroTitle: "Teach. Learn. Make it stick.",
-    heroCopy: "Courses, slides, practice, progress. One clean loop.",
+    heroTitle: "Teach. Practice. Prove.",
+    heroCopy: "Turn lessons into practice and proof.",
     begin: "See it",
     scroll: "Scroll",
     stepHeading: "Three simple steps",
@@ -72,21 +108,21 @@ export const publicCopy = {
     academiesSubhead: "Published portals from schools, teams, and partners.",
   },
   Korean: {
-    brandSubhead: "강좌, 연습, 성장을 위한 학습 공간",
+    brandSubhead: "강의, 연습, 진도를 위한 학습 공간",
     language: "언어",
     signIn: "로그인",
     start: "시작",
     catalogLabel: "공개 카탈로그",
-    heroTitle: "알맞은 공간에서 배우세요.",
-    heroCopy: "검색부터 시작하세요. 준비되면 로그인하고, EdSync가 알맞은 작업 공간으로 안내합니다.",
-    begin: "시작하기",
+    heroTitle: "가르치고, 연습하고, 성장을 증명하세요.",
+    heroCopy: "수업을 연습과 증거로 연결하세요.",
+    begin: "보기",
     scroll: "스크롤",
-    stepHeading: "세 단계",
-    stepCopy: "한 섹션씩 천천히 진행하세요.",
-    steps: [["찾기", "강좌나 아카데미를 찾습니다."], ["로그인", "하나의 계정을 사용합니다."], ["계속", "알맞은 작업 공간을 엽니다."]],
+    stepHeading: "간단한 세 단계",
+    stepCopy: "한 번에 한 섹션씩 이동하세요.",
+    steps: [["탐색", "강의나 아카데미를 찾습니다."], ["로그인", "하나의 계정을 사용합니다."], ["계속", "알맞은 작업 공간을 엽니다."]],
     searchHeading: "검색",
     searchCopy: "검색 후 필요한 필터를 사용하세요.",
-    searchPlaceholder: "강좌 또는 아카데미 검색",
+    searchPlaceholder: "강의 또는 아카데미 검색",
     allPrices: "전체 가격",
     free: "무료",
     paid: "유료",
@@ -98,47 +134,47 @@ export const publicCopy = {
     categories: "카테고리",
     featured: "추천",
     featuredSubhead: "선별된 학습",
-    courses: "강좌",
+    courses: "강의",
     coursesSubhead: "여기에서 시작할 수 있는 공개 학습입니다.",
-    emptyTitle: "강좌를 찾을 수 없습니다",
-    emptyCopy: "다시 검색하거나 새 작업 공간을 시작하세요.",
+    emptyTitle: "강의를 찾을 수 없습니다",
+    emptyCopy: "다른 검색어를 사용하거나 새 작업 공간을 시작하세요.",
     createWorkspace: "작업 공간 만들기",
     academies: "아카데미",
     academiesSubhead: "학교, 팀, 파트너가 공개한 포털입니다.",
   },
   Khmer: {
-    brandSubhead: "កន្លែងរៀនសម្រាប់វគ្គ អនុវត្ត និងវឌ្ឍនភាព",
+    brandSubhead: "កន្លែងសិក្សាសម្រាប់វគ្គ មេរៀនអនុវត្ត និងវឌ្ឍនភាព",
     language: "ភាសា",
     signIn: "ចូល",
     start: "ចាប់ផ្តើម",
     catalogLabel: "កាតាឡុកសាធារណៈ",
-    heroTitle: "រៀនក្នុងកន្លែងត្រឹមត្រូវ។",
-    heroCopy: "ចាប់ផ្តើមដោយស្វែងរក។ ចូលនៅពេលអ្នករួចរាល់ ហើយ EdSync នឹងនាំអ្នកទៅកន្លែងត្រឹមត្រូវ។",
-    begin: "ចាប់ផ្តើម",
+    heroTitle: "បង្រៀន។ អនុវត្ត។ បង្ហាញវឌ្ឍនភាព។",
+    heroCopy: "បម្លែងមេរៀនទៅជាការអនុវត្ត និងភស្តុតាង។",
+    begin: "មើល",
     scroll: "រំកិល",
-    stepHeading: "បីជំហានសាមញ្ញ",
-    stepCopy: "ទៅមួយផ្នែកម្តងៗ។",
-    steps: [["រកមើល", "រកវគ្គ ឬអាកាដេមី។"], ["ចូល", "ប្រើគណនីតែមួយ។"], ["បន្ត", "បើកកន្លែងការងារត្រឹមត្រូវ។"]],
+    stepHeading: "បីជំហានងាយៗ",
+    stepCopy: "មើលមួយផ្នែកម្តង។",
+    steps: [["រកមើល", "រកវគ្គ ឬអង្គការ។"], ["ចូល", "ប្រើគណនីតែមួយ។"], ["បន្ត", "បើកកន្លែងធ្វើការត្រឹមត្រូវ។"]],
     searchHeading: "ស្វែងរក",
     searchCopy: "ប្រើតម្រងបន្ទាប់ពីស្វែងរក។",
-    searchPlaceholder: "ស្វែងរកវគ្គ ឬអាកាដេមី",
+    searchPlaceholder: "ស្វែងរកវគ្គ ឬអង្គការ",
     allPrices: "តម្លៃទាំងអស់",
     free: "ឥតគិតថ្លៃ",
     paid: "បង់ប្រាក់",
-    anyDuration: "រយៈពេលណាក៏បាន",
+    anyDuration: "រយៈពេលណាមួយ",
     filters: "តម្រង",
-    difficulty: "កម្រិត",
+    difficulty: "កម្រិតលំបាក",
     searchButton: "ស្វែងរក",
     clearFilters: "លុបតម្រង",
     categories: "ប្រភេទ",
     featured: "បានណែនាំ",
-    featuredSubhead: "ការរៀនដែលបានជ្រើស",
+    featuredSubhead: "ការសិក្សាដែលបានជ្រើស",
     courses: "វគ្គ",
-    coursesSubhead: "ការរៀនសាធារណៈដែលអ្នកអាចចាប់ផ្តើមនៅទីនេះ។",
+    coursesSubhead: "ការសិក្សាសាធារណៈដែលអ្នកអាចចាប់ផ្តើមនៅទីនេះ។",
     emptyTitle: "រកមិនឃើញវគ្គ",
-    emptyCopy: "សាកល្បងស្វែងរកម្តងទៀត ឬចាប់ផ្តើមកន្លែងការងារផ្ទាល់ខ្លួន។",
-    createWorkspace: "បង្កើតកន្លែងការងារ",
-    academies: "អាកាដេមី",
+    emptyCopy: "សាកល្បងស្វែងរកម្តងទៀត ឬចាប់ផ្តើមកន្លែងធ្វើការថ្មី។",
+    createWorkspace: "បង្កើតកន្លែងធ្វើការ",
+    academies: "អង្គការ",
     academiesSubhead: "ផតថលពីសាលា ក្រុម និងដៃគូ។",
   },
   Chinese: {
@@ -147,13 +183,13 @@ export const publicCopy = {
     signIn: "登录",
     start: "开始",
     catalogLabel: "公开目录",
-    heroTitle: "在合适的空间学习。",
-    heroCopy: "先搜索。准备好后再登录，EdSync 会带你进入合适的工作区。",
-    begin: "开始",
-    scroll: "向下",
+    heroTitle: "教学。练习。证明进步。",
+    heroCopy: "把课程连接到练习和学习证据。",
+    begin: "查看",
+    scroll: "滚动",
     stepHeading: "三个简单步骤",
-    stepCopy: "一次只看一个部分。",
-    steps: [["浏览", "查找课程或学院。"], ["登录", "使用一个账号。"], ["继续", "打开合适的工作区。"]],
+    stepCopy: "一次查看一个部分。",
+    steps: [["浏览", "查找课程或学院。"], ["登录", "使用一个账户。"], ["继续", "打开正确的工作区。"]],
     searchHeading: "搜索",
     searchCopy: "搜索后再使用筛选。",
     searchPlaceholder: "搜索课程或学院",
@@ -169,12 +205,12 @@ export const publicCopy = {
     featured: "精选",
     featuredSubhead: "精选学习",
     courses: "课程",
-    coursesSubhead: "可以从这里开始的公开学习。",
+    coursesSubhead: "可从这里开始的公开学习。",
     emptyTitle: "未找到课程",
     emptyCopy: "尝试其他搜索，或创建自己的工作区。",
     createWorkspace: "创建工作区",
     academies: "学院",
-    academiesSubhead: "来自学校、团队和合作伙伴的门户。",
+    academiesSubhead: "学校、团队和合作伙伴发布的门户。",
   },
   Japanese: {
     brandSubhead: "コース、練習、進捗のための学習スペース",
@@ -182,15 +218,15 @@ export const publicCopy = {
     signIn: "サインイン",
     start: "開始",
     catalogLabel: "公開カタログ",
-    heroTitle: "最適な場所で学ぶ。",
-    heroCopy: "まず検索。準備できたらサインインし、EdSync が適切なワークスペースへ案内します。",
-    begin: "始める",
+    heroTitle: "教える。練習する。進歩を示す。",
+    heroCopy: "レッスンを練習と証拠につなげます。",
+    begin: "見る",
     scroll: "スクロール",
     stepHeading: "3つの簡単なステップ",
-    stepCopy: "1セクションずつ進みます。",
+    stepCopy: "1つずつ進みます。",
     steps: [["探す", "コースやアカデミーを見つけます。"], ["サインイン", "1つのアカウントを使います。"], ["続ける", "適切なワークスペースを開きます。"]],
     searchHeading: "検索",
-    searchCopy: "検索後に必要なフィルターを使います。",
+    searchCopy: "検索後にフィルターを使います。",
     searchPlaceholder: "コースまたはアカデミーを検索",
     allPrices: "すべての価格",
     free: "無料",
@@ -199,14 +235,14 @@ export const publicCopy = {
     filters: "フィルター",
     difficulty: "難易度",
     searchButton: "検索",
-    clearFilters: "フィルターをクリア",
-    categories: "カテゴリー",
+    clearFilters: "クリア",
+    categories: "カテゴリ",
     featured: "注目",
     featuredSubhead: "おすすめ学習",
     courses: "コース",
     coursesSubhead: "ここから始められる公開学習です。",
     emptyTitle: "コースが見つかりません",
-    emptyCopy: "別の検索を試すか、自分のワークスペースを始めましょう。",
+    emptyCopy: "別の検索を試すか、新しいワークスペースを始めましょう。",
     createWorkspace: "ワークスペース作成",
     academies: "アカデミー",
     academiesSubhead: "学校、チーム、パートナーの公開ポータルです。",
@@ -217,10 +253,10 @@ export const publicCopy = {
     signIn: "Iniciar sesión",
     start: "Comenzar",
     catalogLabel: "Catálogo público",
-    heroTitle: "Aprende en el espacio correcto.",
-    heroCopy: "Empieza con una búsqueda. Inicia sesión cuando estés listo y EdSync te guía al espacio adecuado.",
-    begin: "Empezar",
-    scroll: "Bajar",
+    heroTitle: "Enseña. Practica. Demuestra progreso.",
+    heroCopy: "Convierte lecciones en práctica y evidencia.",
+    begin: "Ver",
+    scroll: "Desplazar",
     stepHeading: "Tres pasos simples",
     stepCopy: "Avanza una sección a la vez.",
     steps: [["Explora", "Encuentra un curso o academia."], ["Inicia sesión", "Usa una cuenta."], ["Continúa", "Abre el espacio correcto."]],
@@ -247,14 +283,14 @@ export const publicCopy = {
     academiesSubhead: "Portales publicados por escuelas, equipos y socios.",
   },
   French: {
-    brandSubhead: "Espaces d’apprentissage pour cours, pratique et progression",
+    brandSubhead: "Espaces d'apprentissage pour cours, pratique et progression",
     language: "Langue",
     signIn: "Se connecter",
     start: "Commencer",
     catalogLabel: "Catalogue public",
-    heroTitle: "Apprenez dans le bon espace.",
-    heroCopy: "Commencez par rechercher. Connectez-vous quand vous êtes prêt, puis EdSync vous guide.",
-    begin: "Démarrer",
+    heroTitle: "Enseignez. Pratiquez. Prouvez les progrès.",
+    heroCopy: "Transformez les leçons en pratique et en preuves.",
+    begin: "Voir",
     scroll: "Défiler",
     stepHeading: "Trois étapes simples",
     stepCopy: "Avancez section par section.",
@@ -279,7 +315,7 @@ export const publicCopy = {
     emptyCopy: "Essayez une autre recherche ou créez votre espace.",
     createWorkspace: "Créer un espace",
     academies: "Académies",
-    academiesSubhead: "Portails publiés par écoles, équipes et partenaires.",
+    academiesSubhead: "Portails publiés par des écoles, équipes et partenaires.",
   },
   Vietnamese: {
     brandSubhead: "Không gian học tập cho khóa học, luyện tập và tiến bộ",
@@ -287,13 +323,13 @@ export const publicCopy = {
     signIn: "Đăng nhập",
     start: "Bắt đầu",
     catalogLabel: "Danh mục công khai",
-    heroTitle: "Học trong đúng không gian.",
-    heroCopy: "Bắt đầu bằng tìm kiếm. Đăng nhập khi sẵn sàng, EdSync sẽ đưa bạn đến đúng nơi.",
-    begin: "Bắt đầu",
+    heroTitle: "Dạy. Luyện tập. Chứng minh tiến bộ.",
+    heroCopy: "Biến bài học thành luyện tập và bằng chứng.",
+    begin: "Xem",
     scroll: "Cuộn",
     stepHeading: "Ba bước đơn giản",
     stepCopy: "Đi từng phần một.",
-    steps: [["Duyệt", "Tìm khóa học hoặc học viện."], ["Đăng nhập", "Dùng một tài khoản."], ["Tiếp tục", "Mở không gian phù hợp."]],
+    steps: [["Duyệt", "Tìm khóa học hoặc học viện."], ["Đăng nhập", "Dùng một tài khoản."], ["Tiếp tục", "Mở đúng không gian làm việc."]],
     searchHeading: "Tìm kiếm",
     searchCopy: "Dùng bộ lọc sau khi tìm.",
     searchPlaceholder: "Tìm khóa học hoặc học viện",
@@ -322,13 +358,13 @@ export const publicCopy = {
     signIn: "เข้าสู่ระบบ",
     start: "เริ่ม",
     catalogLabel: "แคตตาล็อกสาธารณะ",
-    heroTitle: "เรียนในพื้นที่ที่ใช่",
-    heroCopy: "เริ่มจากการค้นหา เข้าสู่ระบบเมื่อพร้อม แล้ว EdSync จะพาไปยังพื้นที่ที่เหมาะสม",
-    begin: "เริ่มต้น",
+    heroTitle: "สอน ฝึกฝน และพิสูจน์ความก้าวหน้า",
+    heroCopy: "เปลี่ยนบทเรียนให้เป็นการฝึกและหลักฐานการเรียนรู้",
+    begin: "ดู",
     scroll: "เลื่อน",
     stepHeading: "สามขั้นตอนง่ายๆ",
     stepCopy: "ไปทีละส่วน",
-    steps: [["เลือกดู", "ค้นหาคอร์สหรือสถาบัน"], ["เข้าสู่ระบบ", "ใช้บัญชีเดียว"], ["ดำเนินต่อ", "เปิดพื้นที่ที่เหมาะสม"]],
+    steps: [["เลือกดู", "ค้นหาคอร์สหรือสถาบัน"], ["เข้าสู่ระบบ", "ใช้บัญชีเดียว"], ["ไปต่อ", "เปิดพื้นที่ทำงานที่ถูกต้อง"]],
     searchHeading: "ค้นหา",
     searchCopy: "ใช้ตัวกรองหลังจากค้นหา",
     searchPlaceholder: "ค้นหาคอร์สหรือสถาบัน",
@@ -351,4 +387,4 @@ export const publicCopy = {
     academies: "สถาบัน",
     academiesSubhead: "พอร์ทัลจากโรงเรียน ทีม และพาร์ทเนอร์",
   },
-} as const;
+};
