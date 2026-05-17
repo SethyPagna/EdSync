@@ -180,6 +180,161 @@ const slides: WorkflowSlide[] = [
   },
 ];
 
+function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
+  if (slide.id === "catalog") {
+    return (
+      <div className="edsync-workflow-app-mock edsync-workflow-app-mock-catalog">
+        <div className="edsync-workflow-mock-toolbar">
+          <span className="is-wide">Search public courses or academies</span>
+          <span>Free</span>
+          <span>30 min</span>
+        </div>
+        <div className="edsync-workflow-mock-grid">
+          <article className="edsync-workflow-course-card">
+            <strong>Energy Transfer Lab</strong>
+            <small>Grade 8 Science - free enrollment</small>
+            <em>Open after sign in</em>
+          </article>
+          <article className="edsync-workflow-course-card">
+            <strong>Partner academy</strong>
+            <small>/org/riverside - public catalog</small>
+            <em>Portal scoped</em>
+          </article>
+        </div>
+      </div>
+    );
+  }
+
+  if (slide.id === "studio") {
+    return (
+      <div className="edsync-workflow-app-mock">
+        <div className="edsync-workflow-editor-ribbon">
+          {["Style", "Text", "Insert", "Media", "AI", "Assign"].map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
+        <div className="edsync-workflow-slide-editor">
+          <aside>
+            <span className="is-active">01</span>
+            <span>02</span>
+            <span>03</span>
+          </aside>
+          <section>
+            <small>Slide 03</small>
+            <strong>Conduction vs convection</strong>
+            <div>
+              <span>Image</span>
+              <span>Video</span>
+              <span>Quiz block</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  if (slide.id === "ai") {
+    return (
+      <div className="edsync-workflow-app-mock">
+        <div className="edsync-workflow-ai-grid">
+          <section>
+            <small>Prompt builder</small>
+            <strong>Grade 8 - 35 minutes - student friendly</strong>
+            <span>Output: slides + quiz + rubric</span>
+          </section>
+          <section>
+            <small>Provider</small>
+            <strong>Groq ready</strong>
+            <span>Google fallback enabled</span>
+          </section>
+        </div>
+        <div className="edsync-workflow-preview-rows">
+          <span>
+            <strong>Generated slide deck</strong>
+            <small>6 editable slides, teacher review required</small>
+            <em>Insert into Studio</em>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (slide.id === "teacher") {
+    return (
+      <div className="edsync-workflow-app-mock">
+        <div className="edsync-workflow-assignment-grid">
+          <section>
+            <small>Assign</small>
+            <strong>Grade 8 Science</strong>
+            <span>Due Friday, 4:00 PM</span>
+            <span>12 questions - 24 pts</span>
+          </section>
+          <section>
+            <small>Review</small>
+            <strong>3 submissions waiting</strong>
+            <span>Media checks passed</span>
+            <span>AI feedback draft ready</span>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  if (slide.id === "practice") {
+    return (
+      <div className="edsync-workflow-app-mock">
+        <div className="edsync-workflow-practice-card">
+          <div>
+            <small>Practice sprint</small>
+            <strong>08:42</strong>
+          </div>
+          <span>Pause</span>
+        </div>
+        <div className="edsync-workflow-preview-rows">
+          <span>
+            <strong>Question 4 of 12</strong>
+            <small>Explain why heat moved faster through metal.</small>
+            <em>Retry missed</em>
+          </span>
+          <span>
+            <strong>Review card saved</strong>
+            <small>Mistake goes back to dashboard recommendations.</small>
+            <em>Repeat</em>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="edsync-workflow-app-mock">
+      <div className="edsync-workflow-admin-grid">
+        <section>
+          <small>Grade events</small>
+          <strong>24 pts</strong>
+          <span>Attempt graded</span>
+        </section>
+        <section>
+          <small>AI providers</small>
+          <strong>Healthy</strong>
+          <span>Fallback audited</span>
+        </section>
+        <section>
+          <small>Security</small>
+          <strong>Clean</strong>
+          <span>Upload checks logged</span>
+        </section>
+      </div>
+      <div className="edsync-workflow-bar-chart" aria-hidden="true">
+        <span style={{ height: "42%" }} />
+        <span style={{ height: "66%" }} />
+        <span style={{ height: "54%" }} />
+        <span style={{ height: "78%" }} />
+      </div>
+    </div>
+  );
+}
+
 const WorkflowScreen = memo(function WorkflowScreen({
   slide,
   index,
@@ -239,15 +394,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
               </div>
               <span>{slide.metrics[0]?.value}</span>
             </div>
-            <div className="edsync-workflow-preview-rows">
-              {slide.rows.map((row) => (
-                <span key={row.title}>
-                  <strong>{row.title}</strong>
-                  <small>{row.detail}</small>
-                  <em>{row.status}</em>
-                </span>
-              ))}
-            </div>
+            <WorkflowMockup slide={slide} />
             <div className="edsync-workflow-preview-metrics">
               {slide.metrics.map((metric) => (
                 <span key={metric.label}>
