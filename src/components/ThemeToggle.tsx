@@ -27,8 +27,7 @@ export default function ThemeToggle({
 
   useEffect(() => {
     const stored = window.localStorage.getItem("edsync-theme");
-    const publicLaunchDefault = Boolean(document.querySelector(".edsync-public-launch"));
-    const nextTheme: ThemePreference = stored === "dark" || (!stored && publicLaunchDefault) ? "dark" : "light";
+    const nextTheme: ThemePreference = stored === "dark" ? "dark" : "light";
     setTheme(nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
     document.documentElement.dataset.theme = nextTheme;
