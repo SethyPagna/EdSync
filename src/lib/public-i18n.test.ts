@@ -14,7 +14,7 @@ describe("public i18n", () => {
   });
 
   it("provides translated public hero copy", () => {
-    expect(publicCopy.Spanish.heroTitle).toContain("Aprende");
+    expect(publicCopy.Spanish.heroTitle).toContain("Enseña");
     expect(publicCopy.Korean.signIn).toBeTruthy();
   });
 });
