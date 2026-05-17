@@ -55,7 +55,13 @@ export default async function CatalogPage({
     <main id="top" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
       <PublicLaunchChrome />
 
-      <CatalogLaunchHero />
+      <CatalogLaunchHero
+        title={copy.heroTitle}
+        description={copy.heroCopy}
+        primaryLabel={copy.begin}
+        secondaryLabel={copy.start}
+        statusLabel={copy.catalogLabel}
+      />
 
       <section className="mx-auto max-w-[90rem] px-4">
         <WorkflowShowcase />
