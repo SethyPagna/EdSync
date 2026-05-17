@@ -163,6 +163,8 @@
 - Verification for this pass: local browser smoke confirmed no horizontal overflow, transparent public header in dark mode, in-place workflow tab switching with no scroll jump, and successful `typecheck`, `lint`, `test`, and `build`.
 - Replaced the public catalog topbar on `/catalog` and `/showcase` with a floating launch chrome, rebuilt the hero around a larger concrete EdSync workspace preview, set the public launch surface to dark-first, reordered workflow slides around Catalog, Studio, AI, Review, Practice, and Progress, and made language selection fall back to clean English public copy while preserving full language names.
 - Verification for this pass: local in-app browser QA confirmed no conventional public topbar, dark/light toggle persistence, language menu full-name options, in-place workflow tab switching, and no desktop horizontal overflow. Headless Chrome desktop/mobile screenshots were reviewed; mobile headless Chrome appears to enforce a wider CSS layout than the captured bitmap, so final live smoke should still check a real narrow browser viewport after deploy.
+- Continued public launch polish on 2026-05-17: tightened the workflow story into shorter product-specific slide copy, replaced the workflow mini nav with a compact auto-playing gallery label, widened the app preview area, shortened the intro-to-workflow bridge, and moved mobile theme/language/sign-in controls into a compact top-right cluster.
+- Verification for this pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local desktop, mobile, and workflow screenshots were reviewed after restarting the Next dev server.
 
 ## Update Protocol
 
