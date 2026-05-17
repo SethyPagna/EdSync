@@ -743,7 +743,7 @@ html[data-theme="dark"] .edsync-launch-primary {
 }
 
 .edsync-public-launch .edsync-workflow-bridge {
-  min-height: 96vh;
+  min-height: 78vh;
 }
 
 .edsync-public-launch .edsync-workflow-bridge-sticky {
@@ -764,12 +764,14 @@ html[data-theme="light"] .edsync-public-launch .edsync-workflow-bridge-sticky {
 }
 
 .edsync-public-launch .edsync-workflow-bridge-card h2 {
-  font-size: clamp(3rem, 6.3vw, 5.7rem);
+  font-size: clamp(2.6rem, 5.6vw, 5rem);
   letter-spacing: -0.055em;
 }
 
 .edsync-public-launch .edsync-workflow-bridge-card p {
   color: var(--launch-muted) !important;
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  line-height: 1.55;
 }
 
 .edsync-public-launch .edsync-workflow-bridge-window {
@@ -798,6 +800,16 @@ html[data-theme="light"] .edsync-public-launch .edsync-workflow-bridge-window sp
 
 .edsync-public-launch .edsync-workflow-screen {
   animation: workflowScreenSwap 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.edsync-public-launch .edsync-workflow-live-label {
+  border: 1px solid rgba(226, 232, 240, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(248, 250, 252, 0.68);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 900;
 }
 
 .edsync-public-launch #catalog-search-panel,
@@ -2082,7 +2094,7 @@ h6 {
 
 .edsync-workflow-bridge {
   position: relative;
-  min-height: 145vh;
+  min-height: 110vh;
 }
 
 .edsync-workflow-bridge-sticky {
@@ -2173,7 +2185,7 @@ h6 {
 
 .edsync-workflow-showcase {
   position: relative;
-  min-height: 455vh;
+  min-height: 430vh;
 }
 
 .edsync-workflow-sticky {
@@ -2510,7 +2522,7 @@ h6 {
   top: 0;
   min-height: 100vh;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  padding-block: clamp(1rem, 2vh, 1.6rem) 6rem;
+  padding-block: clamp(1rem, 2vh, 1.6rem) 5.4rem;
 }
 
 .edsync-workflow-showcase .edsync-workflow-heading {
@@ -2558,9 +2570,9 @@ h6 {
 
 .edsync-workflow-showcase .edsync-workflow-screen {
   display: grid;
-  grid-template-columns: minmax(20rem, 0.72fr) minmax(30rem, 1fr);
+  grid-template-columns: minmax(17rem, 0.54fr) minmax(34rem, 1.08fr);
   align-items: center;
-  gap: clamp(1.5rem, 5vw, 4rem);
+  gap: clamp(1.25rem, 4vw, 3.5rem);
   min-height: 0;
   border: 0;
   border-radius: 0;
@@ -2588,18 +2600,18 @@ h6 {
 }
 
 .edsync-workflow-copy h3 {
-  margin-top: 1.5rem;
-  max-width: 34rem;
+  margin-top: 1.1rem;
+  max-width: 29rem;
   font-family: "Bricolage Grotesque", sans-serif;
-  font-size: clamp(2.45rem, 4.1vw, 3.75rem);
+  font-size: clamp(2.3rem, 3.7vw, 3.4rem);
   font-weight: 850;
   line-height: 1.02;
   color: #ffffff;
 }
 
 .edsync-workflow-copy p {
-  margin-top: 1rem;
-  max-width: 34rem;
+  margin-top: 0.85rem;
+  max-width: 29rem;
   color: rgba(226, 232, 240, 0.64);
   font-size: clamp(1rem, 1.5vw, 1.2rem);
   font-weight: 700;
@@ -2609,8 +2621,8 @@ h6 {
 .edsync-workflow-checklist {
   display: grid;
   gap: 0.45rem;
-  margin-top: 1rem;
-  max-width: 31rem;
+  margin-top: 0.85rem;
+  max-width: 29rem;
 }
 
 .edsync-workflow-checklist span {
@@ -2646,7 +2658,7 @@ h6 {
 }
 
 .edsync-workflow-showcase .edsync-workflow-product {
-  grid-template-columns: minmax(11rem, 0.42fr) minmax(0, 1fr);
+  grid-template-columns: minmax(10.5rem, 0.34fr) minmax(0, 1fr);
   gap: 0.85rem;
   margin: 0;
   padding: 0.9rem;
@@ -2677,7 +2689,7 @@ h6 {
 .edsync-workflow-showcase .edsync-workflow-canvas {
   border: 0;
   background: #ffffff;
-  padding: 1rem;
+  padding: clamp(0.9rem, 2vw, 1.15rem);
 }
 
 .edsync-workflow-preview-head {
@@ -3010,7 +3022,7 @@ h6 {
   flex: 1;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.45rem;
-  border-top: 4px solid #f3a9bf;
+  border-top: 4px solid rgba(147, 240, 202, 0.82);
   padding-top: 0.55rem;
 }
 
@@ -3080,11 +3092,12 @@ h6 {
   .edsync-workflow-bridge-sticky {
     position: relative;
     min-height: auto;
-    padding-block: 4rem;
+    padding-block: 2.5rem;
   }
 
   .edsync-workflow-bridge-card {
     grid-template-columns: 1fr;
+    gap: 1.25rem;
   }
 
   .edsync-launch-board {
@@ -3124,14 +3137,14 @@ h6 {
     position: relative;
     top: auto;
     min-height: auto;
-    padding-block: 3rem 2rem;
+    padding-block: 2.4rem 2rem;
   }
 
   .edsync-workflow-heading {
     align-items: start;
   }
 
-  .edsync-workflow-heading nav {
+  .edsync-workflow-live-label {
     display: none;
   }
 
@@ -3166,14 +3179,18 @@ h6 {
 
   .edsync-workflow-copy p {
     max-width: 100%;
-    font-size: 0.96rem;
-    line-height: 1.55;
+    font-size: 0.92rem;
+    line-height: 1.45;
     white-space: normal;
   }
 
   .edsync-workflow-checklist span {
     padding: 0.58rem 0.65rem;
     font-size: 0.86rem;
+  }
+
+  .edsync-workflow-checklist span:nth-child(n+3) {
+    display: none;
   }
 
   .edsync-workflow-showcase .edsync-workflow-product {
@@ -3214,14 +3231,21 @@ h6 {
 
   .edsync-workflow-bottom-tabs {
     display: flex;
+    justify-content: center;
     overflow-x: auto;
     padding-bottom: 0.2rem;
     scroll-snap-type: x proximity;
   }
 
   .edsync-workflow-bottom-tabs button {
-    min-width: 10rem;
+    min-width: 2.85rem;
+    justify-content: center;
+    padding: 0.7rem;
     scroll-snap-align: start;
+  }
+
+  .edsync-workflow-bottom-tabs button span {
+    display: none;
   }
 
   .edsync-workflow-mock-toolbar,
