@@ -1,19 +1,20 @@
-export const EDSYNC_LANGUAGES = [
-  { name: "English", code: "en" },
-  { name: "Korean", code: "ko" },
-  { name: "Khmer", code: "km" },
-  { name: "Chinese", code: "zh" },
-  { name: "Japanese", code: "ja" },
-  { name: "Spanish", code: "es" },
-  { name: "French", code: "fr" },
-  { name: "Vietnamese", code: "vi" },
-  { name: "Thai", code: "th" },
-] as const;
+import {
+  DEFAULT_PUBLIC_LANGUAGE,
+  EDSYNC_LANGUAGES,
+  languageCodeFor,
+  normalizePublicLanguage,
+  type PublicLanguageCode,
+  type PublicLanguageName,
+} from "./public-languages";
 
-export type PublicLanguageName = (typeof EDSYNC_LANGUAGES)[number]["name"];
-export type PublicLanguageCode = (typeof EDSYNC_LANGUAGES)[number]["code"];
-
-export const DEFAULT_PUBLIC_LANGUAGE: PublicLanguageName = "English";
+export {
+  DEFAULT_PUBLIC_LANGUAGE,
+  EDSYNC_LANGUAGES,
+  languageCodeFor,
+  normalizePublicLanguage,
+  type PublicLanguageCode,
+  type PublicLanguageName,
+};
 
 type PublicCopy = {
   brandSubhead: string;
@@ -50,18 +51,6 @@ type PublicCopy = {
   academies: string;
   academiesSubhead: string;
 };
-
-export function languageCodeFor(name: string) {
-  return EDSYNC_LANGUAGES.find((language) => language.name === name)?.code ?? "en";
-}
-
-export function normalizePublicLanguage(value?: string | null): PublicLanguageName {
-  const byName = EDSYNC_LANGUAGES.find((language) => language.name === value);
-  if (byName) return byName.name;
-
-  const byCode = EDSYNC_LANGUAGES.find((language) => language.code === value);
-  return byCode?.name ?? DEFAULT_PUBLIC_LANGUAGE;
-}
 
 export function getPublicCopy(language?: string | null): PublicCopy {
   return publicCopy[normalizePublicLanguage(language)];
