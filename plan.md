@@ -468,6 +468,109 @@
 
 ---
 
+## Phase 21: Public Intro, Workflow Slides, Search, And Launch Motion Redesign
+
+**Target:** Rebuild the visitor launch experience so it behaves like a polished slide-led product intro instead of a page with separated stacked sections.
+
+**Mini Phases:**
+- 21.1 Redesign the main intro surface:
+  - Remove the outer frame from the hero app preview.
+  - Move the app name, theme toggle, language menu, sign-in/start control, direct-jump control, and core functions into the single product rectangle/line treatment.
+  - Remove the visible watermark/status text currently reading like “public catalog to classroom evidence.”
+  - Make tags compact and minimized so the first viewport has a stronger hook and less visual clutter.
+- 21.2 Merge the workflow intro into the first workflow slide:
+  - The sequence starts with one merged `Intro + Workflow` slide.
+  - Existing workflow slides follow as product-function slides.
+  - Improve padding, margins, line length, and spacing from frame edges.
+  - Keep copy short and concrete; move supporting detail into product mockups, controls, or hover/secondary states.
+- 21.3 Fix background and transition continuity:
+  - Match background colors exactly across intro, workflow, and search surfaces in light and dark mode.
+  - Remove mismatched strips, hard color breaks, and unintended scroll gaps.
+  - Ensure the intro-to-workflow transition is animated, not a plain section jump.
+  - Scrolling down/up should trigger the next slide-like transition automatically; avoid scrubbed scroll-progress animations that feel jittery or tied to every pixel.
+- 21.4 Implement slide-like workflow behavior:
+  - User scroll triggers the next or previous slide transition.
+  - Manual controls and gallery dots still change slides in place without moving the page down.
+  - `View Workflow`, `Start`, and direct-jump buttons trigger smooth animated transitions.
+  - Reduced-motion users get immediate non-jittery section changes.
+- 21.5 Merge Search and Available:
+  - Combine “Search” and “Available” into one polished catalog availability surface.
+  - Reduce vertical distance between workflow and catalog/search.
+  - Use a smooth transition from workflow into the combined catalog function.
+  - Keep empty results, filters, price/free/paid counts, language, duration, and organization context readable on mobile.
+- 21.6 Finish language and theme coverage:
+  - Apply light/dark contrast rules to hero, workflow, slide controls, catalog search, buttons, overlays, and language menu.
+  - Make all public copy respect selected language where translation exists.
+  - Keep full language names in the menu.
+  - Fall back to English cleanly when a translation is missing.
+
+**Subtargets:**
+- `/catalog`, `/showcase`, and `/` share one coherent public launch system.
+- The first screen feels spacious, simple, and product-relevant.
+- Workflow slides show concrete EdSync functionality: catalog, Studio, AI co-creator, teacher review, practice, progress/admin evidence.
+- Direct links such as `/catalog#showcase` land cleanly with no topbar offset or background mismatch.
+- Mobile intro has less visible text, compact controls, no clipped preview, and no horizontal overflow.
+
+**Acceptance Checks:**
+- `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` pass.
+- Desktop screenshots verify light mode, dark mode, workflow slide, and combined search/available section.
+- Mobile screenshots verify hero, merged workflow slide, controls, language menu, and search/available section.
+- Manual slide controls and scroll-triggered transitions do not jump the page unexpectedly.
+- Public language URLs such as `/catalog?language=Spanish` and `/catalog?language=Korean` render localized public copy with readable contrast.
+- First-load JS does not increase from language or animation changes without a measured reason.
+
+---
+
+## Phase 22: Deep Data Architecture, Schema, And Learning Flow Audit
+
+**Target:** Build a complete relational schema map that mirrors the actual EdSync data architecture, then propose safer organization and extensibility improvements.
+
+**Mini Phases:**
+- 22.1 Full directory and entity sweep:
+  - Inspect `src/app`, `src/components`, `src/lib`, `src/types`, `migrations`, `database`, `scripts`, worker files, and tests.
+  - Inventory educational entities: tenants, portals, users, memberships, roles, courses, catalog products, billing records, modules, lessons, sections, slides, content blocks, Studio documents, media/object links, enrollments, assignments, work items, quizzes, attempts, submissions, grades, discussions, notes, reviews, automation, notifications, AI providers, AI audits, security events, and progress records.
+  - Record which files read, write, serialize, validate, or display each entity.
+- 22.2 Build the detailed relational schema:
+  - List every table with columns, metadata fields, inferred types, nullable fields, primary keys, unique keys, indexes, foreign-key-like relationships, tenant ownership, role ownership, and lifecycle state.
+  - Include D1 migrations and any code-created or seed-created tables.
+  - Include document-store-like JSON fields and nested structures used inside D1 rows.
+  - Include R2 object metadata relationships and object key conventions.
+- 22.3 Verification loops:
+  - Verify schema against migrations.
+  - Verify schema against D1 query helpers and API route read/write code.
+  - Verify schema against serializers/adapters such as Studio, lesson package, content block, quiz/practice, and catalog mapping helpers.
+  - Verify schema against tests, seed scripts, admin tools, and worker/queue handlers.
+  - Re-run the sweep after edits until the schema document matches actual code paths.
+- 22.4 Learning flow and ownership analysis:
+  - Map the canonical flow: public catalog or org portal -> auth/signup/login -> tenant context -> teacher/course/Studio creation -> lesson/package assignment -> student learning/practice -> submission/attempt -> grade event/progress -> feedback/recommendation/report.
+  - Identify where content management records are mixed with learning records.
+  - Identify where tenant scoping, ownership checks, or role permissions are implicit instead of explicit.
+  - Identify generic data access risks and routes that should move behind feature APIs.
+- 22.5 Optimization and extensibility proposal:
+  - Propose a cleaner separation between content authoring, delivery/enrollment, assessment, learning records, analytics rollups, media library, AI/audit, and tenant/admin configuration.
+  - Propose materialized progress summaries, gradebook summaries, attempt summaries, and dashboard rollups.
+  - Propose indexes for high-traffic reads: tenant-scoped lists, user dashboards, class rosters, assigned work, catalog search, lesson sections, submissions, grade rows, discussion threads, media links, and audit logs.
+  - Propose JSON field normalization only where it improves querying, access control, migrations, or reporting.
+  - Propose D1 Worker-binding usage where Cloudflare runtime can avoid REST latency, while keeping REST fallback for Vercel/local.
+- 22.6 Output schema improvement proposal:
+  - Create a schema report that includes current schema, relationship map, data ownership map, query/flow map, risks, and prioritized improvements.
+  - Include concrete migration candidates, API boundary candidates, indexes, test coverage gaps, and no-regret cleanup tasks.
+  - Distinguish immediate fixes from larger migration work.
+
+**Subtargets:**
+- The schema report is detailed enough for a new engineer to understand how EdSync stores and connects learning data.
+- Every major feature has a named data owner, read path, write path, and tenant boundary.
+- The proposal identifies ways to make EdSync faster, safer, and easier to extend without breaking existing data.
+
+**Acceptance Checks:**
+- Schema report cross-references actual migrations, serializers, API routes, and key UI flows.
+- No table or JSON document shape found in code is missing from the schema report.
+- Proposed improvements are ranked by impact, risk, and implementation cost.
+- Verification commands pass after any code/doc changes made during the audit.
+- `progress.md` records the audit status, findings, and remaining open questions.
+
+---
+
 ## Cross-Phase Architecture Targets
 
 - Keep AI contracts, validators, template engines, and conversion helpers outside UI components.
