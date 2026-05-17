@@ -11,26 +11,38 @@ import {
   Trophy,
 } from "lucide-react";
 
-export default function CatalogLaunchHero() {
+type CatalogLaunchHeroProps = {
+  title?: string;
+  description?: string;
+  primaryLabel?: string;
+  secondaryLabel?: string;
+  statusLabel?: string;
+};
+
+export default function CatalogLaunchHero({
+  title = "Teach. Practice. Prove.",
+  description = "Turn lessons into practice and proof.",
+  primaryLabel = "See it",
+  secondaryLabel = "Start",
+  statusLabel = "Catalog to classroom evidence",
+}: CatalogLaunchHeroProps) {
   return (
     <section className="edsync-launch-hero-v2" aria-labelledby="edsync-public-title">
       <div className="edsync-launch-hero-inner">
         <div className="edsync-launch-copy">
           <div className="edsync-launch-status">
             <Sparkles className="h-4 w-4" />
-            Catalog to classroom evidence
+            {statusLabel}
           </div>
-          <h1 id="edsync-public-title">Teach. Practice. Prove.</h1>
-          <p>
-            Turn lessons into practice and proof.
-          </p>
+          <h1 id="edsync-public-title">{title}</h1>
+          <p>{description}</p>
           <div className="edsync-launch-cta-row">
             <Link href="#workflow-transition" className="edsync-launch-primary">
-              See it
+              {primaryLabel}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/auth/signup" className="edsync-launch-secondary">
-              Start
+              {secondaryLabel}
             </Link>
           </div>
         </div>
