@@ -56,12 +56,16 @@ export default function LanguageMenu({
       const { pathname, search } = window.location;
       if (!pathname.startsWith("/catalog") && !pathname.startsWith("/org/")) return;
       const params = new URLSearchParams(search);
-      params.delete("language");
+      if (nextLanguage === DEFAULT_PUBLIC_LANGUAGE) {
+        params.delete("language");
+      } else {
+        params.set("language", nextLanguage);
+      }
       const nextSearch = params.toString();
       window.location.assign(nextSearch ? `${pathname}?${nextSearch}` : pathname);
     }
   };
-  const copy = getPublicCopy();
+  const copy = getPublicCopy(language);
 
   return (
     <details ref={detailsRef} className={`group relative inline-block ${className}`}>
