@@ -38,8 +38,8 @@ const slides: WorkflowSlide[] = [
     id: "catalog",
     title: "Catalog And Organization Entry",
     shortTitle: "Catalog",
-    headline: "Start from catalog, portal, or workspace.",
-    subtitle: "Visitors search, enroll, sign in, and return to the right course context.",
+    headline: "Find the right course.",
+    subtitle: "Catalog, org portal, login return, and enrollment stay in one path.",
     route: "/catalog",
     icon: Search,
     accent: "text-edsync-cyan",
@@ -54,16 +54,16 @@ const slides: WorkflowSlide[] = [
       { title: "Organization portal", detail: "/org/[portalSlug] keeps school or partner catalog context", status: "Route" },
       { title: "Enrollment guard", detail: "Free access or checkout starts after account sign-in", status: "Access" },
     ],
-    sideTitle: "Visitor entry",
-    sideRows: ["Search courses", "Open org portal", "Enroll with account", "Return to course"],
+    sideTitle: "Course entry",
+    sideRows: ["Search course", "Choose academy", "Sign in once", "Return to lesson"],
     actions: ["Search catalog", "View portals", "Start"],
   },
   {
     id: "studio",
     title: "Studio And Lesson Builder",
     shortTitle: "Studio",
-    headline: "Build lessons in Studio.",
-    subtitle: "Notes, docs, slides, media, drafts, and lesson sections share one authoring surface.",
+    headline: "Build the lesson.",
+    subtitle: "Studio keeps notes, slides, media checks, drafts, and lesson sections together.",
     route: "/studio?tab=slides",
     icon: Presentation,
     accent: "text-edsync-blue",
@@ -78,16 +78,16 @@ const slides: WorkflowSlide[] = [
       { title: "Slide canvas", detail: "Thumbnails, speaker notes, layouts, transitions, PPTX export", status: "Design" },
       { title: "Lesson handoff", detail: "Insert selected Studio blocks into teacher lesson sections", status: "Assign" },
     ],
-    sideTitle: "Real actions",
-    sideRows: ["Save draft", "Duplicate item", "Export PPTX", "Insert into lesson"],
+    sideTitle: "Studio tools",
+    sideRows: ["Save draft", "Edit slides", "Check media", "Insert lesson"],
     actions: ["Open Studio", "Create lesson", "Export deck"],
   },
   {
     id: "ai",
     title: "AI Prompt Builder",
     shortTitle: "AI",
-    headline: "Turn prompts into editable drafts.",
-    subtitle: "AI creates outlines, slides, quizzes, rubrics, and flashcards with provider fallback.",
+    headline: "Ask AI, then edit.",
+    subtitle: "Generate outlines, slides, quizzes, rubrics, and flashcards with provider fallback.",
     route: "/ai",
     icon: Wand2,
     accent: "text-edsync-emerald",
@@ -102,16 +102,16 @@ const slides: WorkflowSlide[] = [
       { title: "Generated package", detail: "Outline, slides, quiz, rubric, flashcards, teacher notes", status: "Preview" },
       { title: "Save to Studio", detail: "Writes an editable local Studio draft before publish", status: "Insert" },
     ],
-    sideTitle: "Controls",
-    sideRows: ["Choose provider family", "Regenerate one section", "Save as note", "Open Studio"],
+    sideTitle: "AI controls",
+    sideRows: ["Pick output", "Preview draft", "Regenerate part", "Save to Studio"],
     actions: ["Run workflow", "Save to Studio", "Open AI"],
   },
   {
     id: "teacher",
     title: "Teacher Review And Assignment",
     shortTitle: "Review",
-    headline: "Review, assign, and grade.",
-    subtitle: "Teachers approve drafts, set due dates, review submissions, and control final scores.",
+    headline: "Review and assign.",
+    subtitle: "Teachers approve drafts, set due dates, add points, and keep final control.",
     route: "/teacher/dashboard",
     icon: CalendarCheck,
     accent: "text-edsync-blue",
@@ -126,16 +126,16 @@ const slides: WorkflowSlide[] = [
       { title: "Assignment setup", detail: "Class, due date, duration, points, and feedback rules", status: "Assign" },
       { title: "Submissions review", detail: "Score updates, comments, notes, and grade events", status: "Grade" },
     ],
-    sideTitle: "Teacher actions",
-    sideRows: ["Approve draft", "Set due date", "Update score", "Send note"],
+    sideTitle: "Teacher loop",
+    sideRows: ["Approve draft", "Set due date", "Add points", "Send feedback"],
     actions: ["Teacher dashboard", "Open gradebook", "Plan deadline"],
   },
   {
     id: "practice",
     title: "Practice And Student Learning",
     shortTitle: "Practice",
-    headline: "Practice until it sticks.",
-    subtitle: "Students use quizzes, flashcards, sprints, explanations, retries, and review cards.",
+    headline: "Practice with feedback.",
+    subtitle: "Quizzes, flashcards, sprints, retries, explanations, and review cards connect.",
     route: "/practice",
     icon: Trophy,
     accent: "text-edsync-amber",
@@ -150,16 +150,16 @@ const slides: WorkflowSlide[] = [
       { title: "Attempt summary", detail: "Elapsed time, score, missed questions, explanations", status: "Review" },
       { title: "Review cards", detail: "Save mistakes to reviews and dashboard recommendations", status: "Repeat" },
     ],
-    sideTitle: "Student actions",
-    sideRows: ["Start timer", "Pause attempt", "Retry missed", "Save mistake"],
+    sideTitle: "Student loop",
+    sideRows: ["Start timer", "See why", "Retry missed", "Save review"],
     actions: ["Open practice", "Open quizzes", "Open games"],
   },
   {
     id: "admin",
     title: "Progress, Evidence, And Admin Controls",
     shortTitle: "Progress",
-    headline: "Progress becomes evidence.",
-    subtitle: "Attempts feed grades, recommendations, provider audits, security logs, and dashboards.",
+    headline: "Progress becomes proof.",
+    subtitle: "Attempts feed grades, recommendations, AI audits, security logs, and dashboards.",
     route: "/admin/dashboard",
     icon: BarChart3,
     accent: "text-edsync-purple",
@@ -174,8 +174,8 @@ const slides: WorkflowSlide[] = [
       { title: "Recommendations", detail: "Missed concepts become review cards and next-step suggestions", status: "Guide" },
       { title: "Admin controls", detail: "AI providers, portals, permissions, security, catalog, and billing", status: "Manage" },
     ],
-    sideTitle: "Evidence loop",
-    sideRows: ["Save attempt", "Explain misses", "Recommend review", "Audit provider"],
+    sideTitle: "Evidence trail",
+    sideRows: ["Save attempt", "Explain misses", "Recommend review", "Audit AI"],
     actions: ["Admin dashboard", "AI settings", "Security"],
   },
 ];
@@ -476,10 +476,10 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
             <div className="edsync-workflow-bridge-card">
               <div className="min-w-0">
                 <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
-                  Scroll through the learning loop.
+                  One course. Six moves.
                 </h2>
                 <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
-                  Watch one course move from public discovery to Studio, AI, teacher review, practice, and progress evidence.
+                  From catalog to grade evidence without losing context.
                 </p>
               </div>
               <div className="edsync-workflow-bridge-window" aria-hidden="true">
@@ -508,14 +508,10 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
             <div>
               <span className="edsync-workflow-eyebrow">
                 <Wand2 className="h-4 w-4" />
-                Scroll workflow
+                Product workflow
               </span>
             </div>
-            <nav aria-label="Workflow sections">
-              <a href="#top">Hero</a>
-              <a href="#showcase">Workflow</a>
-              <a href="#catalog-search-panel">Workspace</a>
-            </nav>
+            <span className="edsync-workflow-live-label">Auto-playing gallery</span>
           </div>
 
           <div className="edsync-workflow-stage">
