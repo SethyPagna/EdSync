@@ -19,7 +19,7 @@ export default async function PublicLaunchChrome() {
           : "/auth/login";
 
   return (
-    <header className="edsync-launch-chrome" aria-label="EdSync public navigation">
+    <div className="edsync-launch-chrome" role="navigation" aria-label="EdSync public navigation">
       <Link href="/" className="edsync-launch-brand" aria-label="EdSync home">
         <span className="edsync-launch-brand-mark">
           <GraduationCap className="h-5 w-5" />
@@ -38,6 +38,6 @@ export default async function PublicLaunchChrome() {
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
-    </header>
+    </div>
   );
 }
