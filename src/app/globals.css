@@ -2960,14 +2960,31 @@ h6 {
   .edsync-workflow-showcase .edsync-workflow-screen {
     grid-template-columns: 1fr;
     gap: 1.25rem;
+    overflow: visible;
   }
 
   .edsync-workflow-copy h3 {
-    font-size: clamp(2.4rem, 13vw, 4rem);
+    max-width: 100%;
+    font-size: clamp(2rem, 10.5vw, 2.7rem);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+    overflow-wrap: anywhere;
+  }
+
+  .edsync-workflow-copy p {
+    max-width: 100%;
+    font-size: 0.96rem;
+    line-height: 1.55;
+  }
+
+  .edsync-workflow-checklist span {
+    padding: 0.58rem 0.65rem;
+    font-size: 0.86rem;
   }
 
   .edsync-workflow-showcase .edsync-workflow-product {
     grid-template-columns: 1fr;
+    padding: 0.6rem;
   }
 
   .edsync-workflow-product {
@@ -2979,6 +2996,26 @@ h6 {
     inset: auto;
     align-items: center;
     margin-top: 1.25rem;
+  }
+
+  .edsync-workflow-preview {
+    border-radius: 1.2rem;
+  }
+
+  .edsync-workflow-showcase .edsync-workflow-browser {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .edsync-workflow-showcase .edsync-workflow-browser .edsync-workflow-open {
+    display: none;
+  }
+
+  .edsync-workflow-preview-head {
+    display: grid;
+  }
+
+  .edsync-workflow-preview-head > span {
+    width: fit-content;
   }
 
   .edsync-workflow-bottom-tabs {
