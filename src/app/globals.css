@@ -2969,12 +2969,14 @@ h6 {
     line-height: 1.02;
     letter-spacing: -0.045em;
     overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .edsync-workflow-copy p {
     max-width: 100%;
     font-size: 0.96rem;
     line-height: 1.55;
+    white-space: normal;
   }
 
   .edsync-workflow-checklist span {
