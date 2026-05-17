@@ -4,11 +4,13 @@ import { ArrowRight, GraduationCap } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
+import { getPublicCopy } from "@/lib/public-i18n";
 
 export default async function PublicLaunchChrome() {
   const cookieStore = await cookies();
   const role = cookieStore.get(ROLE_COOKIE)?.value;
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
+  const copy = getPublicCopy(cookieStore.get("edsync-language")?.value);
   const workspaceHref =
     role === "admin"
       ? "/admin/dashboard"
@@ -26,7 +28,7 @@ export default async function PublicLaunchChrome() {
         </span>
         <span>
           <strong>EdSync</strong>
-          <small>Learning loop for courses, practice, and progress</small>
+          <small>{copy.brandSubhead}</small>
         </span>
       </Link>
 
@@ -34,7 +36,7 @@ export default async function PublicLaunchChrome() {
         <ThemeToggle compact className="edsync-launch-icon" />
         <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
         <Link href={signedIn ? workspaceHref : "/auth/login"} className="edsync-launch-signin">
-          <span>{signedIn ? "Workspace" : "Sign in"}</span>
+          <span>{signedIn ? "Workspace" : copy.signIn}</span>
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
