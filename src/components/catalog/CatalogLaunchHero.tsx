@@ -22,23 +22,16 @@ export default function CatalogLaunchHero() {
           </div>
           <h1 id="edsync-public-title">Teach. Practice. Prove.</h1>
           <p>
-            Turn one lesson into slides, practice, feedback, and proof.
+            Turn lessons into practice and proof.
           </p>
           <div className="edsync-launch-cta-row">
             <Link href="#workflow-transition" className="edsync-launch-primary">
-              View workflow
+              See it
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/auth/signup" className="edsync-launch-secondary">
               Start
             </Link>
-          </div>
-          <div className="edsync-launch-mode-row" aria-label="EdSync workspace modes">
-            <span>Catalog</span>
-            <span>Studio</span>
-            <span>AI</span>
-            <span>Practice</span>
-            <span>Gradebook</span>
           </div>
         </div>
 
