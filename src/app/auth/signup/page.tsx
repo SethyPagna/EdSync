@@ -498,7 +498,7 @@ export default function SignupPage() {
       </section>
 
       <section className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-5 sm:py-10">
-        <div className="w-full max-w-[calc(100vw-2rem)] min-w-0 sm:max-w-md">
+        <div className="w-full max-w-[22rem] min-w-0 sm:max-w-md">
           <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
