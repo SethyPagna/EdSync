@@ -57,6 +57,7 @@ export default async function CatalogPage({
         description={copy.heroCopy}
         primaryLabel={copy.begin}
         secondaryLabel={copy.start}
+        language={filters.language}
       />
 
       <section className="mx-auto max-w-[90rem] px-4">
