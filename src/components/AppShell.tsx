@@ -493,7 +493,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   );
 
   return (
-    <div className="premium-shell min-h-screen text-edsync-text">
+    <div className="premium-shell min-h-screen text-edsync-text" data-shell-role={role}>
       <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg/95 px-4 py-3 shadow-sm backdrop-blur-xl lg:hidden">
         <button
           type="button"
