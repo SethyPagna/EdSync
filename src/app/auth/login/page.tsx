@@ -273,7 +273,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="premium-shell grid min-h-screen lg:grid-cols-[1fr_520px]">
+    <main className="premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_520px]">
       <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
@@ -295,8 +295,8 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section className="flex items-center justify-center px-5 py-10">
-        <div className="w-full max-w-md">
+      <section className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-5 sm:py-10">
+        <div className="w-full max-w-[min(28rem,100%)] min-w-0">
           <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
@@ -309,7 +309,7 @@ export default function LoginPage() {
               <LanguageMenu compact />
             </div>
           </div>
-          <div className="premium-panel animate-reveal-soft rounded-[1.65rem] p-7">
+          <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 sm:rounded-[1.65rem] sm:p-7">
             <h2 className="font-display text-3xl font-bold">Welcome back</h2>
             <div className="mt-7">
               <Suspense
