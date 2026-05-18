@@ -9,7 +9,7 @@ import {
   languageLabelFor,
   normalizePublicLanguage,
   type PublicLanguageName,
-} from "@/lib/public-languages";
+} from "@/lib/public/languages";
 
 type LanguageMenuProps = {
   compact?: boolean;
