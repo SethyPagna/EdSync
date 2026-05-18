@@ -472,6 +472,18 @@
 
 **Target:** Rebuild the visitor launch experience so it behaves like a polished slide-led product intro instead of a page with separated stacked sections.
 
+**Immediate Screenshot Fix Pass:**
+- Remove the separate public topbar from the visitor intro. Put the EdSync brand, theme toggle, language menu, sign-in/start action, and compact direct-jump controls inside the hero product line/rectangle area.
+- Remove the visible "public catalog to classroom evidence" watermark/status copy from the first viewport.
+- Remove the outer frame around the hero app preview and use a larger, clearer product mockup that directly shows EdSync catalog, Studio, AI, practice, assignment, and grade evidence.
+- Minimize the hero function tags so they support the hook instead of competing with it.
+- Merge the old "Scroll into the workflow" transition card into workflow slide 1, with more padding, cleaner typography, shorter copy, and better frame spacing.
+- Match intro, workflow, and catalog/search backgrounds in both light and dark mode so there are no mismatched strips or hard color breaks.
+- Make scroll feel normal while each scroll up/down action triggers a slide-like workflow transition. Do not use jittery progress-scrubbed animation tied to every scroll pixel.
+- Make `View workflow`, `Start`, and direct-jump buttons scroll or transition smoothly to the relevant section.
+- Merge Search and Available/Courses into one catalog availability surface with filters, counts, results, and empty state in the same polished section.
+- Apply public language labels and dark/light contrast across the hero, workflow, controls, catalog search, and empty/result states.
+
 **Mini Phases:**
 - 21.1 Redesign the main intro surface:
   - Remove the outer frame from the hero app preview.
