@@ -4044,7 +4044,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-public-launch .edsync-launch-copy[data-public-language="Khmer"] h1,
   .edsync-public-launch .edsync-launch-copy[data-public-language="Thai"] h1 {
     max-width: 22rem;
-    font-size: clamp(2.35rem, 11vw, 3.35rem);
+    font-size: clamp(2.05rem, 9.5vw, 2.85rem);
   }
 
   .edsync-public-launch .edsync-launch-copy p {
