@@ -6,6 +6,7 @@ import {
   DEFAULT_PUBLIC_LANGUAGE,
   EDSYNC_LANGUAGES,
   languageCodeFor,
+  languageLabelFor,
   normalizePublicLanguage,
   type PublicLanguageName,
 } from "@/lib/public-languages";
@@ -64,7 +65,7 @@ export default function LanguageMenu({
       window.location.assign(nextSearch ? `${pathname}?${nextSearch}` : pathname);
     }
   };
-  const languageLabel = "Language";
+  const languageLabel = languageLabelFor(language);
 
   return (
     <details ref={detailsRef} className={`group relative inline-block ${className}`}>
