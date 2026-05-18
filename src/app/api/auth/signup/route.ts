@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { hashPassword } from "@/lib/auth/password";
-import { createSession, setSessionCookies, type SessionUser } from "@/lib/auth/session";
+import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { createOrganizationSlug, normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
@@ -203,5 +203,6 @@ export async function POST(request: Request) {
   });
 
   setSessionCookies(response, session.token, role, session.expires);
+  setActiveTenantCookie(response, tenantContext?.id, session.expires);
   return response;
 }
