@@ -1,5 +1,6 @@
 import { assertTableName, deserializeRow, serializeRow, type TableName } from "./schema";
 import { sqlInPlaceholders } from "./sql";
+import { getD1QueryAdapter } from "./d1-adapter";
 
 export type DataFilter =
   | { op: "eq" | "neq" | "gte" | "lte"; column: string; value: unknown }
@@ -30,12 +31,6 @@ export type D1Result<T = Record<string, unknown> | Record<string, unknown>[]> = 
   data: T | null;
   error: { message: string } | null;
   count?: number | null;
-};
-
-type D1Response<T = Record<string, unknown>> = {
-  success: boolean;
-  errors?: { message: string }[];
-  result?: Array<{ results?: T[]; meta?: { changes?: number } }>;
 };
 
 const IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -84,52 +79,11 @@ function buildOrder(order: DataOrder[] = []) {
     .join(", ")}`;
 }
 
-function normalizeParams(params: unknown[]) {
-  return params.map((value) => {
-    if (value === undefined) return null;
-    if (value instanceof Date) return value.toISOString();
-    if (typeof value === "boolean") return value ? 1 : 0;
-    if (Array.isArray(value) || (value && typeof value === "object")) {
-      return JSON.stringify(value);
-    }
-    return value;
-  });
-}
-
 export async function d1Query<T = Record<string, unknown>>(
   sql: string,
   params: unknown[] = [],
 ): Promise<T[]> {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-
-  if (!accountId || !databaseId || !token) {
-    throw new Error(
-      "Missing Cloudflare D1 env vars: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_API_TOKEN",
-    );
-  }
-
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ sql, params: normalizeParams(params) }),
-      cache: "no-store",
-    },
-  );
-
-  const payload = (await response.json()) as D1Response<T>;
-  if (!response.ok || !payload.success) {
-    const message = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
-    throw new Error(message);
-  }
-
-  return payload.result?.[0]?.results ?? [];
+  return getD1QueryAdapter().query<T>(sql, params);
 }
 
 async function embedRelations(table: TableName, columns: string | undefined, rows: Record<string, unknown>[]) {
