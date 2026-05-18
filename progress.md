@@ -113,6 +113,7 @@
 | 2026-05-18 | Phase 22 hot-path index migration | Manual SQL review for additive `CREATE INDEX IF NOT EXISTS` migration on lesson, assignment, progress, submission, catalog, tenant link, and notification paths | Passed |
 | 2026-05-18 | Cloudflare D1 remote migration | `npm.cmd run db:migrate` against `edsync-dev-d1`; final index migration processed 10 queries and wrote 10 index changes | Passed |
 | 2026-05-18 | Worker-native D1 adapter | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; `npm.cmd run deploy:cloudflare:app`; live `/catalog` and `/api/catalog` smoke | Passed |
+| 2026-05-18 | Active tenant context | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; `npm.cmd run deploy:cloudflare:app`; live `/catalog` and `/api/catalog` smoke | Passed |
 
 ---
 
@@ -168,6 +169,8 @@
 - Applied the migration set to remote Cloudflare D1 database `edsync-dev-d1`; the final hot-path index migration completed successfully.
 - Added a D1 query adapter boundary so Cloudflare Workers can use the native `EDSYNC_DB` binding while Vercel/local/Docker keep the existing REST fallback.
 - Deployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `cb7a1cb3-4d42-4c3e-a4fb-f1dc8b75422c`.
+- Added an HTTP-only `edsync_active_tenant` cookie for organization login/signup, clear it on logout, and made tenant resolution prefer a validated active tenant after custom-domain routing.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `9375ee85-c8d1-40b1-bd38-905ff76b3319`.
 
 ## Public Intro Redesign Summary
 
