@@ -202,6 +202,7 @@
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `696d27fd-d722-4208-a9eb-a5427bb72eb3`. Live smoke checks returned 200 for `/catalog`, `/catalog?language=Korean`, and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 - Continued public launch refinement on 2026-05-19: localized the hero preview mockup labels for public languages, including the preview nav, lesson studio status, slide label, linked-media line, loop actions, and metric labels. Simplified the mobile preview by hiding the mini preview rail and extra loop/proof rows so the first phone viewport reads cleaner.
 - Verification for this pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3501/catalog?language=Korean` returned 200, and desktop/mobile Korean screenshots were reviewed for localized preview labels and reduced mobile clutter.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `c79ac9bd-385c-4125-bbd9-5f7e2d6df033`. Live smoke checks returned 200 for `/catalog?language=Korean` and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
