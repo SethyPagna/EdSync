@@ -14,6 +14,7 @@ import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public-i18n";
+import { normalizePublicLanguage } from "@/lib/public-languages";
 
 type CatalogLaunchHeroProps = {
   title?: string;
@@ -21,6 +22,7 @@ type CatalogLaunchHeroProps = {
   primaryLabel?: string;
   secondaryLabel?: string;
   statusLabel?: string;
+  language?: string;
 };
 
 export default async function CatalogLaunchHero({
@@ -28,11 +30,13 @@ export default async function CatalogLaunchHero({
   description = "Turn lessons into practice and proof.",
   primaryLabel = "See it",
   secondaryLabel = "Start",
+  language,
 }: CatalogLaunchHeroProps) {
   const cookieStore = await cookies();
   const role = cookieStore.get(ROLE_COOKIE)?.value;
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
-  const copy = getPublicCopy(cookieStore.get("edsync-language")?.value);
+  const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
+  const copy = getPublicCopy(publicLanguage);
   const workspaceHref =
     role === "admin"
       ? "/admin/dashboard"
@@ -71,7 +75,7 @@ export default async function CatalogLaunchHero({
       </div>
 
       <div className="edsync-launch-hero-inner">
-        <div className="edsync-launch-copy">
+        <div className="edsync-launch-copy" data-public-language={publicLanguage}>
           <h1 id="edsync-public-title">{title}</h1>
           <p>{description}</p>
           <div className="edsync-launch-cta-row">
