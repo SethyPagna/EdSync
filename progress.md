@@ -206,6 +206,7 @@
 - Added Phase 23 to `plan.md` for source organization, folder grouping, compatibility shims, runtime language strategy, and cleanup. Decision: keep TypeScript/React as the primary request-path language for Next.js/Cloudflare/Vercel compatibility; consider Rust/WASM only for profiled CPU-heavy isolated utilities such as standards parsing, document conversion, media signature checks, or large import normalization.
 - Began Phase 23 with a safe public helper grouping slice: moved public language metadata to `src/lib/public/languages.ts`, moved public copy/i18n data to `src/lib/public/i18n.ts`, updated public UI/tests to import from the grouped paths, and removed the old flat shim files after `rg` confirmed no references remained.
 - Verification for this organization pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Build output kept `/catalog` at `105 kB` first-load JS, so the grouping did not add public bundle weight.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `23403c89-5101-4a2a-a268-4b79e286af47`. Live smoke checks returned 200 for `/catalog` and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
