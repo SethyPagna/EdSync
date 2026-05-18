@@ -5,7 +5,7 @@ import {
   normalizePublicLanguage,
   type PublicLanguageCode,
   type PublicLanguageName,
-} from "./public-languages";
+} from "./public/languages";
 
 export {
   DEFAULT_PUBLIC_LANGUAGE,
