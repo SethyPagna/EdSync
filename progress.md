@@ -1,6 +1,6 @@
 # EdSync Improvement Progress
 
-**Last Updated:** 2026-05-16
+**Last Updated:** 2026-05-18
 
 **Current Track:** Comprehensive workflow, design, architecture, AI, templates, lessons, slides, discussions, quizzes, activities, and tracking improvements.
 
@@ -37,6 +37,8 @@
 | 18 | Analytics And Continuous Improvement | Not started | Usage and assessment data improve learning content. |
 | 19 | Quality Gates, Testing, And Deployment Workflow | Not started | Tests and deployment checks protect the platform. |
 | 20 | Launch Readiness And Operating Rhythm | Not started | Delivery rhythm, docs, and smoke tests are stable. |
+| 21 | Public Intro, Workflow Slides, Search, And Launch Motion Redesign | Planned | Intro/workflow/search polish is tracked as the next public launch refinement. |
+| 22 | Deep Data Architecture, Schema, And Learning Flow Audit | Complete | Actual D1 schema, code access paths, relationships, risks, and improvement proposal are documented. |
 
 ---
 
@@ -60,6 +62,8 @@
 - [x] Replace duplicated content-block status/type display in Studio with shared adapters.
 - [ ] Replace duplicated section and quiz normalization in large lesson page files with shared adapters.
 - [x] Add teacher lesson package summary integration using `lessonRowsToLearningObject`.
+- [x] Audit D1 schema, serializers, service code, API routes, and legacy client data access.
+- [x] Document detailed relationships, JSON/document fields, current flow strengths, weak spots, and schema improvement order.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
@@ -83,6 +87,7 @@
 | 2026-05-16 | Standardize saved states as local draft, server draft, needs review, published, assigned, archived, and conflict. | Users need consistent status language across Studio, lessons, practice, assignments, and catalog publishing. |
 | 2026-05-16 | Keep the first learning-object layer as adapters over current tables instead of a schema-breaking rewrite. | Existing routes and D1 data stay stable while Studio, lessons, quizzes, and content blocks converge through shared contracts. |
 | 2026-05-16 | Compose legacy lesson rows into learning packages before changing database schema. | Teacher/student lesson pages can adopt the shared model incrementally while current D1 rows remain compatible. |
+| 2026-05-18 | Treat `docs/DATA_SCHEMA_AUDIT.md` as the current source for schema and data-flow improvement priorities. | The audit verifies migrations against serializers and API/page access paths, then orders the next architecture work around tenant context, feature APIs, Studio as source, and event-derived grades. |
 
 ---
 
@@ -104,6 +109,7 @@
 | 2026-05-17 | Dark reference-style catalog hero | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshot review for hero and workflow contrast | Passed |
 | 2026-05-17 | LEARN-style intro link and workflow gallery pass | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots for `/`, `/showcase`, and mobile intro links | Passed |
 | 2026-05-17 | LEARN-style public launch redo | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; in-app browser hero/workflow/theme/language QA; Chrome desktop/mobile screenshots | Passed locally |
+| 2026-05-18 | Phase 22 schema and learning-flow audit | Migration, serializer, API route, tenant helper, event helper, generic data access, and `edsync.from(...)` sweep | Passed |
 
 ---
 
@@ -147,6 +153,14 @@
 - Updated Studio's saved block library to use shared learning-object state labels and block type mapping.
 - Updated the teacher lesson editor header to summarize the current lesson through `lessonRowsToLearningObject`, including shared state, block count, and package duration.
 - Phase 3 remains in progress until large teacher/student lesson pages consume the shared layer and duplicated section/quiz normalization is removed.
+
+## Phase 22 Schema Audit Summary
+
+- Added `docs/DATA_SCHEMA_AUDIT.md` with the current D1 schema grouped by identity/auth, tenancy, lessons, Studio, work/grades, engagement, media/security, AI, automation, analytics, billing, and offline sync.
+- Verified the schema against `src/lib/db/schema.ts`, the tenant helpers, D1 REST adapter, learning event helpers, and key APIs for Studio, work, submissions, grades, billing, catalog, content blocks, standards, practice, and generic data access.
+- The strongest current pattern is the tenant-scoped API layer for newer features plus `learning_events` as the future replay/audit spine.
+- The main architecture risks are broad legacy `edsync.from(...)` reads/writes, generic allowed-table reads through `/api/data`, implicit default tenant membership creation, REST-only D1 access on Cloudflare runtime, and gradebook materialization that is not fully replay-derived yet.
+- Recommended next order: explicit active tenant context, feature-owned APIs for teacher/student lesson/dashboard flows, tenant enforcement for legacy lesson/progress records, Studio as canonical authoring source, hot-path indexes, grade replay service, Worker-native D1 adapter, and a richer offline queue/replay UX.
 
 ## Public Intro Redesign Summary
 
