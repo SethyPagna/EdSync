@@ -1,4 +1,5 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { ACTIVE_TENANT_COOKIE } from "@/lib/auth/constants";
 import { d1Query } from "@/lib/db/d1";
 import type { SessionUser } from "@/lib/auth/session";
 import type { Tenant, TenantMembership, TenantPortal } from "@/types";
@@ -19,6 +20,11 @@ function defaultTenantSlug() {
 async function requestHostname() {
   const headerStore = await headers();
   return (headerStore.get("x-forwarded-host") || headerStore.get("host") || "").split(":")[0].toLowerCase();
+}
+
+async function activeTenantIdFromCookie() {
+  const cookieStore = await cookies();
+  return cookieStore.get(ACTIVE_TENANT_COOKIE)?.value ?? null;
 }
 
 export async function ensureDefaultTenant(ownerId?: string | null) {
@@ -48,9 +54,29 @@ export async function resolveTenantContext(user?: SessionUser | null): Promise<T
       )
     : [];
 
-  const tenantId = domainRows[0]?.id ?? DEFAULT_TENANT_ID;
+  let activeTenantRows: Tenant[] = [];
+  if (!domainRows[0] && user) {
+    const activeTenantId = await activeTenantIdFromCookie();
+    activeTenantRows = activeTenantId
+      ? await d1Query<Tenant>(
+          `SELECT t.*
+             FROM tenants t
+             JOIN tenant_memberships tm ON tm.tenant_id = t.id
+            WHERE t.id = ?
+              AND t.status = 'active'
+              AND tm.user_id = ?
+              AND tm.status = 'active'
+            LIMIT 1`,
+          [activeTenantId, user.id],
+        )
+      : [];
+  }
+
+  const tenantId = domainRows[0]?.id ?? activeTenantRows[0]?.id ?? DEFAULT_TENANT_ID;
   const [tenant] = domainRows[0]
     ? domainRows
+    : activeTenantRows[0]
+      ? activeTenantRows
     : await d1Query<Tenant>("SELECT * FROM tenants WHERE id = ? LIMIT 1", [tenantId]);
 
   const portalRows = await d1Query<TenantPortal>(
