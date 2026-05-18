@@ -461,6 +461,8 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
   const manualControlUntilRef = useRef(0);
+  const scrollControlUntilRef = useRef(0);
+  const touchStartYRef = useRef<number | null>(null);
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   const setActiveSlide = useCallback((index: number) => {
@@ -494,6 +496,50 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
     });
 
     return () => observer.disconnect();
+  }, [setActiveSlide]);
+
+  useEffect(() => {
+    const section = document.getElementById("showcase");
+    if (!section || !window.matchMedia("(min-width: 901px)").matches) return;
+
+    const isMostlyInWorkflow = () => {
+      const rect = section.getBoundingClientRect();
+      return rect.top < window.innerHeight * 0.25 && rect.bottom > window.innerHeight * 0.74;
+    };
+
+    const triggerStep = (direction: 1 | -1) => {
+      if (!isMostlyInWorkflow() || Date.now() < scrollControlUntilRef.current) return;
+      scrollControlUntilRef.current = Date.now() + 620;
+      manualControlUntilRef.current = Date.now() + 1200;
+      setActiveSlide(activeIndexRef.current + direction);
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) < 28) return;
+      triggerStep(event.deltaY > 0 ? 1 : -1);
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const startY = touchStartYRef.current;
+      const endY = event.changedTouches[0]?.clientY;
+      touchStartYRef.current = null;
+      if (startY == null || endY == null || Math.abs(startY - endY) < 42) return;
+      triggerStep(startY > endY ? 1 : -1);
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
   }, [setActiveSlide]);
 
   useEffect(() => {
