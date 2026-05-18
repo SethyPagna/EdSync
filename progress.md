@@ -199,6 +199,7 @@
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `9969daee-461d-490a-a7b0-3475d5b625d0`. Live smoke checks returned 200 for `/catalog` and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 - Continued public launch i18n/showcase polish on 2026-05-18: added lightweight localized language-menu labels, made `/catalog?language=...` drive the hero controls as well as the main headline/body, shortened long translated hero hooks, added language-specific hero sizing for Korean/Khmer/Thai, and removed the leftover public topbar chrome from `/showcase`.
 - Verification for this pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3500/catalog?language=Korean` returned 200, and desktop/mobile Korean screenshots plus `/showcase` screenshots were reviewed for localized controls, no topbar, and better mobile headline scale.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `696d27fd-d722-4208-a9eb-a5427bb72eb3`. Live smoke checks returned 200 for `/catalog`, `/catalog?language=Korean`, and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
