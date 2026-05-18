@@ -110,6 +110,7 @@
 | 2026-05-17 | LEARN-style intro link and workflow gallery pass | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; browser screenshots for `/`, `/showcase`, and mobile intro links | Passed |
 | 2026-05-17 | LEARN-style public launch redo | `npm.cmd run typecheck`; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; in-app browser hero/workflow/theme/language QA; Chrome desktop/mobile screenshots | Passed locally |
 | 2026-05-18 | Phase 22 schema and learning-flow audit | Migration, serializer, API route, tenant helper, event helper, generic data access, and `edsync.from(...)` sweep | Passed |
+| 2026-05-18 | Phase 22 hot-path index migration | Manual SQL review for additive `CREATE INDEX IF NOT EXISTS` migration on lesson, assignment, progress, submission, catalog, tenant link, and notification paths | Passed |
 
 ---
 
@@ -161,6 +162,7 @@
 - The strongest current pattern is the tenant-scoped API layer for newer features plus `learning_events` as the future replay/audit spine.
 - The main architecture risks are broad legacy `edsync.from(...)` reads/writes, generic allowed-table reads through `/api/data`, implicit default tenant membership creation, REST-only D1 access on Cloudflare runtime, and gradebook materialization that is not fully replay-derived yet.
 - Recommended next order: explicit active tenant context, feature-owned APIs for teacher/student lesson/dashboard flows, tenant enforcement for legacy lesson/progress records, Studio as canonical authoring source, hot-path indexes, grade replay service, Worker-native D1 adapter, and a richer offline queue/replay UX.
+- Added `database/migrations/0008_hot_path_indexes.sql` with additive indexes for lesson dashboards, lesson ordering, quiz ordering, student assignments, progress lookups, work submissions, catalog products, tenant object links, and notification lists.
 
 ## Public Intro Redesign Summary
 
