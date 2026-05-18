@@ -4,7 +4,7 @@ import { ArrowRight, GraduationCap } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
-import { getPublicCopy } from "@/lib/public-i18n";
+import { getPublicCopy } from "@/lib/public/i18n";
 
 export default async function PublicLaunchChrome() {
   const cookieStore = await cookies();
