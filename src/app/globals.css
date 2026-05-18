@@ -3887,7 +3887,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-public-launch .edsync-workflow-showcase {
-  min-height: 360vh;
+  min-height: 320vh;
   margin-inline: -1rem;
   margin-top: clamp(-1rem, -1.2vw, -0.35rem);
   padding-inline: 1rem;
@@ -3899,7 +3899,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 .edsync-public-launch .edsync-workflow-showcase .edsync-workflow-sticky {
   top: 0;
   min-height: 100vh;
-  padding-block: clamp(1rem, 2vh, 1.5rem) 5.2rem;
+  padding-block: clamp(0.85rem, 1.8vh, 1.35rem) 4.7rem;
 }
 
 .edsync-public-launch .edsync-workflow-eyebrow,
@@ -3974,7 +3974,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-public-launch .edsync-catalog-availability {
-  margin-top: clamp(-1rem, -1vw, -0.35rem);
+  margin-top: clamp(-2rem, -2.4vw, -0.7rem);
 }
 
 .edsync-public-launch .edsync-catalog-availability .premium-panel {
@@ -4023,7 +4023,8 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-public-launch .edsync-launch-hero-inner {
     min-height: auto;
     grid-template-columns: 1fr;
-    padding-top: clamp(2rem, 8vh, 3.4rem);
+    gap: clamp(1.2rem, 4vh, 2.2rem);
+    padding-top: clamp(1.3rem, 5vh, 2.3rem);
   }
 
   .edsync-public-launch .edsync-launch-copy h1 {
@@ -4052,6 +4053,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-public-launch .edsync-workflow-showcase {
     min-height: auto;
+    margin-top: 0;
   }
 }
 
@@ -4089,6 +4091,42 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-public-launch .edsync-launch-workspace {
     padding: 0.78rem;
+  }
+
+  .edsync-public-launch .edsync-launch-preview-board {
+    margin-inline: -0.8rem;
+  }
+
+  .edsync-public-launch .edsync-launch-preview-wrap {
+    max-height: 24rem;
+    overflow: hidden;
+  }
+
+  .edsync-public-launch .edsync-launch-preview-nav {
+    border-radius: 1rem 1rem 0 0;
+    padding: 0.62rem;
+  }
+
+  .edsync-public-launch .edsync-launch-preview-nav > span {
+    min-width: 6.8rem;
+    justify-content: center;
+    padding: 0.72rem 0.8rem;
+  }
+
+  .edsync-public-launch .edsync-launch-workspace {
+    border-radius: 0 0 1rem 1rem;
+  }
+
+  .edsync-public-launch .edsync-launch-workspace-head h2 {
+    font-size: 1.35rem;
+  }
+
+  .edsync-public-launch .edsync-launch-focus-card {
+    padding: 0.75rem;
+  }
+
+  .edsync-public-launch .edsync-launch-focus-media {
+    min-height: 3.6rem;
   }
 
   .edsync-public-launch .edsync-launch-focus-copy p,
