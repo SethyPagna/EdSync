@@ -12,7 +12,7 @@ import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
-import { getPublicCopy } from "@/lib/public-i18n";
+import { getPublicCopy } from "@/lib/public/i18n";
 
 export const metadata: Metadata = {
   title: "Catalog",
