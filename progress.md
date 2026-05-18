@@ -196,6 +196,7 @@
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `4b886979-2340-4c55-91b6-64ff2e0d4d4d`. Live smoke checks returned 200 for `/catalog` and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 - Continued public launch refinement on 2026-05-18: added discrete wheel/touch workflow slide stepping while preserving normal page scroll, reduced workflow height and the workflow-to-catalog gap, tightened mobile hero/preview spacing, and cropped the mobile preview so the first viewport stays cleaner.
 - Verification for this pass: initial parallel typecheck raced with `.next` regeneration and failed on missing generated `.next/types` files; after `npm.cmd run build` regenerated `.next`, sequential `npm.cmd run typecheck` and `npm.cmd run lint` passed. `npm.cmd run test` and `npm.cmd run build` also passed. Local production preview on `http://127.0.0.1:3400/catalog` returned 200, and desktop/mobile headless Chrome screenshots were reviewed.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `9969daee-461d-490a-a7b0-3475d5b625d0`. Live smoke checks returned 200 for `/catalog` and `/showcase`, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
