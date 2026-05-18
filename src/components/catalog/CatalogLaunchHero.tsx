@@ -56,10 +56,10 @@ export default async function CatalogLaunchHero({
         </Link>
         <div className="edsync-launch-actions-inline">
           <a href="#showcase" className="edsync-launch-mini-link">
-            Workflow
+            {copy.workflowLabel}
           </a>
           <a href="#catalog-search-panel" className="edsync-launch-mini-link">
-            Catalog
+            {copy.catalogLabel}
           </a>
           <ThemeToggle compact className="edsync-launch-icon" />
           <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
@@ -83,11 +83,11 @@ export default async function CatalogLaunchHero({
               {secondaryLabel}
             </Link>
             <Link href="#catalog-search-panel" className="edsync-launch-tertiary">
-              Catalog
+              {copy.catalogLabel}
             </Link>
           </div>
           <div className="edsync-launch-mode-row" aria-label="EdSync public paths">
-            {["Catalog", "Studio", "AI", "Practice", "Grades"].map((tag) => (
+            {copy.heroTags.map((tag) => (
               <span key={tag}>{tag}</span>
             ))}
           </div>
