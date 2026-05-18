@@ -705,7 +705,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     {tab.label}
                   </span>
                   {draftStatus !== "saved" && active && (
-                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">1</span>
+                    <span className="h-2 w-2 rounded-full bg-white/80" aria-label="Unsaved draft" />
                   )}
                 </button>
               );
