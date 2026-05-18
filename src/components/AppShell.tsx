@@ -115,17 +115,17 @@ function sidebarCollapsedFromStorage() {
 }
 
 export const teacherNavItems: ShellNavItem[] = [
-  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
-  { href: "/studio", label: "Studio", icon: Layers3, marker: "S" },
-  { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck, marker: "2" },
-  { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus, marker: "2+" },
-  { href: "/practice", label: "Practice", icon: Timer, marker: "P" },
+  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/studio", label: "Studio", icon: Layers3 },
+  { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
+  { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus },
+  { href: "/practice", label: "Practice", icon: Timer },
   { href: "/ai", label: "AI Tutor", icon: Brain },
-  { href: "/teacher/work", label: "Work", icon: FileCheck2, marker: "3" },
-  { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList, marker: "4" },
+  { href: "/teacher/work", label: "Work", icon: FileCheck2 },
+  { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
   { href: "/teacher/discussions", label: "Discussions", icon: MessageSquareText },
-  { href: "/teacher/planner", label: "Planner", icon: CalendarClock, marker: "5" },
+  { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/teacher/reports", label: "Reports", icon: ClipboardList },
@@ -133,11 +133,11 @@ export const teacherNavItems: ShellNavItem[] = [
 ];
 
 export const studentNavItems: ShellNavItem[] = [
-  { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard, marker: "1" },
-  { href: "/practice", label: "Practice", icon: Timer, marker: "P" },
+  { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/practice", label: "Practice", icon: Timer },
   { href: "/ai", label: "AI Tutor", icon: Brain },
-  { href: "/student/work", label: "My Work", icon: FileCheck2, marker: "2" },
-  { href: "/student/grades", label: "Grades", icon: ClipboardList, marker: "3" },
+  { href: "/student/work", label: "My Work", icon: FileCheck2 },
+  { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/student/profile", label: "Profile", icon: UserRound },
@@ -464,9 +464,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           {!collapsed && <span className="text-sm font-semibold text-edsync-subtle">Alerts</span>}
           <NotificationMenu />
         </div>
-        <div className={`mb-1 grid gap-2 ${collapsed ? "place-items-center" : ""}`}>
-          <ThemeToggle compact={collapsed} className={collapsed ? "" : "w-full justify-start"} onThemeChange={handleThemeChange} />
-          <LanguageMenu compact={collapsed} className={collapsed ? "" : "w-full"} align="left" />
+        <div className={`mb-1 flex gap-2 ${collapsed ? "justify-center" : "justify-start px-3"}`}>
+          <ThemeToggle compact onThemeChange={handleThemeChange} />
+          <LanguageMenu compact align="left" />
         </div>
         <button
           type="button"
@@ -508,6 +508,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           EdSync
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle compact onThemeChange={handleThemeChange} />
           <LanguageMenu compact />
           <NotificationMenu />
         </div>
