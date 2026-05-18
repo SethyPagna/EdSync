@@ -30,6 +30,7 @@ export default function NotificationMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
 
@@ -38,6 +39,7 @@ export default function NotificationMenu() {
     if (!response.ok) return;
     const payload = (await response.json()) as NotificationResponse;
     setItems(payload.data ?? []);
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -123,7 +125,7 @@ export default function NotificationMenu() {
         aria-expanded={open}
       >
         <Bell className="h-5 w-5" />
-        {unread > 0 && (
+        {loaded && unread > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-edsync-red px-1 text-[10px] font-bold text-white">
             {unread > 9 ? "9+" : unread}
           </span>
@@ -135,7 +137,9 @@ export default function NotificationMenu() {
           <div className="flex items-center justify-between border-b border-edsync-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-edsync-text">Notifications</p>
-              <p className="text-xs text-edsync-subtle">{unread} unread</p>
+              <p className="text-xs text-edsync-subtle">
+                {unread > 0 ? `${unread} unread` : "All caught up"}
+              </p>
             </div>
             <button
               type="button"
