@@ -583,6 +583,50 @@
 
 ---
 
+## Phase 23: Source Organization, Runtime Language Strategy, And Cleanup
+
+**Target:** Make the codebase easier to navigate without breaking existing routes, APIs, or Cloudflare/Vercel/local deployments. Group related files into feature folders, keep compatibility shims during moves, and only introduce additional programming languages where measured hot paths justify the complexity.
+
+**Mini Phases:**
+- 23.1 Directory ownership audit:
+  - Inventory root-level `src/lib` and `src/components` files that now belong to clearer domains such as public launch/catalog, auth, tenancy, admin, learning, Studio, practice, media, billing, AI, and security.
+  - Identify duplicate folders, thin wrappers, legacy compatibility files, and files that are imported from too many unrelated domains.
+  - Mark every move as `safe now`, `needs shim`, or `defer until feature API exists`.
+- 23.2 Safe grouping and compatibility shims:
+  - Move public visitor helpers into `src/lib/public/*` and public visitor UI into `src/components/public/*` where practical.
+  - Move catalog helpers into `src/lib/catalog/*` only after stable re-export shims preserve old import paths.
+  - Keep old import paths as short re-export files until all internal imports are migrated and tests pass.
+  - Commit each moved file, shim, and import update separately.
+- 23.3 Folder cleanup:
+  - Merge folders only when they represent the same domain and have no conflicting ownership.
+  - Rename folders only when the new name improves domain clarity and can be updated mechanically with tests.
+  - Keep app-route folders stable unless a route-preserving redirect or wrapper is already in place.
+  - Delete dead files only after `rg` confirms no imports, routes, scripts, docs, or tests still reference them.
+- 23.4 Runtime language strategy:
+  - Keep TypeScript/React as the primary app and UI language because it matches Next.js, Cloudflare Workers, Vercel, shared types, and existing tests.
+  - Use SQL for D1 schema, indexes, and data-heavy filtering where the database can do less work in application code.
+  - Consider Rust compiled to WASM only for isolated CPU-heavy utilities such as SCORM ZIP manifest parsing, document conversion, media signature inspection, or large import normalization after profiling shows TypeScript is a bottleneck.
+  - Avoid Python, background services, or mixed-language runtime calls in request paths unless they are isolated workers with clear deployment and observability contracts.
+  - Do not rewrite working TypeScript features into another language without a benchmark, rollback path, and Cloudflare compatibility check.
+- 23.5 Optimization pass:
+  - Reduce duplicate map/filter passes in hot dashboard, catalog, practice, and Studio list paths.
+  - Prefer `Map`/`Set` lookups for repeated joins and membership checks.
+  - Keep large editors behind dynamic route boundaries and avoid pulling Studio-only libraries into public/auth/dashboard bundles.
+  - Add or update tests for moved helpers and any compatibility shims.
+- 23.6 Verification and rollout:
+  - Run `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` after each grouping slice.
+  - Browser-check public intro, catalog, auth, Studio, teacher dashboard, student dashboard, and admin shell after visible import changes.
+  - Redeploy the existing Cloudflare Worker only after local verification passes.
+
+**Acceptance Checks:**
+- New folders express domain ownership more clearly than the previous flat structure.
+- Existing routes, API routes, tests, and deploy scripts keep working.
+- Re-export shims preserve compatibility during gradual import migration.
+- Mixed-language decisions are documented with performance reasoning, not implemented as a blanket rewrite.
+- `progress.md` records every organization slice, verification result, and remaining cleanup candidate.
+
+---
+
 ## Cross-Phase Architecture Targets
 
 - Keep AI contracts, validators, template engines, and conversion helpers outside UI components.
