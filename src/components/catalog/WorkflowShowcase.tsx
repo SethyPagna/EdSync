@@ -35,6 +35,30 @@ type WorkflowSlide = {
 
 const slides: WorkflowSlide[] = [
   {
+    id: "overview",
+    title: "Intro And Workflow",
+    shortTitle: "Start",
+    headline: "One path from course to proof.",
+    subtitle: "Search, build, generate, practice, grade, and review without losing context.",
+    route: "/catalog#catalog-search-panel",
+    icon: Wand2,
+    accent: "text-edsync-emerald",
+    tabs: ["Catalog", "Studio", "AI", "Practice", "Gradebook"],
+    metrics: [
+      { label: "Flow", value: "6 steps" },
+      { label: "Drafts", value: "Saved" },
+      { label: "Evidence", value: "Tracked" },
+    ],
+    rows: [
+      { title: "Start in catalog", detail: "Public courses and organization portals lead into one account flow", status: "Discover" },
+      { title: "Build in Studio", detail: "Notes, slides, media, quizzes, assignments, and drafts stay connected", status: "Create" },
+      { title: "Practice to proof", detail: "Attempts, explanations, reviews, and grade events create evidence", status: "Track" },
+    ],
+    sideTitle: "EdSync loop",
+    sideRows: ["Find course", "Draft lesson", "Generate quiz", "Review progress"],
+    actions: ["View workflow", "Search catalog", "Start"],
+  },
+  {
     id: "catalog",
     title: "Catalog And Organization Entry",
     shortTitle: "Catalog",
@@ -181,6 +205,27 @@ const slides: WorkflowSlide[] = [
 ];
 
 function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
+  if (slide.id === "overview") {
+    return (
+      <div className="edsync-workflow-app-mock">
+        <div className="edsync-workflow-loop-map">
+          {[
+            ["Catalog", "Preview, price, enroll"],
+            ["Studio", "Docs, slides, media"],
+            ["AI", "Outline, quiz, rubric"],
+            ["Practice", "Timer, retry, explain"],
+            ["Gradebook", "Events, feedback, proof"],
+          ].map(([label, detail], index) => (
+            <span key={label} className={index === 0 ? "is-active" : ""}>
+              <strong>{label}</strong>
+              <small>{detail}</small>
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (slide.id === "catalog") {
     return (
       <div className="edsync-workflow-app-mock edsync-workflow-app-mock-catalog">
@@ -411,6 +456,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
 });
 
 export default function WorkflowShowcase({ includeBridge = true }: { includeBridge?: boolean }) {
+  void includeBridge;
   const [activeIndex, setActiveIndex] = useState(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
@@ -470,38 +516,6 @@ export default function WorkflowShowcase({ includeBridge = true }: { includeBrid
 
   return (
     <>
-      {includeBridge && (
-        <section id="workflow-transition" className="edsync-workflow-bridge" aria-label="Workflow transition">
-          <div className="edsync-workflow-bridge-sticky">
-            <div className="edsync-workflow-bridge-card">
-              <div className="min-w-0">
-                <h2 className="font-display text-5xl font-bold leading-none sm:text-7xl">
-                  One course. Six moves.
-                </h2>
-                <p className="mt-5 max-w-lg text-lg leading-8 text-edsync-subtle">
-                  From catalog to grade evidence without losing context.
-                </p>
-              </div>
-              <div className="edsync-workflow-bridge-window" aria-hidden="true">
-                {[
-                  ["Catalog", "/catalog/[course]", "Search, preview, enroll"],
-                  ["Studio", "/studio", "Slides, media, safe links"],
-                  ["AI insert", "/ai", "Outline, quiz, rubric"],
-                  ["Review", "/teacher/work", "Approve, assign, grade"],
-                  ["Practice", "/practice", "Timer, retry, explain"],
-                ].map(([label, route, detail], index) => (
-                  <span key={label} style={{ transform: `translateX(${index * 0.55}rem)` }}>
-                    <strong>{label}</strong>
-                    <small>{route}</small>
-                    <em>{detail}</em>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       <section id="showcase" className="edsync-workflow-showcase scroll-mt-24">
         <div className="edsync-workflow-sticky">
           <div className="edsync-workflow-heading">
