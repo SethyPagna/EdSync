@@ -13,7 +13,7 @@ import {
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
-import { getPublicCopy } from "@/lib/public-i18n";
+import { getPublicCopy } from "@/lib/public/i18n";
 import { normalizePublicLanguage } from "@/lib/public/languages";
 
 type CatalogLaunchHeroProps = {
