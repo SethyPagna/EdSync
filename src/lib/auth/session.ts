@@ -4,7 +4,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { d1Query } from "@/lib/db/d1";
 import type { Profile } from "@/types";
 import type { UserRole } from "@/types";
-import { ROLE_COOKIE, SESSION_COOKIE } from "./constants";
+import { ACTIVE_TENANT_COOKIE, ROLE_COOKIE, SESSION_COOKIE } from "./constants";
 
 const SESSION_DAYS = 30;
 
@@ -73,6 +73,26 @@ export function setSessionCookies(
 export function clearSessionCookies(response: NextResponse) {
   response.cookies.set(SESSION_COOKIE, "", { path: "/", expires: new Date(0) });
   response.cookies.set(ROLE_COOKIE, "", { path: "/", expires: new Date(0) });
+  clearActiveTenantCookie(response);
+}
+
+export function setActiveTenantCookie(response: NextResponse, tenantId: string | null | undefined, expires: Date) {
+  if (!tenantId) {
+    clearActiveTenantCookie(response);
+    return;
+  }
+
+  response.cookies.set(ACTIVE_TENANT_COOKIE, tenantId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires,
+  });
+}
+
+export function clearActiveTenantCookie(response: NextResponse) {
+  response.cookies.set(ACTIVE_TENANT_COOKIE, "", { path: "/", expires: new Date(0) });
 }
 
 export async function getSessionUserFromToken(token?: string | null) {
