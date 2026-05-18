@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { languageCodeFor, normalizePublicLanguage, publicCopy } from "./public-i18n";
+import { languageCodeFor, normalizePublicLanguage, publicCopy } from "./public/i18n";
 
 describe("public i18n", () => {
   it("normalizes language names and codes", () => {
