@@ -10,7 +10,6 @@ import {
 import CatalogLaunchHero from "@/components/catalog/CatalogLaunchHero";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
-import PublicLaunchChrome from "@/components/public/PublicLaunchChrome";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public-i18n";
@@ -53,25 +52,33 @@ export default async function CatalogPage({
 
   return (
     <main id="top" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
-      <PublicLaunchChrome />
-
       <CatalogLaunchHero
         title={copy.heroTitle}
         description={copy.heroCopy}
         primaryLabel={copy.begin}
         secondaryLabel={copy.start}
-        statusLabel={copy.catalogLabel}
       />
 
       <section className="mx-auto max-w-[90rem] px-4">
         <WorkflowShowcase />
 
-        <section id="catalog-search-panel" className="edsync-scroll-slide grid min-h-screen scroll-mt-24 content-center py-12">
+        <section id="catalog-search-panel" className="edsync-catalog-availability scroll-mt-20 py-10">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
-            <div className="flex flex-col gap-3 pb-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="font-display text-4xl font-bold">{copy.searchHeading}</h2>
-                <p className="mt-2 text-sm text-edsync-subtle">{copy.searchCopy}</p>
+            <div className="flex flex-col gap-3 pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0">
+                <h2 className="font-display text-3xl font-bold sm:text-4xl">{copy.searchHeading}</h2>
+                <p className="mt-2 max-w-2xl text-sm text-edsync-subtle">{copy.searchCopy}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-edsync-subtle">
+                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
+                  {items.length} {copy.courses.toLowerCase()}
+                </span>
+                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
+                  {freeCount} {copy.free.toLowerCase()}
+                </span>
+                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
+                  {paidCount} {copy.paid.toLowerCase()}
+                </span>
               </div>
               {hasFilters && (
                 <Link href="/catalog" className="text-sm font-semibold text-edsync-blue hover:underline">
@@ -137,15 +144,6 @@ export default async function CatalogPage({
               </div>
             </form>
             <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-edsync-subtle">
-              <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
-                {items.length} {copy.courses.toLowerCase()}
-              </span>
-              <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
-                {freeCount} {copy.free.toLowerCase()}
-              </span>
-              <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
-                {paidCount} {copy.paid.toLowerCase()}
-              </span>
               {["AI lessons", "Practice sprint", "Organization portal", "Teacher gradebook"].map((sample) => (
                 <Link
                   key={sample}
@@ -155,6 +153,35 @@ export default async function CatalogPage({
                   {sample}
                 </Link>
               ))}
+            </div>
+
+            <div id="catalog-results" className="mt-6 border-t border-edsync-border pt-5">
+              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
+                  <p className="text-sm text-edsync-subtle">{copy.coursesSubhead}</p>
+                </div>
+                {hasFilters && (
+                  <Link href="/catalog" className="text-sm font-semibold text-edsync-blue hover:underline">
+                    {copy.clearFilters}
+                  </Link>
+                )}
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {items.map((item) => (
+                  <CatalogCourseCard key={item.id} item={item} />
+                ))}
+              </div>
+              {items.length === 0 && (
+                <div className="premium-surface rounded-2xl border-dashed p-8 text-center sm:p-10">
+                  <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
+                  <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
+                  <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
+                  <Link href="/auth/signup" className="btn-primary mx-auto mt-5 w-fit">
+                    {copy.createWorkspace}
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -191,35 +218,6 @@ export default async function CatalogPage({
             </div>
           </section>
         )}
-
-        <section id="catalog-results" className="edsync-scroll-slide mt-8 min-h-screen scroll-mt-32 py-12">
-          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
-              <p className="text-sm text-edsync-subtle">{copy.coursesSubhead}</p>
-            </div>
-            {hasFilters && (
-              <Link href="/catalog" className="text-sm font-semibold text-edsync-blue hover:underline">
-                  {copy.clearFilters}
-              </Link>
-            )}
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {items.map((item) => (
-              <CatalogCourseCard key={item.id} item={item} />
-            ))}
-          </div>
-          {items.length === 0 && (
-            <div className="premium-surface rounded-2xl border-dashed p-10 text-center">
-              <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
-              <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
-              <Link href="/auth/signup" className="btn-primary mx-auto mt-5 w-fit">
-                {copy.createWorkspace}
-              </Link>
-            </div>
-          )}
-        </section>
 
         {portals.length > 0 && (
           <section id="organizations" className="mt-10 pb-12">
