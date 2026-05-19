@@ -3,6 +3,7 @@ import {
   AUTOMATION_ID_MAX_LENGTH,
   AUTOMATION_RECIPES,
   AUTOMATION_TITLE_MAX_LENGTH,
+  normalizeAutomationEnabled,
   normalizeAutomationRulePayload,
   validateAutomationActions,
   validateAutomationConditions,
@@ -37,5 +38,21 @@ describe("automation rule validation", () => {
     expect(() => validateAutomationConditions([])).toThrow("object");
     expect(() => validateAutomationActions([])).toThrow("At least one");
     expect(() => validateAutomationActions([{ type: "delete_everything" }])).toThrow("Unsupported");
+  });
+
+  it("normalizes automation enabled state without string coercion", () => {
+    expect(normalizeAutomationEnabled(undefined)).toBe(true);
+    expect(normalizeAutomationEnabled(null, false)).toBe(false);
+    expect(normalizeAutomationEnabled(true)).toBe(true);
+    expect(normalizeAutomationEnabled(false)).toBe(false);
+    expect(() => normalizeAutomationEnabled("false")).toThrow("true or false");
+    expect(() =>
+      normalizeAutomationRulePayload({
+        title: "Deadline reminder",
+        triggerKey: "deadline.upcoming",
+        actions: [{ type: "notify" }],
+        enabled: "false",
+      }),
+    ).toThrow("true or false");
   });
 });
