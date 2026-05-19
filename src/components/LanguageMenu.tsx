@@ -10,6 +10,7 @@ import {
   normalizePublicLanguage,
   type PublicLanguageName,
 } from "@/lib/public/languages";
+import { publicLanguageRouteWithSearch, shouldSyncPublicLanguagePath } from "@/lib/public/language-routing";
 
 type LanguageMenuProps = {
   compact?: boolean;
@@ -64,15 +65,8 @@ export default function LanguageMenu({
 
     if (syncCatalogFilter) {
       const { pathname, search } = window.location;
-      if (!pathname.startsWith("/catalog") && !pathname.startsWith("/org/")) return;
-      const params = new URLSearchParams(search);
-      if (nextLanguage === DEFAULT_PUBLIC_LANGUAGE) {
-        params.delete("language");
-      } else {
-        params.set("language", nextLanguage);
-      }
-      const nextSearch = params.toString();
-      window.location.assign(nextSearch ? `${pathname}?${nextSearch}` : pathname);
+      if (!shouldSyncPublicLanguagePath(pathname)) return;
+      window.location.assign(publicLanguageRouteWithSearch({ pathname, search, language: nextLanguage }));
     }
   };
   const languageLabel = languageLabelFor(language);
