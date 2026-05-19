@@ -5,7 +5,7 @@ import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { normalizePublicLanguage } from "@/lib/public/languages";
+import { DEFAULT_PUBLIC_LANGUAGE, normalizePublicLanguage } from "@/lib/public/languages";
 
 type PublicTopbarProps = {
   active?: "catalog" | "organization" | "course";
@@ -39,7 +39,7 @@ export default async function PublicTopbar({
           : "/auth/login";
   const loginParams = new URLSearchParams();
   if (resolvedOrganizationCode) loginParams.set("org", resolvedOrganizationCode);
-  if (publicLanguage) loginParams.set("language", publicLanguage);
+  if (publicLanguage !== DEFAULT_PUBLIC_LANGUAGE) loginParams.set("language", publicLanguage);
   const loginQuery = loginParams.toString();
   const loginHref = `/auth/login${loginQuery ? `?${loginQuery}` : ""}`;
 
