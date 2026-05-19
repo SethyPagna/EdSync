@@ -35,7 +35,19 @@ describe("auth route validation responses", () => {
     const payload = await readAuthError(response);
 
     expect(response.status).toBe(400);
-    expect(payload.error.message).toBe("Email and password are required.");
+    expect(payload.error.message).toBe("Email is required.");
+  });
+
+  it("returns HTTP 400 when login email is malformed", async () => {
+    const response = await loginPost(jsonRequest("/api/auth/login", {
+      email: "not-an-email",
+      password: "password123",
+      account_type: "individual",
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Email must be a valid email address.");
   });
 
   it("returns HTTP 400 when signup account details are incomplete", async () => {
@@ -53,6 +65,23 @@ describe("auth route validation responses", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error.message).toBe("A valid email and password of at least 8 characters are required.");
+  });
+
+  it("returns HTTP 400 when signup email is malformed", async () => {
+    const response = await signupPost(jsonRequest("/api/auth/signup", {
+      email: "bad",
+      password: "password123",
+      options: {
+        data: {
+          role: "student",
+          account_type: "individual",
+        },
+      },
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Email must be a valid email address.");
   });
 
   it("returns HTTP 400 when organization signup name is too long", async () => {
