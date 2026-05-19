@@ -57,7 +57,7 @@ function buildLaunchPreviewSlides({
       title: courses,
       route: "/catalog",
       nav: [catalog, courses, featured, start],
-      metrics: [[free, start], ["35m", anyDuration], ["Grade 8", difficulty]],
+      metrics: [[free, start], ["35m", anyDuration], ["8", difficulty]],
       blocks: [[courses, `${search}, ${filters}, ${start}`], [signIn, `${signIn} -> ${start}`]],
     },
     studio: {
@@ -93,7 +93,7 @@ function buildLaunchPreviewSlides({
       title: proof,
       route: "/admin/dashboard",
       nav: [proof, ai, catalog, start],
-      metrics: [["24 pts", proof], [ai, "Log"], [start, practice]],
+      metrics: [["24", proof], [ai, proof], [start, practice]],
       blocks: [[proof, `${proof}, ${practice}, ${courses}`], [ai, `${ai}, ${catalog}, ${proof}`]],
     },
   };
@@ -159,7 +159,7 @@ export default async function CatalogLaunchHero({
           <ThemeToggle compact className="edsync-launch-icon" />
           <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
           <Link href={signedIn ? workspaceHref : "/auth/login"} className="edsync-launch-signin">
-            <span>{signedIn ? "Workspace" : copy.signIn}</span>
+            <span>{signedIn ? copy.start : copy.signIn}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
