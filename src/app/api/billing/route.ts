@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { createCheckout } from "@/lib/billing";
+import {
+  normalizeCheckoutUrl,
+  normalizeOptionalBillingId,
+  normalizePriceInput,
+  normalizeProductInput,
+  normalizeProductStatus,
+  validateBillingId,
+} from "@/lib/billing-validation";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
@@ -19,6 +27,10 @@ function catalogMediaWarnings(
     warnings.push("Unsafe preview video URL was removed.");
   }
   return warnings;
+}
+
+function badBillingRequest(error: unknown, fallback = "Invalid billing request.") {
+  return NextResponse.json({ data: null, error: error instanceof Error ? error.message : fallback }, { status: 400 });
 }
 
 export async function GET() {
@@ -84,13 +96,23 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "checkout") {
-    if (!body.priceId) return NextResponse.json({ data: null, error: "Price is required." }, { status: 400 });
+    let priceId: string;
+    let successUrl: string;
+    let cancelUrl: string;
+    try {
+      priceId = validateBillingId(body.priceId, "Price");
+      const fallbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/student/dashboard`;
+      successUrl = normalizeCheckoutUrl(body.successUrl, fallbackUrl);
+      cancelUrl = normalizeCheckoutUrl(body.cancelUrl, fallbackUrl);
+    } catch (error) {
+      return badBillingRequest(error);
+    }
     const checkout = await createCheckout({
       tenantId: context.tenant.id,
       userId: user.id,
-      priceId: body.priceId,
-      successUrl: body.successUrl || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/student/dashboard`,
-      cancelUrl: body.cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/student/dashboard`,
+      priceId,
+      successUrl,
+      cancelUrl,
     });
     return NextResponse.json({ data: checkout, error: null });
   }
@@ -102,103 +124,124 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "update_catalog") {
-    if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
+    let productId: string;
+    let portalId: string | null | undefined;
+    try {
+      productId = validateBillingId(body.productId, "Product");
+      portalId = normalizeOptionalBillingId(body.portalId, "Portal");
+    } catch (error) {
+      return badBillingRequest(error);
+    }
     const metadata = sanitizeCatalogMetadata(body.metadata);
     const warnings = catalogMediaWarnings(body.metadata, metadata);
-    const status = body.status === "active" || body.status === "archived" || body.status === "draft" ? body.status : "draft";
+    const status = normalizeProductStatus(body.status);
     await d1Query(
       "UPDATE billing_products SET status = ?, metadata = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?",
-      [status, metadata, body.productId, context.tenant.id],
+      [status, JSON.stringify(metadata), productId, context.tenant.id],
     );
-    if (body.portalId) {
+    if (portalId) {
       await d1Query(
         `INSERT INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
          VALUES (?, ?, ?, 'billing_products', ?, datetime('now'))
          ON CONFLICT(object_table, object_id) DO UPDATE SET portal_id = excluded.portal_id`,
-        [crypto.randomUUID(), context.tenant.id, body.portalId, body.productId],
+        [crypto.randomUUID(), context.tenant.id, portalId, productId],
       );
-    } else if (body.portalId === null) {
+    } else if (portalId === null) {
       await d1Query(
         "DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?",
-        [context.tenant.id, body.productId],
+        [context.tenant.id, productId],
       );
     }
-    return NextResponse.json({ data: { id: body.productId, warnings }, error: null });
+    return NextResponse.json({ data: { id: productId, warnings }, error: null });
   }
 
   if (body.action === "update_product") {
-    if (!body.productId || !body.title?.trim()) {
-      return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
+    let productId: string;
+    let portalId: string | null | undefined;
+    let product: ReturnType<typeof normalizeProductInput>;
+    try {
+      productId = validateBillingId(body.productId, "Product");
+      portalId = normalizeOptionalBillingId(body.portalId, "Portal");
+      product = normalizeProductInput(body);
+    } catch (error) {
+      return badBillingRequest(error);
     }
     const metadata = sanitizeCatalogMetadata(body.metadata);
     const warnings = catalogMediaWarnings(body.metadata, metadata);
-    const status = body.status === "active" || body.status === "archived" || body.status === "draft" ? body.status : "draft";
     await d1Query(
       `UPDATE billing_products
        SET title = ?, description = ?, product_type = ?, course_id = ?, status = ?, metadata = ?, updated_at = datetime('now')
        WHERE id = ? AND tenant_id = ?`,
       [
-        body.title.trim(),
-        body.description ?? null,
-        ["course", "bundle", "membership", "subscription"].includes(body.productType || "") ? body.productType : "course",
-        body.courseId ?? null,
-        status,
-        metadata,
-        body.productId,
+        product.title,
+        product.description,
+        product.productType,
+        product.courseId,
+        product.status,
+        JSON.stringify(metadata),
+        productId,
         context.tenant.id,
       ],
     );
-    if (body.portalId) {
+    if (portalId) {
       await d1Query(
         `INSERT INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
          VALUES (?, ?, ?, 'billing_products', ?, datetime('now'))
          ON CONFLICT(object_table, object_id) DO UPDATE SET portal_id = excluded.portal_id`,
-        [crypto.randomUUID(), context.tenant.id, body.portalId, body.productId],
+        [crypto.randomUUID(), context.tenant.id, portalId, productId],
       );
-    } else {
+    } else if (portalId === null) {
       await d1Query(
         "DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?",
-        [context.tenant.id, body.productId],
+        [context.tenant.id, productId],
       );
     }
-    return NextResponse.json({ data: { id: body.productId, warnings }, error: null });
+    return NextResponse.json({ data: { id: productId, warnings }, error: null });
   }
 
   if (body.action === "delete_product") {
-    if (!body.productId) return NextResponse.json({ data: null, error: "Product is required." }, { status: 400 });
+    let productId: string;
+    try {
+      productId = validateBillingId(body.productId, "Product");
+    } catch (error) {
+      return badBillingRequest(error);
+    }
     const [usage] = await d1Query<{ entitlement_count: number; transaction_count: number }>(
       `SELECT
          (SELECT COUNT(*) FROM entitlements WHERE tenant_id = ? AND product_id = ?) AS entitlement_count,
          (SELECT COUNT(*) FROM billing_transactions WHERE tenant_id = ? AND product_id = ?) AS transaction_count`,
-      [context.tenant.id, body.productId, context.tenant.id, body.productId],
+      [context.tenant.id, productId, context.tenant.id, productId],
     );
     await d1Query("DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = 'billing_products' AND object_id = ?", [
       context.tenant.id,
-      body.productId,
+      productId,
     ]);
     if ((usage?.entitlement_count ?? 0) > 0 || (usage?.transaction_count ?? 0) > 0) {
       await d1Query(
         "UPDATE billing_prices SET active = 0, updated_at = datetime('now') WHERE tenant_id = ? AND product_id = ?",
-        [context.tenant.id, body.productId],
+        [context.tenant.id, productId],
       );
       await d1Query(
         "UPDATE billing_products SET status = 'archived', metadata = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?",
         [
-          sanitizeCatalogMetadata({ visibility: "private", enrollmentMode: "closed" }),
+          JSON.stringify(sanitizeCatalogMetadata({ visibility: "private", enrollmentMode: "closed" })),
           context.tenant.id,
-          body.productId,
+          productId,
         ],
       );
-      return NextResponse.json({ data: { id: body.productId, mode: "archived" }, error: null });
+      return NextResponse.json({ data: { id: productId, mode: "archived" }, error: null });
     }
-    await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND product_id = ?", [context.tenant.id, body.productId]);
-    await d1Query("DELETE FROM billing_products WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.productId]);
-    return NextResponse.json({ data: { id: body.productId, mode: "deleted" }, error: null });
+    await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND product_id = ?", [context.tenant.id, productId]);
+    await d1Query("DELETE FROM billing_products WHERE tenant_id = ? AND id = ?", [context.tenant.id, productId]);
+    return NextResponse.json({ data: { id: productId, mode: "deleted" }, error: null });
   }
 
   if (body.action === "create_price") {
-    if (!body.productId || body.amountCents === undefined) {
-      return NextResponse.json({ data: null, error: "Product and amount are required." }, { status: 400 });
+    let price: ReturnType<typeof normalizePriceInput>;
+    try {
+      price = normalizePriceInput(body);
+    } catch (error) {
+      return badBillingRequest(error);
     }
     const id = crypto.randomUUID();
     await d1Query(
@@ -208,57 +251,74 @@ export async function POST(request: Request) {
       [
         id,
         context.tenant.id,
-        body.productId,
+        price.productId,
         process.env.PAYMENT_PROVIDER === "stripe" ? "stripe" : "manual",
-        (body.currency || "usd").toLowerCase(),
-        Math.max(0, Number(body.amountCents)),
-        body.billingInterval || "one_time",
+        price.currency,
+        price.amountCents,
+        price.billingInterval,
       ],
     );
     return NextResponse.json({ data: { id }, error: null });
   }
 
   if (body.action === "update_price") {
-    if (!body.priceId || !body.productId || body.amountCents === undefined) {
-      return NextResponse.json({ data: null, error: "Price, product, and amount are required." }, { status: 400 });
+    let priceId: string;
+    let price: ReturnType<typeof normalizePriceInput>;
+    try {
+      priceId = validateBillingId(body.priceId, "Price");
+      price = normalizePriceInput(body);
+    } catch (error) {
+      return badBillingRequest(error);
     }
     await d1Query(
       `UPDATE billing_prices
        SET product_id = ?, currency = ?, amount_cents = ?, billing_interval = ?, active = ?, updated_at = datetime('now')
-       WHERE id = ? AND tenant_id = ?`,
+      WHERE id = ? AND tenant_id = ?`,
       [
-        body.productId,
-        (body.currency || "usd").toLowerCase(),
-        Math.max(0, Number(body.amountCents)),
-        body.billingInterval || "one_time",
-        body.active === false ? 0 : 1,
-        body.priceId,
+        price.productId,
+        price.currency,
+        price.amountCents,
+        price.billingInterval,
+        price.active ? 1 : 0,
+        priceId,
         context.tenant.id,
       ],
     );
-    return NextResponse.json({ data: { id: body.priceId }, error: null });
+    return NextResponse.json({ data: { id: priceId }, error: null });
   }
 
   if (body.action === "delete_price") {
-    if (!body.priceId) return NextResponse.json({ data: null, error: "Price is required." }, { status: 400 });
+    let priceId: string;
+    try {
+      priceId = validateBillingId(body.priceId, "Price");
+    } catch (error) {
+      return badBillingRequest(error);
+    }
     const [usage] = await d1Query<{ transaction_count: number; subscription_count: number }>(
       `SELECT
          (SELECT COUNT(*) FROM billing_transactions WHERE tenant_id = ? AND price_id = ?) AS transaction_count,
          (SELECT COUNT(*) FROM billing_subscriptions WHERE tenant_id = ? AND price_id = ?) AS subscription_count`,
-      [context.tenant.id, body.priceId, context.tenant.id, body.priceId],
+      [context.tenant.id, priceId, context.tenant.id, priceId],
     );
     if ((usage?.transaction_count ?? 0) > 0 || (usage?.subscription_count ?? 0) > 0) {
       await d1Query("UPDATE billing_prices SET active = 0, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?", [
         context.tenant.id,
-        body.priceId,
+        priceId,
       ]);
-      return NextResponse.json({ data: { id: body.priceId, mode: "deactivated" }, error: null });
+      return NextResponse.json({ data: { id: priceId, mode: "deactivated" }, error: null });
     }
-    await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.priceId]);
-    return NextResponse.json({ data: { id: body.priceId, mode: "deleted" }, error: null });
+    await d1Query("DELETE FROM billing_prices WHERE tenant_id = ? AND id = ?", [context.tenant.id, priceId]);
+    return NextResponse.json({ data: { id: priceId, mode: "deleted" }, error: null });
   }
 
-  if (!body.title) return NextResponse.json({ data: null, error: "Product title is required." }, { status: 400 });
+  let product: ReturnType<typeof normalizeProductInput>;
+  let portalId: string | null | undefined;
+  try {
+    product = normalizeProductInput(body);
+    portalId = normalizeOptionalBillingId(body.portalId, "Portal");
+  } catch (error) {
+    return badBillingRequest(error);
+  }
   const id = crypto.randomUUID();
   const metadata = sanitizeCatalogMetadata(body.metadata);
   const warnings = catalogMediaWarnings(body.metadata, metadata);
@@ -269,18 +329,18 @@ export async function POST(request: Request) {
     [
       id,
       context.tenant.id,
-      body.title.trim(),
-      body.description ?? null,
-      ["course", "bundle", "membership", "subscription"].includes(body.productType || "") ? body.productType : "course",
-      body.courseId ?? null,
-      metadata,
+      product.title,
+      product.description,
+      product.productType,
+      product.courseId,
+      JSON.stringify(metadata),
     ],
   );
-  if (body.portalId) {
+  if (portalId) {
     await d1Query(
       `INSERT INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
        VALUES (?, ?, ?, 'billing_products', ?, datetime('now'))`,
-      [crypto.randomUUID(), context.tenant.id, body.portalId, id],
+      [crypto.randomUUID(), context.tenant.id, portalId, id],
     );
   }
   return NextResponse.json({ data: { id, warnings }, error: null });
