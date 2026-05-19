@@ -8,7 +8,7 @@ import CatalogLaunchPreviewGallery, {
 } from "@/components/catalog/CatalogLaunchPreviewGallery";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { DEFAULT_PUBLIC_LANGUAGE, normalizePublicLanguage } from "@/lib/public/languages";
+import { normalizePublicLanguage, publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 type CatalogLaunchHeroProps = {
   title?: string;
@@ -111,7 +111,7 @@ export default async function CatalogLaunchHero({
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
   const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
   const copy = getPublicCopy(publicLanguage);
-  const languageQuery = publicLanguage === DEFAULT_PUBLIC_LANGUAGE ? "" : `?language=${encodeURIComponent(publicLanguage)}`;
+  const languageQuery = publicLanguageQuerySuffix(publicLanguage);
   const authQuery = languageQuery;
   const [, studioLabel = "Studio", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const previewSlides = buildLaunchPreviewSlides({
