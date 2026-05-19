@@ -3,6 +3,8 @@ import {
   CERTIFICATION_ID_MAX_LENGTH,
   CERTIFICATION_RECIPES,
   CERTIFICATION_TITLE_MAX_LENGTH,
+  normalizeCertificationExpiry,
+  normalizeCertificationNotifyDays,
   normalizeCertificationCourseId,
   normalizeCertificationRulePayload,
   normalizeCertificationSettings,
@@ -25,6 +27,10 @@ describe("certification rule validation", () => {
     expect(normalizeCertificationRulePayload({ title: "No expiry", expiresAfterDays: 0 }).expiresAfterDays).toBeNull();
     expect(normalizeCertificationRulePayload({ title: "Long", expiresAfterDays: 99999 }).expiresAfterDays).toBe(3650);
     expect(normalizeCertificationRulePayload({ title: "Notify", notifyBeforeDays: -5 }).notifyBeforeDays).toBe(0);
+    expect(normalizeCertificationExpiry("45")).toBe(45);
+    expect(normalizeCertificationNotifyDays(undefined)).toBe(30);
+    expect(() => normalizeCertificationExpiry("soon")).toThrow("must be a number");
+    expect(() => normalizeCertificationNotifyDays("later")).toThrow("must be a number");
   });
 
   it("requires object settings", () => {
