@@ -4,7 +4,7 @@ import { d1Query } from "@/lib/db/d1";
 import { getSessionUser } from "@/lib/auth/session";
 import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
-import { sanitizeObjectPath, validateUploadFile } from "@/lib/security/upload";
+import { validateObjectPath, validateUploadFile } from "@/lib/security/upload";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -61,8 +61,18 @@ export async function POST(request: Request) {
   }
 
   const env = process.env.DEPLOYMENT_TARGET || "local";
-  const safeBucketAlias = sanitizeObjectPath(bucketAlias) || "uploads";
-  const safePath = sanitizeObjectPath(path) || safeFile.fileName;
+  let safeBucketAlias: string;
+  let safePath: string;
+  try {
+    safeBucketAlias = validateObjectPath(bucketAlias || "uploads", "Bucket alias");
+    safePath = validateObjectPath(path || safeFile.fileName, "Upload path");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload path is invalid.";
+    return NextResponse.json(
+      { data: null, error: { message } },
+      { status: 400 },
+    );
+  }
   const objectKey = `${env}/users/${user.id}/${safeBucketAlias}/${safePath}`.replace(/\/+/g, "/");
   const fileBuffer = Buffer.from(await file.arrayBuffer());
   const malwareScan = await scanUploadBuffer({
