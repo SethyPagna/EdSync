@@ -5,6 +5,7 @@ import {
   FEATURE_FLAG_KEY_MAX_LENGTH,
   FEATURE_FLAG_LABEL_MAX_LENGTH,
   normalizeFeatureFlagAudience,
+  normalizeFeatureFlagEnabled,
   normalizeFeatureFlagInput,
   normalizeFeatureFlagKey,
   validateFeatureFlagId,
@@ -18,7 +19,7 @@ describe("admin settings validation", () => {
         flagKey: " AI Provider Fallback ",
         label: "  Smart AI ",
         description: "  Fallback providers. ",
-        enabled: 1,
+        enabled: true,
         audience: "teacher",
       }),
     ).toEqual({
@@ -54,5 +55,18 @@ describe("admin settings validation", () => {
   it("defaults unsupported audiences", () => {
     expect(normalizeFeatureFlagAudience("admin")).toBe("admin");
     expect(normalizeFeatureFlagAudience("owner")).toBe("all");
+  });
+
+  it("requires explicit boolean enabled states", () => {
+    expect(normalizeFeatureFlagEnabled(true)).toBe(true);
+    expect(normalizeFeatureFlagEnabled(false)).toBe(false);
+    expect(() => normalizeFeatureFlagEnabled("false")).toThrow("true or false");
+    expect(() =>
+      normalizeFeatureFlagInput({
+        flagKey: "safe_toggle",
+        label: "Safe toggle",
+        enabled: 1,
+      }),
+    ).toThrow("true or false");
   });
 });
