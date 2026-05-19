@@ -9,6 +9,8 @@ import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
+import { getPublicCopy } from "@/lib/public/i18n";
+import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
 import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
@@ -22,6 +24,8 @@ type OrganizationLookup = {
 
 function LoginForm() {
   const searchParams = useSearchParams();
+  const { language, querySuffix } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicCopy(language), [language]);
   const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
@@ -191,7 +195,7 @@ function LoginForm() {
           />
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <Link
-              href={organizationLookup?.slug ? `/org/${organizationLookup.slug}` : "/catalog"}
+              href={organizationLookup?.slug ? `/org/${organizationLookup.slug}${querySuffix}` : `/catalog${querySuffix}`}
               className="btn-secondary justify-center px-3 py-2 text-sm"
             >
               Open portal
@@ -264,10 +268,34 @@ function LoginForm() {
         disabled={loading || waitingForOrganization}
         className="btn-primary w-full justify-center py-3.5"
       >
-        {loading ? "Signing in..." : waitingForOrganization ? "Checking organization..." : "Sign in"}
+        {loading ? "Signing in..." : waitingForOrganization ? "Checking organization..." : copy.signIn}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
     </form>
+  );
+}
+
+function LoginPanelTitle() {
+  const { language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicCopy(language), [language]);
+
+  return <h2 className="font-display text-3xl font-bold">{copy.signIn}</h2>;
+}
+
+function LoginSignupLink() {
+  const { querySuffix, language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicCopy(language), [language]);
+
+  return (
+    <p className="mt-6 text-center text-sm text-edsync-subtle">
+      New to EdSync?{" "}
+      <Link
+        href={`/auth/signup${querySuffix}`}
+        className="font-semibold text-edsync-blue hover:underline"
+      >
+        {copy.createWorkspace}
+      </Link>
+    </p>
   );
 }
 
@@ -310,7 +338,9 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 sm:rounded-[1.65rem] sm:p-7">
-            <h2 className="font-display text-3xl font-bold">Welcome back</h2>
+            <Suspense fallback={<h2 className="font-display text-3xl font-bold">Sign in</h2>}>
+              <LoginPanelTitle />
+            </Suspense>
             <div className="mt-7">
               <Suspense
                 fallback={
@@ -320,15 +350,9 @@ export default function LoginPage() {
                 <LoginForm />
               </Suspense>
             </div>
-            <p className="mt-6 text-center text-sm text-edsync-subtle">
-              New to EdSync?{" "}
-              <Link
-                href="/auth/signup"
-                className="font-semibold text-edsync-blue hover:underline"
-              >
-                Create an account
-              </Link>
-            </p>
+            <Suspense fallback={null}>
+              <LoginSignupLink />
+            </Suspense>
           </div>
         </div>
       </section>
