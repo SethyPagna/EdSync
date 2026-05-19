@@ -1,9 +1,12 @@
 export const CERTIFICATION_TITLE_MAX_LENGTH = 140;
 export const CERTIFICATION_DESCRIPTION_MAX_LENGTH = 600;
+export const CERTIFICATION_ID_MAX_LENGTH = 160;
 export const CERTIFICATION_MIN_NOTIFY_DAYS = 0;
 export const CERTIFICATION_MAX_NOTIFY_DAYS = 365;
 export const CERTIFICATION_MIN_EXPIRY_DAYS = 0;
 export const CERTIFICATION_MAX_EXPIRY_DAYS = 3650;
+
+const CERTIFICATION_ID_PATTERN = /^[a-z0-9_.:-]+$/i;
 
 export const CERTIFICATION_RECIPES = [
   {
@@ -68,6 +71,24 @@ export function validateCertificationTitle(value: unknown) {
   return title;
 }
 
+export function validateCertificationRuleId(value: unknown) {
+  const id = String(value ?? "").trim();
+  if (!id) throw new Error("Rule is required.");
+  if (id.length > CERTIFICATION_ID_MAX_LENGTH || !CERTIFICATION_ID_PATTERN.test(id)) {
+    throw new Error("Rule id must be a short identifier.");
+  }
+  return id;
+}
+
+export function normalizeCertificationCourseId(value: unknown) {
+  const id = String(value ?? "").trim();
+  if (!id) return null;
+  if (id.length > CERTIFICATION_ID_MAX_LENGTH || !CERTIFICATION_ID_PATTERN.test(id)) {
+    throw new Error("Course id must be a short identifier.");
+  }
+  return id;
+}
+
 export function normalizeCertificationDescription(value: unknown) {
   const description = String(value ?? "").trim();
   if (!description) return null;
@@ -103,7 +124,7 @@ export function normalizeCertificationRulePayload(input: {
   return {
     title: validateCertificationTitle(input.title),
     description: normalizeCertificationDescription(input.description),
-    courseId: String(input.courseId ?? "").trim() || null,
+    courseId: normalizeCertificationCourseId(input.courseId),
     expiresAfterDays: normalizeCertificationExpiry(input.expiresAfterDays),
     notifyBeforeDays: normalizeCertificationNotifyDays(input.notifyBeforeDays),
     settings: normalizeCertificationSettings(input.settings),
