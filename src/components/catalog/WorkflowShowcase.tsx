@@ -455,8 +455,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
   );
 });
 
-export default function WorkflowShowcase({ includeBridge = true }: { includeBridge?: boolean }) {
-  void includeBridge;
+export default function WorkflowShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
