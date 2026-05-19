@@ -5,7 +5,7 @@ import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { publicLanguageQuerySuffix } from "@/lib/public/languages";
+import { publicLanguageHref } from "@/lib/public/languages";
 
 export default async function PublicLaunchChrome() {
   const cookieStore = await cookies();
@@ -13,7 +13,7 @@ export default async function PublicLaunchChrome() {
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
   const publicLanguage = cookieStore.get("edsync-language")?.value;
   const copy = getPublicCopy(publicLanguage);
-  const languageQuery = publicLanguageQuerySuffix(publicLanguage);
+  const loginHref = publicLanguageHref("/auth/login", publicLanguage);
   const workspaceHref =
     role === "admin"
       ? "/admin/dashboard"
@@ -38,7 +38,7 @@ export default async function PublicLaunchChrome() {
       <div className="edsync-launch-actions">
         <ThemeToggle compact className="edsync-launch-icon" />
         <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
-        <Link href={signedIn ? workspaceHref : `/auth/login${languageQuery}`} className="edsync-launch-signin">
+        <Link href={signedIn ? workspaceHref : loginHref} className="edsync-launch-signin">
           <span>{signedIn ? "Workspace" : copy.signIn}</span>
           <ArrowRight className="h-4 w-4" />
         </Link>
