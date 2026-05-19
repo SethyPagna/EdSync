@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { homeForRole, isSafeAppPath, safeNextPath } from "@/lib/auth/redirects";
+import { homeForRole, isSafeAppPath, normalizeRedirectRole, safeNextPath } from "@/lib/auth/redirects";
 
 describe("auth redirects", () => {
   it("returns a role-specific home path", () => {
@@ -8,6 +8,14 @@ describe("auth redirects", () => {
     expect(homeForRole("student")).toBe("/student/dashboard");
     expect(homeForRole(null)).toBe("/auth/login");
     expect(homeForRole("unknown")).toBe("/auth/login");
+  });
+
+  it("normalizes only supported route roles", () => {
+    expect(normalizeRedirectRole("admin")).toBe("admin");
+    expect(normalizeRedirectRole("teacher")).toBe("teacher");
+    expect(normalizeRedirectRole("student")).toBe("student");
+    expect(normalizeRedirectRole("owner")).toBeNull();
+    expect(normalizeRedirectRole(undefined)).toBeNull();
   });
 
   it("accepts only known app-local next paths", () => {
