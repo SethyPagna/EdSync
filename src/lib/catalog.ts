@@ -140,7 +140,7 @@ function matchesCatalogFilters(item: PublicCatalogItem, filters: CatalogFilters)
   if (filters.price === "paid" && item.price.isFree) return false;
   if (!textFilterMatches(item.metadata.category, filters.category)) return false;
   if (!textFilterMatches(item.metadata.difficulty, filters.difficulty)) return false;
-  if (!textFilterMatches(item.metadata.language, filters.language)) return false;
+  if (!textFilterMatches(item.metadata.language, filters.courseLanguage)) return false;
   if (filters.maxDuration && item.lesson.durationMinutes && item.lesson.durationMinutes > filters.maxDuration) {
     return false;
   }
@@ -167,6 +167,8 @@ export async function listPublicCatalog(input: {
   category?: string | null;
   difficulty?: string | null;
   language?: string | null;
+  courseLanguage?: string | null;
+  catalogLanguage?: string | null;
   maxDuration?: number | string | null;
 } = {}) {
   const filters = normalizeCatalogFilters(input);
