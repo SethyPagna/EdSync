@@ -118,7 +118,7 @@ function SignupForm() {
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters.");
+      toast.error(authCopy.passwordMin);
       return;
     }
 
@@ -150,7 +150,7 @@ function SignupForm() {
           duration: 9000,
         });
       } else if (message.includes("already registered")) {
-        toast.error("This email is already registered. Try signing in.");
+        toast.error(authCopy.emailAlreadyRegistered);
       } else {
         toast.error(error.message);
       }
@@ -198,7 +198,7 @@ function SignupForm() {
         }),
       );
 
-      toast.success("Account created.");
+      toast.success(authCopy.accountCreated);
       const destination = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
       router.push(accountType === "organization" && tenantSlug ? `${destination}?tenant=${encodeURIComponent(tenantSlug)}` : destination);
       router.refresh();
@@ -210,7 +210,7 @@ function SignupForm() {
       <div className="space-y-5 text-center">
         <h2 className="font-display text-3xl font-bold">{authCopy.checkEmail}</h2>
         <p className="text-sm leading-6 text-edsync-subtle">
-          We sent a confirmation link to{" "}
+          {authCopy.emailSent}{" "}
           <span className="font-semibold text-edsync-blue">{email}</span>.
         </p>
         <Link href={`/auth/login${querySuffix}`} className="btn-secondary inline-flex">
@@ -343,19 +343,19 @@ function SignupForm() {
             type="button"
             onClick={() => {
               if (accountType === "organization" && organizationMode === "join" && !organizationCode.trim()) {
-                toast.error("Enter your organization code first.");
+                toast.error(authCopy.enterOrganizationCodeFirst);
                 return;
               }
               if (accountType === "organization" && organizationMode === "join" && organizationStatus === "checking") {
-                toast.error("Still checking that organization.");
+                toast.error(authCopy.stillCheckingOrganization);
                 return;
               }
               if (accountType === "organization" && organizationMode === "join" && !organizationLookup) {
-                toast.error("Choose an active organization before continuing.");
+                toast.error(authCopy.chooseActiveOrganization);
                 return;
               }
               if (accountType === "organization" && organizationMode === "create" && !organizationName.trim()) {
-                toast.error("Enter your organization name first.");
+                toast.error(authCopy.enterOrganizationNameFirst);
                 return;
               }
               setStep("role");
@@ -374,8 +374,8 @@ function SignupForm() {
           <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
               ? organizationMode === "create"
-                ? `New organization: ${organizationLabel}`
-                : `Joining organization: ${organizationLabel}`
+                ? `${authCopy.newOrganization}: ${organizationLabel}`
+                : `${authCopy.joiningOrganization}: ${organizationLabel}`
               : authCopy.individualWorkspace}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -508,6 +508,29 @@ function SignupLoginLink() {
   );
 }
 
+function SignupSidePanelCopy() {
+  const { language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
+
+  return (
+    <>
+      <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
+        {copy.createRightSpaceTitle}
+      </h1>
+      <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
+        {copy.signupPanelCopy}
+      </p>
+    </>
+  );
+}
+
+function SignupOrganizationBenefits() {
+  const { language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
+
+  return <>{copy.organizationBenefits}</>;
+}
+
 export default function SignupPage() {
   return (
     <main className="premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_560px]">
@@ -519,15 +542,14 @@ export default function SignupPage() {
           <span className="font-display text-xl font-bold">EdSync</span>
         </Link>
         <div className="premium-panel rounded-[1.65rem] p-7">
-          <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Create the right space first.
-          </h1>
-          <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
-            Start as an individual or enter an organization before choosing teacher or student mode.
-          </p>
+          <Suspense fallback={null}>
+            <SignupSidePanelCopy />
+          </Suspense>
         </div>
         <p className="text-sm text-edsync-subtle">
-          Individuals stay simple. Organizations get scoped portals, catalogs, and role controls.
+          <Suspense fallback={<span>Individuals stay simple. Organizations get scoped portals, catalogs, and role controls.</span>}>
+            <SignupOrganizationBenefits />
+          </Suspense>
         </p>
       </section>
 
