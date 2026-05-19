@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
-import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import { validateOrganizationCode } from "@/lib/auth/organization-code";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
@@ -31,7 +31,18 @@ export async function POST(request: Request) {
 
   const normalizedEmail = email.trim().toLowerCase();
   const accountType = body.account_type === "organization" ? "organization" : "individual";
-  const organizationCode = normalizeOrganizationCode(body.organization_code);
+  let organizationCode: string | null = null;
+  if (accountType === "organization") {
+    try {
+      organizationCode = validateOrganizationCode(body.organization_code);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Organization code is invalid.";
+      return NextResponse.json({
+        data: { user: null, session: null },
+        error: { message, status: 400 },
+      }, { status: 400 });
+    }
+  }
   const rate = await enforceRateLimit({
     request,
     scope: "auth_login",
@@ -84,13 +95,6 @@ export async function POST(request: Request) {
 
   let tenantContext: { id: string; slug: string; name: string } | null = null;
   if (accountType === "organization") {
-    if (!organizationCode) {
-      return NextResponse.json({
-        data: { user: null, session: null },
-        error: { message: "Organization code is required.", status: 400 },
-      }, { status: 400 });
-    }
-
     const [membership] = await d1Query<{ id: string; slug: string; name: string }>(
       `SELECT t.id, t.slug, t.name
          FROM tenants t
