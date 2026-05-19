@@ -4186,8 +4186,8 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-public-launch .edsync-launch-copy h1 {
-    max-width: 23rem;
-    font-size: clamp(3.05rem, 15vw, 4.15rem);
+    max-width: 20rem;
+    font-size: clamp(2.65rem, 13vw, 3.4rem);
   }
 
   .edsync-public-launch .edsync-launch-copy[data-public-language="Korean"] h1,
@@ -4198,9 +4198,20 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-public-launch .edsync-launch-copy p {
-    max-width: 25rem;
-    font-size: 0.98rem;
-    line-height: 1.55;
+    display: none;
+  }
+
+  .edsync-public-launch .edsync-launch-cta-row {
+    gap: 0.45rem;
+  }
+
+  .edsync-public-launch .edsync-launch-primary,
+  .edsync-public-launch .edsync-launch-secondary,
+  .edsync-public-launch .edsync-launch-tertiary {
+    min-height: 2.4rem;
+    border-radius: 0.8rem;
+    padding: 0.65rem 0.82rem;
+    font-size: 0.82rem;
   }
 
   .edsync-public-launch .edsync-launch-preview-grid {
@@ -4293,7 +4304,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-public-launch .edsync-launch-preview-wrap {
-    max-height: 27rem;
+    max-height: 23.5rem;
     max-width: 100%;
     overflow: hidden;
   }
@@ -4307,7 +4318,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-public-launch .edsync-launch-workspace-head h2 {
-    font-size: 1.35rem;
+    font-size: 1.15rem;
   }
 
   .edsync-public-launch .edsync-launch-focus-card {
@@ -4336,14 +4347,11 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-public-launch .edsync-launch-focus-copy strong {
-    font-size: clamp(1.35rem, 8vw, 1.9rem);
+    font-size: clamp(1.18rem, 7vw, 1.6rem);
   }
 
   .edsync-public-launch .edsync-launch-focus-copy p {
-    display: block;
-    max-width: 12rem;
-    font-size: 0.72rem;
-    line-height: 1.28;
+    display: none;
   }
 
   .edsync-launch-app-path span:nth-child(n+4) {
@@ -4352,6 +4360,54 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-public-launch .edsync-catalog-availability {
     padding-top: 1.8rem;
+  }
+
+  .edsync-public-launch .edsync-workflow-copy p,
+  .edsync-public-launch .edsync-workflow-checklist {
+    display: none;
+  }
+
+  .edsync-public-launch .edsync-workflow-copy h3 {
+    font-size: clamp(1.85rem, 9.5vw, 2.45rem);
+    letter-spacing: -0.035em;
+  }
+
+  .edsync-public-launch .edsync-workflow-showcase .edsync-workflow-sidepanel {
+    display: flex;
+    gap: 0.42rem;
+    overflow-x: auto;
+    padding: 0.52rem;
+  }
+
+  .edsync-public-launch .edsync-workflow-sidepanel span {
+    flex: 0 0 auto;
+    padding: 0.5rem 0.62rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .edsync-public-launch .edsync-workflow-preview-head h4 {
+    font-size: 1.15rem;
+  }
+
+  .edsync-public-launch .edsync-workflow-preview-head p,
+  .edsync-public-launch .edsync-workflow-preview-head > span {
+    font-size: 0.66rem;
+  }
+
+  .edsync-public-launch .edsync-workflow-loop-map span:nth-child(n+4),
+  .edsync-public-launch .edsync-workflow-preview-metrics span:nth-child(n+3),
+  .edsync-public-launch .edsync-workflow-preview-rows span:nth-child(n+2) {
+    display: none;
+  }
+
+  .edsync-public-launch .edsync-workflow-preview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edsync-public-launch .edsync-workflow-mock-toolbar span:not(.is-wide),
+  .edsync-public-launch .edsync-workflow-editor-ribbon span:nth-child(n+5) {
+    display: none;
   }
 }
 
