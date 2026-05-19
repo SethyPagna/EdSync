@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
-import { homeForRole, normalizeRedirectRole, safeNextPath } from "@/lib/auth/redirects";
+import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
+import { normalizeUserRole } from "@/lib/auth/roles";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -120,7 +121,7 @@ function LoginForm() {
       return;
     }
 
-    const role = normalizeRedirectRole(data.user?.user_metadata?.role as string | undefined);
+    const role = normalizeUserRole(data.user?.user_metadata?.role);
     if (!role) {
       toast.error(authCopy.missingRole);
       setLoading(false);
