@@ -6,7 +6,8 @@ describe("auth redirects", () => {
     expect(homeForRole("admin")).toBe("/admin/dashboard");
     expect(homeForRole("teacher")).toBe("/teacher/dashboard");
     expect(homeForRole("student")).toBe("/student/dashboard");
-    expect(homeForRole(null)).toBe("/student/dashboard");
+    expect(homeForRole(null)).toBe("/auth/login");
+    expect(homeForRole("unknown")).toBe("/auth/login");
   });
 
   it("accepts only known app-local next paths", () => {
@@ -20,5 +21,6 @@ describe("auth redirects", () => {
   it("falls back to role home for unsafe paths", () => {
     expect(safeNextPath("/org/main", "student")).toBe("/org/main");
     expect(safeNextPath("https://evil.example", "teacher")).toBe("/teacher/dashboard");
+    expect(safeNextPath("https://evil.example", null)).toBe("/auth/login");
   });
 });
