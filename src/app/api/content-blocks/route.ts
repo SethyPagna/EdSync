@@ -4,7 +4,6 @@ import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent } from "@/lib/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import {
-  normalizeContentBlockStatus,
   normalizeContentBlockTags,
   normalizeContentBlockType,
   validateContentBlockData,
