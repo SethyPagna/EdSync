@@ -86,15 +86,15 @@ function LoginForm() {
     event.preventDefault();
     const normalizedOrganizationCode = normalizeOrganizationCode(organizationCode);
     if (accountType === "organization" && !normalizedOrganizationCode) {
-      toast.error("Enter your organization code first.");
+      toast.error(authCopy.enterOrganizationCodeFirst);
       return;
     }
     if (accountType === "organization" && organizationStatus === "checking") {
-      toast.error("Still checking that organization.");
+      toast.error(authCopy.stillCheckingOrganization);
       return;
     }
     if (accountType === "organization" && !organizationLookup) {
-      toast.error("Choose an active organization before signing in.");
+      toast.error(authCopy.chooseActiveOrganizationSignIn);
       return;
     }
 
@@ -110,9 +110,9 @@ function LoginForm() {
     if (error) {
       const message = error.message.toLowerCase();
       if (message.includes("email not confirmed")) {
-        toast.error("Please confirm your email before signing in.");
+        toast.error(authCopy.confirmEmailFirst);
       } else if (message.includes("invalid login credentials")) {
-        toast.error("Wrong email or password.");
+        toast.error(authCopy.wrongCredentials);
       } else {
         toast.error(error.message);
       }
@@ -138,7 +138,7 @@ function LoginForm() {
       }),
     );
 
-    toast.success("Welcome back.");
+    toast.success(authCopy.welcomeBack);
     router.push(safeNext);
     router.refresh();
   };
@@ -228,7 +228,7 @@ function LoginForm() {
               }`}
             >
               {organizationStatus === "found"
-                ? `Found ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
+                ? `${authCopy.foundOrganization} ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
                 : organizationStatus === "checking"
                   ? authCopy.checkingOrganization
                   : authCopy.missingOrganization}
@@ -302,6 +302,29 @@ function LoginSignupLink() {
   );
 }
 
+function LoginSidePanelCopy() {
+  const { language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
+
+  return (
+    <>
+      <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
+        {copy.workspaceTitle}
+      </h1>
+      <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
+        {copy.workspaceCopy}
+      </p>
+    </>
+  );
+}
+
+function ProtectedPortalsCopy() {
+  const { language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
+
+  return <span>{copy.protectedPortals}</span>;
+}
+
 export default function LoginPage() {
   return (
     <main className="premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_520px]">
@@ -313,16 +336,15 @@ export default function LoginPage() {
           <span className="font-display text-xl font-bold">EdSync</span>
         </Link>
         <div className="premium-panel rounded-[1.65rem] p-7">
-          <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-            Enter your learning workspace.
-          </h1>
-          <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
-            Choose an organization when your school or company manages access, or continue with your individual space.
-          </p>
+          <Suspense fallback={null}>
+            <LoginSidePanelCopy />
+          </Suspense>
         </div>
         <div className="flex items-center gap-3 text-sm text-edsync-subtle">
           <ShieldCheck className="h-5 w-5 text-edsync-emerald" />
-          Protected teacher, student, and admin portals.
+          <Suspense fallback={<span>Protected teacher, student, and admin portals.</span>}>
+            <ProtectedPortalsCopy />
+          </Suspense>
         </div>
       </section>
 
