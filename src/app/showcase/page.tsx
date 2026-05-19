@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
-import { publicLanguageHref } from "@/lib/public/languages";
+import { publicLanguageHref, type PublicLanguageSearchParams } from "@/lib/public/languages";
 
 export const metadata: Metadata = {
   title: "Workflow",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function ShowcasePage({
   searchParams,
 }: {
-  searchParams?: { language?: string };
+  searchParams?: PublicLanguageSearchParams;
 }) {
   const catalogHref = publicLanguageHref("/catalog", searchParams?.language);
 
