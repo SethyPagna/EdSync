@@ -49,6 +49,11 @@ export function normalizeFeatureFlagAudience(value: unknown): FeatureFlagAudienc
   return FEATURE_FLAG_AUDIENCES.has(audience) ? (audience as FeatureFlagAudience) : "all";
 }
 
+export function normalizeFeatureFlagEnabled(value: unknown) {
+  if (typeof value !== "boolean") throw new Error("Feature flag enabled state must be true or false.");
+  return value;
+}
+
 export function normalizeFeatureFlagInput(input: {
   flagKey?: unknown;
   label?: unknown;
@@ -60,7 +65,7 @@ export function normalizeFeatureFlagInput(input: {
     flagKey: normalizeFeatureFlagKey(input.flagKey),
     label: validateFeatureFlagText(input.label, "Flag label", FEATURE_FLAG_LABEL_MAX_LENGTH),
     description: validateFeatureFlagText(input.description, "Flag description", FEATURE_FLAG_DESCRIPTION_MAX_LENGTH, false) || null,
-    enabled: Boolean(input.enabled),
+    enabled: normalizeFeatureFlagEnabled(input.enabled),
     audience: normalizeFeatureFlagAudience(input.audience),
   };
 }
