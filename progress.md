@@ -227,6 +227,7 @@
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `3ba9584b-dc82-4424-b759-907469f4ab60`. Live smoke checks returned 200 for `/catalog?language=Spanish`, `/showcase`, and `/auth/login`, and `/api/catalog` returned an empty catalog payload without errors.
 - Continued public preview localization on 2026-05-19: reduced the remaining English-heavy hero preview titles and block summaries by using selected-language public labels for Catalog, Studio, AI, Practice, Grades, Courses, Search, Filters, Duration, Difficulty, Free, and Start across the gallery.
 - Verification for this preview label pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3507/catalog?language=Spanish` returned 200, and a mobile screenshot confirmed the preview uses shorter localized labels without clipping.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `08d9b1d7-ca81-4a45-b251-37ad555e3383`. Live smoke checks returned 200 for `/catalog?language=Spanish`, `/showcase`, and `/auth/login`, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
