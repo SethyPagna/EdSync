@@ -4,6 +4,7 @@ import {
   normalizeContentBlockTags,
   normalizeContentBlockType,
   validateContentBlockData,
+  validateContentBlockStatus,
   validateContentBlockTitle,
 } from "@/lib/studio/content-block-validation";
 
@@ -13,6 +14,14 @@ describe("content block validation", () => {
     expect(normalizeContentBlockType("unknown")).toBe("rich_text");
     expect(normalizeContentBlockStatus("published")).toBe("published");
     expect(normalizeContentBlockStatus("deleted")).toBe("draft");
+  });
+
+  it("validates statuses for API writes", () => {
+    expect(validateContentBlockStatus(undefined)).toBe("draft");
+    expect(validateContentBlockStatus("published")).toBe("published");
+    expect(validateContentBlockStatus("archived")).toBe("archived");
+    expect(() => validateContentBlockStatus("archived", { allowArchived: false })).toThrow("supported content block status");
+    expect(() => validateContentBlockStatus("deleted")).toThrow("supported content block status");
   });
 
   it("cleans, de-duplicates, and limits tags", () => {
