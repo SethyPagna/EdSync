@@ -4,6 +4,7 @@ const WORK_TYPES = new Set(["quiz", "test", "task", "discussion", "activity"]);
 const WORK_STATUSES = new Set(["draft", "published", "archived"]);
 
 export const WORK_POINTS_MAX = 10_000;
+export const WORK_RESPONSE_MAX_BYTES = 250_000;
 
 export function isWorkType(value: unknown): value is WorkType {
   return typeof value === "string" && WORK_TYPES.has(value);
@@ -39,4 +40,17 @@ export function validateWorkPoints(value: unknown, fallback = 100) {
 export function validateEarnedWorkPoints(value: unknown, pointsPossible: number) {
   const points = validateWorkPoints(value, 0);
   return Math.min(points, pointsPossible);
+}
+
+export function validateWorkResponse(value: unknown) {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Submission response must be an object.");
+  }
+
+  const json = JSON.stringify(value);
+  if (new TextEncoder().encode(json).length > WORK_RESPONSE_MAX_BYTES) {
+    throw new Error("Submission response is too large. Split it into a smaller answer or attachment.");
+  }
+  return value as Record<string, unknown>;
 }
