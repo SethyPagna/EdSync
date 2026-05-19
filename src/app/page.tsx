@@ -1,12 +1,25 @@
 import { redirect } from "next/navigation";
 import CatalogPage from "./catalog/page";
 import { getSessionUser } from "@/lib/auth/session";
+import { publicLanguageHref } from "@/lib/public/languages";
 import { resolveTenantContext } from "@/lib/tenancy";
+
+type RootSearchParams = {
+  q?: string;
+  portal?: string;
+  tenant?: string;
+  price?: string;
+  category?: string;
+  difficulty?: string;
+  language?: string;
+  courseLanguage?: string;
+  duration?: string;
+};
 
 export default async function RootPage({
   searchParams,
 }: {
-  searchParams?: { q?: string; portal?: string; tenant?: string };
+  searchParams?: RootSearchParams;
 }) {
   const user = await getSessionUser().catch(() => null);
 
@@ -25,7 +38,7 @@ export default async function RootPage({
     context?.portal?.slug &&
     ["public", "customer", "partner"].includes(context.portal.audience)
   ) {
-    redirect(`/org/${context.portal.slug}`);
+    redirect(publicLanguageHref(`/org/${context.portal.slug}`, searchParams?.language));
   }
 
   return <CatalogPage searchParams={searchParams} />;
