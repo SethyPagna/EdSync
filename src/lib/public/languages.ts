@@ -44,6 +44,11 @@ export function publicLanguageQuerySuffix(value?: string | null) {
   return language === DEFAULT_PUBLIC_LANGUAGE ? "" : `?language=${encodeURIComponent(language)}`;
 }
 
+export function publicLanguageQueryValue(value?: string | null) {
+  const language = normalizePublicLanguage(value);
+  return language === DEFAULT_PUBLIC_LANGUAGE ? null : language;
+}
+
 export function languageLabelFor(value?: string | null) {
   return LANGUAGE_LABELS[normalizePublicLanguage(value)];
 }
