@@ -39,6 +39,11 @@ export function normalizePublicLanguage(value?: string | null): PublicLanguageNa
   return byCode?.name ?? DEFAULT_PUBLIC_LANGUAGE;
 }
 
+export function publicLanguageQuerySuffix(value?: string | null) {
+  const language = normalizePublicLanguage(value);
+  return language === DEFAULT_PUBLIC_LANGUAGE ? "" : `?language=${encodeURIComponent(language)}`;
+}
+
 export function languageLabelFor(value?: string | null) {
   return LANGUAGE_LABELS[normalizePublicLanguage(value)];
 }
