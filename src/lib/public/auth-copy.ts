@@ -2,37 +2,52 @@ import { normalizePublicLanguage, type PublicLanguageName } from "./languages";
 
 type AuthCopy = {
   account: string;
+  accountCreated: string;
   accountStep: string;
   alreadyHaveAccount: string;
   back: string;
   checkEmail: string;
   checkingOrganization: string;
   chooseActiveOrganization: string;
+  chooseActiveOrganizationSignIn: string;
+  confirmEmailFirst: string;
   continue: string;
   createNew: string;
+  createRightSpaceTitle: string;
   creatingAccount: string;
   email: string;
+  emailAlreadyRegistered: string;
+  emailSent: string;
+  enterOrganizationCodeFirst: string;
+  enterOrganizationNameFirst: string;
   enterOrganization: string;
+  foundOrganization: string;
   fullName: string;
   individual: string;
   individualCopy: string;
   individualWorkspace: string;
   joinExisting: string;
+  joiningOrganization: string;
   missingOrganization: string;
   newToEdSync: string;
+  newOrganization: string;
   openPortal: string;
   organization: string;
+  organizationBenefits: string;
   organizationCode: string;
   organizationCopy: string;
   organizationName: string;
   password: string;
+  passwordMin: string;
   passwordPlaceholder: string;
   protectedPortals: string;
   role: string;
   roleStep: string;
   signingIn: string;
+  signupPanelCopy: string;
   spaceStep: string;
   ssoOptions: string;
+  stillCheckingOrganization: string;
   student: string;
   studentCopy: string;
   teacher: string;
@@ -41,41 +56,57 @@ type AuthCopy = {
   welcomeBack: string;
   workspaceTitle: string;
   workspaceCopy: string;
+  wrongCredentials: string;
 };
 
 const englishAuthCopy: AuthCopy = {
   account: "Account",
+  accountCreated: "Account created.",
   accountStep: "3 Account",
   alreadyHaveAccount: "Already have an account?",
   back: "Back",
   checkEmail: "Check your email",
   checkingOrganization: "Checking organization...",
   chooseActiveOrganization: "Choose an active organization before continuing.",
+  chooseActiveOrganizationSignIn: "Choose an active organization before signing in.",
+  confirmEmailFirst: "Please confirm your email before signing in.",
   continue: "Continue",
   createNew: "Create new",
+  createRightSpaceTitle: "Create the right space first.",
   creatingAccount: "Creating account...",
   email: "Email",
+  emailAlreadyRegistered: "This email is already registered. Try signing in.",
+  emailSent: "We sent a confirmation link to",
+  enterOrganizationCodeFirst: "Enter your organization code first.",
+  enterOrganizationNameFirst: "Enter your organization name first.",
   enterOrganization: "Enter organization",
+  foundOrganization: "Found",
   fullName: "Full name",
   individual: "Individual",
   individualCopy: "Personal teacher or learner workspace.",
   individualWorkspace: "Individual workspace",
   joinExisting: "Join existing",
+  joiningOrganization: "Joining organization",
   missingOrganization: "No active organization found for that code yet.",
   newToEdSync: "New to EdSync?",
+  newOrganization: "New organization",
   openPortal: "Open portal",
   organization: "Organization",
+  organizationBenefits: "Individuals stay simple. Organizations get scoped portals, catalogs, and role controls.",
   organizationCode: "Organization code",
   organizationCopy: "School, academy, company, or cohort.",
   organizationName: "Organization name",
   password: "Password",
+  passwordMin: "Password must be at least 8 characters.",
   passwordPlaceholder: "Minimum 8 characters",
   protectedPortals: "Protected teacher, student, and admin portals.",
   role: "Role",
   roleStep: "2 Role",
   signingIn: "Signing in...",
+  signupPanelCopy: "Start as an individual or enter an organization before choosing teacher or student mode.",
   spaceStep: "1 Workspace",
   ssoOptions: "SSO options",
+  stillCheckingOrganization: "Still checking that organization.",
   student: "Student",
   studentCopy: "Join learning spaces, take lessons, track grades, and save progress.",
   teacher: "Teacher",
@@ -84,6 +115,7 @@ const englishAuthCopy: AuthCopy = {
   welcomeBack: "Welcome back",
   workspaceTitle: "Enter your learning workspace.",
   workspaceCopy: "Choose an organization when your school or company manages access, or continue with your individual space.",
+  wrongCredentials: "Wrong email or password.",
 };
 
 const authCopy: Record<PublicLanguageName, Partial<AuthCopy>> = {
@@ -206,35 +238,51 @@ const authCopy: Record<PublicLanguageName, Partial<AuthCopy>> = {
   },
   Spanish: {
     account: "Cuenta",
+    accountCreated: "Cuenta creada.",
     alreadyHaveAccount: "¿Ya tienes una cuenta?",
     back: "Atrás",
     checkEmail: "Revisa tu correo",
     checkingOrganization: "Comprobando organización...",
     continue: "Continuar",
+    chooseActiveOrganization: "Elige una organización activa antes de continuar.",
+    chooseActiveOrganizationSignIn: "Elige una organización activa antes de iniciar sesión.",
+    confirmEmailFirst: "Confirma tu correo antes de iniciar sesión.",
     createNew: "Crear nueva",
+    createRightSpaceTitle: "Crea primero el espacio correcto.",
     creatingAccount: "Creando cuenta...",
     email: "Correo",
+    emailAlreadyRegistered: "Este correo ya está registrado. Intenta iniciar sesión.",
+    emailSent: "Enviamos un enlace de confirmación a",
+    enterOrganizationCodeFirst: "Ingresa primero el código de tu organización.",
+    enterOrganizationNameFirst: "Ingresa primero el nombre de tu organización.",
     enterOrganization: "Entrar a organización",
+    foundOrganization: "Encontramos",
     fullName: "Nombre completo",
     individual: "Individual",
     individualCopy: "Espacio personal para enseñar o aprender.",
     individualWorkspace: "Espacio individual",
     joinExisting: "Unirse a existente",
+    joiningOrganization: "Uniéndose a organización",
     missingOrganization: "No se encontró una organización activa con ese código.",
     newToEdSync: "¿Nuevo en EdSync?",
+    newOrganization: "Nueva organización",
     openPortal: "Abrir portal",
     organization: "Organización",
+    organizationBenefits: "Los espacios individuales se mantienen simples. Las organizaciones obtienen portales, catálogos y roles.",
     organizationCode: "Código de organización",
     organizationCopy: "Escuela, academia, empresa o grupo.",
     organizationName: "Nombre de organización",
     password: "Contraseña",
+    passwordMin: "La contraseña debe tener al menos 8 caracteres.",
     passwordPlaceholder: "Mínimo 8 caracteres",
     protectedPortals: "Portales protegidos para docentes, estudiantes y admin.",
     role: "Rol",
     roleStep: "2 Rol",
     signingIn: "Iniciando sesión...",
+    signupPanelCopy: "Empieza como individual o entra a una organización antes de elegir docente o estudiante.",
     spaceStep: "1 Espacio",
     ssoOptions: "Opciones SSO",
+    stillCheckingOrganization: "Todavía estamos comprobando esa organización.",
     student: "Estudiante",
     studentCopy: "Únete a espacios, toma lecciones, revisa notas y guarda progreso.",
     teacher: "Docente",
@@ -243,6 +291,7 @@ const authCopy: Record<PublicLanguageName, Partial<AuthCopy>> = {
     welcomeBack: "Bienvenido de nuevo",
     workspaceTitle: "Entra a tu espacio de aprendizaje.",
     workspaceCopy: "Usa una organización si tu escuela o empresa gestiona el acceso, o continúa con tu espacio individual.",
+    wrongCredentials: "Correo o contraseña incorrectos.",
   },
   French: {
     account: "Compte",
