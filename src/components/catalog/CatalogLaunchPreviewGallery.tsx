@@ -89,6 +89,7 @@ export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPre
   const slides = useMemo(() => buildSlides(labels), [labels]);
   const [activeIndex, setActiveIndex] = useState(0);
   const pauseUntilRef = useRef(0);
+  const touchStartXRef = useRef<number | null>(null);
   const activeSlide = slides[activeIndex] ?? slides[0];
   const ActiveIcon = activeSlide.icon;
 
@@ -100,6 +101,8 @@ export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPre
   }, [slides.length]);
 
   useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const id = window.setInterval(() => {
       if (document.hidden || Date.now() < pauseUntilRef.current) return;
       setActiveIndex((index) => (index + 1) % slides.length);
@@ -110,11 +113,29 @@ export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPre
   return (
     <div
       className="edsync-launch-preview-board"
+      role="region"
+      tabIndex={0}
+      aria-label="EdSync product preview gallery"
       onFocusCapture={() => {
         pauseUntilRef.current = Date.now() + 9000;
       }}
       onMouseEnter={() => {
         pauseUntilRef.current = Date.now() + 9000;
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        showSlide(activeIndex + (event.key === "ArrowRight" ? 1 : -1));
+      }}
+      onTouchStart={(event) => {
+        touchStartXRef.current = event.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(event) => {
+        const startX = touchStartXRef.current;
+        const endX = event.changedTouches[0]?.clientX;
+        touchStartXRef.current = null;
+        if (startX == null || endX == null || Math.abs(startX - endX) < 42) return;
+        showSlide(activeIndex + (startX > endX ? 1 : -1));
       }}
     >
       <div className="edsync-launch-preview-grid" key={activeSlide.id}>
