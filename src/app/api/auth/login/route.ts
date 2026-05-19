@@ -22,15 +22,15 @@ export async function POST(request: Request) {
   }
 
   const { email, password } = body;
+  const normalizedEmail = email?.trim().toLowerCase();
 
-  if (!email || !password) {
+  if (!normalizedEmail || !password) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Email and password are required.", status: 400 },
     }, { status: 400 });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
   const accountType = normalizeAccountType(body.account_type);
   if (!accountType) {
     return NextResponse.json({
