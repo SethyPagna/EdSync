@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent, recordGradeEvent } from "@/lib/learning-events";
 import { resolveTenantContext } from "@/lib/tenancy";
-import { validateEarnedWorkPoints, validateWorkPoints } from "@/lib/work/validation";
+import { validateEarnedWorkPoints, validateWorkPoints, validateWorkResponse } from "@/lib/work/validation";
 
 function percent(pointsEarned: number, pointsPossible: number) {
   return pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 10000) / 100 : null;
@@ -74,6 +74,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: "Work item is not available." }, { status: 404 });
   }
 
+  let response: Record<string, unknown>;
+  try {
+    response = validateWorkResponse(body.response);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid submission response." },
+      { status: 400 },
+    );
+  }
+
   const id = crypto.randomUUID();
   const context = await resolveTenantContext(user);
   await d1Query(
@@ -85,7 +95,7 @@ export async function POST(request: Request) {
        status = 'submitted',
        submitted_at = datetime('now'),
        updated_at = datetime('now')`,
-    [id, body.workItemId, user.id, work.class_id, JSON.stringify(body.response ?? {})],
+    [id, body.workItemId, user.id, work.class_id, JSON.stringify(response)],
   );
   const eventId = await appendLearningEvent({
     tenantId: context.tenant.id,
