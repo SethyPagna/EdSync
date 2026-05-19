@@ -8,6 +8,7 @@ import {
   normalizeContentBlockTags,
   normalizeContentBlockType,
   validateContentBlockData,
+  validateContentBlockStatus,
   validateContentBlockTitle,
 } from "@/lib/studio/content-block-validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
@@ -113,14 +114,15 @@ export async function POST(request: Request) {
   const body = (await request.json()) as { title?: string; blockType?: string; data?: Record<string, unknown>; tags?: string[]; status?: string };
   let title: string;
   let data: Record<string, unknown>;
+  let status: "draft" | "published";
   try {
     title = validateContentBlockTitle(body.title);
     data = validateContentBlockData(body.data);
+    status = validateContentBlockStatus(body.status, { allowArchived: false }) as "draft" | "published";
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Invalid content block.");
   }
   const blockType = normalizeContentBlockType(body.blockType);
-  const status = normalizeContentBlockStatus(body.status);
   const tags = normalizeContentBlockTags(body.tags);
   if (status === "published") await requirePermission(user, context, PERMISSIONS.coursesPublish);
   const id = crypto.randomUUID();
@@ -204,8 +206,13 @@ export async function PATCH(request: Request) {
     updates.push("tags = ?");
     values.push(JSON.stringify(normalizeContentBlockTags(body.tags)));
   }
+  let status: "draft" | "published" | "archived" | null = null;
   if (body.status !== undefined) {
-    const status = normalizeContentBlockStatus(body.status);
+    try {
+      status = validateContentBlockStatus(body.status);
+    } catch (error) {
+      return jsonError(error instanceof Error ? error.message : "Invalid content block status.");
+    }
     if (status === "published") await requirePermission(user, context, PERMISSIONS.coursesPublish);
     updates.push("status = ?");
     values.push(status);
@@ -224,9 +231,9 @@ export async function PATCH(request: Request) {
     actorId: user.id,
     blockId: body.id,
     eventType:
-      body.status === "published"
+      status === "published"
         ? "content_block.published"
-        : body.status === "archived"
+        : status === "archived"
           ? "content_block.archived"
           : "content_block.updated",
     title: row?.title,
