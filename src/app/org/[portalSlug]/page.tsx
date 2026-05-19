@@ -72,6 +72,7 @@ export default async function OrganizationPortalPage({
         organizationName={portal.name}
         organizationCode={portal.tenant_slug}
         portalSlug={portal.slug}
+        language={filters.language}
       />
 
       <section className="mx-auto max-w-7xl px-4 py-8">
