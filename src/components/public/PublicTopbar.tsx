@@ -5,6 +5,7 @@ import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
+import { normalizePublicLanguage } from "@/lib/public/languages";
 
 type PublicTopbarProps = {
   active?: "catalog" | "organization" | "course";
@@ -12,6 +13,7 @@ type PublicTopbarProps = {
   organizationCode?: string;
   portalSlug?: string;
   organizationSlug?: string;
+  language?: string | null;
 };
 
 export default async function PublicTopbar({
@@ -19,9 +21,11 @@ export default async function PublicTopbar({
   organizationCode,
   portalSlug,
   organizationSlug,
+  language,
 }: PublicTopbarProps) {
   const cookieStore = await cookies();
-  const copy = getPublicCopy();
+  const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
+  const copy = getPublicCopy(publicLanguage);
   const resolvedOrganizationCode = organizationCode || organizationSlug || portalSlug;
   const role = cookieStore.get(ROLE_COOKIE)?.value;
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
@@ -33,9 +37,11 @@ export default async function PublicTopbar({
         : role === "student"
           ? "/student/dashboard"
           : "/auth/login";
-  const loginHref = resolvedOrganizationCode
-    ? `/auth/login?org=${encodeURIComponent(resolvedOrganizationCode)}`
-    : "/auth/login";
+  const loginParams = new URLSearchParams();
+  if (resolvedOrganizationCode) loginParams.set("org", resolvedOrganizationCode);
+  if (publicLanguage) loginParams.set("language", publicLanguage);
+  const loginQuery = loginParams.toString();
+  const loginHref = `/auth/login${loginQuery ? `?${loginQuery}` : ""}`;
 
   return (
     <header className="edsync-public-topbar sticky top-0 z-30 bg-edsync-bg/92 backdrop-blur-xl">
@@ -65,7 +71,7 @@ export default async function PublicTopbar({
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
           <Link href={signedIn ? workspaceHref : loginHref} className="btn-primary !hidden justify-center px-3 py-2 text-sm sm:!inline-flex sm:px-4">
-            <span>{signedIn ? "Open workspace" : copy.signIn}</span>
+            <span>{signedIn ? copy.start : copy.signIn}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
