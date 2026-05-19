@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent, recordGradeEvent } from "@/lib/learning-events";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { validateEarnedWorkPoints, validateWorkPoints } from "@/lib/work/validation";
 
 function percent(pointsEarned: number, pointsPossible: number) {
   return pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 10000) / 100 : null;
@@ -139,8 +140,17 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ data: null, error: "Submission not found." }, { status: 404 });
   }
 
-  const pointsPossible = Number(body.pointsPossible ?? submission.points_possible ?? 0);
-  const pointsEarned = Number(body.pointsEarned ?? 0);
+  let pointsPossible: number;
+  let pointsEarned: number;
+  try {
+    pointsPossible = validateWorkPoints(body.pointsPossible, submission.points_possible ?? 0);
+    pointsEarned = validateEarnedWorkPoints(body.pointsEarned, pointsPossible);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid score." },
+      { status: 400 },
+    );
+  }
   const scorePercent = percent(pointsEarned, pointsPossible);
 
   await d1Query(
