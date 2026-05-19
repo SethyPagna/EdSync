@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enrollCatalogItem, getPublicCatalogItem } from "@/lib/catalog";
+import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 export async function POST(
   request: Request,
@@ -11,7 +12,7 @@ export async function POST(
     const item = await getPublicCatalogItem(params.id);
     const url = new URL(request.url);
     const language = url.searchParams.get("language");
-    const detailQuery = language ? `?language=${encodeURIComponent(language)}` : "";
+    const detailQuery = publicLanguageQuerySuffix(language);
     const detailUrl = `/catalog/${params.id}${detailQuery}`;
     const successUrl = new URL(detailUrl, url.origin);
     successUrl.searchParams.set("enrolled", "1");
