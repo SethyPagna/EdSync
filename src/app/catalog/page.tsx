@@ -61,7 +61,7 @@ export default async function CatalogPage({
       />
 
       <section className="mx-auto max-w-[90rem] px-4">
-        <WorkflowShowcase />
+        <WorkflowShowcase language={filters.language} />
 
         <section id="catalog-search-panel" className="edsync-catalog-availability scroll-mt-20 py-10">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
