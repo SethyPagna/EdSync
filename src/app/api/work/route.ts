@@ -3,8 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent } from "@/lib/learning-events";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
-
-const WORK_TYPES = new Set(["quiz", "test", "task", "discussion", "activity"]);
+import { validateWorkPoints, validateWorkStatus, validateWorkType } from "@/lib/work/validation";
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -82,13 +81,25 @@ export async function POST(request: Request) {
     }>;
   };
 
-  const workType = body.workType || "task";
-  if (!body.title || !WORK_TYPES.has(workType)) {
-    return NextResponse.json({ data: null, error: "Title and valid work type are required." }, { status: 400 });
+  if (!body.title?.trim()) {
+    return NextResponse.json({ data: null, error: "Title is required." }, { status: 400 });
+  }
+
+  let workType: ReturnType<typeof validateWorkType>;
+  let status: "draft" | "published";
+  let pointsPossible: number;
+  try {
+    workType = validateWorkType(body.workType);
+    status = validateWorkStatus(body.status, { allowArchived: false }) as "draft" | "published";
+    pointsPossible = validateWorkPoints(body.pointsPossible);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid work item." },
+      { status: 400 },
+    );
   }
 
   const id = crypto.randomUUID();
-  const pointsPossible = Math.max(0, Number(body.pointsPossible ?? 100));
   const context = await resolveTenantContext(user);
   await d1Query(
     `INSERT INTO learning_work_items (
@@ -107,7 +118,7 @@ export async function POST(request: Request) {
       body.instructions ?? null,
       pointsPossible,
       body.dueAt ?? null,
-      body.status ?? "draft",
+      status,
       body.allowLate === false ? 0 : 1,
       JSON.stringify(body.rubric ?? []),
     ],
@@ -150,7 +161,7 @@ export async function POST(request: Request) {
     sourceType: "learning_work_item",
     sourceId: id,
     eventType: `work.${workType}.created`,
-    payload: { title: body.title.trim(), status: body.status ?? "draft", pointsPossible },
+    payload: { title: body.title.trim(), status, pointsPossible },
   });
 
   return NextResponse.json({ data: { id }, error: null });
