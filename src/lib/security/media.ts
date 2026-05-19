@@ -8,6 +8,7 @@ const ALLOWED_EMBED_HOSTS = new Set([
 ]);
 
 const ALLOWED_PUBLIC_MEDIA_PROTOCOLS = new Set(["https:"]);
+export const PUBLIC_MEDIA_URL_MAX_LENGTH = 2048;
 const BLOCKED_PUBLIC_FILE_EXTENSIONS = new Set([
   "apk",
   "app",
@@ -80,6 +81,7 @@ function vimeoEmbed(url: URL) {
 
 export function safePublicUrl(value?: string | null) {
   if (!value) return null;
+  if (value.length > PUBLIC_MEDIA_URL_MAX_LENGTH) return null;
   try {
     const url = new URL(value);
     if (!ALLOWED_PUBLIC_MEDIA_PROTOCOLS.has(url.protocol)) return null;
