@@ -8,7 +8,7 @@ import CatalogLaunchPreviewGallery, {
 } from "@/components/catalog/CatalogLaunchPreviewGallery";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { normalizePublicLanguage, publicLanguageQuerySuffix } from "@/lib/public/languages";
+import { normalizePublicLanguage, publicLanguageHref } from "@/lib/public/languages";
 
 type CatalogLaunchHeroProps = {
   title?: string;
@@ -111,8 +111,8 @@ export default async function CatalogLaunchHero({
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
   const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
   const copy = getPublicCopy(publicLanguage);
-  const languageQuery = publicLanguageQuerySuffix(publicLanguage);
-  const authQuery = languageQuery;
+  const loginHref = publicLanguageHref("/auth/login", publicLanguage);
+  const signupHref = publicLanguageHref("/auth/signup", publicLanguage);
   const [, studioLabel = "Studio", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const previewSlides = buildLaunchPreviewSlides({
     catalog: copy.catalogLabel,
@@ -160,7 +160,7 @@ export default async function CatalogLaunchHero({
           </a>
           <ThemeToggle compact className="edsync-launch-icon" />
           <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
-          <Link href={signedIn ? workspaceHref : `/auth/login${authQuery}`} className="edsync-launch-signin">
+          <Link href={signedIn ? workspaceHref : loginHref} className="edsync-launch-signin">
             <span>{signedIn ? copy.start : copy.signIn}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -176,7 +176,7 @@ export default async function CatalogLaunchHero({
               {primaryLabel}
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href={`/auth/signup${languageQuery}`} className="edsync-launch-secondary">
+            <Link href={signupHref} className="edsync-launch-secondary">
               {secondaryLabel}
             </Link>
             <Link href="#catalog-search-panel" className="edsync-launch-tertiary">
