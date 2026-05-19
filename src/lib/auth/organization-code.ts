@@ -14,6 +14,9 @@ export function validateOrganizationCode(value?: string | null) {
 }
 
 export function createOrganizationSlug(name: string, idSuffix: string) {
-  const base = normalizeOrganizationCode(name) || "organization";
-  return `${base}-${idSuffix}`;
+  const suffix = normalizeOrganizationCode(idSuffix);
+  const separatorAndSuffixLength = suffix ? suffix.length + 1 : 0;
+  const maxBaseLength = Math.max(1, ORGANIZATION_CODE_MAX_LENGTH - separatorAndSuffixLength);
+  const base = (normalizeOrganizationCode(name) || "organization").slice(0, maxBaseLength).replace(/-+$/g, "");
+  return suffix ? `${base}-${suffix}` : base;
 }
