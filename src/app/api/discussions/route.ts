@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import {
+  DISCUSSION_POST_MAX_LENGTH,
+  DISCUSSION_PROMPT_MAX_LENGTH,
+  DISCUSSION_TITLE_MAX_LENGTH,
+  validateDiscussionText,
+} from "@/lib/discussions/validation";
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -52,26 +58,40 @@ export async function POST(request: Request) {
     if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
       return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
     }
-    if (!body.title) {
-      return NextResponse.json({ data: null, error: "Discussion title is required." }, { status: 400 });
+    let title: string;
+    let prompt: string;
+    try {
+      title = validateDiscussionText(body.title, "Discussion title", DISCUSSION_TITLE_MAX_LENGTH);
+      prompt = validateDiscussionText(body.prompt, "Discussion prompt", DISCUSSION_PROMPT_MAX_LENGTH, false);
+    } catch (error) {
+      return NextResponse.json(
+        { data: null, error: error instanceof Error ? error.message : "Invalid discussion." },
+        { status: 400 },
+      );
     }
     const id = crypto.randomUUID();
     await d1Query(
       `INSERT INTO discussion_threads (id, class_id, teacher_id, title, prompt, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [id, body.classId ?? null, user.id, body.title.trim(), body.prompt ?? null],
+      [id, body.classId ?? null, user.id, title, prompt || null],
     );
     return NextResponse.json({ data: { id }, error: null });
   }
 
-  if (!body.body) {
-    return NextResponse.json({ data: null, error: "Post body is required." }, { status: 400 });
+  let postBody: string;
+  try {
+    postBody = validateDiscussionText(body.body, "Post body", DISCUSSION_POST_MAX_LENGTH);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid discussion post." },
+      { status: 400 },
+    );
   }
   const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO discussion_posts (id, thread_id, author_id, parent_id, body, visibility, metadata, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 'class', '{}', datetime('now'), datetime('now'))`,
-    [id, body.threadId, user.id, body.parentId ?? null, body.body.trim()],
+    [id, body.threadId, user.id, body.parentId ?? null, postBody],
   );
   await d1Query("UPDATE discussion_threads SET updated_at = datetime('now') WHERE id = ?", [body.threadId]);
   return NextResponse.json({ data: { id }, error: null });
