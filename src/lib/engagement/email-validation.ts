@@ -1,6 +1,7 @@
 export const EMAIL_SUBJECT_MAX_LENGTH = 180;
 export const EMAIL_BODY_MAX_LENGTH = 20_000;
 export const EMAIL_DISPLAY_MAX_LENGTH = 120;
+export const EMAIL_ADDRESS_MAX_LENGTH = 254;
 export const EMAIL_MAX_RECIPIENTS = 300;
 export const EMAIL_METADATA_MAX_LENGTH = 4_000;
 export const EMAIL_ID_MAX_LENGTH = 160;
@@ -17,6 +18,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 export function validateEmailAddress(value: unknown, label = "Email") {
   const email = String(value ?? "").trim().toLowerCase();
   if (!email) throw new Error(`${label} is required.`);
+  if (email.length > EMAIL_ADDRESS_MAX_LENGTH) {
+    throw new Error(`${label} must be ${EMAIL_ADDRESS_MAX_LENGTH} characters or fewer.`);
+  }
   if (DANGEROUS_MAILTO_PATTERN.test(email) || !EMAIL_PATTERN.test(email)) {
     throw new Error(`${label} must be a valid email address.`);
   }
