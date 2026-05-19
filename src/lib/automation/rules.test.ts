@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  AUTOMATION_ID_MAX_LENGTH,
   AUTOMATION_RECIPES,
   AUTOMATION_TITLE_MAX_LENGTH,
   normalizeAutomationRulePayload,
   validateAutomationActions,
   validateAutomationConditions,
+  validateAutomationRuleId,
   validateAutomationTitle,
   validateAutomationTrigger,
 } from "@/lib/automation/rules";
@@ -18,7 +20,10 @@ describe("automation rule validation", () => {
 
   it("validates title and trigger boundaries", () => {
     expect(validateAutomationTitle("  Deadline reminder  ")).toBe("Deadline reminder");
+    expect(validateAutomationRuleId("automation-1")).toBe("automation-1");
     expect(validateAutomationTrigger("learner.inactive")).toBe("learner.inactive");
+    expect(() => validateAutomationRuleId("bad id")).toThrow("short identifier");
+    expect(() => validateAutomationRuleId("x".repeat(AUTOMATION_ID_MAX_LENGTH + 1))).toThrow("short identifier");
     expect(() => validateAutomationTitle("")).toThrow("required");
     expect(() => validateAutomationTitle("x".repeat(AUTOMATION_TITLE_MAX_LENGTH + 1))).toThrow("characters");
     expect(() => validateAutomationTrigger("unknown.trigger")).toThrow("supported");
