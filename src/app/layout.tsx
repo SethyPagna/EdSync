@@ -10,9 +10,10 @@ const preferenceScript = `
   try {
     const theme = window.localStorage.getItem("edsync-theme");
     document.documentElement.classList.toggle("dark", theme === "dark");
+    const queryLanguage = new URLSearchParams(window.location.search).get("language");
     const cookieLanguage = document.cookie.split("; ").find((row) => row.startsWith("edsync-language="))?.split("=")[1];
     const cookieLanguageCode = document.cookie.split("; ").find((row) => row.startsWith("edsync-language-code="))?.split("=")[1];
-    const language = window.localStorage.getItem("edsync-language") || (cookieLanguage ? decodeURIComponent(cookieLanguage) : "${DEFAULT_PUBLIC_LANGUAGE}");
+    const language = queryLanguage || window.localStorage.getItem("edsync-language") || (cookieLanguage ? decodeURIComponent(cookieLanguage) : "${DEFAULT_PUBLIC_LANGUAGE}");
     const languageCode = cookieLanguageCode ? decodeURIComponent(cookieLanguageCode) : "";
     const languages = ${publicLanguages};
     const match = languages.find((item) => item.name === language || item.code === language || item.code === languageCode);
