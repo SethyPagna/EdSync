@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSignupRole, normalizeUserRole } from "@/lib/auth/roles";
+import {
+  normalizeAccountType,
+  normalizeOrganizationMode,
+  normalizeSignupRole,
+  normalizeUserRole,
+} from "@/lib/auth/roles";
 
 describe("auth roles", () => {
   it("normalizes supported user roles", () => {
@@ -15,5 +20,19 @@ describe("auth roles", () => {
     expect(normalizeSignupRole("student")).toBe("student");
     expect(normalizeSignupRole("admin")).toBeNull();
     expect(normalizeSignupRole(undefined)).toBeNull();
+  });
+
+  it("normalizes explicit account entry choices", () => {
+    expect(normalizeAccountType("individual")).toBe("individual");
+    expect(normalizeAccountType("organization")).toBe("organization");
+    expect(normalizeAccountType("school")).toBeNull();
+    expect(normalizeAccountType(undefined)).toBeNull();
+  });
+
+  it("normalizes explicit organization entry modes", () => {
+    expect(normalizeOrganizationMode("join")).toBe("join");
+    expect(normalizeOrganizationMode("create")).toBe("create");
+    expect(normalizeOrganizationMode("invite")).toBeNull();
+    expect(normalizeOrganizationMode(null)).toBeNull();
   });
 });
