@@ -9,6 +9,7 @@ export type CatalogFilters = {
   category: string;
   difficulty: string;
   language: string;
+  courseLanguage: string;
   maxDuration: number | null;
 };
 
@@ -50,6 +51,8 @@ export function normalizeCatalogFilters(input: {
   category?: unknown;
   difficulty?: unknown;
   language?: unknown;
+  courseLanguage?: unknown;
+  catalogLanguage?: unknown;
   maxDuration?: unknown;
   duration?: unknown;
 } = {}): CatalogFilters {
@@ -62,6 +65,7 @@ export function normalizeCatalogFilters(input: {
     category: normalizeText(input.category, TEXT_FILTER_MAX_LENGTH),
     difficulty: normalizeText(input.difficulty, TEXT_FILTER_MAX_LENGTH),
     language: normalizeText(input.language, TEXT_FILTER_MAX_LENGTH),
+    courseLanguage: normalizeText(input.courseLanguage ?? input.catalogLanguage, TEXT_FILTER_MAX_LENGTH),
     maxDuration: normalizeMaxDuration(input.maxDuration ?? input.duration),
   };
 }
@@ -75,7 +79,7 @@ export function hasCatalogFilters(filters: CatalogFilters) {
       filters.price !== "all" ||
       filters.category ||
       filters.difficulty ||
-      filters.language ||
+      filters.courseLanguage ||
       filters.maxDuration,
   );
 }
