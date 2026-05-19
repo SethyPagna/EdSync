@@ -14,6 +14,7 @@ import {
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getPublicCatalogItem } from "@/lib/catalog";
+import { getPublicCopy } from "@/lib/public/i18n";
 
 export async function generateMetadata({
   params,
@@ -35,10 +36,11 @@ export default async function CatalogDetailPage({
   searchParams,
 }: {
   params: { productId: string };
-  searchParams?: { enrolled?: string; checkout?: string };
+  searchParams?: { enrolled?: string; checkout?: string; language?: string };
 }) {
   const item = await getPublicCatalogItem(params.productId);
   if (!item) notFound();
+  const copy = getPublicCopy(searchParams?.language);
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -52,7 +54,7 @@ export default async function CatalogDetailPage({
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <Link href="/catalog" className="btn-ghost w-fit px-0">
-            Back to catalog
+            {copy.catalogLabel}
           </Link>
           <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
             <div className="relative aspect-video overflow-hidden bg-edsync-surface">
@@ -91,7 +93,7 @@ export default async function CatalogDetailPage({
             <div className="p-5">
               <h1 className="mt-4 font-display text-4xl font-bold leading-tight">{item.title}</h1>
               <p className="mt-4 text-base leading-7 text-edsync-subtle">
-                {item.metadata.previewSummary || item.description || "This public course is available through EdSync."}
+                {item.metadata.previewSummary || item.description || `${copy.courses}. ${copy.start}.`}
               </p>
             </div>
           </div>
@@ -99,19 +101,19 @@ export default async function CatalogDetailPage({
           <section className="grid gap-3 md:grid-cols-3">
             <div className="premium-card rounded-2xl p-4">
               <Clock3 className="mb-3 h-5 w-5 text-edsync-blue" />
-              <p className="font-semibold">Duration</p>
+              <p className="font-semibold">{copy.anyDuration}</p>
               <p className="text-sm text-edsync-subtle">
-                {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} minutes` : "Flexible"}
+                {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} min` : copy.anyDuration}
               </p>
             </div>
             <div className="premium-card rounded-2xl p-4">
               <GraduationCap className="mb-3 h-5 w-5 text-edsync-emerald" />
-              <p className="font-semibold">Level</p>
-              <p className="text-sm text-edsync-subtle">{item.metadata.difficulty || item.lesson.gradeLevel || "Open"}</p>
+              <p className="font-semibold">{copy.difficulty}</p>
+              <p className="text-sm text-edsync-subtle">{item.metadata.difficulty || item.lesson.gradeLevel || copy.start}</p>
             </div>
             <div className="premium-card rounded-2xl p-4">
               <Languages className="mb-3 h-5 w-5 text-edsync-amber" />
-              <p className="font-semibold">Language</p>
+              <p className="font-semibold">{copy.language}</p>
               <p className="text-sm text-edsync-subtle">{item.metadata.language}</p>
             </div>
           </section>
@@ -120,19 +122,19 @@ export default async function CatalogDetailPage({
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           {searchParams?.enrolled && (
             <div className="rounded-lg border border-edsync-emerald/30 bg-edsync-emerald/10 p-4 text-sm text-edsync-emerald">
-              Enrollment is active. Open your student dashboard to continue.
+              {copy.start}: {copy.courses}.
             </div>
           )}
           {searchParams?.checkout === "cancelled" && (
             <div className="rounded-lg border border-edsync-amber/30 bg-edsync-amber/10 p-4 text-sm text-edsync-amber">
-              Checkout was cancelled. You can restart anytime.
+              {copy.start}.
             </div>
           )}
           <div className="premium-panel rounded-2xl p-5">
-            <p className="text-sm font-semibold text-edsync-subtle">Enrollment</p>
+            <p className="text-sm font-semibold text-edsync-subtle">{copy.start}</p>
             <p className="mt-2 font-display text-4xl font-bold">{item.price.label}</p>
             <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-              Sign in, choose your organization when one applies, then EdSync keeps access, progress, grades, and certificates tied to the right space.
+              {copy.signIn}. {copy.academies}. {copy.courses}.
             </p>
             <div className="mt-5">
               <CatalogEnrollButton productId={item.id} isFree={item.price.isFree} />
@@ -144,9 +146,9 @@ export default async function CatalogDetailPage({
               <div className="flex items-start gap-3">
                 <UserRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-blue" />
                 <div>
-                  <p className="font-semibold">Individual learner</p>
+                  <p className="font-semibold">{copy.signIn}</p>
                   <p className="mt-1 text-sm leading-6 text-edsync-subtle">
-                    Join with your own account and continue from your student dashboard.
+                    {copy.start}. {copy.courses}.
                   </p>
                 </div>
               </div>
@@ -155,9 +157,9 @@ export default async function CatalogDetailPage({
               <div className="flex items-start gap-3">
                 <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-emerald" />
                 <div>
-                  <p className="font-semibold">Organization member</p>
+                  <p className="font-semibold">{copy.academies}</p>
                   <p className="mt-1 text-sm leading-6 text-edsync-subtle">
-                    Enter through your academy so access and reports stay scoped correctly.
+                    {copy.signIn}. {copy.start}.
                   </p>
                 </div>
               </div>
@@ -170,11 +172,11 @@ export default async function CatalogDetailPage({
               <div>
                 <p className="font-semibold">{item.organization.name}</p>
                 <p className="mt-1 text-sm text-edsync-subtle">
-                  {item.portal ? `${item.portal.name} - ${item.portal.audience}` : "Main EdSync catalog"}
+                  {item.portal ? `${item.portal.name} - ${item.portal.audience}` : copy.catalogLabel}
                 </p>
                 {item.portal && (
                   <Link href={`/org/${item.portal.slug}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-edsync-blue hover:underline">
-                    View organization catalog
+                    {copy.academies}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 )}
@@ -186,7 +188,7 @@ export default async function CatalogDetailPage({
             <div className="flex gap-3">
               <ShieldCheck className="h-5 w-5 flex-shrink-0 text-edsync-emerald" />
               <p className="text-sm leading-6 text-edsync-subtle">
-                Public previews use safe HTTPS media. Enrollment and full course access require an authenticated account.
+                {copy.catalogLabel}. {copy.signIn}. {copy.start}.
               </p>
             </div>
           </div>
