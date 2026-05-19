@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { homeForRole } from "@/lib/auth/redirects";
 
+function knownRole(value: string | undefined) {
+  return value === "admin" || value === "teacher" || value === "student" ? value : null;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected =
@@ -20,7 +24,7 @@ export function middleware(request: NextRequest) {
   const isAuthPage =
     pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup");
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-  const role = request.cookies.get(ROLE_COOKIE)?.value;
+  const role = knownRole(request.cookies.get(ROLE_COOKIE)?.value);
 
   if (!hasSession && isProtected) {
     const url = request.nextUrl.clone();
@@ -30,13 +34,21 @@ export function middleware(request: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (hasSession && isAuthPage) {
+  if (hasSession && isAuthPage && role) {
     const url = request.nextUrl.clone();
     url.pathname = homeForRole(role);
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (hasSession && role !== "admin" && pathname.startsWith("/admin")) {
+  if (hasSession && !role && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    url.search = "";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    return withSecurityHeaders(NextResponse.redirect(url));
+  }
+
+  if (hasSession && role && role !== "admin" && pathname.startsWith("/admin")) {
     const url = request.nextUrl.clone();
     url.pathname = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
     return withSecurityHeaders(NextResponse.redirect(url));
