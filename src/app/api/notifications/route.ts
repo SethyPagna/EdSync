@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { getSessionUser } from "@/lib/auth/session";
 import { createNotification } from "@/lib/engagement/server";
-import { normalizeNotificationInput } from "@/lib/engagement/notification-validation";
+import { normalizeNotificationInput, validateNotificationRecordId } from "@/lib/engagement/notification-validation";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
@@ -38,19 +38,17 @@ export async function POST(request: Request) {
     metadata?: Record<string, unknown>;
   };
 
-  if (!body.userId) {
-    return NextResponse.json({ data: null, error: "Missing notification fields." }, { status: 400 });
-  }
-
   let notification: ReturnType<typeof normalizeNotificationInput>;
+  let userId: string;
   try {
+    userId = validateNotificationRecordId(body.userId, "User");
     notification = normalizeNotificationInput(body);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Notification payload is invalid.";
     return NextResponse.json({ data: null, error: message }, { status: 400 });
   }
 
-  if (body.userId !== user.id) {
+  if (userId !== user.id) {
     const context = await resolveTenantContext(user);
     try {
       await requirePermission(user, context, PERMISSIONS.coursesAuthor);
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   const id = await createNotification({
-    userId: body.userId,
+    userId,
     actorId: user.id,
     ...notification,
   });
@@ -80,10 +78,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ data: { updated: true }, error: null });
   }
 
-  if (!body.id) return NextResponse.json({ data: null, error: "Missing notification id." }, { status: 400 });
+  let id: string;
+  try {
+    id = validateNotificationRecordId(body.id, "Notification");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Missing notification id.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
+  }
 
   await d1Query("UPDATE notifications SET read_at = datetime('now') WHERE id = ? AND user_id = ?", [
-    body.id,
+    id,
     user.id,
   ]);
   return NextResponse.json({ data: { updated: true }, error: null });
@@ -94,8 +98,13 @@ export async function DELETE(request: Request) {
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ data: null, error: "Missing notification id." }, { status: 400 });
+  let id: string;
+  try {
+    id = validateNotificationRecordId(searchParams.get("id"), "Notification");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Missing notification id.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
+  }
 
   await d1Query("DELETE FROM notifications WHERE id = ? AND user_id = ?", [id, user.id]);
   return NextResponse.json({ data: { deleted: true }, error: null });
