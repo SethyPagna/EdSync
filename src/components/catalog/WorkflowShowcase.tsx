@@ -44,6 +44,27 @@ type WorkflowLabels = {
   review: string;
   security: string;
   healthy: string;
+  route: string;
+  events: string;
+  audit: string;
+  slides: string;
+  quiz: string;
+  rubric: string;
+  retry: string;
+  proof: string;
+  text: string;
+  insert: string;
+  image: string;
+  questions: string;
+  points: string;
+  submissions: string;
+  attempt: string;
+  checks: string;
+  fallback: string;
+  exam: string;
+  flashcards: string;
+  sprint: string;
+  admin: string;
 };
 
 type WorkflowSlide = {
@@ -78,16 +99,16 @@ function labelsForLanguage(language?: string | null): WorkflowLabels {
     Thai: "ความก้าวหน้า",
     Vietnamese: "Tiến bộ",
   };
-  const utilityLabels: Record<string, Pick<WorkflowLabels, "media" | "provider" | "review" | "security" | "healthy">> = {
-    Chinese: { media: "媒体", provider: "提供商", review: "审核", security: "安全", healthy: "正常" },
-    English: { media: "Media", provider: "Provider", review: "Review", security: "Security", healthy: "Healthy" },
-    French: { media: "Médias", provider: "Fournisseur", review: "Revue", security: "Sécurité", healthy: "OK" },
-    Japanese: { media: "メディア", provider: "プロバイダー", review: "確認", security: "セキュリティ", healthy: "正常" },
-    Khmer: { media: "មេឌៀ", provider: "អ្នកផ្តល់", review: "ពិនិត្យ", security: "សុវត្ថិភាព", healthy: "ល្អ" },
-    Korean: { media: "미디어", provider: "제공자", review: "검토", security: "보안", healthy: "정상" },
-    Spanish: { media: "Medios", provider: "Proveedor", review: "Revisión", security: "Seguridad", healthy: "Correcto" },
-    Thai: { media: "สื่อ", provider: "ผู้ให้บริการ", review: "ตรวจทาน", security: "ความปลอดภัย", healthy: "พร้อม" },
-    Vietnamese: { media: "Phương tiện", provider: "Nhà cung cấp", review: "Duyệt", security: "Bảo mật", healthy: "Ổn định" },
+  const utilityLabels: Record<string, Omit<WorkflowLabels, "catalog" | "studio" | "ai" | "practice" | "grades" | "courses" | "search" | "filters" | "start" | "signIn" | "free" | "paid" | "duration" | "difficulty" | "featured" | "workflow">> = {
+    Chinese: { media: "媒体", provider: "提供商", review: "审核", security: "安全", healthy: "正常", route: "路径", events: "事件", audit: "审计", slides: "幻灯片", quiz: "测验", rubric: "评分表", retry: "重试", proof: "证据", text: "文本", insert: "插入", image: "图片", questions: "题", points: "分", submissions: "提交", attempt: "尝试", checks: "检查", fallback: "备用", exam: "考试", flashcards: "卡片", sprint: "冲刺", admin: "管理" },
+    English: { media: "Media", provider: "Provider", review: "Review", security: "Security", healthy: "Healthy", route: "Route", events: "Events", audit: "Audit", slides: "slides", quiz: "quiz", rubric: "rubric", retry: "retry", proof: "proof", text: "Text", insert: "Insert", image: "Image", questions: "questions", points: "pts", submissions: "submissions", attempt: "Attempt", checks: "checks", fallback: "Fallback", exam: "exam", flashcards: "flashcards", sprint: "sprint", admin: "Admin" },
+    French: { media: "Médias", provider: "Fournisseur", review: "Revue", security: "Sécurité", healthy: "OK", route: "Route", events: "Événements", audit: "Audit", slides: "diapos", quiz: "quiz", rubric: "grille", retry: "reprise", proof: "preuve", text: "Texte", insert: "Insérer", image: "Image", questions: "questions", points: "pts", submissions: "remises", attempt: "Essai", checks: "contrôles", fallback: "Secours", exam: "examen", flashcards: "cartes", sprint: "sprint", admin: "Admin" },
+    Japanese: { media: "メディア", provider: "プロバイダー", review: "確認", security: "セキュリティ", healthy: "正常", route: "経路", events: "イベント", audit: "監査", slides: "スライド", quiz: "小テスト", rubric: "ルーブリック", retry: "再挑戦", proof: "証跡", text: "テキスト", insert: "挿入", image: "画像", questions: "問", points: "点", submissions: "提出", attempt: "答案", checks: "検査", fallback: "代替", exam: "試験", flashcards: "カード", sprint: "短時間", admin: "管理" },
+    Khmer: { media: "មេឌៀ", provider: "អ្នកផ្តល់", review: "ពិនិត្យ", security: "សុវត្ថិភាព", healthy: "ល្អ", route: "ផ្លូវ", events: "ព្រឹត្តិការណ៍", audit: "សវនកម្ម", slides: "ស្លាយ", quiz: "សំណួរ", rubric: "រូប្រិក", retry: "ព្យាយាមម្តងទៀត", proof: "ភស្តុតាង", text: "អត្ថបទ", insert: "បញ្ចូល", image: "រូបភាព", questions: "សំណួរ", points: "ពិន្ទុ", submissions: "ការដាក់ស្នើ", attempt: "ការព្យាយាម", checks: "ពិនិត្យ", fallback: "បម្រុង", exam: "ប្រឡង", flashcards: "កាត", sprint: "រត់ខ្លី", admin: "គ្រប់គ្រង" },
+    Korean: { media: "미디어", provider: "제공자", review: "검토", security: "보안", healthy: "정상", route: "경로", events: "이벤트", audit: "감사", slides: "슬라이드", quiz: "퀴즈", rubric: "루브릭", retry: "재시도", proof: "증거", text: "텍스트", insert: "삽입", image: "이미지", questions: "문항", points: "점", submissions: "제출", attempt: "시도", checks: "검사", fallback: "대체", exam: "시험", flashcards: "카드", sprint: "스프린트", admin: "관리" },
+    Spanish: { media: "Medios", provider: "Proveedor", review: "Revisión", security: "Seguridad", healthy: "Correcto", route: "Ruta", events: "Eventos", audit: "Auditoría", slides: "diapositivas", quiz: "cuestionario", rubric: "rúbrica", retry: "reintento", proof: "evidencia", text: "Texto", insert: "Insertar", image: "Imagen", questions: "preguntas", points: "pts", submissions: "entregas", attempt: "Intento", checks: "controles", fallback: "Reserva", exam: "examen", flashcards: "tarjetas", sprint: "sprint", admin: "Admin" },
+    Thai: { media: "สื่อ", provider: "ผู้ให้บริการ", review: "ตรวจทาน", security: "ความปลอดภัย", healthy: "พร้อม", route: "เส้นทาง", events: "เหตุการณ์", audit: "ตรวจสอบ", slides: "สไลด์", quiz: "ควิซ", rubric: "รูบริก", retry: "ลองใหม่", proof: "หลักฐาน", text: "ข้อความ", insert: "แทรก", image: "รูปภาพ", questions: "ข้อ", points: "คะแนน", submissions: "งานส่ง", attempt: "ครั้ง", checks: "ตรวจ", fallback: "สำรอง", exam: "สอบ", flashcards: "บัตรคำ", sprint: "สปรินต์", admin: "แอดมิน" },
+    Vietnamese: { media: "Phương tiện", provider: "Nhà cung cấp", review: "Duyệt", security: "Bảo mật", healthy: "Ổn định", route: "Tuyến", events: "Sự kiện", audit: "Kiểm toán", slides: "slide", quiz: "quiz", rubric: "rubric", retry: "làm lại", proof: "bằng chứng", text: "Văn bản", insert: "Chèn", image: "Ảnh", questions: "câu hỏi", points: "điểm", submissions: "bài nộp", attempt: "Lượt làm", checks: "kiểm tra", fallback: "Dự phòng", exam: "bài thi", flashcards: "thẻ nhớ", sprint: "sprint", admin: "Quản trị" },
   };
   const grades = progressLabels[publicLanguage] ?? fallbackGrades;
   const utility = utilityLabels[publicLanguage] ?? utilityLabels.English;
@@ -150,7 +171,7 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     accent: "text-edsync-cyan",
     tabs: [labels.search, labels.featured, labels.start, labels.signIn],
     metrics: [
-      { label: "Routes", value: "/catalog" },
+      { label: labels.route, value: "/catalog" },
       { label: labels.courses, value: `${labels.free} + ${labels.paid}` },
       { label: labels.signIn, value: labels.start },
     ],
@@ -223,7 +244,7 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     tabs: [labels.studio, labels.practice, labels.duration, labels.grades],
     metrics: [
       { label: labels.grades, value: labels.start },
-      { label: labels.grades, value: "24 pts" },
+      { label: labels.grades, value: `24 ${labels.points}` },
       { label: labels.practice, value: labels.courses },
     ],
     rows: [
@@ -240,7 +261,7 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     title: labels.practice,
     shortTitle: labels.practice,
     headline: `${labels.practice}. ${labels.grades}.`,
-    subtitle: `${labels.practice}: quiz, sprint, flashcards, retry, review.`,
+    subtitle: `${labels.practice}: ${labels.quiz}, ${labels.sprint}, ${labels.flashcards}, ${labels.retry}, ${labels.review}.`,
     route: "/practice",
     icon: Trophy,
     accent: "text-edsync-amber",
@@ -248,10 +269,10 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     metrics: [
       { label: labels.practice, value: "9" },
       { label: labels.duration, value: "08:42" },
-      { label: "Route", value: "/practice" },
+      { label: labels.route, value: "/practice" },
     ],
     rows: [
-      { title: labels.practice, detail: "quiz, exam, flashcards, sprint", status: labels.start },
+      { title: labels.practice, detail: `${labels.quiz}, ${labels.exam}, ${labels.flashcards}, ${labels.sprint}`, status: labels.start },
       { title: labels.duration, detail: `${labels.duration}, ${labels.grades}`, status: labels.practice },
       { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: labels.grades },
     ],
@@ -261,21 +282,21 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
   },
   {
     id: "admin",
-    title: `${labels.grades} + Admin`,
+    title: `${labels.grades} + ${labels.admin}`,
     shortTitle: labels.grades,
-    headline: `${labels.grades} -> Admin.`,
+    headline: `${labels.grades} -> ${labels.admin}.`,
     subtitle: `${labels.grades}, ${labels.ai}, ${labels.catalog}, ${labels.practice}.`,
     route: "/admin/dashboard",
     icon: BarChart3,
     accent: "text-edsync-purple",
     tabs: [labels.grades, labels.practice, labels.ai, labels.catalog],
     metrics: [
-      { label: labels.grades, value: "Events" },
-      { label: labels.ai, value: "Fallback" },
-      { label: labels.catalog, value: "Audit" },
+      { label: labels.grades, value: labels.events },
+      { label: labels.ai, value: labels.fallback },
+      { label: labels.catalog, value: labels.audit },
     ],
     rows: [
-      { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: "Audit" },
+      { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: labels.audit },
       { title: labels.practice, detail: `${labels.practice} -> ${labels.start}`, status: labels.practice },
       { title: labels.ai, detail: `${labels.ai}, ${labels.catalog}, ${labels.grades}`, status: labels.ai },
     ],
@@ -293,10 +314,10 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         <div className="edsync-workflow-loop-map">
           {[
             [labels.catalog, `${labels.search}, ${labels.free}, ${labels.start}`],
-            [labels.studio, `${labels.courses}, slides, ${labels.media}`],
-            [labels.ai, `${labels.courses}, quiz, rubric`],
-            [labels.practice, `${labels.duration}, retry, ${labels.review}`],
-            [labels.grades, `events, ${labels.review}, proof`],
+            [labels.studio, `${labels.courses}, ${labels.slides}, ${labels.media}`],
+            [labels.ai, `${labels.courses}, ${labels.quiz}, ${labels.rubric}`],
+            [labels.practice, `${labels.duration}, ${labels.retry}, ${labels.review}`],
+            [labels.grades, `${labels.events}, ${labels.review}, ${labels.proof}`],
           ].map(([label, detail], index) => (
             <span key={label} className={index === 0 ? "is-active" : ""}>
               <strong>{label}</strong>
@@ -336,7 +357,7 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
     return (
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-editor-ribbon">
-          {[labels.studio, "Text", "Insert", labels.media, labels.ai, labels.start].map((item) => (
+          {[labels.studio, labels.text, labels.insert, labels.media, labels.ai, labels.start].map((item) => (
             <span key={item}>{item}</span>
           ))}
         </div>
@@ -350,7 +371,7 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
             <small>{labels.studio} 03</small>
             <strong>{labels.courses}</strong>
             <div>
-              <span>Image</span>
+              <span>{labels.image}</span>
               <span>{labels.media}</span>
               <span>{labels.practice}</span>
             </div>
@@ -367,7 +388,7 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
           <section>
             <small>{labels.ai}</small>
             <strong>{labels.difficulty} - 35m</strong>
-            <span>{labels.studio} + {labels.practice} + rubric</span>
+            <span>{labels.studio} + {labels.practice} + {labels.rubric}</span>
           </section>
           <section>
             <small>{labels.provider}</small>
@@ -378,7 +399,7 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         <div className="edsync-workflow-preview-rows">
           <span>
             <strong>{labels.studio}</strong>
-            <small>6 slides, {labels.review}</small>
+            <small>6 {labels.slides}, {labels.review}</small>
             <em>{labels.ai} {"->"} {labels.studio}</em>
           </span>
         </div>
@@ -394,12 +415,12 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
             <small>{labels.start}</small>
             <strong>{labels.courses}</strong>
             <span>{labels.duration}: 35m</span>
-            <span>12 questions - 24 pts</span>
+            <span>12 {labels.questions} - 24 {labels.points}</span>
           </section>
           <section>
             <small>{labels.grades}</small>
-            <strong>3 submissions</strong>
-            <span>{labels.media} checks</span>
+            <strong>3 {labels.submissions}</strong>
+            <span>{labels.media} {labels.checks}</span>
             <span>{labels.ai} {labels.review}</span>
           </section>
         </div>
@@ -438,18 +459,18 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
       <div className="edsync-workflow-admin-grid">
         <section>
           <small>{labels.grades}</small>
-          <strong>24 pts</strong>
-          <span>Attempt graded</span>
+          <strong>24 {labels.points}</strong>
+          <span>{labels.attempt} {labels.grades}</span>
         </section>
         <section>
           <small>{labels.ai}</small>
           <strong>{labels.healthy}</strong>
-          <span>Fallback audited</span>
+          <span>{labels.fallback} {labels.audit}</span>
         </section>
         <section>
           <small>{labels.security}</small>
           <strong>{labels.healthy}</strong>
-          <span>Upload checks logged</span>
+          <span>{labels.media} {labels.checks}</span>
         </section>
       </div>
       <div className="edsync-workflow-bar-chart" aria-hidden="true">
