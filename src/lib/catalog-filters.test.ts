@@ -34,6 +34,17 @@ describe("catalog filters", () => {
 
   it("detects active filters", () => {
     expect(hasCatalogFilters(normalizeCatalogFilters())).toBe(false);
-    expect(hasCatalogFilters(normalizeCatalogFilters({ language: "English" }))).toBe(true);
+    expect(hasCatalogFilters(normalizeCatalogFilters({ language: "Spanish" }))).toBe(false);
+    expect(hasCatalogFilters(normalizeCatalogFilters({ courseLanguage: "English" }))).toBe(true);
+  });
+
+  it("keeps public language separate from course language filters", () => {
+    const filters = normalizeCatalogFilters({
+      language: "Spanish",
+      courseLanguage: "English",
+    });
+
+    expect(filters.language).toBe("Spanish");
+    expect(filters.courseLanguage).toBe("English");
   });
 });
