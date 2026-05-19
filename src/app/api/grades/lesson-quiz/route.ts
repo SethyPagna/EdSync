@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { validateGradePercent } from "@/lib/grades/validation";
 import { recordGradeEvent } from "@/lib/learning-events";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { validateEarnedWorkPoints, validateWorkPoints } from "@/lib/work/validation";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -26,9 +28,22 @@ export async function POST(request: Request) {
   );
   if (!lesson) return NextResponse.json({ data: null, error: "Lesson not found." }, { status: 404 });
 
-  const score = Math.max(0, Math.min(100, Number(body.score || 0)));
-  const pointsPossible = Math.max(0, Number(body.pointsPossible ?? 100));
-  const pointsEarned = body.pointsEarned !== undefined ? Number(body.pointsEarned) : Math.round((score / 100) * pointsPossible);
+  let score: number;
+  let pointsPossible: number;
+  let pointsEarned: number;
+  try {
+    score = validateGradePercent(body.score);
+    pointsPossible = validateWorkPoints(body.pointsPossible, 100);
+    pointsEarned =
+      body.pointsEarned !== undefined
+        ? validateEarnedWorkPoints(body.pointsEarned, pointsPossible)
+        : Math.round((score / 100) * pointsPossible);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid quiz score." },
+      { status: 400 },
+    );
+  }
 
   const context = await resolveTenantContext(user);
   const result = await recordGradeEvent({
