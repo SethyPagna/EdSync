@@ -4134,11 +4134,35 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 @media (max-width: 900px) {
   .edsync-launch-topline {
     align-items: flex-start;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  .edsync-launch-brand-inline {
+    flex: 0 1 auto;
+  }
+
+  .edsync-launch-brand-inline small {
+    display: none;
   }
 
   .edsync-launch-actions-inline {
+    margin-left: 0;
     flex-wrap: nowrap;
     justify-content: flex-end;
+  }
+
+  .edsync-public-launch .edsync-launch-icon.premium-icon-button,
+  .edsync-public-launch .edsync-launch-icon > .premium-icon-button,
+  .edsync-public-launch .edsync-launch-icon > summary.premium-icon-button,
+  .edsync-public-launch .edsync-launch-signin {
+    min-height: 2.35rem;
+    width: 2.35rem;
+    padding-inline: 0;
+  }
+
+  .edsync-public-launch .edsync-launch-signin span {
+    display: none;
   }
 
   .edsync-launch-mini-link {
@@ -4198,22 +4222,42 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-launch-topline {
     flex-wrap: nowrap;
     gap: 0.65rem;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .edsync-launch-brand-inline small {
     display: none;
   }
 
+  .edsync-launch-brand-inline {
+    flex: 0 1 auto;
+    max-width: calc(100% - 7.7rem);
+    gap: 0.52rem;
+  }
+
+  .edsync-launch-brand-mark {
+    height: 2.35rem;
+    width: 2.35rem;
+  }
+
   .edsync-launch-actions-inline {
     width: auto;
-    margin-left: auto;
+    margin-left: 0;
+    margin-right: clamp(0rem, calc(30rem - 100vw), 5rem);
+    min-width: 7.2rem;
     flex-wrap: nowrap;
-    gap: 0.32rem;
+    gap: 0.24rem;
     justify-content: flex-end;
   }
 
+  .edsync-public-launch .edsync-launch-icon.premium-icon-button,
+  .edsync-public-launch .edsync-launch-icon > .premium-icon-button,
+  .edsync-public-launch .edsync-launch-icon > summary.premium-icon-button,
   .edsync-public-launch .edsync-launch-signin {
-    width: 2.5rem;
+    min-height: 2.25rem;
+    width: 2.25rem;
+    border-radius: 0.72rem;
     padding-inline: 0;
   }
 
