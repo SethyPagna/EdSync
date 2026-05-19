@@ -15,78 +15,112 @@ type PreviewSlide = {
   blocks: [string, string][];
 };
 
-type CatalogLaunchPreviewGalleryProps = {
-  labels: {
-    catalog: string;
-    studio: string;
-    ai: string;
-    practice: string;
-    proof: string;
-  };
+export type LaunchPreviewSlideCopy = Omit<PreviewSlide, "id" | "icon">;
+
+type LegacyLaunchPreviewLabels = {
+  catalog: string;
+  studio: string;
+  ai: string;
+  practice: string;
+  proof: string;
 };
 
-function buildSlides(labels: CatalogLaunchPreviewGalleryProps["labels"]): PreviewSlide[] {
-  return [
-    {
-      id: "catalog",
+type LaunchPreviewSlideMap = Record<"catalog" | "studio" | "ai" | "practice" | "proof", LaunchPreviewSlideCopy>;
+
+type CatalogLaunchPreviewGalleryProps = {
+  readyLabel: string;
+  slides: LaunchPreviewSlideMap;
+  labels?: never;
+} | {
+  readyLabel?: string;
+  slides?: never;
+  labels: LegacyLaunchPreviewLabels;
+};
+
+function buildLegacySlides(labels: LegacyLaunchPreviewLabels): LaunchPreviewSlideMap {
+  return {
+    catalog: {
       label: labels.catalog,
       eyebrow: "Public catalog",
       title: "Energy Transfer",
       route: "/catalog",
-      icon: Search,
       nav: [labels.catalog, "Org portal", "Preview", "Enroll"],
       metrics: [["Free", "Access"], ["35m", "Duration"], ["Grade 8", "Level"]],
       blocks: [["Course card", "Preview, price, organization, and enrollment state"], ["Return path", "Sign in once, then continue to the selected course"]],
     },
-    {
-      id: "studio",
+    studio: {
       label: labels.studio,
       eyebrow: "Lesson studio",
       title: "Conduction vs convection",
       route: "/studio",
-      icon: Presentation,
       nav: [labels.studio, "Docs", "Slides", "Media"],
       metrics: [["5", "Slides"], ["12", "Questions"], ["Saved", "Draft"]],
       blocks: [["Slide canvas", "Toolbar, thumbnails, media checks, quiz blocks"], ["Lesson handoff", "Insert Studio blocks into teacher lessons"]],
     },
-    {
-      id: "ai",
+    ai: {
       label: labels.ai,
       eyebrow: "AI co-creator",
       title: "Outline to editable draft",
       route: "/ai",
-      icon: Bot,
       nav: [labels.ai, "Prompt", "Preview", "Insert"],
       metrics: [["Groq", "Primary"], ["Google", "Fallback"], ["Review", "Required"]],
       blocks: [["Generated package", "Slides, quiz, rubric, flashcards, teacher notes"], ["Insert back", "Save as local Studio draft before publishing"]],
     },
-    {
-      id: "practice",
+    practice: {
       label: labels.practice,
       eyebrow: "Student practice",
       title: "Sprint with explanations",
       route: "/practice",
-      icon: Trophy,
       nav: [labels.practice, "Quiz", "Retry", "Review"],
       metrics: [["08:42", "Elapsed"], ["4/12", "Question"], ["2", "Missed"]],
       blocks: [["Attempt summary", "Score, time, missed concepts, explanations"], ["Review queue", "Save mistakes for dashboard recommendations"]],
     },
-    {
-      id: "proof",
+    proof: {
       label: labels.proof,
       eyebrow: "Progress proof",
       title: "Grade event saved",
       route: "/admin/dashboard",
-      icon: ShieldCheck,
       nav: [labels.proof, "Feedback", "Audit", "Admin"],
       metrics: [["24 pts", "Score"], ["Audit", "Logged"], ["Next", "Review"]],
       blocks: [["Teacher control", "Overrides, feedback, notes, and due dates stay visible"], ["Admin command", "AI providers, security, portals, catalog, and billing"]],
     },
+  };
+}
+
+function buildSlides(slides: LaunchPreviewSlideMap): PreviewSlide[] {
+  return [
+    {
+      id: "catalog",
+      icon: Search,
+      ...slides.catalog,
+    },
+    {
+      id: "studio",
+      icon: Presentation,
+      ...slides.studio,
+    },
+    {
+      id: "ai",
+      icon: Bot,
+      ...slides.ai,
+    },
+    {
+      id: "practice",
+      icon: Trophy,
+      ...slides.practice,
+    },
+    {
+      id: "proof",
+      icon: ShieldCheck,
+      ...slides.proof,
+    },
   ];
 }
 
-export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPreviewGalleryProps) {
-  const slides = useMemo(() => buildSlides(labels), [labels]);
+export default function CatalogLaunchPreviewGallery(props: CatalogLaunchPreviewGalleryProps) {
+  const readyLabel = props.readyLabel ?? "Ready";
+  const previewSlides: LaunchPreviewSlideMap = props.slides ?? buildLegacySlides(props.labels);
+  const slides = useMemo(() => buildSlides(previewSlides), [previewSlides]);
   const [activeIndex, setActiveIndex] = useState(0);
   const pauseUntilRef = useRef(0);
   const touchStartXRef = useRef<number | null>(null);
@@ -170,7 +204,7 @@ export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPre
             </div>
             <span>
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Ready
+              {readyLabel}
             </span>
           </div>
 
