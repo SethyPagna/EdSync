@@ -14,7 +14,7 @@ import PublicTopbar from "@/components/public/PublicTopbar";
 import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
+import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
 export async function generateMetadata({
   params,
@@ -66,10 +66,8 @@ export default async function OrganizationPortalPage({
     minutes: "min",
   };
   const languageQuery = publicLanguageQuerySuffix(filters.language);
-  const authParams = new URLSearchParams({ org: portal.tenant_slug });
-  const publicLanguage = publicLanguageQueryValue(filters.language);
-  if (publicLanguage) authParams.set("language", publicLanguage);
-  const authQuery = authParams.toString();
+  const loginHref = publicLanguageHref("/auth/login", filters.language, { org: portal.tenant_slug });
+  const signupHref = publicLanguageHref("/auth/signup", filters.language, { org: portal.tenant_slug });
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -97,14 +95,14 @@ export default async function OrganizationPortalPage({
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href={`/auth/login?${authQuery}`}
+                  href={loginHref}
                   className="btn-primary justify-center"
                 >
                   {copy.signIn}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href={`/auth/signup?${authQuery}`}
+                  href={signupHref}
                   className="btn-secondary justify-center"
                 >
                   {copy.start}
