@@ -49,6 +49,20 @@ export default async function CatalogPage({
   const categories = Array.from(
     new Set(items.map((item) => item.metadata.category).filter(Boolean) as string[]),
   ).slice(0, 6);
+  const [, , aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
+  const cardLabels = {
+    featured: copy.featured,
+    preview: `${copy.courses}. ${copy.start}.`,
+    flexible: copy.anyDuration,
+    view: copy.courses,
+    minutes: "min",
+  };
+  const quickSearches = [
+    `${aiLabel} ${copy.courses}`,
+    `${practiceLabel} ${copy.workflowLabel}`,
+    `${copy.academies} ${copy.catalogLabel}`,
+    `${proofLabel} ${copy.courses}`,
+  ];
 
   return (
     <main id="top" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
@@ -145,7 +159,7 @@ export default async function CatalogPage({
               </div>
             </form>
             <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-edsync-subtle">
-              {["AI lessons", "Practice sprint", "Organization portal", "Teacher gradebook"].map((sample) => (
+              {quickSearches.map((sample) => (
                 <Link
                   key={sample}
                   href={`/catalog?q=${encodeURIComponent(sample)}`}
@@ -170,7 +184,7 @@ export default async function CatalogPage({
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {items.map((item) => (
-                  <CatalogCourseCard key={item.id} item={item} />
+                  <CatalogCourseCard key={item.id} item={item} labels={cardLabels} />
                 ))}
               </div>
               {items.length === 0 && (
@@ -214,7 +228,7 @@ export default async function CatalogPage({
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               {featured.map((item) => (
-                <CatalogCourseCard key={item.id} item={item} featured />
+                <CatalogCourseCard key={item.id} item={item} featured labels={cardLabels} />
               ))}
             </div>
           </section>
