@@ -13,7 +13,7 @@ import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
+import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
 export const metadata: Metadata = {
   title: "Catalog",
@@ -211,7 +211,7 @@ export default async function CatalogPage({
                   <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
                   <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
                   <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
-                  <Link href={`/auth/signup${publicLanguageQuerySuffix(filters.language)}`} className="btn-primary mx-auto mt-5 w-fit">
+                  <Link href={publicLanguageHref("/auth/signup", filters.language)} className="btn-primary mx-auto mt-5 w-fit">
                     {copy.createWorkspace}
                   </Link>
                 </div>
