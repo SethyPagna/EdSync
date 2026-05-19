@@ -4212,11 +4212,13 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     justify-content: flex-end;
   }
 
+  .edsync-public-launch .edsync-launch-signin {
+    width: 2.5rem;
+    padding-inline: 0;
+  }
+
   .edsync-public-launch .edsync-launch-signin span {
-    display: inline;
-    max-width: 4.2rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none;
   }
 
   .edsync-public-launch .edsync-launch-mode-row {
@@ -4233,10 +4235,13 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-public-launch .edsync-launch-preview-board {
     margin-inline: 0;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .edsync-public-launch .edsync-launch-preview-wrap {
     max-height: 27rem;
+    max-width: 100%;
     overflow: hidden;
   }
 
@@ -4258,7 +4263,12 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-public-launch .edsync-launch-focus-media {
-    width: 38%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 34%;
+  }
+
+  .edsync-public-launch .edsync-launch-focus-media span:last-child {
+    display: none;
   }
 
   .edsync-public-launch .edsync-launch-loop-strip,
@@ -4295,9 +4305,5 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 @media (max-width: 380px) {
   .edsync-launch-brand-inline strong {
     font-size: 0.9rem;
-  }
-
-  .edsync-public-launch .edsync-launch-signin span {
-    display: none;
   }
 }
