@@ -26,6 +26,19 @@ function cookieLanguage() {
   return match ? decodeURIComponent(match) : null;
 }
 
+function queryLanguage() {
+  const value = new URLSearchParams(window.location.search).get("language");
+  return value ? decodeURIComponent(value) : null;
+}
+
+function persistLanguage(language: PublicLanguageName) {
+  const code = languageCodeFor(language);
+  window.localStorage.setItem("edsync-language", language);
+  document.cookie = `edsync-language=${encodeURIComponent(language)}; path=/; max-age=31536000; samesite=lax`;
+  document.cookie = `edsync-language-code=${encodeURIComponent(code)}; path=/; max-age=31536000; samesite=lax`;
+  document.documentElement.lang = code;
+}
+
 export default function LanguageMenu({
   compact = false,
   syncCatalogFilter = false,
@@ -36,19 +49,16 @@ export default function LanguageMenu({
   const [language, setLanguage] = useState<PublicLanguageName>(DEFAULT_PUBLIC_LANGUAGE);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("edsync-language") || cookieLanguage() || DEFAULT_PUBLIC_LANGUAGE;
+    const queryValue = queryLanguage();
+    const stored = queryValue || window.localStorage.getItem("edsync-language") || cookieLanguage() || DEFAULT_PUBLIC_LANGUAGE;
     const nextLanguage = normalizePublicLanguage(stored);
     setLanguage(nextLanguage);
-    document.documentElement.lang = languageCodeFor(nextLanguage);
+    persistLanguage(nextLanguage);
   }, []);
 
   const chooseLanguage = (nextLanguage: PublicLanguageName) => {
-    const code = languageCodeFor(nextLanguage);
     setLanguage(nextLanguage);
-    window.localStorage.setItem("edsync-language", nextLanguage);
-    document.cookie = `edsync-language=${encodeURIComponent(nextLanguage)}; path=/; max-age=31536000; samesite=lax`;
-    document.cookie = `edsync-language-code=${encodeURIComponent(code)}; path=/; max-age=31536000; samesite=lax`;
-    document.documentElement.lang = code;
+    persistLanguage(nextLanguage);
     window.dispatchEvent(new CustomEvent("edsync-language-change", { detail: { language: nextLanguage } }));
     detailsRef.current?.removeAttribute("open");
 
