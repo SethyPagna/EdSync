@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
-import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import { validateOrganizationCode } from "@/lib/auth/organization-code";
 
 function readSettings(value: string | null) {
   if (!value) return {};
@@ -16,9 +16,12 @@ function readSettings(value: string | null) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const code = normalizeOrganizationCode(url.searchParams.get("code"));
-  if (!code) {
-    return NextResponse.json({ data: null, error: "Organization code is required." }, { status: 400 });
+  let code: string;
+  try {
+    code = validateOrganizationCode(url.searchParams.get("code"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Organization code is invalid.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
   }
 
   const [row] = await d1Query<{
