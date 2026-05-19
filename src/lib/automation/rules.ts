@@ -1,4 +1,5 @@
 export const AUTOMATION_TITLE_MAX_LENGTH = 140;
+export const AUTOMATION_ID_MAX_LENGTH = 180;
 export const AUTOMATION_TRIGGERS = {
   learnerInactive: "learner.inactive",
   scoreMastery: "score.mastery",
@@ -55,6 +56,7 @@ export const AUTOMATION_RECIPES = [
 
 const SUPPORTED_TRIGGER_KEYS = new Set<string>(Object.values(AUTOMATION_TRIGGERS));
 const SUPPORTED_ACTION_TYPES = new Set(["notify", "unlock", "award_badge", "create_review", "assign_work"]);
+const AUTOMATION_ID_PATTERN = /^[a-z0-9_.:-]+$/i;
 
 export type NormalizedAutomationRule = {
   title: string;
@@ -75,6 +77,15 @@ export function validateAutomationTitle(value: unknown) {
     throw new Error(`Rule title must be ${AUTOMATION_TITLE_MAX_LENGTH} characters or fewer.`);
   }
   return title;
+}
+
+export function validateAutomationRuleId(value: unknown) {
+  const id = String(value ?? "").trim();
+  if (!id) throw new Error("Rule is required.");
+  if (id.length > AUTOMATION_ID_MAX_LENGTH || !AUTOMATION_ID_PATTERN.test(id)) {
+    throw new Error("Rule id must be a short identifier.");
+  }
+  return id;
 }
 
 export function validateAutomationTrigger(value: unknown) {
