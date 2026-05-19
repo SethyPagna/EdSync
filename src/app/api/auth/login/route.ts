@@ -4,6 +4,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeUserRole } from "@/lib/auth/roles";
+import { validateEmailAddress } from "@/lib/email-address";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
@@ -21,13 +22,20 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
-  const { email, password } = body;
-  const normalizedEmail = email?.trim().toLowerCase();
-
-  if (!normalizedEmail || !password) {
+  if (!body.email || !body.password) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Email and password are required.", status: 400 },
+    }, { status: 400 });
+  }
+
+  let normalizedEmail: string;
+  try {
+    normalizedEmail = validateEmailAddress(body.email);
+  } catch (error) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: error instanceof Error ? error.message : "Email must be valid.", status: 400 },
     }, { status: 400 });
   }
 
@@ -87,7 +95,7 @@ export async function POST(request: Request) {
   );
 
   const account = rows[0];
-  if (!account || !(await verifyPassword(password, account.password_hash))) {
+  if (!account || !(await verifyPassword(body.password, account.password_hash))) {
     await logSecurityEvent({
       request,
       eventType: "login_failed",
