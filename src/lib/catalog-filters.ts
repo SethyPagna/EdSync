@@ -13,6 +13,25 @@ export type CatalogFilters = {
   maxDuration: number | null;
 };
 
+export type CatalogSearchParams = {
+  q?: string;
+  query?: string;
+  portal?: string;
+  portalSlug?: string;
+  tenant?: string;
+  tenantSlug?: string;
+  featured?: string;
+  featuredOnly?: string;
+  price?: string;
+  category?: string;
+  difficulty?: string;
+  language?: string;
+  courseLanguage?: string;
+  catalogLanguage?: string;
+  maxDuration?: string;
+  duration?: string;
+};
+
 const TEXT_FILTER_MAX_LENGTH = 80;
 const SEARCH_MAX_LENGTH = 120;
 const MAX_DURATION_LIMIT = 600;
