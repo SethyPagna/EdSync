@@ -10,7 +10,13 @@ export async function POST(
     const user = await getSessionUser();
     const item = await getPublicCatalogItem(params.id);
     const url = new URL(request.url);
-    const detailUrl = `/catalog/${params.id}`;
+    const language = url.searchParams.get("language");
+    const detailQuery = language ? `?language=${encodeURIComponent(language)}` : "";
+    const detailUrl = `/catalog/${params.id}${detailQuery}`;
+    const successUrl = new URL(detailUrl, url.origin);
+    successUrl.searchParams.set("enrolled", "1");
+    const cancelUrl = new URL(detailUrl, url.origin);
+    cancelUrl.searchParams.set("checkout", "cancelled");
 
     if (!item) {
       return NextResponse.json({ data: null, error: "Catalog item not found." }, { status: 404 });
@@ -26,8 +32,8 @@ export async function POST(
     const result = await enrollCatalogItem({
       item,
       userId: user.id,
-      successUrl: `${url.origin}${detailUrl}?enrolled=1`,
-      cancelUrl: `${url.origin}${detailUrl}?checkout=cancelled`,
+      successUrl: successUrl.toString(),
+      cancelUrl: cancelUrl.toString(),
     });
 
     return NextResponse.json({ data: result, error: null });
