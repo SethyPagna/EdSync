@@ -8,6 +8,8 @@ import { createClient } from "@/lib/edsync/client";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
+import { getPublicCopy } from "@/lib/public/i18n";
+import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
 import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
 
 type Role = "teacher" | "student";
@@ -36,6 +38,8 @@ const roleDetails = {
 
 function SignupForm() {
   const searchParams = useSearchParams();
+  const { language, querySuffix } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicCopy(language), [language]);
   const preset = searchParams.get("role");
   const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const initialRole: Role = preset === "teacher" ? "teacher" : "student";
@@ -128,7 +132,7 @@ function SignupForm() {
           organization_name: accountType === "organization" && organizationMode === "create" ? organizationName : undefined,
           organization_code: accountType === "organization" && organizationMode === "join" ? organizationCode : undefined,
         },
-        emailRedirectTo: `${window.location.origin}/auth/login`,
+        emailRedirectTo: `${window.location.origin}/auth/login${querySuffix}`,
       },
     });
 
@@ -206,8 +210,8 @@ function SignupForm() {
           We sent a confirmation link to{" "}
           <span className="font-semibold text-edsync-blue">{email}</span>.
         </p>
-        <Link href="/auth/login" className="btn-secondary inline-flex">
-          Back to sign in
+        <Link href={`/auth/login${querySuffix}`} className="btn-secondary inline-flex">
+          {copy.signIn}
         </Link>
       </div>
     );
@@ -462,7 +466,7 @@ function SignupForm() {
         disabled={loading}
         className="btn-primary w-full justify-center py-3.5"
       >
-        {loading ? "Creating account..." : `Create ${roleDetails[role].label} workspace`}
+        {loading ? "Creating account..." : `${copy.createWorkspace} - ${roleDetails[role].label}`}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
       <button type="button" onClick={() => setStep("role")} className="btn-secondary w-full justify-center py-3">
@@ -471,6 +475,30 @@ function SignupForm() {
         </div>
       )}
     </form>
+  );
+}
+
+function SignupPanelTitle() {
+  const { language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicCopy(language), [language]);
+
+  return <h2 className="font-display text-3xl font-bold">{copy.createWorkspace}</h2>;
+}
+
+function SignupLoginLink() {
+  const { querySuffix, language } = usePublicLanguagePreference();
+  const copy = useMemo(() => getPublicCopy(language), [language]);
+
+  return (
+    <p className="mt-6 text-center text-sm text-edsync-subtle">
+      Already have an account?{" "}
+      <Link
+        href={`/auth/login${querySuffix}`}
+        className="font-semibold text-edsync-blue hover:underline"
+      >
+        {copy.signIn}
+      </Link>
+    </p>
   );
 }
 
@@ -512,7 +540,9 @@ export default function SignupPage() {
             </div>
           </div>
           <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 sm:rounded-[1.65rem] sm:p-7">
-            <h2 className="font-display text-3xl font-bold">Create workspace</h2>
+            <Suspense fallback={<h2 className="font-display text-3xl font-bold">Create workspace</h2>}>
+              <SignupPanelTitle />
+            </Suspense>
             <div className="mt-7">
               <Suspense
                 fallback={
@@ -522,15 +552,9 @@ export default function SignupPage() {
                 <SignupForm />
               </Suspense>
             </div>
-            <p className="mt-6 text-center text-sm text-edsync-subtle">
-              Already have an account?{" "}
-              <Link
-                href="/auth/login"
-                className="font-semibold text-edsync-blue hover:underline"
-              >
-                Sign in
-              </Link>
-            </p>
+            <Suspense fallback={null}>
+              <SignupLoginLink />
+            </Suspense>
           </div>
         </div>
       </section>
