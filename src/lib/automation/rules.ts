@@ -113,6 +113,12 @@ export function validateAutomationActions(value: unknown) {
   });
 }
 
+export function normalizeAutomationEnabled(value: unknown, fallback = true) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "boolean") throw new Error("Automation enabled state must be true or false.");
+  return value;
+}
+
 export function normalizeAutomationRulePayload(input: {
   title?: unknown;
   triggerKey?: unknown;
@@ -125,6 +131,6 @@ export function normalizeAutomationRulePayload(input: {
     triggerKey: validateAutomationTrigger(input.triggerKey),
     conditions: validateAutomationConditions(input.conditions),
     actions: validateAutomationActions(input.actions),
-    enabled: input.enabled !== false,
+    enabled: normalizeAutomationEnabled(input.enabled),
   };
 }
