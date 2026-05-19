@@ -8,6 +8,7 @@ import { createClient } from "@/lib/edsync/client";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
+import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
 import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
@@ -40,6 +41,7 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const { language, querySuffix } = usePublicLanguagePreference();
   const copy = useMemo(() => getPublicCopy(language), [language]);
+  const authCopy = useMemo(() => getPublicAuthCopy(language), [language]);
   const preset = searchParams.get("role");
   const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const initialRole: Role = preset === "teacher" ? "teacher" : "student";
@@ -64,6 +66,7 @@ function SignupForm() {
     organizationMode === "create"
       ? organizationName
       : organizationLookup?.name || organizationCode;
+  const roleLabel = role === "teacher" ? authCopy.teacher : authCopy.student;
   const waitingForOrganization =
     accountType === "organization" && organizationMode === "join" && organizationStatus === "checking";
 
@@ -205,7 +208,7 @@ function SignupForm() {
   if (emailSent) {
     return (
       <div className="space-y-5 text-center">
-        <h2 className="font-display text-3xl font-bold">Check your email</h2>
+        <h2 className="font-display text-3xl font-bold">{authCopy.checkEmail}</h2>
         <p className="text-sm leading-6 text-edsync-subtle">
           We sent a confirmation link to{" "}
           <span className="font-semibold text-edsync-blue">{email}</span>.
@@ -221,9 +224,9 @@ function SignupForm() {
     <form onSubmit={handleSignup} className="space-y-5">
       <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
         {[
-          ["space", "1 Workspace"],
-          ["role", "2 Role"],
-          ["account", "3 Account"],
+          ["space", authCopy.spaceStep],
+          ["role", authCopy.roleStep],
+          ["account", authCopy.accountStep],
         ].map(([key, label]) => (
           <span
             key={key}
@@ -244,14 +247,14 @@ function SignupForm() {
             {([
               {
                 key: "organization" as const,
-                label: "Enter organization",
-                copy: "Use a school, academy, company, cohort, or department portal.",
+                label: authCopy.enterOrganization,
+                copy: authCopy.organizationCopy,
                 icon: Building2,
               },
               {
                 key: "individual" as const,
-                label: "Use as individual",
-                copy: "Start a personal teacher or learner workspace.",
+                label: authCopy.useIndividual,
+                copy: authCopy.individualCopy,
                 icon: UserRound,
               },
             ]).map((item) => {
@@ -279,8 +282,8 @@ function SignupForm() {
             <div className="premium-surface space-y-3 rounded-2xl p-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 {([
-                  ["join", "Join existing"],
-                  ["create", "Create new"],
+                  ["join", authCopy.joinExisting],
+                  ["create", authCopy.createNew],
                 ] as const).map(([mode, label]) => (
                   <button
                     key={mode}
@@ -297,7 +300,7 @@ function SignupForm() {
                 ))}
               </div>
               <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-                {organizationMode === "join" ? "Organization code" : "Organization name"}
+                {organizationMode === "join" ? authCopy.organizationCode : authCopy.organizationName}
               </label>
               <input
                 type="text"
@@ -330,8 +333,8 @@ function SignupForm() {
                   {organizationStatus === "found"
                     ? `Found ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
                     : organizationStatus === "checking"
-                      ? "Checking organization..."
-                      : "No active organization found for that code yet."}
+                      ? authCopy.checkingOrganization
+                      : authCopy.missingOrganization}
                 </div>
               )}
             </div>
@@ -360,7 +363,7 @@ function SignupForm() {
             disabled={waitingForOrganization}
             className="btn-primary w-full justify-center py-3.5"
           >
-            {waitingForOrganization ? "Checking organization..." : "Continue"}
+            {waitingForOrganization ? authCopy.checkingOrganization : authCopy.continue}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -373,12 +376,14 @@ function SignupForm() {
               ? organizationMode === "create"
                 ? `New organization: ${organizationLabel}`
                 : `Joining organization: ${organizationLabel}`
-              : "Individual workspace"}
+              : authCopy.individualWorkspace}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
         {(["teacher", "student"] as const).map((item) => {
           const Icon = roleDetails[item].icon;
           const selected = role === item;
+          const itemLabel = item === "teacher" ? authCopy.teacher : authCopy.student;
+          const itemCopy = item === "teacher" ? authCopy.teacherCopy : authCopy.studentCopy;
           return (
             <button
               key={item}
@@ -391,9 +396,9 @@ function SignupForm() {
               }`}
             >
               <Icon className="mb-3 h-5 w-5" />
-              <span className="block font-semibold">{roleDetails[item].label}</span>
+              <span className="block font-semibold">{itemLabel}</span>
               <span className="mt-1 block text-xs">
-                {roleDetails[item].copy}
+                {itemCopy}
               </span>
             </button>
           );
@@ -401,10 +406,10 @@ function SignupForm() {
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={() => setStep("space")} className="btn-secondary justify-center py-3">
-              Back
+              {authCopy.back}
             </button>
             <button type="button" onClick={() => setStep("account")} className="btn-primary justify-center py-3">
-              Continue
+              {authCopy.continue}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -416,14 +421,14 @@ function SignupForm() {
           <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
             {accountType === "organization"
               ? organizationMode === "create"
-                ? `${organizationLabel} - ${roleDetails[role].label}`
-                : `${organizationLabel} - ${roleDetails[role].label}`
-              : `Individual - ${roleDetails[role].label}`}
+                ? `${organizationLabel} - ${roleLabel}`
+                : `${organizationLabel} - ${roleLabel}`
+              : `${authCopy.individual} - ${roleLabel}`}
           </div>
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          Full name
+          {authCopy.fullName}
         </label>
         <input
           type="text"
@@ -436,7 +441,7 @@ function SignupForm() {
       </div>
       <div>
         <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          Email
+          {authCopy.email}
         </label>
         <input
           type="email"
@@ -449,13 +454,13 @@ function SignupForm() {
       </div>
       <div>
         <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          Password
+          {authCopy.password}
         </label>
         <input
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Minimum 8 characters"
+          placeholder={authCopy.passwordPlaceholder}
           minLength={8}
           required
           className="edsync-input"
@@ -466,11 +471,11 @@ function SignupForm() {
         disabled={loading}
         className="btn-primary w-full justify-center py-3.5"
       >
-        {loading ? "Creating account..." : `${copy.createWorkspace} - ${roleDetails[role].label}`}
+        {loading ? authCopy.creatingAccount : `${copy.createWorkspace} - ${roleLabel}`}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
       <button type="button" onClick={() => setStep("role")} className="btn-secondary w-full justify-center py-3">
-        Back
+        {authCopy.back}
       </button>
         </div>
       )}
@@ -487,16 +492,17 @@ function SignupPanelTitle() {
 
 function SignupLoginLink() {
   const { querySuffix, language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicCopy(language), [language]);
+  const authCopy = useMemo(() => getPublicAuthCopy(language), [language]);
+  const publicCopy = useMemo(() => getPublicCopy(language), [language]);
 
   return (
     <p className="mt-6 text-center text-sm text-edsync-subtle">
-      Already have an account?{" "}
+      {authCopy.alreadyHaveAccount}{" "}
       <Link
         href={`/auth/login${querySuffix}`}
         className="font-semibold text-edsync-blue hover:underline"
       >
-        {copy.signIn}
+        {publicCopy.signIn}
       </Link>
     </p>
   );
