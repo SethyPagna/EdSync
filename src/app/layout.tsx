@@ -2,16 +2,21 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import PwaRegister from "@/components/PwaRegister";
+import { DEFAULT_PUBLIC_LANGUAGE, EDSYNC_LANGUAGES } from "@/lib/public/languages";
 
+const publicLanguages = JSON.stringify(EDSYNC_LANGUAGES);
 const preferenceScript = `
 (() => {
   try {
     const theme = window.localStorage.getItem("edsync-theme");
     document.documentElement.classList.toggle("dark", theme === "dark");
     const cookieLanguage = document.cookie.split("; ").find((row) => row.startsWith("edsync-language="))?.split("=")[1];
-    const language = window.localStorage.getItem("edsync-language") || (cookieLanguage ? decodeURIComponent(cookieLanguage) : "English");
-    const codes = { English: "en", Korean: "ko", Khmer: "km", Chinese: "zh", Japanese: "ja", Spanish: "es", French: "fr", Vietnamese: "vi", Thai: "th" };
-    document.documentElement.lang = codes[language] || "en";
+    const cookieLanguageCode = document.cookie.split("; ").find((row) => row.startsWith("edsync-language-code="))?.split("=")[1];
+    const language = window.localStorage.getItem("edsync-language") || (cookieLanguage ? decodeURIComponent(cookieLanguage) : "${DEFAULT_PUBLIC_LANGUAGE}");
+    const languageCode = cookieLanguageCode ? decodeURIComponent(cookieLanguageCode) : "";
+    const languages = ${publicLanguages};
+    const match = languages.find((item) => item.name === language || item.code === language || item.code === languageCode);
+    document.documentElement.lang = match?.code || "en";
   } catch {}
 })();
 `;
