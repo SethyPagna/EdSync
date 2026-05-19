@@ -29,6 +29,7 @@ type AuthCopy = {
   joinExisting: string;
   joiningOrganization: string;
   missingOrganization: string;
+  missingRole: string;
   newToEdSync: string;
   newOrganization: string;
   openPortal: string;
@@ -88,6 +89,7 @@ const englishAuthCopy: AuthCopy = {
   joinExisting: "Join existing",
   joiningOrganization: "Joining organization",
   missingOrganization: "No active organization found for that code yet.",
+  missingRole: "Your account role is missing. Please contact support before continuing.",
   newToEdSync: "New to EdSync?",
   newOrganization: "New organization",
   openPortal: "Open portal",
