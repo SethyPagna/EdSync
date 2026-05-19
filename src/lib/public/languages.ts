@@ -12,6 +12,9 @@ export const EDSYNC_LANGUAGES = [
 
 export type PublicLanguageName = (typeof EDSYNC_LANGUAGES)[number]["name"];
 export type PublicLanguageCode = (typeof EDSYNC_LANGUAGES)[number]["code"];
+export type PublicLanguageSearchParams = {
+  language?: string;
+};
 
 export const DEFAULT_PUBLIC_LANGUAGE: PublicLanguageName = "English";
 
