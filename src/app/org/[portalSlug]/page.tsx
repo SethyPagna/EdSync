@@ -63,6 +63,7 @@ export default async function OrganizationPortalPage({
     view: copy.courses,
     minutes: "min",
   };
+  const languageQuery = filters.language ? `?language=${encodeURIComponent(filters.language)}` : "";
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -178,7 +179,7 @@ export default async function OrganizationPortalPage({
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
             {hasFilters && (
-              <Link href={`/org/${portal.slug}`} className="text-sm font-semibold text-edsync-blue hover:underline">
+              <Link href={`/org/${portal.slug}${languageQuery}`} className="text-sm font-semibold text-edsync-blue hover:underline">
                 {copy.clearFilters}
               </Link>
             )}
@@ -201,7 +202,7 @@ export default async function OrganizationPortalPage({
             <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
             <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
             <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
-            <Link href="/catalog" className="btn-primary mx-auto mt-5 w-fit">
+            <Link href={`/catalog${languageQuery}`} className="btn-primary mx-auto mt-5 w-fit">
               {copy.catalogLabel}
             </Link>
           </div>
