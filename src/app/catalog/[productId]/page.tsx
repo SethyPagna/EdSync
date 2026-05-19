@@ -16,6 +16,7 @@ import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getPublicCatalogItem } from "@/lib/catalog";
 import { getPublicCopy } from "@/lib/public/i18n";
+import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 export async function generateMetadata({
   params,
@@ -44,7 +45,7 @@ export default async function CatalogDetailPage({
   const cookieStore = await cookies();
   const publicLanguage = searchParams?.language ?? cookieStore.get("edsync-language")?.value;
   const copy = getPublicCopy(publicLanguage);
-  const languageQuery = publicLanguage ? `?language=${encodeURIComponent(publicLanguage)}` : "";
+  const languageQuery = publicLanguageQuerySuffix(publicLanguage);
   const displayPrice = item.price.isFree ? copy.free : item.price.label;
   const enrollLabels = {
     enrolled: copy.start,
