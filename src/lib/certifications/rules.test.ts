@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  CERTIFICATION_ID_MAX_LENGTH,
   CERTIFICATION_RECIPES,
   CERTIFICATION_TITLE_MAX_LENGTH,
+  normalizeCertificationCourseId,
   normalizeCertificationRulePayload,
   normalizeCertificationSettings,
+  validateCertificationRuleId,
   validateCertificationTitle,
 } from "@/lib/certifications/rules";
 
@@ -28,5 +31,14 @@ describe("certification rule validation", () => {
     expect(normalizeCertificationSettings({ audit: "standard" })).toEqual({ audit: "standard" });
     expect(normalizeCertificationSettings(null)).toEqual({});
     expect(() => normalizeCertificationSettings([])).toThrow("JSON object");
+  });
+
+  it("validates rule and course identifiers", () => {
+    expect(validateCertificationRuleId("rule-1")).toBe("rule-1");
+    expect(normalizeCertificationCourseId("course_1")).toBe("course_1");
+    expect(normalizeCertificationCourseId("")).toBeNull();
+    expect(() => validateCertificationRuleId("bad id")).toThrow("short identifier");
+    expect(() => validateCertificationRuleId("x".repeat(CERTIFICATION_ID_MAX_LENGTH + 1))).toThrow("short identifier");
+    expect(() => normalizeCertificationCourseId("bad course")).toThrow("short identifier");
   });
 });
