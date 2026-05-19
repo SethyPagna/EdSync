@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "A valid email and password of at least 8 characters are required.", status: 400 },
-    });
+    }, { status: 400 });
   }
 
   const rate = await enforceRateLimit({
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "This email is already registered. Try signing in.", status: 409 },
-    });
+    }, { status: 409 });
   }
 
   const id = crypto.randomUUID();
