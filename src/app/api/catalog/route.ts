@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const price = priceParam === "free" || priceParam === "paid" ? priceParam : undefined;
     const category = params.get("category");
     const difficulty = params.get("difficulty");
-    const language = params.get("language");
+    const courseLanguage = params.get("courseLanguage") ?? params.get("catalogLanguage") ?? params.get("language");
     const maxDuration = params.get("duration");
 
     const [items, portals] = await Promise.all([
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         price,
         category,
         difficulty,
-        language,
+        courseLanguage,
         maxDuration,
       }),
       listPublicPortals(),
