@@ -225,6 +225,8 @@
 - Continued public i18n refinement on 2026-05-19: changed the launch preview gallery to accept server-provided preview copy, kept a compatibility path for existing labels, and wired the catalog hero so preview nav labels, ready/start state, key metrics, and compact block labels reuse the selected public language strings instead of staying fully English.
 - Verification for this i18n pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3506/catalog?language=Spanish` returned 200, and a mobile screenshot was reviewed for localized hero text, compact controls, and localized preview labels without clipping.
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `3ba9584b-dc82-4424-b759-907469f4ab60`. Live smoke checks returned 200 for `/catalog?language=Spanish`, `/showcase`, and `/auth/login`, and `/api/catalog` returned an empty catalog payload without errors.
+- Continued public preview localization on 2026-05-19: reduced the remaining English-heavy hero preview titles and block summaries by using selected-language public labels for Catalog, Studio, AI, Practice, Grades, Courses, Search, Filters, Duration, Difficulty, Free, and Start across the gallery.
+- Verification for this preview label pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3507/catalog?language=Spanish` returned 200, and a mobile screenshot confirmed the preview uses shorter localized labels without clipping.
 
 ## Update Protocol
 
