@@ -52,6 +52,7 @@ export default async function CatalogPage({
   const [, , aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const cardLabels = {
     featured: copy.featured,
+    free: copy.free,
     preview: `${copy.courses}. ${copy.start}.`,
     flexible: copy.anyDuration,
     view: copy.courses,
@@ -184,7 +185,7 @@ export default async function CatalogPage({
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {items.map((item) => (
-                  <CatalogCourseCard key={item.id} item={item} labels={cardLabels} />
+                  <CatalogCourseCard key={item.id} item={item} labels={cardLabels} language={filters.language} />
                 ))}
               </div>
               {items.length === 0 && (
@@ -228,7 +229,7 @@ export default async function CatalogPage({
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               {featured.map((item) => (
-                <CatalogCourseCard key={item.id} item={item} featured labels={cardLabels} />
+                <CatalogCourseCard key={item.id} item={item} featured labels={cardLabels} language={filters.language} />
               ))}
             </div>
           </section>
