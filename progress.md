@@ -212,6 +212,7 @@
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `4d1310c1-87ed-4eaf-aabb-95a21c15713e`. Live smoke checks returned 200 for `/catalog` and `/auth/login`, `/studio` returned the expected unauthenticated 307 redirect, and `/api/catalog` returned an empty catalog payload without errors.
 - Continued shell responsiveness on 2026-05-19: compacted the protected mobile header to keep the brand icon, theme, language, and notifications from crowding narrow screens; clamped the mobile drawer to the viewport; and restored focused admin Governance links for Standards, Certifications, and Automation so those pages remain visibly connected in the sidebar.
 - Verification for this follow-up: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `3bf2f508-dcc4-4c92-b9d4-9463c3bfde6b`. Live smoke checks returned 200 for `/catalog` and `/auth/login`, `/admin/dashboard` returned the expected unauthenticated 307 redirect, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
