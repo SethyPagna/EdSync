@@ -5,6 +5,7 @@ import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUs
 import { createOrganizationSlug, validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeOrganizationMode, normalizeSignupRole } from "@/lib/auth/roles";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
+import { validateTenantName } from "@/lib/tenant-validation";
 
 function organizationSlug(name: string) {
   return createOrganizationSlug(name, crypto.randomUUID().slice(0, 8));
@@ -69,7 +70,20 @@ export async function POST(request: Request) {
   }
 
   const fullName = options?.data?.full_name?.trim() || null;
-  const organizationName = options?.data?.organization_name?.trim() || null;
+  let organizationName: string | null = null;
+  if (accountType === "organization" && organizationMode === "create") {
+    try {
+      organizationName = validateTenantName(options?.data?.organization_name);
+    } catch (error) {
+      return NextResponse.json({
+        data: { user: null, session: null },
+        error: {
+          message: error instanceof Error ? error.message.replace("Tenant", "Organization") : "Organization name is invalid.",
+          status: 400,
+        },
+      }, { status: 400 });
+    }
+  }
   let organizationCode: string | null = null;
   if (accountType === "organization" && organizationMode === "join") {
     try {
@@ -105,13 +119,6 @@ export async function POST(request: Request) {
       },
       { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
     );
-  }
-
-  if (accountType === "organization" && organizationMode === "create" && !organizationName) {
-    return NextResponse.json({
-      data: { user: null, session: null },
-      error: { message: "Organization name is required.", status: 400 },
-    }, { status: 400 });
   }
 
   const joinedTenantRows = accountType === "organization" && organizationMode === "join"
