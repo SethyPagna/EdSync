@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpenCheck, Building2, Clock3 } from "lucide-react";
 import type { PublicCatalogItem } from "@/lib/catalog";
+import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 type CatalogCourseCardProps = {
   item: PublicCatalogItem;
@@ -31,9 +32,7 @@ export default function CatalogCourseCard({
     minutes: "min",
   },
 }: CatalogCourseCardProps) {
-  const detailUrl = language
-    ? `${item.detailUrl}?language=${encodeURIComponent(language)}`
-    : item.detailUrl;
+  const detailUrl = `${item.detailUrl}${publicLanguageQuerySuffix(language)}`;
 
   return (
     <Link
