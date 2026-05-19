@@ -1,8 +1,10 @@
 import { d1Query } from "@/lib/db/d1";
 import {
   normalizeEmailDisplay,
+  normalizeEmailMetadata,
   validateEmailAddress,
   validateEmailBody,
+  validateEmailHtml,
   validateEmailSubject,
 } from "@/lib/engagement/email-validation";
 import { normalizeNotificationInput } from "@/lib/engagement/notification-validation";
@@ -36,8 +38,10 @@ function normalizeEmailInput(input: EmailInput): EmailInput {
     recipientEmail: validateEmailAddress(input.recipientEmail, "Recipient email"),
     subject: validateEmailSubject(input.subject),
     bodyText: validateEmailBody(input.bodyText),
+    bodyHtml: validateEmailHtml(input.bodyHtml),
     senderDisplay: normalizeEmailDisplay(input.senderDisplay, "EdSync"),
     replyTo: input.replyTo ? validateEmailAddress(input.replyTo, "Reply-to email") : null,
+    metadata: normalizeEmailMetadata(input.metadata),
   };
 }
 
