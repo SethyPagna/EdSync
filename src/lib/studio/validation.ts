@@ -4,6 +4,9 @@ export const STUDIO_TITLE_MAX_LENGTH = 160;
 export const STUDIO_CONTENT_MAX_BYTES = 600_000;
 
 const STUDIO_KINDS = new Set(["note", "doc", "sheet", "slide", "practice", "import", "design"]);
+const STUDIO_STATUSES = new Set(["draft", "published", "archived"]);
+
+export type StudioDocumentStatus = "draft" | "published" | "archived";
 
 export function normalizeStudioKind(kind: unknown): Exclude<StudioItemKind, "lesson"> {
   const value = String(kind ?? "doc");
@@ -18,6 +21,21 @@ export function validateStudioTitle(value: unknown) {
     throw new Error(`Title must be ${STUDIO_TITLE_MAX_LENGTH} characters or fewer.`);
   }
   return title;
+}
+
+export function validateStudioStatus(
+  value: unknown,
+  options: { allowArchived?: boolean; fallback?: StudioDocumentStatus } = {},
+): StudioDocumentStatus {
+  const fallback = options.fallback ?? "draft";
+  const allowArchived = options.allowArchived ?? true;
+  if (value === undefined || value === null || value === "") return fallback;
+
+  const status = String(value);
+  if (!STUDIO_STATUSES.has(status) || (!allowArchived && status === "archived")) {
+    throw new Error("Choose a supported Studio status.");
+  }
+  return status as StudioDocumentStatus;
 }
 
 export function validateStudioJsonObject(value: unknown) {
