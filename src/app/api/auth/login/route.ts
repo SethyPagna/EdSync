@@ -3,6 +3,7 @@ import { d1Query } from "@/lib/db/d1";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { validateOrganizationCode } from "@/lib/auth/organization-code";
+import { normalizeUserRole } from "@/lib/auth/roles";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     id: string;
     email: string;
     password_hash: string;
-    role: "teacher" | "student";
+    role: string;
     is_admin: number | null;
     full_name: string | null;
   }>(
@@ -91,6 +92,21 @@ export async function POST(request: Request) {
       data: { user: null, session: null },
       error: { message: "Invalid login credentials.", status: 401 },
     });
+  }
+
+  const accountRole = normalizeUserRole(account.is_admin ? "admin" : account.role);
+  if (!accountRole) {
+    await logSecurityEvent({
+      request,
+      eventType: "login_role_invalid",
+      severity: "warning",
+      subject: normalizedEmail,
+      message: "Login blocked because the account profile role is invalid.",
+    });
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Your account role is missing. Please contact support before continuing.", status: 403 },
+    }, { status: 403 });
   }
 
   let tenantContext: { id: string; slug: string; name: string } | null = null;
@@ -128,7 +144,7 @@ export async function POST(request: Request) {
     id: account.id,
     email: account.email,
     user_metadata: {
-      role: account.is_admin ? "admin" : account.role,
+      role: accountRole,
       full_name: account.full_name,
       tenant_slug: tenantContext?.slug,
       tenant_name: tenantContext?.name,
@@ -140,7 +156,7 @@ export async function POST(request: Request) {
     error: null,
   });
 
-  setSessionCookies(response, session.token, user.user_metadata.role, session.expires);
+  setSessionCookies(response, session.token, accountRole, session.expires);
   setActiveTenantCookie(response, tenantContext?.id, session.expires);
   return response;
 }
