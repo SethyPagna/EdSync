@@ -1,6 +1,14 @@
 "use client";
 
 import type { DataFilter, DataOrder, DataRequest, D1Result } from "@/lib/db/d1";
+import {
+  normalizeAccountType,
+  normalizeOrganizationMode,
+  normalizeSignupRole,
+  type AccountType,
+  type OrganizationMode,
+  type SignupRole,
+} from "@/lib/auth/roles";
 
 type QueryOptions = {
   count?: "exact";
@@ -23,6 +31,13 @@ type AuthResponse = {
   };
   error: { message: string; status?: number } | null;
 };
+
+function authValidationError(message: string): AuthResponse {
+  return {
+    data: { user: null, session: null },
+    error: { message, status: 400 },
+  };
+}
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -165,26 +180,40 @@ export function createClient() {
       async signInWithPassword(input: {
         email: string;
         password: string;
-        account_type?: "individual" | "organization";
+        account_type: AccountType;
         organization_code?: string;
       }): Promise<AuthResponse> {
+        if (!normalizeAccountType(input.account_type)) {
+          return authValidationError("Choose individual or organization before signing in.");
+        }
         return postJson<AuthResponse>("/api/auth/login", input);
       },
       async signUp(input: {
         email: string;
         password: string;
-        options?: {
-          data?: {
+        options: {
+          data: {
             full_name?: string;
-            role?: "teacher" | "student";
-            account_type?: "individual" | "organization";
-            organization_mode?: "join" | "create";
+            role: SignupRole;
+            account_type: AccountType;
+            organization_mode?: OrganizationMode;
             organization_name?: string;
             organization_code?: string;
           };
           emailRedirectTo?: string;
         };
       }): Promise<AuthResponse> {
+        const data = input.options.data;
+        if (!normalizeSignupRole(data.role)) {
+          return authValidationError("Choose teacher or student before creating an account.");
+        }
+        const accountType = normalizeAccountType(data.account_type);
+        if (!accountType) {
+          return authValidationError("Choose individual or organization before creating an account.");
+        }
+        if (accountType === "organization" && !normalizeOrganizationMode(data.organization_mode)) {
+          return authValidationError("Choose whether to join or create an organization.");
+        }
         return postJson<AuthResponse>("/api/auth/signup", input);
       },
       async signOut() {
