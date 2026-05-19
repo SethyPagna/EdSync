@@ -17,4 +17,10 @@ describe("organization code helpers", () => {
     expect(() => validateOrganizationCode("!!!")).toThrow("required");
     expect(() => validateOrganizationCode("x".repeat(ORGANIZATION_CODE_MAX_LENGTH + 1))).toThrow("characters");
   });
+
+  it("keeps generated organization slugs within the lookup-code length", () => {
+    const slug = createOrganizationSlug("North Campus ".repeat(20), "abc123");
+    expect(slug).toHaveLength(ORGANIZATION_CODE_MAX_LENGTH);
+    expect(slug.endsWith("-abc123")).toBe(true);
+  });
 });
