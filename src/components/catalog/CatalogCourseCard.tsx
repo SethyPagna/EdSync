@@ -6,12 +6,26 @@ type CatalogCourseCardProps = {
   item: PublicCatalogItem;
   featured?: boolean;
   showOrganization?: boolean;
+  labels?: {
+    featured: string;
+    preview: string;
+    flexible: string;
+    view: string;
+    minutes: string;
+  };
 };
 
 export default function CatalogCourseCard({
   item,
   featured = false,
   showOrganization = true,
+  labels = {
+    featured: "Featured",
+    preview: "Preview this course and enroll when you are ready.",
+    flexible: "Flexible",
+    view: "View course",
+    minutes: "min",
+  },
 }: CatalogCourseCardProps) {
   return (
     <Link
@@ -38,7 +52,7 @@ export default function CatalogCourseCard({
           </span>
           {(featured || item.metadata.category) && (
             <span className="rounded-full bg-edsync-blue px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-              {featured ? "Featured" : item.metadata.category}
+              {featured ? labels.featured : item.metadata.category}
             </span>
           )}
         </div>
@@ -57,7 +71,7 @@ export default function CatalogCourseCard({
         <p className="mt-2 line-clamp-2 text-sm leading-6 text-edsync-subtle">
           {item.metadata.previewSummary ||
             item.description ||
-            "Preview this course and enroll when you are ready."}
+            labels.preview}
         </p>
         <div className="mt-4 grid gap-2 text-xs text-edsync-subtle sm:grid-cols-2">
           {showOrganization && (
@@ -68,11 +82,11 @@ export default function CatalogCourseCard({
           )}
           <span className="flex items-center gap-1.5">
             <Clock3 className="h-3.5 w-3.5" />
-            {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} min` : "Flexible"}
+            {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} ${labels.minutes}` : labels.flexible}
           </span>
         </div>
         <div className="mt-4 flex items-center justify-between gap-3 text-sm font-semibold text-edsync-blue">
-          <span>View course</span>
+          <span>{labels.view}</span>
           <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
         </div>
       </div>
