@@ -219,6 +219,8 @@
 - Continued gallery interaction cleanup on 2026-05-19: hero preview dots and side preview buttons now pause autoplay after manual interaction or focus/hover so the gallery does not immediately jump away from the user-selected slide; selected dots expose `aria-current`, and stale unused workflow bridge props were removed from `/showcase` and the shared workflow component.
 - Verification for this cleanup pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed.
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `d35f1e6f-3e85-4333-bc4c-0c8d335666d2`. Live smoke checks returned 200 for `/catalog`, `/showcase`, and `/auth/login`, and `/api/catalog` returned an empty catalog payload without errors.
+- Continued mobile gallery refinement on 2026-05-19: added swipe gestures and left/right keyboard support to the hero preview gallery, disabled autoplay for `prefers-reduced-motion`, and added a polished focus-visible state for keyboard users.
+- Verification for this interaction pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3505/catalog` returned 200, and desktop/mobile screenshots were reviewed for compact controls, readable gallery content, and no clipped launch actions.
 
 ## Update Protocol
 
