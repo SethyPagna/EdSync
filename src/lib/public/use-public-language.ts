@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   DEFAULT_PUBLIC_LANGUAGE,
   normalizePublicLanguage,
+  publicLanguageQuerySuffix,
   type PublicLanguageName,
 } from "./languages";
 
@@ -40,10 +41,7 @@ export function usePublicLanguagePreference() {
     return () => window.removeEventListener("edsync-language-change", handleLanguageChange);
   }, []);
 
-  const querySuffix = useMemo(
-    () => (language === DEFAULT_PUBLIC_LANGUAGE ? "" : `?language=${encodeURIComponent(language)}`),
-    [language],
-  );
+  const querySuffix = useMemo(() => publicLanguageQuerySuffix(language), [language]);
 
   return { language, querySuffix };
 }
