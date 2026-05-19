@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
-import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
+import { homeForRole, normalizeRedirectRole, safeNextPath } from "@/lib/auth/redirects";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -120,7 +120,13 @@ function LoginForm() {
       return;
     }
 
-    const role = (data.user?.user_metadata?.role as string) || "student";
+    const role = normalizeRedirectRole(data.user?.user_metadata?.role as string | undefined);
+    if (!role) {
+      toast.error(authCopy.missingRole);
+      setLoading(false);
+      return;
+    }
+
     const tenantSlug = data.user?.user_metadata?.tenant_slug || normalizedOrganizationCode;
     const requestedNext = searchParams.get("next");
     const fallbackNext = accountType === "organization" && tenantSlug
