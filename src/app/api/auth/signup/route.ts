@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
+import { validateDisplayName } from "@/lib/auth/display-name";
 import { hashPassword } from "@/lib/auth/password";
 import { validateSignupPassword } from "@/lib/auth/password-validation";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
@@ -80,7 +81,15 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
-  const fullName = options?.data?.full_name?.trim() || null;
+  let fullName: string | null;
+  try {
+    fullName = validateDisplayName(options?.data?.full_name);
+  } catch (error) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: error instanceof Error ? error.message : "Full name is invalid.", status: 400 },
+    }, { status: 400 });
+  }
   let organizationName: string | null = null;
   if (accountType === "organization" && organizationMode === "create") {
     try {
