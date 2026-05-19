@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enqueueAutomationJob } from "@/lib/automation";
-import { AUTOMATION_RECIPES, normalizeAutomationRulePayload } from "@/lib/automation/rules";
+import { AUTOMATION_RECIPES, normalizeAutomationRulePayload, validateAutomationRuleId } from "@/lib/automation/rules";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
@@ -18,8 +18,8 @@ async function seedDefaultAutomations(tenantId: string, userId: string) {
         tenantId,
         rule.title,
         rule.triggerKey,
-        rule.conditions,
-        rule.actions,
+        JSON.stringify(rule.conditions),
+        JSON.stringify(rule.actions),
         userId,
       ],
     );
@@ -61,20 +61,32 @@ export async function POST(request: Request) {
   };
 
   if (body.action === "delete") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
-    await d1Query("DELETE FROM automation_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.id]);
-    return NextResponse.json({ data: { id: body.id }, error: null });
+    let id: string;
+    try {
+      id = validateAutomationRuleId(body.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rule is required.";
+      return NextResponse.json({ data: null, error: message }, { status: 400 });
+    }
+    await d1Query("DELETE FROM automation_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, id]);
+    return NextResponse.json({ data: { id }, error: null });
   }
 
   if (body.action === "toggle") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
+    let id: string;
+    try {
+      id = validateAutomationRuleId(body.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rule is required.";
+      return NextResponse.json({ data: null, error: message }, { status: 400 });
+    }
     await d1Query("UPDATE automation_rules SET enabled = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?", [
       body.enabled === false ? 0 : 1,
       context.tenant.id,
-      body.id,
+      id,
     ]);
-    const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.toggled", payload: { ruleId: body.id } });
-    return NextResponse.json({ data: { id: body.id, jobId }, error: null });
+    const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.toggled", payload: { ruleId: id } });
+    return NextResponse.json({ data: { id, jobId }, error: null });
   }
 
   let normalized;
@@ -86,7 +98,13 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "update") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
+    let id: string;
+    try {
+      id = validateAutomationRuleId(body.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rule is required.";
+      return NextResponse.json({ data: null, error: message }, { status: 400 });
+    }
     await d1Query(
       `UPDATE automation_rules
        SET title = ?, trigger_key = ?, conditions = ?, actions = ?, enabled = ?, updated_at = datetime('now')
@@ -94,15 +112,15 @@ export async function POST(request: Request) {
       [
         normalized.title,
         normalized.triggerKey,
-        normalized.conditions,
-        normalized.actions,
+        JSON.stringify(normalized.conditions),
+        JSON.stringify(normalized.actions),
         normalized.enabled ? 1 : 0,
         context.tenant.id,
-        body.id,
+        id,
       ],
     );
-    const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.updated", payload: { ruleId: body.id } });
-    return NextResponse.json({ data: { id: body.id, jobId }, error: null });
+    const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.updated", payload: { ruleId: id } });
+    return NextResponse.json({ data: { id, jobId }, error: null });
   }
 
   const id = crypto.randomUUID();
@@ -114,8 +132,8 @@ export async function POST(request: Request) {
       context.tenant.id,
       normalized.title,
       normalized.triggerKey,
-      normalized.conditions,
-      normalized.actions,
+      JSON.stringify(normalized.conditions),
+      JSON.stringify(normalized.actions),
       normalized.enabled ? 1 : 0,
       user.id,
     ],
