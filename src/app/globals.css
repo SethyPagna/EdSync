@@ -3897,6 +3897,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
   animation: launchPreviewLift 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 
+.edsync-launch-preview-board:focus {
+  outline: none;
+}
+
+.edsync-launch-preview-board:focus-visible {
+  border-radius: 1.4rem;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--launch-blue) 28%, transparent);
+}
+
 .edsync-launch-preview-board::before {
   content: "";
   position: absolute;
