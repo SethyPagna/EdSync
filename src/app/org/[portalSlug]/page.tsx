@@ -12,7 +12,7 @@ import {
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
-import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
+import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
@@ -35,14 +35,7 @@ export default async function OrganizationPortalPage({
   searchParams,
 }: {
   params: { portalSlug: string };
-  searchParams?: {
-    q?: string;
-    price?: string;
-    difficulty?: string;
-    language?: string;
-    courseLanguage?: string;
-    duration?: string;
-  };
+  searchParams?: CatalogSearchParams;
 }) {
   const portal = await getOrganizationPortal(params.portalSlug);
   if (!portal) notFound();
