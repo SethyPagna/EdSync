@@ -5,7 +5,7 @@ import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { DEFAULT_PUBLIC_LANGUAGE, normalizePublicLanguage } from "@/lib/public/languages";
+import { normalizePublicLanguage, publicLanguageHref } from "@/lib/public/languages";
 
 type PublicTopbarProps = {
   active?: "catalog" | "organization" | "course";
@@ -37,11 +37,7 @@ export default async function PublicTopbar({
         : role === "student"
           ? "/student/dashboard"
           : "/auth/login";
-  const loginParams = new URLSearchParams();
-  if (resolvedOrganizationCode) loginParams.set("org", resolvedOrganizationCode);
-  if (publicLanguage !== DEFAULT_PUBLIC_LANGUAGE) loginParams.set("language", publicLanguage);
-  const loginQuery = loginParams.toString();
-  const loginHref = `/auth/login${loginQuery ? `?${loginQuery}` : ""}`;
+  const loginHref = publicLanguageHref("/auth/login", publicLanguage, { org: resolvedOrganizationCode });
 
   return (
     <header className="edsync-public-topbar sticky top-0 z-30 bg-edsync-bg/92 backdrop-blur-xl">
