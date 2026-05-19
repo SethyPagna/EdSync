@@ -15,6 +15,7 @@ import {
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getPublicCatalogItem } from "@/lib/catalog";
+import { validateCatalogProductId } from "@/lib/catalog-validation";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageQuerySuffix, type PublicLanguageSearchParams } from "@/lib/public/languages";
 
@@ -23,7 +24,16 @@ export async function generateMetadata({
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
-  const item = await getPublicCatalogItem(params.productId);
+  let productId: string;
+  try {
+    productId = validateCatalogProductId(params.productId);
+  } catch {
+    return {
+      title: "Course",
+      description: "Preview an EdSync public course and enroll when ready.",
+    };
+  }
+  const item = await getPublicCatalogItem(productId);
   return {
     title: item ? item.title : "Course",
     description:
@@ -40,7 +50,13 @@ export default async function CatalogDetailPage({
   params: { productId: string };
   searchParams?: PublicLanguageSearchParams & { enrolled?: string; checkout?: string };
 }) {
-  const item = await getPublicCatalogItem(params.productId);
+  let productId: string;
+  try {
+    productId = validateCatalogProductId(params.productId);
+  } catch {
+    notFound();
+  }
+  const item = await getPublicCatalogItem(productId);
   if (!item) notFound();
   const cookieStore = await cookies();
   const publicLanguage = searchParams?.language ?? cookieStore.get("edsync-language")?.value;
