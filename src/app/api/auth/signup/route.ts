@@ -3,7 +3,7 @@ import { d1Query } from "@/lib/db/d1";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { createOrganizationSlug, validateOrganizationCode } from "@/lib/auth/organization-code";
-import { normalizeSignupRole } from "@/lib/auth/roles";
+import { normalizeAccountType, normalizeOrganizationMode, normalizeSignupRole } from "@/lib/auth/roles";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 function organizationSlug(name: string) {
@@ -50,9 +50,25 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
+  const accountType = normalizeAccountType(options?.data?.account_type);
+  if (!accountType) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Choose individual or organization before creating an account.", status: 400 },
+    }, { status: 400 });
+  }
+
+  const organizationMode = accountType === "organization"
+    ? normalizeOrganizationMode(options?.data?.organization_mode)
+    : null;
+  if (accountType === "organization" && !organizationMode) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Choose whether to join or create an organization.", status: 400 },
+    }, { status: 400 });
+  }
+
   const fullName = options?.data?.full_name?.trim() || null;
-  const accountType = options?.data?.account_type === "organization" ? "organization" : "individual";
-  const organizationMode = options?.data?.organization_mode === "join" ? "join" : "create";
   const organizationName = options?.data?.organization_name?.trim() || null;
   let organizationCode: string | null = null;
   if (accountType === "organization" && organizationMode === "join") {
@@ -174,7 +190,7 @@ export async function POST(request: Request) {
         crypto.randomUUID(),
         tenantId,
         id,
-        roleProfileFor({ role, accountType, organizationMode }),
+        roleProfileFor({ role, accountType, organizationMode: organizationMode ?? undefined }),
       ],
     );
     tenantContext = { id: tenantId, slug: tenantSlug, name: organizationName };
@@ -194,7 +210,7 @@ export async function POST(request: Request) {
         crypto.randomUUID(),
         joinedTenantRows[0].id,
         id,
-        roleProfileFor({ role, accountType, organizationMode }),
+        roleProfileFor({ role, accountType, organizationMode: organizationMode ?? undefined }),
       ],
     );
     tenantContext = {
