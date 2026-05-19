@@ -1,14 +1,16 @@
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import AppShell, { adminNavItems, studentNavItems, teacherNavItems } from "@/components/AppShell";
-import { ROLE_COOKIE } from "@/lib/auth/constants";
+import { getSessionUser } from "@/lib/auth/session";
 
 type SharedWorkspaceShellProps = {
   children: React.ReactNode;
 };
 
 export default async function SharedWorkspaceShell({ children }: SharedWorkspaceShellProps) {
-  const cookieStore = await cookies();
-  const role = cookieStore.get(ROLE_COOKIE)?.value;
+  const user = await getSessionUser().catch(() => null);
+  if (!user) redirect("/auth/login");
+
+  const role = user.user_metadata.role;
 
   if (role === "admin") {
     return (
