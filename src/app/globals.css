@@ -3771,8 +3771,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid var(--launch-line);
-  padding-bottom: clamp(0.8rem, 1.8vh, 1.1rem);
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .edsync-launch-brand-inline {
