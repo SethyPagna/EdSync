@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeFileName, sanitizeObjectPath, validateUploadFile } from "@/lib/security/upload";
+import {
+  UPLOAD_OBJECT_PATH_MAX_LENGTH,
+  UPLOAD_OBJECT_PATH_MAX_SEGMENTS,
+  sanitizeFileName,
+  sanitizeObjectPath,
+  validateObjectPath,
+  validateUploadFile,
+} from "@/lib/security/upload";
 
 function fileFromBytes(name: string, type: string, bytes: number[]) {
   return new File([new Uint8Array(bytes)], name, { type });
@@ -9,6 +16,14 @@ describe("upload security", () => {
   it("sanitizes file names and object paths", () => {
     expect(sanitizeFileName("../My Course!!.png")).toBe("My-Course.png");
     expect(sanitizeObjectPath("../avatars/ My Photo!!.png")).toBe("avatars/My-Photo.png");
+    expect(validateObjectPath("../avatars/ My Photo!!.png")).toBe("avatars/My-Photo.png");
+    expect(() => validateObjectPath("")).toThrow("required");
+    const overlongPath = Array.from({ length: 5 }, (_, index) => `${index}-${"x".repeat(119)}`).join("/");
+    expect(overlongPath.length).toBeGreaterThan(UPLOAD_OBJECT_PATH_MAX_LENGTH);
+    expect(() => validateObjectPath(overlongPath)).toThrow("characters");
+    expect(() => validateObjectPath(Array.from({ length: UPLOAD_OBJECT_PATH_MAX_SEGMENTS + 1 }, (_, index) => `part-${index}`).join("/"))).toThrow(
+      "segments",
+    );
   });
 
   it("accepts image uploads when MIME and signature match", async () => {
