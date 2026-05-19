@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { hashPassword } from "@/lib/auth/password";
+import { validateSignupPassword } from "@/lib/auth/password-validation";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { createOrganizationSlug, validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeOrganizationMode, normalizeSignupRole } from "@/lib/auth/roles";
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
-  const { password, options } = body;
+  const { options } = body;
 
   let normalizedEmail: string;
   try {
@@ -107,10 +108,13 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!password || password.length < 8) {
+  let password: string;
+  try {
+    password = validateSignupPassword(body.password);
+  } catch (error) {
     return NextResponse.json({
       data: { user: null, session: null },
-      error: { message: "A valid email and password of at least 8 characters are required.", status: 400 },
+      error: { message: error instanceof Error ? error.message : "Password is invalid.", status: 400 },
     }, { status: 400 });
   }
 
