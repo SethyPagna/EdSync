@@ -18,7 +18,7 @@ export default function ShowcasePage() {
             Intro
           </Link>
         </div>
-        <WorkflowShowcase includeBridge={false} />
+        <WorkflowShowcase />
       </section>
     </main>
   );
