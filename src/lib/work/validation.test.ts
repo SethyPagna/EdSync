@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   WORK_POINTS_MAX,
   isWorkType,
+  validateEarnedWorkPoints,
   validateWorkPoints,
   validateWorkStatus,
   validateWorkType,
@@ -29,5 +30,11 @@ describe("work validation", () => {
     expect(validateWorkPoints(-5)).toBe(0);
     expect(validateWorkPoints(WORK_POINTS_MAX + 1)).toBe(WORK_POINTS_MAX);
     expect(() => validateWorkPoints("many")).toThrow("valid number");
+  });
+
+  it("bounds earned points to the possible score", () => {
+    expect(validateEarnedWorkPoints(8, 10)).toBe(8);
+    expect(validateEarnedWorkPoints(12, 10)).toBe(10);
+    expect(validateEarnedWorkPoints(-1, 10)).toBe(0);
   });
 });
