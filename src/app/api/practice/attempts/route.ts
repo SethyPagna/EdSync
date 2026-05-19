@@ -6,11 +6,12 @@ import {
   summarizePracticeAttempt,
   type PracticeItem,
 } from "@/lib/practice/engine";
+import { isPracticeMode } from "@/lib/practice/modes";
 import { resolveTenantContext } from "@/lib/tenancy";
 import type { PracticeMode } from "@/types";
 
 type PracticeAttemptBody = {
-  mode?: PracticeMode;
+  mode?: string;
   sourceType?: string;
   sourceId?: string;
   elapsedSeconds?: number;
@@ -28,11 +29,15 @@ export async function POST(request: Request) {
   if (!body.mode || !Array.isArray(body.items) || body.items.length === 0) {
     return NextResponse.json({ data: null, error: "Practice mode and items are required." }, { status: 400 });
   }
+  if (!isPracticeMode(body.mode)) {
+    return NextResponse.json({ data: null, error: "Choose a supported practice mode." }, { status: 400 });
+  }
 
   const context = await resolveTenantContext(user);
+  const mode: PracticeMode = body.mode;
   const attemptId = crypto.randomUUID();
   const summary = summarizePracticeAttempt({
-    mode: body.mode,
+    mode,
     items: body.items,
     elapsedSeconds: Number(body.elapsedSeconds ?? 0),
     targetSeconds: body.targetSeconds ?? null,
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
       user.id,
       body.sourceType || "studio",
       body.sourceId || null,
-      body.mode,
+      mode,
       summary.targetSeconds,
       summary.elapsedSeconds,
       summary.percent,
