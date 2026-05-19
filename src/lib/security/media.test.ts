@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  PUBLIC_MEDIA_URL_MAX_LENGTH,
   safeCatalogImageUrl,
   safeCatalogVideoUrl,
   safePublicUrl,
@@ -21,6 +22,7 @@ describe("catalog media security", () => {
     expect(safePublicUrl("https://user:pass@example.com/file.png")).toBeNull();
     expect(safePublicUrl("https://cdn.example.com/installer.exe")).toBeNull();
     expect(safePublicUrl("https://cdn.example.com/script.js")).toBeNull();
+    expect(safePublicUrl(`https://cdn.example.com/${"x".repeat(PUBLIC_MEDIA_URL_MAX_LENGTH)}.png`)).toBeNull();
     expect(safePublicUrl("https://cdn.example.com/document.pdf")).toBe("https://cdn.example.com/document.pdf");
   });
 
