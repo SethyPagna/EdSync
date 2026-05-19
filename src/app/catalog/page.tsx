@@ -11,7 +11,7 @@ import CatalogLaunchHero from "@/components/catalog/CatalogLaunchHero";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
-import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
+import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
@@ -24,17 +24,7 @@ export const metadata: Metadata = {
 export default async function CatalogPage({
   searchParams,
 }: {
-  searchParams?: {
-    q?: string;
-    portal?: string;
-    tenant?: string;
-    price?: string;
-    category?: string;
-    difficulty?: string;
-    language?: string;
-    courseLanguage?: string;
-    duration?: string;
-  };
+  searchParams?: CatalogSearchParams;
 }) {
   const filters = normalizeCatalogFilters(searchParams);
   const copy = getPublicCopy(filters.language);
