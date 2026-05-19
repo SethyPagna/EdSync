@@ -49,6 +49,25 @@ export function publicLanguageQueryValue(value?: string | null) {
   return language === DEFAULT_PUBLIC_LANGUAGE ? null : language;
 }
 
+export function publicLanguageHref(
+  path: string,
+  value?: string | null,
+  params: Record<string, string | number | boolean | null | undefined> = {},
+) {
+  const [basePath, currentQuery = ""] = path.split("?", 2);
+  const query = new URLSearchParams(currentQuery);
+  for (const [key, paramValue] of Object.entries(params)) {
+    if (paramValue === null || paramValue === undefined || paramValue === "") continue;
+    query.set(key, String(paramValue));
+  }
+
+  const language = publicLanguageQueryValue(value);
+  if (language && !query.has("language")) query.set("language", language);
+
+  const queryString = query.toString();
+  return `${basePath}${queryString ? `?${queryString}` : ""}`;
+}
+
 export function languageLabelFor(value?: string | null) {
   return LANGUAGE_LABELS[normalizePublicLanguage(value)];
 }
