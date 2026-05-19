@@ -14,6 +14,7 @@ import PublicTopbar from "@/components/public/PublicTopbar";
 import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
+import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 export async function generateMetadata({
   params,
@@ -63,7 +64,7 @@ export default async function OrganizationPortalPage({
     view: copy.courses,
     minutes: "min",
   };
-  const languageQuery = filters.language ? `?language=${encodeURIComponent(filters.language)}` : "";
+  const languageQuery = publicLanguageQuerySuffix(filters.language);
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
