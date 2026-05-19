@@ -17,10 +17,16 @@ const SAFE_NEXT_PREFIXES = [
   "/games",
 ];
 
+export function normalizeRedirectRole(role: string | null | undefined): UserRole | null {
+  if (role === "admin" || role === "teacher" || role === "student") return role;
+  return null;
+}
+
 export function homeForRole(role: string | null | undefined) {
-  if (role === "admin") return "/admin/dashboard";
-  if (role === "teacher") return "/teacher/dashboard";
-  if (role === "student") return "/student/dashboard";
+  const normalizedRole = normalizeRedirectRole(role);
+  if (normalizedRole === "admin") return "/admin/dashboard";
+  if (normalizedRole === "teacher") return "/teacher/dashboard";
+  if (normalizedRole === "student") return "/student/dashboard";
   return "/auth/login";
 }
 
