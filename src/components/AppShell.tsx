@@ -503,11 +503,11 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <Link href="/" className="flex items-center gap-2 font-display font-bold">
+        <Link href="/" className="flex items-center gap-2 font-display font-bold" aria-label="EdSync home">
           <Brain className={`h-5 w-5 ${copy.accent}`} />
-          EdSync
+          <span className="hidden sm:inline">EdSync</span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ThemeToggle compact onThemeChange={handleThemeChange} />
           <LanguageMenu compact />
           <NotificationMenu />
