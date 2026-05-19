@@ -3,7 +3,7 @@ import { d1Query } from "@/lib/db/d1";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { validateOrganizationCode } from "@/lib/auth/organization-code";
-import { normalizeUserRole } from "@/lib/auth/roles";
+import { normalizeAccountType, normalizeUserRole } from "@/lib/auth/roles";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
@@ -31,7 +31,14 @@ export async function POST(request: Request) {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const accountType = body.account_type === "organization" ? "organization" : "individual";
+  const accountType = normalizeAccountType(body.account_type);
+  if (!accountType) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Choose individual or organization before signing in.", status: 400 },
+    }, { status: 400 });
+  }
+
   let organizationCode: string | null = null;
   if (accountType === "organization") {
     try {
