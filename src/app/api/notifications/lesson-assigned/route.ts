@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import {
   buildLessonAssignmentCopy,
-  normalizeAssignmentDueDate,
+  normalizeAssignmentNotificationPayload,
   parseAssignmentPreferences,
   wantsAssignmentEmail,
 } from "@/lib/engagement/assignment-notifications";
@@ -47,40 +47,36 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as AssignmentPayload;
-  if (!body.lessonId || (!body.classId && !body.studentId)) {
-    return jsonError("Lesson and class or student are required.", 400);
-  }
-
-  let dueDate: string | null;
+  let assignment: ReturnType<typeof normalizeAssignmentNotificationPayload>;
   try {
-    dueDate = normalizeAssignmentDueDate(body.dueDate);
+    assignment = normalizeAssignmentNotificationPayload(body);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Due date is invalid.";
+    const message = error instanceof Error ? error.message : "Assignment notification payload is invalid.";
     return jsonError(message, 400);
   }
 
   const [lesson] = await d1Query<LessonRow>(
     "SELECT id, title, teacher_id FROM lessons WHERE id = ? LIMIT 1",
-    [body.lessonId],
+    [assignment.lessonId],
   );
   const isAdmin = user.user_metadata.role === "admin";
   if (!lesson || (!isAdmin && lesson.teacher_id !== user.id)) {
     return jsonError("Lesson not found.", 404);
   }
 
-  if (body.classId) {
+  if (assignment.classId) {
     const [classRow] = await d1Query<{ id: string; teacher_id: string }>(
       "SELECT id, teacher_id FROM classes WHERE id = ? AND is_active = 1 LIMIT 1",
-      [body.classId],
+      [assignment.classId],
     );
     if (!classRow || (!isAdmin && classRow.teacher_id !== user.id)) {
       return jsonError("Class not found.", 404);
     }
   }
 
-  const students = body.studentId
+  const students = assignment.studentId
     ? await d1Query<StudentRow>(
-        body.classId
+        assignment.classId
           ? `SELECT p.id, p.email, p.full_name, p.preferences
                FROM class_enrollments ce
                JOIN classes c ON c.id = ce.class_id
@@ -99,9 +95,9 @@ export async function POST(request: Request) {
                 AND p.role = 'student'
                 AND (? = 1 OR c.teacher_id = ?)
               LIMIT 1`,
-        body.classId
-          ? [body.classId, body.studentId, isAdmin ? 1 : 0, user.id]
-          : [body.studentId, isAdmin ? 1 : 0, user.id],
+        assignment.classId
+          ? [assignment.classId, assignment.studentId, isAdmin ? 1 : 0, user.id]
+          : [assignment.studentId, isAdmin ? 1 : 0, user.id],
       )
     : await d1Query<StudentRow>(
         `SELECT p.id, p.email, p.full_name, p.preferences
@@ -112,7 +108,7 @@ export async function POST(request: Request) {
             AND ce.is_active = 1
             AND p.role = 'student'
             AND (? = 1 OR c.teacher_id = ?)`,
-        [body.classId, isAdmin ? 1 : 0, user.id],
+        [assignment.classId, isAdmin ? 1 : 0, user.id],
       );
 
   if (students.length === 0) return jsonError("No active student recipients found.", 404);
@@ -126,7 +122,7 @@ export async function POST(request: Request) {
       const shouldEmail = wantsAssignmentEmail(preferences);
       const copy = buildLessonAssignmentCopy({
         lessonTitle: lesson.title,
-        dueDate,
+        dueDate: assignment.dueDate,
         studentName: student.full_name,
         actionUrl,
         appUrl,
@@ -139,16 +135,16 @@ export async function POST(request: Request) {
         title: copy.title,
         message: copy.message,
         actionUrl,
-        priority: dueDate ? "high" : "normal",
+        priority: assignment.dueDate ? "high" : "normal",
         channels: shouldEmail ? ["in_app", "email"] : ["in_app"],
-        metadata: { lessonId: lesson.id, classId: body.classId ?? null, dueDate },
+        metadata: { lessonId: lesson.id, classId: assignment.classId, dueDate: assignment.dueDate },
         email: shouldEmail
           ? {
               recipientUserId: student.id,
               recipientEmail: student.email,
               subject: copy.subject,
               bodyText: copy.bodyText,
-              metadata: { lessonId: lesson.id, classId: body.classId ?? null },
+              metadata: { lessonId: lesson.id, classId: assignment.classId },
             }
           : null,
       });
