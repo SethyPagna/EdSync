@@ -1,4 +1,5 @@
 import type { UserRole } from "@/types";
+import { normalizeUserRole } from "@/lib/auth/roles";
 
 const SAFE_NEXT_PREFIXES = [
   "/admin",
@@ -18,8 +19,7 @@ const SAFE_NEXT_PREFIXES = [
 ];
 
 export function normalizeRedirectRole(role: string | null | undefined): UserRole | null {
-  if (role === "admin" || role === "teacher" || role === "student") return role;
-  return null;
+  return normalizeUserRole(role);
 }
 
 export function homeForRole(role: string | null | undefined) {
