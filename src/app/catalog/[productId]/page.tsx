@@ -45,6 +45,20 @@ export default async function CatalogDetailPage({
   const publicLanguage = searchParams?.language ?? cookieStore.get("edsync-language")?.value;
   const copy = getPublicCopy(publicLanguage);
   const languageQuery = publicLanguage ? `?language=${encodeURIComponent(publicLanguage)}` : "";
+  const displayPrice = item.price.isFree ? copy.free : item.price.label;
+  const enrollLabels = {
+    enrolled: copy.start,
+    requestSent: copy.start,
+    alreadyEnrolled: copy.start,
+    enrollFree: `${copy.start} ${copy.free.toLowerCase()}`,
+    startCheckout: copy.start,
+    working: `${copy.start}...`,
+    error: copy.emptyCopy,
+    connectionError: copy.emptyCopy,
+    manualSuccess: copy.start,
+    activeSuccess: copy.start,
+    enrolledSuccess: copy.start,
+  };
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -85,7 +99,7 @@ export default async function CatalogDetailPage({
               )}
               <div className="absolute inset-x-4 bottom-4 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-edsync-surface/90 px-3 py-1.5 text-xs font-bold text-edsync-text shadow-sm backdrop-blur">
-                  {item.price.label}
+                  {displayPrice}
                 </span>
                 {item.metadata.category && (
                   <span className="rounded-full bg-edsync-blue px-3 py-1.5 text-xs font-bold text-white shadow-sm">
@@ -136,12 +150,17 @@ export default async function CatalogDetailPage({
           )}
           <div className="premium-panel rounded-2xl p-5">
             <p className="text-sm font-semibold text-edsync-subtle">{copy.start}</p>
-            <p className="mt-2 font-display text-4xl font-bold">{item.price.label}</p>
+            <p className="mt-2 font-display text-4xl font-bold">{displayPrice}</p>
             <p className="mt-2 text-sm leading-6 text-edsync-subtle">
               {copy.signIn}. {copy.academies}. {copy.courses}.
             </p>
             <div className="mt-5">
-              <CatalogEnrollButton productId={item.id} isFree={item.price.isFree} />
+              <CatalogEnrollButton
+                productId={item.id}
+                isFree={item.price.isFree}
+                language={publicLanguage}
+                labels={enrollLabels}
+              />
             </div>
           </div>
 
