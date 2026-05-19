@@ -1,10 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
-import { homeForRole } from "@/lib/auth/redirects";
-
-function knownRole(value: string | undefined) {
-  return value === "admin" || value === "teacher" || value === "student" ? value : null;
-}
+import { homeForRole, normalizeRedirectRole } from "@/lib/auth/redirects";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -24,7 +20,7 @@ export function middleware(request: NextRequest) {
   const isAuthPage =
     pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup");
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-  const role = knownRole(request.cookies.get(ROLE_COOKIE)?.value);
+  const role = normalizeRedirectRole(request.cookies.get(ROLE_COOKIE)?.value);
 
   if (!hasSession && isProtected) {
     const url = request.nextUrl.clone();
