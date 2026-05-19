@@ -54,4 +54,23 @@ describe("auth route validation responses", () => {
     expect(response.status).toBe(400);
     expect(payload.error.message).toBe("A valid email and password of at least 8 characters are required.");
   });
+
+  it("returns HTTP 400 when organization signup name is too long", async () => {
+    const response = await signupPost(jsonRequest("/api/auth/signup", {
+      email: "owner@example.com",
+      password: "password123",
+      options: {
+        data: {
+          role: "teacher",
+          account_type: "organization",
+          organization_mode: "create",
+          organization_name: "x".repeat(121),
+        },
+      },
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Organization name must be 120 characters or fewer.");
+  });
 });
