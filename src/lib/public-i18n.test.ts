@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getPublicAuthCopy } from "./public/auth-copy";
 import { languageCodeFor, normalizePublicLanguage, publicCopy } from "./public/i18n";
-import { publicLanguageQuerySuffix, publicLanguageQueryValue } from "./public/languages";
+import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "./public/languages";
 
 describe("public i18n", () => {
   it("normalizes language names and codes", () => {
@@ -34,5 +34,7 @@ describe("public i18n", () => {
     expect(publicLanguageQueryValue("English")).toBeNull();
     expect(publicLanguageQueryValue("Spanish")).toBe("Spanish");
     expect(publicLanguageQueryValue("unknown")).toBeNull();
+    expect(publicLanguageHref("/auth/login", "Spanish", { org: "edsync" })).toBe("/auth/login?org=edsync&language=Spanish");
+    expect(publicLanguageHref("/catalog?courseLanguage=English", "English")).toBe("/catalog?courseLanguage=English");
   });
 });
