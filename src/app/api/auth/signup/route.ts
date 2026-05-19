@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { createOrganizationSlug, validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeOrganizationMode, normalizeSignupRole } from "@/lib/auth/roles";
+import { validateEmailAddress } from "@/lib/email-address";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateTenantName } from "@/lib/tenant-validation";
 
@@ -40,9 +41,18 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
-  const { email, password, options } = body;
+  const { password, options } = body;
 
-  const normalizedEmail = email?.trim().toLowerCase();
+  let normalizedEmail: string;
+  try {
+    normalizedEmail = validateEmailAddress(body.email);
+  } catch (error) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: error instanceof Error ? error.message : "Email must be valid.", status: 400 },
+    }, { status: 400 });
+  }
+
   const role = normalizeSignupRole(options?.data?.role);
   if (!role) {
     return NextResponse.json({
@@ -97,7 +107,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!normalizedEmail || !password || password.length < 8) {
+  if (!password || password.length < 8) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "A valid email and password of at least 8 characters are required.", status: 400 },
