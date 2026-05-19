@@ -13,6 +13,7 @@ import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
+import { publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
 export const metadata: Metadata = {
   title: "Catalog",
@@ -66,7 +67,8 @@ export default async function CatalogPage({
   ];
   const catalogHref = (params: Record<string, string> = {}) => {
     const query = new URLSearchParams();
-    if (filters.language) query.set("language", filters.language);
+    const publicLanguage = publicLanguageQueryValue(filters.language);
+    if (publicLanguage) query.set("language", publicLanguage);
     for (const [key, value] of Object.entries(params)) {
       if (value) query.set(key, value);
     }
@@ -74,8 +76,7 @@ export default async function CatalogPage({
     return `/catalog${queryString ? `?${queryString}` : ""}`;
   };
   const orgHref = (slug: string) => {
-    const query = filters.language ? `?language=${encodeURIComponent(filters.language)}` : "";
-    return `/org/${slug}${query}`;
+    return `/org/${slug}${publicLanguageQuerySuffix(filters.language)}`;
   };
 
   return (
