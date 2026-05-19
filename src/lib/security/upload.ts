@@ -1,4 +1,6 @@
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const UPLOAD_OBJECT_PATH_MAX_LENGTH = 512;
+export const UPLOAD_OBJECT_PATH_MAX_SEGMENTS = 12;
 
 const ALLOWED_EXTENSIONS = new Set([
   "txt",
@@ -167,6 +169,18 @@ export function sanitizeObjectPath(path: string) {
     .filter(Boolean)
     .join("/")
     .replace(/^\/+/, "");
+}
+
+export function validateObjectPath(value: unknown, label = "Object path") {
+  const path = sanitizeObjectPath(String(value ?? ""));
+  if (!path) throw new Error(`${label} is required.`);
+  if (path.length > UPLOAD_OBJECT_PATH_MAX_LENGTH) {
+    throw new Error(`${label} must be ${UPLOAD_OBJECT_PATH_MAX_LENGTH} characters or fewer.`);
+  }
+  if (path.split("/").length > UPLOAD_OBJECT_PATH_MAX_SEGMENTS) {
+    throw new Error(`${label} must have ${UPLOAD_OBJECT_PATH_MAX_SEGMENTS} segments or fewer.`);
+  }
+  return path;
 }
 
 export async function validateUploadFile(file: File): Promise<SafeUpload> {
