@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Email and password are required.", status: 400 },
-    });
+    }, { status: 400 });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Invalid login credentials.", status: 401 },
-    });
+    }, { status: 401 });
   }
 
   const accountRole = normalizeUserRole(account.is_admin ? "admin" : account.role);
