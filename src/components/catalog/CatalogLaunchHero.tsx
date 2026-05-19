@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 import { ArrowRight, GraduationCap } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
-import CatalogLaunchPreviewGallery from "@/components/catalog/CatalogLaunchPreviewGallery";
+import CatalogLaunchPreviewGallery, {
+  type LaunchPreviewSlideCopy,
+} from "@/components/catalog/CatalogLaunchPreviewGallery";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { normalizePublicLanguage } from "@/lib/public/languages";
@@ -16,6 +18,86 @@ type CatalogLaunchHeroProps = {
   statusLabel?: string;
   language?: string;
 };
+
+function buildLaunchPreviewSlides({
+  catalog,
+  studio,
+  ai,
+  practice,
+  proof,
+  signIn,
+  start,
+  free,
+  anyDuration,
+  difficulty,
+  courses,
+  search,
+  filters,
+  featured,
+}: {
+  catalog: string;
+  studio: string;
+  ai: string;
+  practice: string;
+  proof: string;
+  signIn: string;
+  start: string;
+  free: string;
+  anyDuration: string;
+  difficulty: string;
+  courses: string;
+  search: string;
+  filters: string;
+  featured: string;
+}): Record<"catalog" | "studio" | "ai" | "practice" | "proof", LaunchPreviewSlideCopy> {
+  return {
+    catalog: {
+      label: catalog,
+      eyebrow: catalog,
+      title: "Energy Transfer",
+      route: "/catalog",
+      nav: [catalog, courses, featured, start],
+      metrics: [[free, start], ["35m", anyDuration], ["Grade 8", difficulty]],
+      blocks: [[courses, `${search}, ${filters}, ${start}`], [signIn, `${signIn} -> ${start}`]],
+    },
+    studio: {
+      label: studio,
+      eyebrow: studio,
+      title: "Conduction vs convection",
+      route: "/studio",
+      nav: [studio, "Docs", "Slides", "Media"],
+      metrics: [["5", "Slides"], ["12", "Quiz"], [start, "Draft"]],
+      blocks: [["Slide canvas", "Slides, media, quiz"], [studio, `${studio} -> ${courses}`]],
+    },
+    ai: {
+      label: ai,
+      eyebrow: ai,
+      title: "Outline to editable draft",
+      route: "/ai",
+      nav: [ai, "Prompt", "Preview", "Insert"],
+      metrics: [["Groq", "AI"], ["Google", "AI"], [start, "Review"]],
+      blocks: [[ai, "Slides, quiz, rubric"], [studio, `${ai} -> ${studio}`]],
+    },
+    practice: {
+      label: practice,
+      eyebrow: practice,
+      title: "Sprint with explanations",
+      route: "/practice",
+      nav: [practice, "Quiz", "Retry", "Review"],
+      metrics: [["08:42", anyDuration], ["4/12", "Quiz"], ["2", "Review"]],
+      blocks: [[practice, "Quiz, sprint, retry"], [proof, `${practice} -> ${proof}`]],
+    },
+    proof: {
+      label: proof,
+      eyebrow: proof,
+      title: "Grade event saved",
+      route: "/admin/dashboard",
+      nav: [proof, "Feedback", "Audit", "Admin"],
+      metrics: [["24 pts", proof], ["Audit", "Log"], [start, "Review"]],
+      blocks: [[proof, "Feedback, notes, due dates"], ["Admin", "AI, security, portals, billing"]],
+    },
+  };
+}
 
 export default async function CatalogLaunchHero({
   title = "Teach. Practice. Prove.",
@@ -30,6 +112,22 @@ export default async function CatalogLaunchHero({
   const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
   const copy = getPublicCopy(publicLanguage);
   const [, studioLabel = "Studio", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
+  const previewSlides = buildLaunchPreviewSlides({
+    catalog: copy.catalogLabel,
+    studio: studioLabel,
+    ai: aiLabel,
+    practice: practiceLabel,
+    proof: proofLabel,
+    signIn: copy.signIn,
+    start: copy.start,
+    free: copy.free,
+    anyDuration: copy.anyDuration,
+    difficulty: copy.difficulty,
+    courses: copy.courses,
+    search: copy.searchButton,
+    filters: copy.filters,
+    featured: copy.featured,
+  });
   const workspaceHref =
     role === "admin"
       ? "/admin/dashboard"
@@ -92,13 +190,8 @@ export default async function CatalogLaunchHero({
 
         <div className="edsync-launch-preview-wrap" aria-label="EdSync workspace preview">
           <CatalogLaunchPreviewGallery
-            labels={{
-              catalog: copy.catalogLabel,
-              studio: studioLabel,
-              ai: aiLabel,
-              practice: practiceLabel,
-              proof: proofLabel,
-            }}
+            readyLabel={copy.start}
+            slides={previewSlides}
           />
         </div>
       </div>
