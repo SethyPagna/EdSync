@@ -1,8 +1,12 @@
 export const NOTIFICATION_TITLE_MAX_LENGTH = 120;
 export const NOTIFICATION_MESSAGE_MAX_LENGTH = 600;
 export const NOTIFICATION_TYPE_MAX_LENGTH = 80;
+export const NOTIFICATION_ID_MAX_LENGTH = 160;
+export const NOTIFICATION_ACTION_URL_MAX_LENGTH = 500;
+export const NOTIFICATION_METADATA_MAX_LENGTH = 4_000;
 
 const NOTIFICATION_TYPE_PATTERN = /^[a-z0-9_.:-]+$/i;
+const NOTIFICATION_ID_PATTERN = /^[a-z0-9_.:-]+$/i;
 const SAFE_CHANNELS = new Set(["in_app", "email"]);
 
 export type NotificationPriority = "low" | "normal" | "high";
@@ -43,6 +47,20 @@ export function validateNotificationType(value: unknown) {
   return type;
 }
 
+export function validateNotificationRecordId(value: unknown, label = "Record") {
+  const id = String(value ?? "").trim();
+  if (!id) throw new Error(`${label} is required.`);
+  if (id.length > NOTIFICATION_ID_MAX_LENGTH || !NOTIFICATION_ID_PATTERN.test(id)) {
+    throw new Error(`${label} must be a short identifier.`);
+  }
+  return id;
+}
+
+export function normalizeOptionalNotificationRecordId(value: unknown, label = "Record") {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  return validateNotificationRecordId(value, label);
+}
+
 export function validateNotificationPriority(value: unknown): NotificationPriority {
   if (value === "low" || value === "normal" || value === "high") return value;
   return "normal";
@@ -51,6 +69,9 @@ export function validateNotificationPriority(value: unknown): NotificationPriori
 export function validateNotificationActionUrl(value: unknown) {
   const url = String(value ?? "").trim();
   if (!url) return null;
+  if (url.length > NOTIFICATION_ACTION_URL_MAX_LENGTH) {
+    throw new Error(`Notification action must be ${NOTIFICATION_ACTION_URL_MAX_LENGTH} characters or fewer.`);
+  }
   if (!url.startsWith("/") || url.startsWith("//") || /[\r\n]/.test(url)) {
     throw new Error("Notification action must be an internal EdSync path.");
   }
@@ -65,7 +86,11 @@ export function normalizeNotificationChannels(value: unknown) {
 
 export function normalizeNotificationMetadata(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
+  const metadata = value as Record<string, unknown>;
+  if (JSON.stringify(metadata).length > NOTIFICATION_METADATA_MAX_LENGTH) {
+    throw new Error(`Notification metadata must be ${NOTIFICATION_METADATA_MAX_LENGTH} characters or fewer.`);
+  }
+  return metadata;
 }
 
 export function normalizeNotificationInput(input: {
