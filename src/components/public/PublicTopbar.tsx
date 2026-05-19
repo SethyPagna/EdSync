@@ -40,11 +40,11 @@ export default async function PublicTopbar({
   const loginHref = publicLanguageHref("/auth/login", publicLanguage, { org: resolvedOrganizationCode });
 
   return (
-    <header className="edsync-public-topbar sticky top-0 z-30 bg-edsync-bg/92 backdrop-blur-xl">
+    <header className="edsync-public-topbar relative z-30">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link href="/" className="group flex min-w-0 items-center gap-2 sm:gap-3">
-            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue text-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue text-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-lg sm:h-11 sm:w-11">
               <GraduationCap className="h-5 w-5" />
             </span>
             <span className="min-w-0">
@@ -66,8 +66,12 @@ export default async function PublicTopbar({
         <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
-          <Link href={signedIn ? workspaceHref : loginHref} className="btn-primary !hidden justify-center px-3 py-2 text-sm sm:!inline-flex sm:px-4">
-            <span>{signedIn ? copy.start : copy.signIn}</span>
+          <Link
+            href={signedIn ? workspaceHref : loginHref}
+            className="btn-primary min-h-10 justify-center px-2.5 py-2 text-sm sm:px-4"
+            aria-label={signedIn ? copy.start : copy.signIn}
+          >
+            <span className="hidden min-[390px]:inline">{signedIn ? copy.start : copy.signIn}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
