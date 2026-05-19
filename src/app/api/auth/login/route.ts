@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { verifyPassword } from "@/lib/auth/password";
+import { validateLoginPassword } from "@/lib/auth/password-validation";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeUserRole } from "@/lib/auth/roles";
@@ -36,6 +37,16 @@ export async function POST(request: Request) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: error instanceof Error ? error.message : "Email must be valid.", status: 400 },
+    }, { status: 400 });
+  }
+
+  let password: string;
+  try {
+    password = validateLoginPassword(body.password);
+  } catch (error) {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: error instanceof Error ? error.message : "Password is invalid.", status: 400 },
     }, { status: 400 });
   }
 
@@ -95,7 +106,7 @@ export async function POST(request: Request) {
   );
 
   const account = rows[0];
-  if (!account || !(await verifyPassword(body.password, account.password_hash))) {
+  if (!account || !(await verifyPassword(password, account.password_hash))) {
     await logSecurityEvent({
       request,
       eventType: "login_failed",
