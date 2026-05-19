@@ -39,6 +39,11 @@ type WorkflowLabels = {
   difficulty: string;
   featured: string;
   workflow: string;
+  media: string;
+  provider: string;
+  review: string;
+  security: string;
+  healthy: string;
 };
 
 type WorkflowSlide = {
@@ -73,7 +78,19 @@ function labelsForLanguage(language?: string | null): WorkflowLabels {
     Thai: "ความก้าวหน้า",
     Vietnamese: "Tiến bộ",
   };
+  const utilityLabels: Record<string, Pick<WorkflowLabels, "media" | "provider" | "review" | "security" | "healthy">> = {
+    Chinese: { media: "媒体", provider: "提供商", review: "审核", security: "安全", healthy: "正常" },
+    English: { media: "Media", provider: "Provider", review: "Review", security: "Security", healthy: "Healthy" },
+    French: { media: "Médias", provider: "Fournisseur", review: "Revue", security: "Sécurité", healthy: "OK" },
+    Japanese: { media: "メディア", provider: "プロバイダー", review: "確認", security: "セキュリティ", healthy: "正常" },
+    Khmer: { media: "មេឌៀ", provider: "អ្នកផ្តល់", review: "ពិនិត្យ", security: "សុវត្ថិភាព", healthy: "ល្អ" },
+    Korean: { media: "미디어", provider: "제공자", review: "검토", security: "보안", healthy: "정상" },
+    Spanish: { media: "Medios", provider: "Proveedor", review: "Revisión", security: "Seguridad", healthy: "Correcto" },
+    Thai: { media: "สื่อ", provider: "ผู้ให้บริการ", review: "ตรวจทาน", security: "ความปลอดภัย", healthy: "พร้อม" },
+    Vietnamese: { media: "Phương tiện", provider: "Nhà cung cấp", review: "Duyệt", security: "Bảo mật", healthy: "Ổn định" },
+  };
   const grades = progressLabels[publicLanguage] ?? fallbackGrades;
+  const utility = utilityLabels[publicLanguage] ?? utilityLabels.English;
 
   return {
     catalog: copy.catalogLabel,
@@ -92,6 +109,7 @@ function labelsForLanguage(language?: string | null): WorkflowLabels {
     difficulty: copy.difficulty,
     featured: copy.featured,
     workflow: copy.workflowLabel,
+    ...utility,
   };
 }
 
@@ -275,10 +293,10 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         <div className="edsync-workflow-loop-map">
           {[
             [labels.catalog, `${labels.search}, ${labels.free}, ${labels.start}`],
-            [labels.studio, `${labels.courses}, slides, media`],
+            [labels.studio, `${labels.courses}, slides, ${labels.media}`],
             [labels.ai, `${labels.courses}, quiz, rubric`],
-            [labels.practice, `${labels.duration}, retry, explain`],
-            [labels.grades, `events, feedback, proof`],
+            [labels.practice, `${labels.duration}, retry, ${labels.review}`],
+            [labels.grades, `events, ${labels.review}, proof`],
           ].map(([label, detail], index) => (
             <span key={label} className={index === 0 ? "is-active" : ""}>
               <strong>{label}</strong>
@@ -300,12 +318,12 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         </div>
         <div className="edsync-workflow-mock-grid">
           <article className="edsync-workflow-course-card">
-            <strong>Energy Transfer Lab</strong>
-            <small>Grade 8 - {labels.free}</small>
+            <strong>{labels.courses}</strong>
+            <small>{labels.difficulty} - {labels.free}</small>
             <em>{labels.signIn} {"->"} {labels.start}</em>
           </article>
           <article className="edsync-workflow-course-card">
-            <strong>Partner academy</strong>
+            <strong>{labels.featured}</strong>
             <small>/org/riverside - {labels.catalog}</small>
             <em>{labels.featured}</em>
           </article>
@@ -318,7 +336,7 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
     return (
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-editor-ribbon">
-          {[labels.studio, "Text", "Insert", "Media", labels.ai, labels.start].map((item) => (
+          {[labels.studio, "Text", "Insert", labels.media, labels.ai, labels.start].map((item) => (
             <span key={item}>{item}</span>
           ))}
         </div>
@@ -329,11 +347,11 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
             <span>03</span>
           </aside>
           <section>
-            <small>Slide 03</small>
-            <strong>Conduction vs convection</strong>
+            <small>{labels.studio} 03</small>
+            <strong>{labels.courses}</strong>
             <div>
               <span>Image</span>
-              <span>Video</span>
+              <span>{labels.media}</span>
               <span>{labels.practice}</span>
             </div>
           </section>
@@ -348,19 +366,19 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         <div className="edsync-workflow-ai-grid">
           <section>
             <small>{labels.ai}</small>
-            <strong>Grade 8 - 35m - {labels.difficulty}</strong>
+            <strong>{labels.difficulty} - 35m</strong>
             <span>{labels.studio} + {labels.practice} + rubric</span>
           </section>
           <section>
-            <small>Provider</small>
-            <strong>Groq ready</strong>
-            <span>Google fallback enabled</span>
+            <small>{labels.provider}</small>
+            <strong>{labels.healthy}</strong>
+            <span>Groq + Google</span>
           </section>
         </div>
         <div className="edsync-workflow-preview-rows">
           <span>
             <strong>{labels.studio}</strong>
-            <small>6 slides, review required</small>
+            <small>6 slides, {labels.review}</small>
             <em>{labels.ai} {"->"} {labels.studio}</em>
           </span>
         </div>
@@ -374,15 +392,15 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         <div className="edsync-workflow-assignment-grid">
           <section>
             <small>{labels.start}</small>
-            <strong>Grade 8 Science</strong>
+            <strong>{labels.courses}</strong>
             <span>{labels.duration}: 35m</span>
             <span>12 questions - 24 pts</span>
           </section>
           <section>
             <small>{labels.grades}</small>
             <strong>3 submissions</strong>
-            <span>Media checks passed</span>
-            <span>{labels.ai} feedback ready</span>
+            <span>{labels.media} checks</span>
+            <span>{labels.ai} {labels.review}</span>
           </section>
         </div>
       </div>
@@ -397,17 +415,17 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
             <small>{labels.practice}</small>
             <strong>08:42</strong>
           </div>
-          <span>Pause</span>
+          <span>{labels.duration}</span>
         </div>
         <div className="edsync-workflow-preview-rows">
           <span>
-            <strong>Question 4 of 12</strong>
-            <small>Explain why heat moved faster through metal.</small>
+            <strong>4 / 12</strong>
+            <small>{labels.practice}, {labels.review}</small>
             <em>{labels.practice}</em>
           </span>
           <span>
             <strong>{labels.grades}</strong>
-            <small>{labels.practice} {"->"} dashboard</small>
+            <small>{labels.practice} {"->"} {labels.grades}</small>
             <em>{labels.start}</em>
           </span>
         </div>
@@ -425,12 +443,12 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
         </section>
         <section>
           <small>{labels.ai}</small>
-          <strong>Healthy</strong>
+          <strong>{labels.healthy}</strong>
           <span>Fallback audited</span>
         </section>
         <section>
-          <small>Security</small>
-          <strong>Clean</strong>
+          <small>{labels.security}</small>
+          <strong>{labels.healthy}</strong>
           <span>Upload checks logged</span>
         </section>
       </div>
