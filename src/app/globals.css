@@ -80,33 +80,6 @@ html[data-theme="dark"] .edsync-public-launch {
     linear-gradient(135deg, #071323 0%, #031512 48%, #020712 100%);
 }
 
-.edsync-launch-chrome {
-  position: absolute;
-  top: clamp(5.4rem, 13vh, 8.6rem);
-  left: max(1.25rem, calc((100vw - 82rem) / 2));
-  right: max(1.25rem, calc((100vw - 82rem) / 2));
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  pointer-events: none;
-}
-
-.edsync-launch-brand,
-.edsync-launch-actions {
-  pointer-events: auto;
-}
-
-.edsync-launch-brand {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 0.85rem;
-  color: var(--launch-ink);
-  text-decoration: none;
-}
-
 .edsync-launch-brand-mark {
   display: grid;
   height: 2.75rem;
@@ -124,35 +97,7 @@ html[data-theme="dark"] .edsync-launch-brand-mark {
   background: var(--launch-panel-strong);
 }
 
-.edsync-launch-brand strong,
-.edsync-launch-brand small {
-  display: block;
-}
-
-.edsync-launch-brand strong {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-size: 0.95rem;
-  font-weight: 950;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.edsync-launch-brand small {
-  margin-top: 0.15rem;
-  color: var(--launch-muted);
-  font-size: 0.74rem;
-  font-weight: 760;
-}
-
-.edsync-launch-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.edsync-launch-icon .premium-icon-button,
-.edsync-launch-actions > .premium-icon-button,
-.edsync-launch-actions summary.premium-icon-button {
+.edsync-launch-icon .premium-icon-button {
   border-color: var(--launch-line);
   background: var(--launch-panel-strong);
   color: var(--launch-ink);
@@ -160,7 +105,7 @@ html[data-theme="dark"] .edsync-launch-brand-mark {
   box-shadow: 0 14px 34px rgba(21, 36, 61, 0.11);
 }
 
-.edsync-launch-actions .premium-overlay {
+.edsync-launch-icon .premium-overlay {
   border-color: var(--launch-line);
   background: var(--launch-panel-strong);
   color: var(--launch-ink);
@@ -869,17 +814,6 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
 }
 
 @media (max-width: 980px) {
-  .edsync-launch-chrome {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    right: 1rem;
-  }
-
-  .edsync-launch-brand small {
-    display: none;
-  }
-
   .edsync-launch-hero-v2 {
     padding-top: 7.6rem;
   }
@@ -915,24 +849,6 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
 }
 
 @media (max-width: 640px) {
-  .edsync-launch-chrome {
-    left: 0.5rem;
-    right: 0.5rem;
-    transform: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.55rem;
-  }
-
-  .edsync-launch-actions {
-    flex: 0 0 auto;
-  }
-
-  .edsync-launch-brand strong {
-    font-size: 0.86rem;
-  }
-
   .edsync-launch-signin {
     padding-inline: 0.72rem;
   }
@@ -3706,18 +3622,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 @media (max-width: 640px) {
-  .edsync-public-launch .edsync-launch-chrome {
-    left: 0.5rem;
-    right: 0.5rem;
-    transform: none;
-  }
-
-  .edsync-public-launch .edsync-launch-actions {
-    justify-self: start;
-    flex-shrink: 0;
-    gap: 0.32rem;
-  }
-
   .edsync-public-launch .premium-icon-button,
   .edsync-public-launch .edsync-launch-signin {
     min-height: 2.35rem;
