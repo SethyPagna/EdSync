@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent } from "@/lib/learning-events";
+import { normalizeLearningEventInput } from "@/lib/learning-events-validation";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
 
@@ -27,17 +28,23 @@ export async function POST(request: Request) {
     eventType?: string;
     payload?: Record<string, unknown>;
   };
-  if (!body.sourceType || !body.eventType) {
-    return NextResponse.json({ data: null, error: "Source type and event type are required." }, { status: 400 });
+  let event;
+  try {
+    event = normalizeLearningEventInput(body);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid learning event." },
+      { status: 400 },
+    );
   }
   const id = await appendLearningEvent({
     tenantId: context.tenant.id,
     actorId: user.id,
     studentId: user.user_metadata.role === "student" ? user.id : null,
-    sourceType: body.sourceType,
-    sourceId: body.sourceId ?? null,
-    eventType: body.eventType,
-    payload: body.payload ?? {},
+    sourceType: event.sourceType,
+    sourceId: event.sourceId,
+    eventType: event.eventType,
+    payload: event.payload,
   });
   return NextResponse.json({ data: { id }, error: null });
 }
