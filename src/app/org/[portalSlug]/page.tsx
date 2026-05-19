@@ -57,6 +57,7 @@ export default async function OrganizationPortalPage({
   });
   const cardLabels = {
     featured: copy.featured,
+    free: copy.free,
     preview: `${copy.courses}. ${copy.start}.`,
     flexible: copy.anyDuration,
     view: copy.courses,
@@ -184,7 +185,13 @@ export default async function OrganizationPortalPage({
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
-              <CatalogCourseCard key={item.id} item={item} showOrganization={false} labels={cardLabels} />
+              <CatalogCourseCard
+                key={item.id}
+                item={item}
+                showOrganization={false}
+                labels={cardLabels}
+                language={filters.language}
+              />
             ))}
           </div>
         </section>
