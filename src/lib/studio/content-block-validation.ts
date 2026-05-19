@@ -25,6 +25,21 @@ export function normalizeContentBlockStatus(value: unknown): ContentBlockStatus 
   return CONTENT_BLOCK_STATUSES.has(status) ? (status as ContentBlockStatus) : "draft";
 }
 
+export function validateContentBlockStatus(
+  value: unknown,
+  options: { allowArchived?: boolean; fallback?: ContentBlockStatus } = {},
+): ContentBlockStatus {
+  const fallback = options.fallback ?? "draft";
+  const allowArchived = options.allowArchived ?? true;
+  if (value === undefined || value === null || value === "") return fallback;
+
+  const status = String(value).trim();
+  if (!CONTENT_BLOCK_STATUSES.has(status) || (!allowArchived && status === "archived")) {
+    throw new Error("Choose a supported content block status.");
+  }
+  return status as ContentBlockStatus;
+}
+
 export function validateContentBlockTitle(value: unknown) {
   return validateStudioTitle(value);
 }
