@@ -221,6 +221,7 @@
 - Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `d35f1e6f-3e85-4333-bc4c-0c8d335666d2`. Live smoke checks returned 200 for `/catalog`, `/showcase`, and `/auth/login`, and `/api/catalog` returned an empty catalog payload without errors.
 - Continued mobile gallery refinement on 2026-05-19: added swipe gestures and left/right keyboard support to the hero preview gallery, disabled autoplay for `prefers-reduced-motion`, and added a polished focus-visible state for keyboard users.
 - Verification for this interaction pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed. Local production preview on `http://127.0.0.1:3505/catalog` returned 200, and desktop/mobile screenshots were reviewed for compact controls, readable gallery content, and no clipped launch actions.
+- Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `eb6ad0ce-010f-4df7-9f41-9de7d67a06dd`. Live smoke checks returned 200 for `/catalog`, `/showcase`, and `/auth/login`, and `/api/catalog` returned an empty catalog payload without errors.
 
 ## Update Protocol
 
