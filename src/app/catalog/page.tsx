@@ -32,6 +32,7 @@ export default async function CatalogPage({
     category?: string;
     difficulty?: string;
     language?: string;
+    courseLanguage?: string;
     duration?: string;
   };
 }) {
@@ -120,6 +121,9 @@ export default async function CatalogPage({
               <label className="sr-only" htmlFor="catalog-search">
                 Search catalog
               </label>
+              {publicLanguageQueryValue(filters.language) && (
+                <input type="hidden" name="language" value={publicLanguageQueryValue(filters.language) ?? ""} />
+              )}
               {filters.portalSlug && <input type="hidden" name="portal" value={filters.portalSlug} />}
               {filters.tenantSlug && <input type="hidden" name="tenant" value={filters.tenantSlug} />}
               <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_9rem_9rem_auto_auto] [&>*]:min-w-0">
@@ -159,8 +163,8 @@ export default async function CatalogPage({
                         placeholder={copy.difficulty}
                       />
                       <input
-                        name="language"
-                        defaultValue={filters.language}
+                        name="courseLanguage"
+                        defaultValue={filters.courseLanguage}
                         className="edsync-input min-w-0"
                         placeholder={copy.language}
                       />
