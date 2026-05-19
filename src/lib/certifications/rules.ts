@@ -56,9 +56,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function clampInteger(value: unknown, fallback: number, min: number, max: number) {
+function normalizeBoundedInteger(value: unknown, label: string, min: number, max: number) {
   const number = Number(value);
-  const normalized = Number.isFinite(number) ? Math.round(number) : fallback;
+  if (!Number.isFinite(number)) throw new Error(`${label} must be a number.`);
+  const normalized = Math.round(number);
   return Math.min(max, Math.max(min, normalized));
 }
 
@@ -100,11 +101,12 @@ export function normalizeCertificationDescription(value: unknown) {
 
 export function normalizeCertificationExpiry(value: unknown) {
   if (value === null || value === undefined || value === "" || Number(value) === 0) return null;
-  return clampInteger(value, 365, CERTIFICATION_MIN_EXPIRY_DAYS, CERTIFICATION_MAX_EXPIRY_DAYS);
+  return normalizeBoundedInteger(value, "Expiry days", CERTIFICATION_MIN_EXPIRY_DAYS, CERTIFICATION_MAX_EXPIRY_DAYS);
 }
 
 export function normalizeCertificationNotifyDays(value: unknown) {
-  return clampInteger(value, 30, CERTIFICATION_MIN_NOTIFY_DAYS, CERTIFICATION_MAX_NOTIFY_DAYS);
+  if (value === null || value === undefined || value === "") return 30;
+  return normalizeBoundedInteger(value, "Notification days", CERTIFICATION_MIN_NOTIFY_DAYS, CERTIFICATION_MAX_NOTIFY_DAYS);
 }
 
 export function normalizeCertificationSettings(value: unknown) {
