@@ -67,6 +67,7 @@ export default async function CatalogDetailPage({
         organizationName={item.portal?.name || item.organization.name}
         organizationCode={item.organization.slug}
         portalSlug={item.portal?.slug}
+        language={publicLanguage}
       />
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_380px]">
