@@ -24,7 +24,7 @@ export function usePublicLanguagePreference() {
   const searchParams = useSearchParams();
   const queryLanguage = searchParams.get("language");
   const [language, setLanguage] = useState<PublicLanguageName>(() =>
-    normalizePublicLanguage(queryLanguage || DEFAULT_PUBLIC_LANGUAGE),
+    queryLanguage ? normalizePublicLanguage(queryLanguage) : readStoredLanguage(),
   );
 
   useEffect(() => {
