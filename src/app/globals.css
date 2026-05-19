@@ -1544,6 +1544,19 @@ h6 {
   padding-top: 1.35rem;
 }
 
+@media (max-width: 520px) {
+  .edsync-catalog-reference > .edsync-public-topbar > div {
+    gap: 0.5rem;
+    padding-inline: 0.85rem;
+    padding-top: 0.85rem;
+  }
+
+  .edsync-catalog-reference > .edsync-public-topbar .premium-icon-button {
+    min-height: 2.35rem;
+    width: 2.35rem;
+  }
+}
+
 .edsync-catalog-reference > .edsync-public-topbar .premium-icon-button,
 .edsync-catalog-reference > .edsync-public-topbar button,
 .edsync-catalog-reference > .edsync-public-topbar .btn-primary {
