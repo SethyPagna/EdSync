@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import AiPromptBuilder from "@/components/ai/AiPromptBuilder";
-import { AI_PROMPT_CONTRACTS } from "@/lib/studio/catalog";
+import { AI_PROMPT_CONTRACTS, normalizeAiPromptContractId, type AiPromptSearchParams } from "@/lib/studio/catalog";
 import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
@@ -9,9 +9,7 @@ export const metadata = {
 };
 
 type AiPageProps = {
-  searchParams?: {
-    task?: string;
-  };
+  searchParams?: AiPromptSearchParams;
 };
 
 export default async function AiPage({ searchParams }: AiPageProps) {
@@ -29,7 +27,7 @@ export default async function AiPage({ searchParams }: AiPageProps) {
             slides, documents, or Practice.
           </p>
         </div>
-        <AiPromptBuilder contracts={AI_PROMPT_CONTRACTS} initialTask={searchParams?.task} />
+        <AiPromptBuilder contracts={AI_PROMPT_CONTRACTS} initialTask={normalizeAiPromptContractId(searchParams?.task)} />
       </section>
     </main>
   );
