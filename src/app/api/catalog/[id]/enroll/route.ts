@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enrollCatalogItem, getPublicCatalogItem } from "@/lib/catalog";
+import { validateCatalogProductId } from "@/lib/catalog-validation";
 import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 export async function POST(
@@ -8,12 +9,13 @@ export async function POST(
   { params }: { params: { id: string } },
 ) {
   try {
+    const id = validateCatalogProductId(params.id);
     const user = await getSessionUser();
-    const item = await getPublicCatalogItem(params.id);
+    const item = await getPublicCatalogItem(id);
     const url = new URL(request.url);
     const language = url.searchParams.get("language");
     const detailQuery = publicLanguageQuerySuffix(language);
-    const detailUrl = `/catalog/${params.id}${detailQuery}`;
+    const detailUrl = `/catalog/${id}${detailQuery}`;
     const successUrl = new URL(detailUrl, url.origin);
     successUrl.searchParams.set("enrolled", "1");
     const cancelUrl = new URL(detailUrl, url.origin);
@@ -39,6 +41,9 @@ export async function POST(
 
     return NextResponse.json({ data: result, error: null });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Catalog item id")) {
+      return NextResponse.json({ data: null, error: error.message }, { status: 400 });
+    }
     console.error("Catalog enrollment failed", error);
     return NextResponse.json(
       { data: null, error: "Enrollment could not be completed." },
