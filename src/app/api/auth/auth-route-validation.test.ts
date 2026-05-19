@@ -113,6 +113,42 @@ describe("auth route validation responses", () => {
     expect(payload.error.message).toBe("Password must be 256 characters or fewer.");
   });
 
+  it("returns HTTP 400 when signup full name is too long", async () => {
+    const response = await signupPost(jsonRequest("/api/auth/signup", {
+      email: "student@example.com",
+      password: "password123",
+      options: {
+        data: {
+          full_name: "x".repeat(121),
+          role: "student",
+          account_type: "individual",
+        },
+      },
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Full name must be 120 characters or fewer.");
+  });
+
+  it("returns HTTP 400 when signup full name has multiple lines", async () => {
+    const response = await signupPost(jsonRequest("/api/auth/signup", {
+      email: "student@example.com",
+      password: "password123",
+      options: {
+        data: {
+          full_name: "Mina\nBcc: other@example.com",
+          role: "student",
+          account_type: "individual",
+        },
+      },
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Full name must be a single line.");
+  });
+
   it("returns HTTP 400 when organization signup name is too long", async () => {
     const response = await signupPost(jsonRequest("/api/auth/signup", {
       email: "owner@example.com",
