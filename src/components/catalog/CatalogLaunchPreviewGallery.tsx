@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, CheckCircle2, GraduationCap, Presentation, Search, ShieldCheck, Trophy, type LucideIcon } from "lucide-react";
 
 type PreviewSlide = {
@@ -88,18 +88,35 @@ function buildSlides(labels: CatalogLaunchPreviewGalleryProps["labels"]): Previe
 export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPreviewGalleryProps) {
   const slides = useMemo(() => buildSlides(labels), [labels]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const pauseUntilRef = useRef(0);
   const activeSlide = slides[activeIndex] ?? slides[0];
   const ActiveIcon = activeSlide.icon;
 
+  const showSlide = useCallback((index: number, pause = true) => {
+    if (pause) {
+      pauseUntilRef.current = Date.now() + 9000;
+    }
+    setActiveIndex((index + slides.length) % slides.length);
+  }, [slides.length]);
+
   useEffect(() => {
     const id = window.setInterval(() => {
+      if (document.hidden || Date.now() < pauseUntilRef.current) return;
       setActiveIndex((index) => (index + 1) % slides.length);
     }, 4200);
     return () => window.clearInterval(id);
   }, [slides.length]);
 
   return (
-    <div className="edsync-launch-preview-board">
+    <div
+      className="edsync-launch-preview-board"
+      onFocusCapture={() => {
+        pauseUntilRef.current = Date.now() + 9000;
+      }}
+      onMouseEnter={() => {
+        pauseUntilRef.current = Date.now() + 9000;
+      }}
+    >
       <div className="edsync-launch-preview-grid" key={activeSlide.id}>
         <aside className="edsync-launch-preview-nav" aria-label="Hero preview gallery">
           {slides.map((slide, index) => {
@@ -110,7 +127,7 @@ export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPre
                 key={slide.id}
                 type="button"
                 className={selected ? "is-active" : ""}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => showSlide(index)}
                 aria-label={`Show ${slide.label} preview`}
                 aria-pressed={selected}
               >
@@ -184,8 +201,9 @@ export default function CatalogLaunchPreviewGallery({ labels }: CatalogLaunchPre
                 key={`${slide.id}-dot`}
                 type="button"
                 className={index === activeIndex ? "is-active" : ""}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => showSlide(index)}
                 aria-label={`Show ${slide.label}`}
+                aria-current={index === activeIndex ? "true" : undefined}
               />
             ))}
           </div>
