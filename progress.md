@@ -1,6 +1,6 @@
 # EdSync Improvement Progress
 
-**Last Updated:** 2026-05-18
+**Last Updated:** 2026-05-19
 
 **Current Track:** Comprehensive workflow, design, architecture, AI, templates, lessons, slides, discussions, quizzes, activities, and tracking improvements.
 
@@ -324,6 +324,8 @@
 - Verification for this notification validation pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed with 126 tests. Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `7875f125-03a0-4f58-a00e-85d8149db97f`. Live smoke checks returned 200 for `/`, `/catalog?language=Spanish&courseLanguage=English`, `/showcase?language=Spanish`, and `/api/catalog`; unauthenticated GET and POST `/api/notifications` returned 401 as expected.
 - Continued lesson-assignment notification hardening on 2026-05-19: added shared validation for lesson/class/student ids and assignment notification payloads, then reused it in `/api/notifications/lesson-assigned` so all assignment notification lookups use normalized ids and validated due dates before touching lesson, class, roster, notification, or email flows.
 - Verification for this lesson-assignment notification pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed with 128 tests. Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `b40da637-6e22-423a-a7ce-0e679a976aaa`. Live smoke checks returned 200 for `/`, `/catalog?language=Spanish&courseLanguage=English`, `/showcase?language=Spanish`, and `/api/catalog`; unauthenticated GET `/api/notifications/lesson-assigned` returned 405 and unauthenticated POST `/api/notifications/lesson-assigned` returned 401 as expected.
+- Continued admin user-management hardening on 2026-05-19: added shared admin user validation for search text, user ids, and explicit admin access booleans, then reused it in `/api/admin/users` so global admin grants/revokes cannot be triggered by malformed ids or missing boolean payloads.
+- Verification for this admin user validation pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed with 132 tests. Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `741a9abf-b787-444f-8159-410a5c1b174a`. Live smoke checks returned 200 for `/`, `/catalog?language=Spanish&courseLanguage=English`, `/showcase?language=Spanish`, and `/api/catalog`; unauthenticated GET and PATCH `/api/admin/users` returned 401 as expected.
 
 ## Update Protocol
 
