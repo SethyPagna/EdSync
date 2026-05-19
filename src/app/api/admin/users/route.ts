@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, auditAdminAction } from "@/lib/admin";
+import { normalizeAdminUserPatch, normalizeAdminUserSearch } from "@/lib/admin-users-validation";
 import { d1Query } from "@/lib/db/d1";
 
 export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
-  const query = new URL(request.url).searchParams.get("q")?.trim().toLowerCase() || "";
+  let query: string;
+  try {
+    query = normalizeAdminUserSearch(new URL(request.url).searchParams.get("q"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Search is invalid.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
+  }
   const params: unknown[] = [];
   const where = query
     ? "WHERE lower(p.email) LIKE ? OR lower(COALESCE(p.full_name, '')) LIKE ?"
@@ -33,25 +40,31 @@ export async function PATCH(request: Request) {
   if (auth.response) return auth.response;
 
   const body = (await request.json()) as { userId?: string; admin?: boolean };
-  if (!body.userId) return NextResponse.json({ data: null, error: "User id is required." }, { status: 400 });
+  let patch: ReturnType<typeof normalizeAdminUserPatch>;
+  try {
+    patch = normalizeAdminUserPatch(body);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "User update is invalid.";
+    return NextResponse.json({ data: null, error: message }, { status: 400 });
+  }
 
-  if (body.admin) {
+  if (patch.admin) {
     await d1Query("INSERT OR IGNORE INTO admin_users (user_id, created_by, created_at) VALUES (?, ?, datetime('now'))", [
-      body.userId,
+      patch.userId,
       auth.user.id,
     ]);
   } else {
-    if (body.userId === auth.user.id) {
+    if (patch.userId === auth.user.id) {
       return NextResponse.json({ data: null, error: "You cannot remove your own admin access." }, { status: 400 });
     }
-    await d1Query("DELETE FROM admin_users WHERE user_id = ?", [body.userId]);
+    await d1Query("DELETE FROM admin_users WHERE user_id = ?", [patch.userId]);
   }
 
   await auditAdminAction({
     adminId: auth.user.id,
-    action: body.admin ? "grant_admin" : "revoke_admin",
+    action: patch.admin ? "grant_admin" : "revoke_admin",
     entityType: "user",
-    entityId: body.userId,
+    entityId: patch.userId,
   });
 
   return NextResponse.json({ data: { updated: true }, error: null });
