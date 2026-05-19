@@ -6,6 +6,7 @@ import { PERMISSIONS, getPermissionSet } from "@/lib/permissions";
 import {
   normalizeStudioKind,
   validateStudioJsonObject,
+  validateStudioStatus,
   validateStudioTitle,
 } from "@/lib/studio/validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
@@ -194,13 +195,15 @@ export async function POST(request: Request) {
   };
   let title: string;
   let content: Record<string, unknown>;
+  let status: "draft" | "published";
   try {
     title = validateStudioTitle(body.title);
     content = validateStudioJsonObject(body.content);
+    status = validateStudioStatus(body.status, { allowArchived: false }) as "draft" | "published";
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : "Invalid Studio item.", 400);
   }
-  if (body.status === "published" && !(await canPublish(user, context))) {
+  if (status === "published" && !(await canPublish(user, context))) {
     return errorResponse("Publishing permission is required.", 403);
   }
 
@@ -247,7 +250,7 @@ export async function POST(request: Request) {
       title,
       JSON.stringify(content),
       body.plainText ?? null,
-      body.status === "published" ? "published" : "draft",
+      status,
       body.sourceType ?? null,
       body.sourceId ?? null,
       JSON.stringify(metadata),
@@ -260,7 +263,7 @@ export async function POST(request: Request) {
     documentId: id,
     eventType: existed ? "studio.document.updated" : "studio.document.created",
     title,
-    status: body.status === "published" ? "published" : "draft",
+    status,
     kind,
   });
 
@@ -283,8 +286,16 @@ export async function PATCH(request: Request) {
   };
   if (!body.id) return errorResponse("Studio item id is required.", 400);
   await assertOwnerOrAdmin(body.id, context.tenant.id, user.id, user.user_metadata.role === "admin");
-  if (body.status === "published" && !(await canPublish(user, context))) {
-    return errorResponse("Publishing permission is required.", 403);
+  let status: "draft" | "published" | "archived" | null = null;
+  if (body.status !== undefined) {
+    try {
+      status = validateStudioStatus(body.status);
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Invalid Studio status.", 400);
+    }
+    if (status === "published" && !(await canPublish(user, context))) {
+      return errorResponse("Publishing permission is required.", 403);
+    }
   }
 
   const updates: string[] = [];
@@ -309,9 +320,9 @@ export async function PATCH(request: Request) {
     updates.push("plain_text = ?");
     values.push(body.plainText);
   }
-  if (body.status) {
+  if (status) {
     updates.push("status = ?");
-    values.push(body.status);
+    values.push(status);
   }
   if (body.metadata) {
     updates.push("metadata = ?");
@@ -329,11 +340,11 @@ export async function PATCH(request: Request) {
     actorId: user.id,
     documentId: body.id,
     eventType:
-      body.status === "published"
+      status === "published"
         ? "studio.document.published"
-        : body.status === "archived"
+        : status === "archived"
           ? "studio.document.archived"
-          : body.status === "draft"
+          : status === "draft"
             ? "studio.document.restored"
             : "studio.document.updated",
     title: row?.title,
