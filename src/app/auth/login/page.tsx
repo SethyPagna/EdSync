@@ -9,6 +9,7 @@ import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
 import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
+import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
 import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
@@ -26,6 +27,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { language, querySuffix } = usePublicLanguagePreference();
   const copy = useMemo(() => getPublicCopy(language), [language]);
+  const authCopy = useMemo(() => getPublicAuthCopy(language), [language]);
   const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
@@ -147,14 +149,14 @@ function LoginForm() {
         {([
           {
             key: "organization" as const,
-            label: "Organization",
-            copy: "School, academy, company, or cohort.",
+            label: authCopy.organization,
+            copy: authCopy.organizationCopy,
             icon: Building2,
           },
           {
             key: "individual" as const,
-            label: "Individual",
-            copy: "Personal teacher or learner workspace.",
+            label: authCopy.individual,
+            copy: authCopy.individualCopy,
             icon: UserRound,
           },
         ]).map((item) => {
@@ -182,7 +184,7 @@ function LoginForm() {
       {accountType === "organization" && (
         <div className="premium-surface rounded-2xl p-3">
           <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-            Organization code
+            {authCopy.organizationCode}
           </label>
           <input
             type="text"
@@ -198,7 +200,7 @@ function LoginForm() {
               href={organizationLookup?.slug ? `/org/${organizationLookup.slug}${querySuffix}` : `/catalog${querySuffix}`}
               className="btn-secondary justify-center px-3 py-2 text-sm"
             >
-              Open portal
+              {authCopy.openPortal}
             </Link>
             <button
               type="button"
@@ -212,7 +214,7 @@ function LoginForm() {
               }
               className="btn-secondary justify-center px-3 py-2 text-sm"
             >
-              SSO options
+              {authCopy.ssoOptions}
             </button>
           </div>
           {organizationStatus !== "idle" && (
@@ -228,8 +230,8 @@ function LoginForm() {
               {organizationStatus === "found"
                 ? `Found ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
                 : organizationStatus === "checking"
-                  ? "Checking organization..."
-                  : "No active organization found for that code yet."}
+                  ? authCopy.checkingOrganization
+                  : authCopy.missingOrganization}
             </div>
           )}
         </div>
@@ -237,7 +239,7 @@ function LoginForm() {
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          Email
+          {authCopy.email}
         </label>
         <input
           type="email"
@@ -251,13 +253,13 @@ function LoginForm() {
       </div>
       <div>
         <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          Password
+          {authCopy.password}
         </label>
         <input
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Minimum 8 characters"
+          placeholder={authCopy.passwordPlaceholder}
           required
           autoComplete="current-password"
           className="edsync-input"
@@ -268,7 +270,7 @@ function LoginForm() {
         disabled={loading || waitingForOrganization}
         className="btn-primary w-full justify-center py-3.5"
       >
-        {loading ? "Signing in..." : waitingForOrganization ? "Checking organization..." : copy.signIn}
+        {loading ? authCopy.signingIn : waitingForOrganization ? authCopy.checkingOrganization : copy.signIn}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </button>
     </form>
@@ -277,23 +279,24 @@ function LoginForm() {
 
 function LoginPanelTitle() {
   const { language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicCopy(language), [language]);
+  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
 
-  return <h2 className="font-display text-3xl font-bold">{copy.signIn}</h2>;
+  return <h2 className="font-display text-3xl font-bold">{copy.welcomeBack}</h2>;
 }
 
 function LoginSignupLink() {
   const { querySuffix, language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicCopy(language), [language]);
+  const publicCopy = useMemo(() => getPublicCopy(language), [language]);
+  const authCopy = useMemo(() => getPublicAuthCopy(language), [language]);
 
   return (
     <p className="mt-6 text-center text-sm text-edsync-subtle">
-      New to EdSync?{" "}
+      {authCopy.newToEdSync}{" "}
       <Link
         href={`/auth/signup${querySuffix}`}
         className="font-semibold text-edsync-blue hover:underline"
       >
-        {copy.createWorkspace}
+        {publicCopy.createWorkspace}
       </Link>
     </p>
   );
