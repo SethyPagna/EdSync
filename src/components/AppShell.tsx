@@ -346,7 +346,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-72 flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
+      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
     >
       <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
@@ -528,7 +528,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
               className="absolute inset-0 bg-black/60"
               onClick={() => setMobileOpen(false)}
             />
-            <div className="relative h-full w-72">{sidebar}</div>
+            <div className="relative h-full w-[min(18rem,calc(100vw-1rem))]">{sidebar}</div>
           </div>
         )}
         <main
