@@ -6,8 +6,10 @@ type CatalogCourseCardProps = {
   item: PublicCatalogItem;
   featured?: boolean;
   showOrganization?: boolean;
+  language?: string | null;
   labels?: {
     featured: string;
+    free: string;
     preview: string;
     flexible: string;
     view: string;
@@ -19,17 +21,23 @@ export default function CatalogCourseCard({
   item,
   featured = false,
   showOrganization = true,
+  language,
   labels = {
     featured: "Featured",
+    free: "Free",
     preview: "Preview this course and enroll when you are ready.",
     flexible: "Flexible",
     view: "View course",
     minutes: "min",
   },
 }: CatalogCourseCardProps) {
+  const detailUrl = language
+    ? `${item.detailUrl}?language=${encodeURIComponent(language)}`
+    : item.detailUrl;
+
   return (
     <Link
-      href={item.detailUrl}
+      href={detailUrl}
       className={`premium-card group overflow-hidden rounded-2xl ${
         featured ? "border-edsync-blue/40" : ""
       }`}
@@ -48,7 +56,7 @@ export default function CatalogCourseCard({
         )}
         <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
           <span className="rounded-full bg-edsync-surface/90 px-2.5 py-1 text-xs font-bold text-edsync-text shadow-sm backdrop-blur">
-            {item.price.label}
+            {item.price.isFree ? labels.free : item.price.label}
           </span>
           {(featured || item.metadata.category) && (
             <span className="rounded-full bg-edsync-blue px-2.5 py-1 text-xs font-bold text-white shadow-sm">
