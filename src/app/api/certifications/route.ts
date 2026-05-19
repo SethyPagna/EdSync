@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
-import { normalizeCertificationRulePayload } from "@/lib/certifications/rules";
+import { normalizeCertificationRulePayload, validateCertificationRuleId } from "@/lib/certifications/rules";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
@@ -39,9 +39,15 @@ export async function POST(request: Request) {
   };
 
   if (body.action === "delete") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
-    await d1Query("DELETE FROM certification_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.id]);
-    return NextResponse.json({ data: { id: body.id }, error: null });
+    let id: string;
+    try {
+      id = validateCertificationRuleId(body.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rule is required.";
+      return NextResponse.json({ data: null, error: message }, { status: 400 });
+    }
+    await d1Query("DELETE FROM certification_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, id]);
+    return NextResponse.json({ data: { id }, error: null });
   }
 
   let normalized;
@@ -53,7 +59,13 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "update") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Rule is required." }, { status: 400 });
+    let id: string;
+    try {
+      id = validateCertificationRuleId(body.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Rule is required.";
+      return NextResponse.json({ data: null, error: message }, { status: 400 });
+    }
     await d1Query(
       `UPDATE certification_rules
        SET title = ?, description = ?, course_id = ?, expires_after_days = ?, notify_before_days = ?, settings = ?, updated_at = datetime('now')
@@ -64,12 +76,12 @@ export async function POST(request: Request) {
         normalized.courseId,
         normalized.expiresAfterDays,
         normalized.notifyBeforeDays,
-        normalized.settings,
+        JSON.stringify(normalized.settings),
         context.tenant.id,
-        body.id,
+        id,
       ],
     );
-    return NextResponse.json({ data: { id: body.id }, error: null });
+    return NextResponse.json({ data: { id }, error: null });
   }
 
   const id = crypto.randomUUID();
@@ -85,7 +97,7 @@ export async function POST(request: Request) {
       normalized.courseId,
       normalized.expiresAfterDays,
       normalized.notifyBeforeDays,
-      normalized.settings,
+      JSON.stringify(normalized.settings),
     ],
   );
   return NextResponse.json({ data: { id }, error: null });
