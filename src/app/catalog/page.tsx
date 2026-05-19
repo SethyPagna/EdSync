@@ -64,6 +64,19 @@ export default async function CatalogPage({
     `${copy.academies} ${copy.catalogLabel}`,
     `${proofLabel} ${copy.courses}`,
   ];
+  const catalogHref = (params: Record<string, string> = {}) => {
+    const query = new URLSearchParams();
+    if (filters.language) query.set("language", filters.language);
+    for (const [key, value] of Object.entries(params)) {
+      if (value) query.set(key, value);
+    }
+    const queryString = query.toString();
+    return `/catalog${queryString ? `?${queryString}` : ""}`;
+  };
+  const orgHref = (slug: string) => {
+    const query = filters.language ? `?language=${encodeURIComponent(filters.language)}` : "";
+    return `/org/${slug}${query}`;
+  };
 
   return (
     <main id="top" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
@@ -97,7 +110,7 @@ export default async function CatalogPage({
                 </span>
               </div>
               {hasFilters && (
-                <Link href="/catalog" className="text-sm font-semibold text-edsync-blue hover:underline">
+                <Link href={catalogHref()} className="text-sm font-semibold text-edsync-blue hover:underline">
                   {copy.clearFilters}
                 </Link>
               )}
@@ -163,7 +176,7 @@ export default async function CatalogPage({
               {quickSearches.map((sample) => (
                 <Link
                   key={sample}
-                  href={`/catalog?q=${encodeURIComponent(sample)}`}
+                  href={catalogHref({ q: sample })}
                   className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
                 >
                   {sample}
@@ -178,7 +191,7 @@ export default async function CatalogPage({
                   <p className="text-sm text-edsync-subtle">{copy.coursesSubhead}</p>
                 </div>
                 {hasFilters && (
-                  <Link href="/catalog" className="text-sm font-semibold text-edsync-blue hover:underline">
+                  <Link href={catalogHref()} className="text-sm font-semibold text-edsync-blue hover:underline">
                     {copy.clearFilters}
                   </Link>
                 )}
@@ -210,7 +223,7 @@ export default async function CatalogPage({
                 {categories.map((category) => (
                   <Link
                     key={category}
-                    href={`/catalog?category=${encodeURIComponent(category)}`}
+                    href={catalogHref({ category })}
                     className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
                   >
                     {category}
@@ -245,7 +258,7 @@ export default async function CatalogPage({
               {portals.slice(0, 9).map((portal) => (
                 <Link
                   key={portal.id}
-                  href={`/org/${portal.slug}`}
+                  href={orgHref(portal.slug)}
                   className="premium-card group rounded-2xl p-4"
                 >
                   <div className="flex items-start gap-3">
