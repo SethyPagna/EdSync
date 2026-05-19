@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { d1Query } from "@/lib/db/d1";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
-import { createOrganizationSlug, normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import { createOrganizationSlug, validateOrganizationCode } from "@/lib/auth/organization-code";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 function organizationSlug(name: string) {
@@ -46,7 +46,18 @@ export async function POST(request: Request) {
   const accountType = options?.data?.account_type === "organization" ? "organization" : "individual";
   const organizationMode = options?.data?.organization_mode === "join" ? "join" : "create";
   const organizationName = options?.data?.organization_name?.trim() || null;
-  const organizationCode = normalizeOrganizationCode(options?.data?.organization_code);
+  let organizationCode: string | null = null;
+  if (accountType === "organization" && organizationMode === "join") {
+    try {
+      organizationCode = validateOrganizationCode(options?.data?.organization_code);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Organization code is invalid.";
+      return NextResponse.json({
+        data: { user: null, session: null },
+        error: { message, status: 400 },
+      }, { status: 400 });
+    }
+  }
 
   if (!normalizedEmail || !password || password.length < 8) {
     return NextResponse.json({
@@ -76,13 +87,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Organization name is required.", status: 400 },
-    }, { status: 400 });
-  }
-
-  if (accountType === "organization" && organizationMode === "join" && !organizationCode) {
-    return NextResponse.json({
-      data: { user: null, session: null },
-      error: { message: "Organization code is required.", status: 400 },
     }, { status: 400 });
   }
 
@@ -169,6 +173,12 @@ export async function POST(request: Request) {
   }
 
   if (accountType === "organization" && organizationMode === "join" && joinedTenantRows[0]) {
+    if (!organizationCode) {
+      return NextResponse.json({
+        data: { user: null, session: null },
+        error: { message: "Organization code is required.", status: 400 },
+      }, { status: 400 });
+    }
     await d1Query(
       `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'active', '[]', datetime('now'), datetime('now'))`,
