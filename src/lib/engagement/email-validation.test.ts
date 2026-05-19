@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EMAIL_ADDRESS_MAX_LENGTH,
   EMAIL_ID_MAX_LENGTH,
   EMAIL_MAX_RECIPIENTS,
   EMAIL_METADATA_MAX_LENGTH,
@@ -20,6 +21,7 @@ describe("email validation", () => {
     expect(validateEmailAddress(" USER@example.COM ")).toBe("user@example.com");
     expect(validateEmailSubject("  Class update  ")).toBe("Class update");
     expect(() => validateEmailAddress("bad")).toThrow("valid email");
+    expect(() => validateEmailAddress(`${"x".repeat(EMAIL_ADDRESS_MAX_LENGTH)}@example.com`)).toThrow("characters");
     expect(() => validateEmailSubject("Hi\r\nBcc:bad@example.com")).toThrow("line breaks");
     expect(() => validateEmailSubject("x".repeat(EMAIL_SUBJECT_MAX_LENGTH + 1))).toThrow("characters");
   });
