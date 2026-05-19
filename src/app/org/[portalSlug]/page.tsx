@@ -14,7 +14,7 @@ import PublicTopbar from "@/components/public/PublicTopbar";
 import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters } from "@/lib/catalog-filters";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { publicLanguageQuerySuffix } from "@/lib/public/languages";
+import { publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
 export async function generateMetadata({
   params,
@@ -40,6 +40,7 @@ export default async function OrganizationPortalPage({
     price?: string;
     difficulty?: string;
     language?: string;
+    courseLanguage?: string;
     duration?: string;
   };
 }) {
@@ -107,6 +108,9 @@ export default async function OrganizationPortalPage({
               </div>
             </div>
             <form className="border-t border-edsync-border bg-edsync-surface/85 p-3">
+              {publicLanguageQueryValue(filters.language) && (
+                <input type="hidden" name="language" value={publicLanguageQueryValue(filters.language) ?? ""} />
+              )}
               <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_9rem_9rem_auto_auto] [&>*]:min-w-0">
                 <label className="relative">
                   <span className="sr-only">{copy.searchPlaceholder}</span>
@@ -144,8 +148,8 @@ export default async function OrganizationPortalPage({
                         placeholder={copy.difficulty}
                       />
                       <input
-                        name="language"
-                        defaultValue={filters.language}
+                        name="courseLanguage"
+                        defaultValue={filters.courseLanguage}
                         className="edsync-input min-w-0"
                         placeholder={copy.language}
                       />
