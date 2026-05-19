@@ -171,7 +171,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
       { label: "Platform", items: pick(["/admin/users", "/admin/portals", "/admin/permissions"]) },
       { label: "Learning Ops", items: pick(["/admin/email"]) },
       { label: "Intelligence", items: pick(["/admin/ai"]) },
-      { label: "Governance", items: pick(["/admin/governance", "/admin/security"]) },
+      { label: "Governance", items: pick(["/admin/governance", "/admin/standards", "/admin/certifications", "/admin/automation", "/admin/security"]) },
       { label: "System", items: pick(["/admin/billing", "/admin/settings"]) },
       { label: "View As", items: pick(["/teacher/dashboard?adminView=teacher", "/student/dashboard?adminView=student"]) },
     ];
