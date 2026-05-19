@@ -28,19 +28,48 @@ async function readEnrollPayload(response: Response): Promise<EnrollPayload> {
 export default function CatalogEnrollButton({
   productId,
   isFree,
+  language,
+  labels = {
+    enrolled: "Enrolled",
+    requestSent: "Request sent",
+    alreadyEnrolled: "Already enrolled",
+    enrollFree: "Enroll free",
+    startCheckout: "Start checkout",
+    working: "Working...",
+    error: "Could not start enrollment.",
+    connectionError: "Enrollment could not connect. Please try again.",
+    manualSuccess: "Checkout request created.",
+    activeSuccess: "You already have access.",
+    enrolledSuccess: "Enrollment is active.",
+  },
 }: {
   productId: string;
   isFree: boolean;
+  language?: string | null;
+  labels?: {
+    enrolled: string;
+    requestSent: string;
+    alreadyEnrolled: string;
+    enrollFree: string;
+    startCheckout: string;
+    working: string;
+    error: string;
+    connectionError: string;
+    manualSuccess: string;
+    activeSuccess: string;
+    enrolledSuccess: string;
+  };
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [doneLabel, setDoneLabel] = useState("Enrolled");
+  const [doneLabel, setDoneLabel] = useState(labels.enrolled);
 
   const enroll = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/catalog/${productId}/enroll`, {
+      const query = language ? `?language=${encodeURIComponent(language)}` : "";
+      const response = await fetch(`/api/catalog/${productId}/enroll${query}`, {
         method: "POST",
         credentials: "include",
       });
@@ -52,7 +81,7 @@ export default function CatalogEnrollButton({
       }
 
       if (!response.ok) {
-        toast.error(payload.error || "Could not start enrollment.");
+        toast.error(payload.error || labels.error);
         return;
       }
 
@@ -62,27 +91,27 @@ export default function CatalogEnrollButton({
       }
 
       if (payload.data?.mode === "manual") {
-        setDoneLabel("Request sent");
+        setDoneLabel(labels.requestSent);
         setDone(true);
-        toast.success("Checkout request created. Your organization can activate access after review.");
+        toast.success(labels.manualSuccess);
         router.refresh();
         return;
       }
 
       if (payload.data?.mode === "active") {
-        setDoneLabel("Already enrolled");
+        setDoneLabel(labels.alreadyEnrolled);
         setDone(true);
-        toast.success("You already have access.");
+        toast.success(labels.activeSuccess);
         router.refresh();
         return;
       }
 
-      setDoneLabel("Enrolled");
+      setDoneLabel(labels.enrolled);
       setDone(true);
-      toast.success(isFree ? "You are enrolled." : "Enrollment is active.");
+      toast.success(labels.enrolledSuccess);
       router.refresh();
     } catch {
-      toast.error("Enrollment could not connect. Please try again.");
+      toast.error(labels.connectionError);
     } finally {
       setLoading(false);
     }
@@ -102,10 +131,10 @@ export default function CatalogEnrollButton({
           {doneLabel}
         </>
       ) : loading ? (
-        "Working..."
+        labels.working
       ) : (
         <>
-          {isFree ? "Enroll free" : "Start checkout"}
+          {isFree ? labels.enrollFree : labels.startCheckout}
           <ArrowRight className="h-4 w-4" />
         </>
       )}
