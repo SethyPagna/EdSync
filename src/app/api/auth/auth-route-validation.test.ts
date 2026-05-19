@@ -26,6 +26,18 @@ describe("auth route validation responses", () => {
     expect(payload.error.message).toBe("Email and password are required.");
   });
 
+  it("returns HTTP 400 when login email is blank after trimming", async () => {
+    const response = await loginPost(jsonRequest("/api/auth/login", {
+      email: "   ",
+      password: "password123",
+      account_type: "individual",
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Email and password are required.");
+  });
+
   it("returns HTTP 400 when signup account details are incomplete", async () => {
     const response = await signupPost(jsonRequest("/api/auth/signup", {
       email: "student@example.com",
