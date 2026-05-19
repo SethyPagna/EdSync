@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, auditAdminAction } from "@/lib/admin";
 import {
+  normalizeFeatureFlagEnabled,
   normalizeFeatureFlagInput,
   normalizeFeatureFlagKey,
   validateFeatureFlagId,
@@ -42,8 +43,10 @@ export async function PATCH(request: Request) {
 
   const body = (await request.json()) as { flagKey?: string; enabled?: boolean };
   let flagKey: string;
+  let enabled: boolean;
   try {
     flagKey = normalizeFeatureFlagKey(body.flagKey);
+    enabled = normalizeFeatureFlagEnabled(body.enabled);
   } catch (error) {
     return NextResponse.json(
       { data: null, error: error instanceof Error ? error.message : "Invalid feature flag." },
@@ -53,7 +56,7 @@ export async function PATCH(request: Request) {
 
   await seedDefaults();
   await d1Query("UPDATE feature_flags SET enabled = ?, updated_at = datetime('now') WHERE flag_key = ?", [
-    body.enabled ? 1 : 0,
+    enabled ? 1 : 0,
     flagKey,
   ]);
   await auditAdminAction({
@@ -61,7 +64,7 @@ export async function PATCH(request: Request) {
     action: "toggle_flag",
     entityType: "feature_flag",
     entityId: flagKey,
-    metadata: { enabled: Boolean(body.enabled) },
+    metadata: { enabled },
   });
   return NextResponse.json({ data: { updated: true }, error: null });
 }
