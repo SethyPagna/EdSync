@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 type EnrollPayload = {
   data?: {
@@ -68,7 +69,7 @@ export default function CatalogEnrollButton({
   const enroll = async () => {
     setLoading(true);
     try {
-      const query = language ? `?language=${encodeURIComponent(language)}` : "";
+      const query = publicLanguageQuerySuffix(language);
       const response = await fetch(`/api/catalog/${productId}/enroll${query}`, {
         method: "POST",
         credentials: "include",
