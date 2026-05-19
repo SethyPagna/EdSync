@@ -64,7 +64,7 @@ describe("auth route validation responses", () => {
     const payload = await readAuthError(response);
 
     expect(response.status).toBe(400);
-    expect(payload.error.message).toBe("A valid email and password of at least 8 characters are required.");
+    expect(payload.error.message).toBe("Password must be at least 8 characters.");
   });
 
   it("returns HTTP 400 when signup email is malformed", async () => {
@@ -82,6 +82,35 @@ describe("auth route validation responses", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error.message).toBe("Email must be a valid email address.");
+  });
+
+  it("returns HTTP 400 when login password is too long", async () => {
+    const response = await loginPost(jsonRequest("/api/auth/login", {
+      email: "teacher@example.com",
+      password: "x".repeat(257),
+      account_type: "individual",
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Password must be 256 characters or fewer.");
+  });
+
+  it("returns HTTP 400 when signup password is too long", async () => {
+    const response = await signupPost(jsonRequest("/api/auth/signup", {
+      email: "student@example.com",
+      password: "x".repeat(257),
+      options: {
+        data: {
+          role: "student",
+          account_type: "individual",
+        },
+      },
+    }));
+    const payload = await readAuthError(response);
+
+    expect(response.status).toBe(400);
+    expect(payload.error.message).toBe("Password must be 256 characters or fewer.");
   });
 
   it("returns HTTP 400 when organization signup name is too long", async () => {
