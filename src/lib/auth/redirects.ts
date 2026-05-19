@@ -20,7 +20,8 @@ const SAFE_NEXT_PREFIXES = [
 export function homeForRole(role: string | null | undefined) {
   if (role === "admin") return "/admin/dashboard";
   if (role === "teacher") return "/teacher/dashboard";
-  return "/student/dashboard";
+  if (role === "student") return "/student/dashboard";
+  return "/auth/login";
 }
 
 export function isSafeAppPath(value: string | null | undefined) {
