@@ -308,3 +308,15 @@ export const AI_PROMPT_CONTRACTS: AiPromptContract[] = [
     outputShape: { mode: "string", items: "array", explanations: "array" },
   },
 ];
+
+export type AiPromptSearchParams = {
+  task?: string;
+};
+
+export function isAiPromptContractId(value: unknown): value is string {
+  return typeof value === "string" && AI_PROMPT_CONTRACTS.some((contract) => contract.id === value);
+}
+
+export function normalizeAiPromptContractId(value: unknown): string | undefined {
+  return isAiPromptContractId(value) ? value : AI_PROMPT_CONTRACTS[0]?.id;
+}
