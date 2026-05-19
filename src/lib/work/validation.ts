@@ -35,3 +35,8 @@ export function validateWorkPoints(value: unknown, fallback = 100) {
   if (!Number.isFinite(points)) throw new Error("Points must be a valid number.");
   return Math.min(WORK_POINTS_MAX, Math.max(0, points));
 }
+
+export function validateEarnedWorkPoints(value: unknown, pointsPossible: number) {
+  const points = validateWorkPoints(value, 0);
+  return Math.min(points, pointsPossible);
+}
