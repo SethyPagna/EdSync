@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { ensureDefaultTenant, resolveTenantContext } from "@/lib/tenancy";
+import { normalizeTenantInput } from "@/lib/tenant-validation";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -28,8 +29,15 @@ export async function POST(request: Request) {
   await requirePermission(user, context, PERMISSIONS.portalsManage);
 
   const body = (await request.json()) as { name?: string; slug?: string; planTier?: string; isolationMode?: string };
-  const slug = (body.slug || body.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  if (!body.name || !slug) return NextResponse.json({ data: null, error: "Tenant name is required." }, { status: 400 });
+  let tenantInput;
+  try {
+    tenantInput = normalizeTenantInput(body);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid tenant." },
+      { status: 400 },
+    );
+  }
 
   const id = crypto.randomUUID();
   await ensureDefaultTenant(user.id);
@@ -38,17 +46,17 @@ export async function POST(request: Request) {
      VALUES (?, ?, ?, ?, ?, ?, '{}', datetime('now'), datetime('now'))`,
     [
       id,
-      slug,
-      body.name.trim(),
+      tenantInput.slug,
+      tenantInput.name,
       user.id,
-      body.planTier === "team" || body.planTier === "enterprise" ? body.planTier : "solo",
-      body.isolationMode === "dedicated_d1" ? "dedicated_d1" : "shared_d1",
+      tenantInput.planTier,
+      tenantInput.isolationMode,
     ],
   );
   await d1Query(
     `INSERT INTO tenant_portals (id, tenant_id, slug, name, audience, is_default, theme, created_at, updated_at)
      VALUES (?, ?, 'main', ?, 'internal', 1, '{"theme":"light"}', datetime('now'), datetime('now'))`,
-    [crypto.randomUUID(), id, `${body.name.trim()} Portal`],
+    [crypto.randomUUID(), id, `${tenantInput.name} Portal`],
   );
   await d1Query(
     `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
