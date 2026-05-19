@@ -3,8 +3,11 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import {
   normalizeEmailDisplay,
+  normalizeEmailMetadata,
+  normalizeOptionalEmailRecordId,
   validateEmailAddress,
   validateEmailBody,
+  validateEmailHtml,
   validateEmailSubject,
   validateRecipientList,
 } from "@/lib/engagement/email-validation";
@@ -49,23 +52,29 @@ export async function POST(request: Request) {
 
   let subject: string;
   let text: string;
+  let html: string | null;
   let replyTo: string;
   let senderDisplay: string;
+  let classId: string | null;
+  let metadata: Record<string, unknown>;
   try {
     subject = validateEmailSubject(body.subject);
     text = validateEmailBody(body.text);
+    html = validateEmailHtml(body.html);
     replyTo = validateEmailAddress(body.replyTo ?? user.email, "Reply-to email");
     senderDisplay = normalizeEmailDisplay(body.senderDisplay, user.email);
+    classId = normalizeOptionalEmailRecordId(body.classId, "Class");
+    metadata = normalizeEmailMetadata(body.metadata);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Email payload is invalid.";
     return NextResponse.json({ data: null, error: message }, { status: 400 });
   }
 
-  if (!body.to && !body.classId) {
+  if (!body.to && !classId) {
     return NextResponse.json({ data: null, error: "Recipient or class is required." }, { status: 400 });
   }
 
-  const classRecipients = body.classId
+  const classRecipients = classId
     ? await d1Query<{ id: string; email: string }>(
         `SELECT p.id, p.email
            FROM class_enrollments ce
@@ -75,10 +84,10 @@ export async function POST(request: Request) {
             AND ce.is_active = 1
             AND c.is_active = 1
             AND (? = 1 OR c.teacher_id = ?)`,
-        [body.classId, user.user_metadata.role === "admin" ? 1 : 0, user.id],
+        [classId, user.user_metadata.role === "admin" ? 1 : 0, user.id],
       )
     : [];
-  if (body.classId && classRecipients.length === 0 && !body.to) {
+  if (classId && classRecipients.length === 0 && !body.to) {
     return NextResponse.json({ data: null, error: "No active recipients were found for this class." }, { status: 404 });
   }
 
@@ -98,10 +107,10 @@ export async function POST(request: Request) {
         recipientEmail: recipient.email,
         subject,
         bodyText: text,
-        bodyHtml: body.html ?? null,
+        bodyHtml: html,
         senderDisplay,
         replyTo,
-        metadata: { sentBy: user.id, classId: body.classId ?? null, ...(body.metadata ?? {}) },
+        metadata: { sentBy: user.id, classId, ...metadata },
       }),
     ),
   );
@@ -121,7 +130,7 @@ export async function POST(request: Request) {
     [
       crypto.randomUUID(),
       user.id,
-      body.classId ?? null,
+      classId,
       subject,
       text,
       recipients.length,
