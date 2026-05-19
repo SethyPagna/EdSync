@@ -8,7 +8,11 @@ export const metadata: Metadata = {
   description: "Slide through the EdSync catalog, Studio, AI, teacher, student, and admin workflow.",
 };
 
-export default function ShowcasePage() {
+export default function ShowcasePage({
+  searchParams,
+}: {
+  searchParams?: { language?: string };
+}) {
   return (
     <main className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
       <section className="mx-auto max-w-[90rem] px-4 pt-4">
@@ -18,7 +22,7 @@ export default function ShowcasePage() {
             Intro
           </Link>
         </div>
-        <WorkflowShowcase />
+        <WorkflowShowcase language={searchParams?.language} />
       </section>
     </main>
   );
