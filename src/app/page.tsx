@@ -1,25 +1,14 @@
 import { redirect } from "next/navigation";
 import CatalogPage from "./catalog/page";
 import { getSessionUser } from "@/lib/auth/session";
+import type { CatalogSearchParams } from "@/lib/catalog-filters";
 import { publicLanguageHref } from "@/lib/public/languages";
 import { resolveTenantContext } from "@/lib/tenancy";
-
-type RootSearchParams = {
-  q?: string;
-  portal?: string;
-  tenant?: string;
-  price?: string;
-  category?: string;
-  difficulty?: string;
-  language?: string;
-  courseLanguage?: string;
-  duration?: string;
-};
 
 export default async function RootPage({
   searchParams,
 }: {
-  searchParams?: RootSearchParams;
+  searchParams?: CatalogSearchParams;
 }) {
   const user = await getSessionUser().catch(() => null);
 
