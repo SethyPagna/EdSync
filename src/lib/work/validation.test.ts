@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   WORK_POINTS_MAX,
+  WORK_RESPONSE_MAX_BYTES,
   isWorkType,
   validateEarnedWorkPoints,
   validateWorkPoints,
+  validateWorkResponse,
   validateWorkStatus,
   validateWorkType,
 } from "@/lib/work/validation";
@@ -36,5 +38,13 @@ describe("work validation", () => {
     expect(validateEarnedWorkPoints(8, 10)).toBe(8);
     expect(validateEarnedWorkPoints(12, 10)).toBe(10);
     expect(validateEarnedWorkPoints(-1, 10)).toBe(0);
+  });
+
+  it("validates submission response payloads", () => {
+    expect(validateWorkResponse(undefined)).toEqual({});
+    expect(validateWorkResponse({ answer: "Complete" })).toEqual({ answer: "Complete" });
+    expect(() => validateWorkResponse("answer")).toThrow("must be an object");
+    expect(() => validateWorkResponse(["answer"])).toThrow("must be an object");
+    expect(() => validateWorkResponse({ answer: "x".repeat(WORK_RESPONSE_MAX_BYTES) })).toThrow("too large");
   });
 });
