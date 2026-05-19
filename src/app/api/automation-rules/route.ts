@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enqueueAutomationJob } from "@/lib/automation";
-import { AUTOMATION_RECIPES, normalizeAutomationRulePayload, validateAutomationRuleId } from "@/lib/automation/rules";
+import {
+  AUTOMATION_RECIPES,
+  normalizeAutomationEnabled,
+  normalizeAutomationRulePayload,
+  validateAutomationRuleId,
+} from "@/lib/automation/rules";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
@@ -74,14 +79,16 @@ export async function POST(request: Request) {
 
   if (body.action === "toggle") {
     let id: string;
+    let enabled: boolean;
     try {
       id = validateAutomationRuleId(body.id);
+      enabled = normalizeAutomationEnabled(body.enabled);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Rule is required.";
       return NextResponse.json({ data: null, error: message }, { status: 400 });
     }
     await d1Query("UPDATE automation_rules SET enabled = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?", [
-      body.enabled === false ? 0 : 1,
+      enabled ? 1 : 0,
       context.tenant.id,
       id,
     ]);
