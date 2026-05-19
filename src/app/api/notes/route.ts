@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { createNotification } from "@/lib/engagement/server";
+import { normalizeStudentNoteInput } from "@/lib/notes/validation";
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -55,12 +56,21 @@ export async function POST(request: Request) {
     visibility?: "teacher" | "student" | "guardian";
     priority?: "low" | "normal" | "high";
   };
-  if (!body.studentId || !body.title || !body.body) {
-    return NextResponse.json({ data: null, error: "Student, title, and note are required." }, { status: 400 });
+  if (!body.studentId) {
+    return NextResponse.json({ data: null, error: "Student is required." }, { status: 400 });
+  }
+
+  let note;
+  try {
+    note = normalizeStudentNoteInput(body);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid student note." },
+      { status: 400 },
+    );
   }
 
   const id = crypto.randomUUID();
-  const visibility = body.visibility ?? "student";
   await d1Query(
     `INSERT INTO student_notes (
        id, teacher_id, student_id, class_id, title, body, visibility, priority, metadata, created_at, updated_at
@@ -70,22 +80,22 @@ export async function POST(request: Request) {
       user.id,
       body.studentId,
       body.classId ?? null,
-      body.title.trim(),
-      body.body.trim(),
-      visibility,
-      body.priority ?? "normal",
+      note.title,
+      note.body,
+      note.visibility,
+      note.priority,
     ],
   );
 
-  if (visibility !== "teacher") {
+  if (note.visibility !== "teacher") {
     await createNotification({
       userId: body.studentId,
       actorId: user.id,
       type: "student_note",
-      title: body.title.trim(),
-      message: body.body.trim().slice(0, 180),
+      title: note.title,
+      message: note.body.slice(0, 180),
       actionUrl: "/student/notes",
-      priority: body.priority ?? "normal",
+      priority: note.priority,
       metadata: { noteId: id },
     });
   }
