@@ -16,7 +16,7 @@ import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getPublicCatalogItem } from "@/lib/catalog";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { publicLanguageQuerySuffix } from "@/lib/public/languages";
+import { publicLanguageQuerySuffix, type PublicLanguageSearchParams } from "@/lib/public/languages";
 
 export async function generateMetadata({
   params,
@@ -38,7 +38,7 @@ export default async function CatalogDetailPage({
   searchParams,
 }: {
   params: { productId: string };
-  searchParams?: { enrolled?: string; checkout?: string; language?: string };
+  searchParams?: PublicLanguageSearchParams & { enrolled?: string; checkout?: string };
 }) {
   const item = await getPublicCatalogItem(params.productId);
   if (!item) notFound();
