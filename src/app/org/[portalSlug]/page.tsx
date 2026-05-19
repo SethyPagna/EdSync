@@ -66,6 +66,10 @@ export default async function OrganizationPortalPage({
     minutes: "min",
   };
   const languageQuery = publicLanguageQuerySuffix(filters.language);
+  const authParams = new URLSearchParams({ org: portal.tenant_slug });
+  const publicLanguage = publicLanguageQueryValue(filters.language);
+  if (publicLanguage) authParams.set("language", publicLanguage);
+  const authQuery = authParams.toString();
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -93,14 +97,14 @@ export default async function OrganizationPortalPage({
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href={`/auth/login?org=${encodeURIComponent(portal.tenant_slug)}`}
+                  href={`/auth/login?${authQuery}`}
                   className="btn-primary justify-center"
                 >
                   {copy.signIn}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href={`/auth/signup?org=${encodeURIComponent(portal.tenant_slug)}`}
+                  href={`/auth/signup?${authQuery}`}
                   className="btn-secondary justify-center"
                 >
                   {copy.start}
