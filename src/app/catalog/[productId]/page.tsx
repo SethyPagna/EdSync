@@ -100,7 +100,9 @@ export default async function CatalogDetailPage({
             <div className="premium-card rounded-2xl p-4">
               <Clock3 className="mb-3 h-5 w-5 text-edsync-blue" />
               <p className="font-semibold">Duration</p>
-              <p className="text-sm text-edsync-subtle">{item.lesson.durationMinutes || "Flexible"} minutes</p>
+              <p className="text-sm text-edsync-subtle">
+                {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} minutes` : "Flexible"}
+              </p>
             </div>
             <div className="premium-card rounded-2xl p-4">
               <GraduationCap className="mb-3 h-5 w-5 text-edsync-emerald" />
