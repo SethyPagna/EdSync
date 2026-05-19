@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
@@ -40,7 +41,10 @@ export default async function CatalogDetailPage({
 }) {
   const item = await getPublicCatalogItem(params.productId);
   if (!item) notFound();
-  const copy = getPublicCopy(searchParams?.language);
+  const cookieStore = await cookies();
+  const publicLanguage = searchParams?.language ?? cookieStore.get("edsync-language")?.value;
+  const copy = getPublicCopy(publicLanguage);
+  const languageQuery = publicLanguage ? `?language=${encodeURIComponent(publicLanguage)}` : "";
 
   return (
     <main className="premium-shell min-h-screen text-edsync-text">
@@ -53,7 +57,7 @@ export default async function CatalogDetailPage({
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
-          <Link href="/catalog" className="btn-ghost w-fit px-0">
+          <Link href={`/catalog${languageQuery}`} className="btn-ghost w-fit px-0">
             {copy.catalogLabel}
           </Link>
           <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
@@ -175,7 +179,7 @@ export default async function CatalogDetailPage({
                   {item.portal ? `${item.portal.name} - ${item.portal.audience}` : copy.catalogLabel}
                 </p>
                 {item.portal && (
-                  <Link href={`/org/${item.portal.slug}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-edsync-blue hover:underline">
+                  <Link href={`/org/${item.portal.slug}${languageQuery}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-edsync-blue hover:underline">
                     {copy.academies}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
