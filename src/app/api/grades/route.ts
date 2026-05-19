@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import {
+  GRADE_CATEGORY_NAME_MAX_LENGTH,
+  normalizeManualGradeInput,
+  validateGradeCategoryWeight,
+  validateGradeText,
+} from "@/lib/grades/validation";
 import { recordGradeEvent } from "@/lib/learning-events";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
@@ -135,26 +141,44 @@ export async function POST(request: Request) {
   };
 
   if (body.kind === "category") {
-    if (!body.classId || !body.name) {
-      return NextResponse.json({ data: null, error: "Class and category name are required." }, { status: 400 });
+    if (!body.classId) {
+      return NextResponse.json({ data: null, error: "Class is required." }, { status: 400 });
+    }
+    let categoryName: string;
+    let categoryWeight: number;
+    try {
+      categoryName = validateGradeText(body.name, "Category name", GRADE_CATEGORY_NAME_MAX_LENGTH);
+      categoryWeight = validateGradeCategoryWeight(body.weight);
+    } catch (error) {
+      return NextResponse.json(
+        { data: null, error: error instanceof Error ? error.message : "Invalid grade category." },
+        { status: 400 },
+      );
     }
     const id = crypto.randomUUID();
     await d1Query(
       `INSERT INTO gradebook_categories (id, class_id, teacher_id, name, weight, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [id, body.classId, user.id, body.name.trim(), Math.max(0, Number(body.weight ?? 1))],
+      [id, body.classId, user.id, categoryName, categoryWeight],
     );
     const context = await resolveTenantContext(user);
     await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "gradebook_categories", objectId: id });
     return NextResponse.json({ data: { id }, error: null });
   }
 
-  if (!body.studentId || !body.title) {
-    return NextResponse.json({ data: null, error: "Student and score title are required." }, { status: 400 });
+  if (!body.studentId) {
+    return NextResponse.json({ data: null, error: "Student is required." }, { status: 400 });
   }
 
-  const pointsEarned = Number(body.pointsEarned ?? 0);
-  const pointsPossible = Number(body.pointsPossible ?? 0);
+  let grade;
+  try {
+    grade = normalizeManualGradeInput(body);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid grade score." },
+      { status: 400 },
+    );
+  }
   const id = crypto.randomUUID();
   const context = await resolveTenantContext(user);
   const result = await recordGradeEvent({
@@ -162,14 +186,14 @@ export async function POST(request: Request) {
     actorId: user.id,
     studentId: body.studentId,
     classId: body.classId ?? null,
-    sourceType: body.sourceType ?? "manual",
+    sourceType: grade.sourceType,
     sourceId: body.sourceId ?? id,
     eventType: "grade.manual.recorded",
     teacherId: user.id,
-    title: body.title.trim(),
-    pointsEarned,
-    pointsPossible,
-    feedback: body.feedback ?? null,
+    title: grade.title,
+    pointsEarned: grade.pointsEarned,
+    pointsPossible: grade.pointsPossible,
+    feedback: grade.feedback,
     payload: { categoryId: body.categoryId ?? null },
   });
 
