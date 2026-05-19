@@ -59,8 +59,21 @@ type WorkflowSlide = {
 };
 
 function labelsForLanguage(language?: string | null): WorkflowLabels {
-  const copy = getPublicCopy(normalizePublicLanguage(language));
-  const [, studio = "Studio", ai = "AI", practice = "Practice", grades = "Grades"] = copy.heroTags;
+  const publicLanguage = normalizePublicLanguage(language);
+  const copy = getPublicCopy(publicLanguage);
+  const [, studio = "Studio", ai = "AI", practice = "Practice", fallbackGrades = "Progress"] = copy.heroTags;
+  const progressLabels: Record<string, string> = {
+    Chinese: "进度",
+    English: "Progress",
+    French: "Progrès",
+    Japanese: "進捗",
+    Khmer: "វឌ្ឍនភាព",
+    Korean: "진도",
+    Spanish: "Progreso",
+    Thai: "ความก้าวหน้า",
+    Vietnamese: "Tiến bộ",
+  };
+  const grades = progressLabels[publicLanguage] ?? fallbackGrades;
 
   return {
     catalog: copy.catalogLabel,
@@ -472,7 +485,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
           </div>
           <span className="truncate text-xs font-bold text-edsync-subtle">{slide.route}</span>
           <Link href={slide.route} className="edsync-workflow-open">
-            Open
+            {labels.start}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
