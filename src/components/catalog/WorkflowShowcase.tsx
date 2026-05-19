@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { memo, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,6 +15,31 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react";
+import { getPublicCopy } from "@/lib/public/i18n";
+import { normalizePublicLanguage } from "@/lib/public/languages";
+
+type WorkflowShowcaseProps = {
+  language?: string | null;
+};
+
+type WorkflowLabels = {
+  catalog: string;
+  studio: string;
+  ai: string;
+  practice: string;
+  grades: string;
+  courses: string;
+  search: string;
+  filters: string;
+  start: string;
+  signIn: string;
+  free: string;
+  paid: string;
+  duration: string;
+  difficulty: string;
+  featured: string;
+  workflow: string;
+};
 
 type WorkflowSlide = {
   id: string;
@@ -33,188 +58,214 @@ type WorkflowSlide = {
   actions: string[];
 };
 
-const slides: WorkflowSlide[] = [
+function labelsForLanguage(language?: string | null): WorkflowLabels {
+  const copy = getPublicCopy(normalizePublicLanguage(language));
+  const [, studio = "Studio", ai = "AI", practice = "Practice", grades = "Grades"] = copy.heroTags;
+
+  return {
+    catalog: copy.catalogLabel,
+    studio,
+    ai,
+    practice,
+    grades,
+    courses: copy.courses,
+    search: copy.searchButton,
+    filters: copy.filters,
+    start: copy.start,
+    signIn: copy.signIn,
+    free: copy.free,
+    paid: copy.paid,
+    duration: copy.anyDuration,
+    difficulty: copy.difficulty,
+    featured: copy.featured,
+    workflow: copy.workflowLabel,
+  };
+}
+
+function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
+  return [
   {
     id: "overview",
-    title: "Intro And Workflow",
-    shortTitle: "Start",
-    headline: "One path from course to proof.",
-    subtitle: "Search, build, generate, practice, grade, and review without losing context.",
+    title: `${labels.start} + ${labels.workflow}`,
+    shortTitle: labels.start,
+    headline: `${labels.courses}. ${labels.studio}. ${labels.practice}.`,
+    subtitle: `${labels.catalog}, ${labels.studio}, ${labels.ai}, ${labels.practice}, ${labels.grades}.`,
     route: "/catalog#catalog-search-panel",
     icon: Wand2,
     accent: "text-edsync-emerald",
-    tabs: ["Catalog", "Studio", "AI", "Practice", "Gradebook"],
+    tabs: [labels.catalog, labels.studio, labels.ai, labels.practice, labels.grades],
     metrics: [
-      { label: "Flow", value: "6 steps" },
-      { label: "Drafts", value: "Saved" },
-      { label: "Evidence", value: "Tracked" },
+      { label: labels.workflow, value: "6" },
+      { label: labels.studio, value: labels.start },
+      { label: labels.grades, value: labels.practice },
     ],
     rows: [
-      { title: "Start in catalog", detail: "Public courses and organization portals lead into one account flow", status: "Discover" },
-      { title: "Build in Studio", detail: "Notes, slides, media, quizzes, assignments, and drafts stay connected", status: "Create" },
-      { title: "Practice to proof", detail: "Attempts, explanations, reviews, and grade events create evidence", status: "Track" },
+      { title: labels.catalog, detail: `${labels.search}, ${labels.filters}, ${labels.signIn}`, status: labels.search },
+      { title: labels.studio, detail: `${labels.courses}, ${labels.ai}, ${labels.practice}`, status: labels.start },
+      { title: labels.practice, detail: `${labels.practice}, ${labels.grades}, ${labels.workflow}`, status: labels.grades },
     ],
-    sideTitle: "EdSync loop",
-    sideRows: ["Find course", "Draft lesson", "Generate quiz", "Review progress"],
-    actions: ["View workflow", "Search catalog", "Start"],
+    sideTitle: "EdSync",
+    sideRows: [labels.catalog, labels.studio, labels.ai, labels.practice],
+    actions: [labels.workflow, labels.search, labels.start],
   },
   {
     id: "catalog",
-    title: "Catalog And Organization Entry",
-    shortTitle: "Catalog",
-    headline: "Find the right course.",
-    subtitle: "Catalog, org portal, login return, and enrollment stay in one path.",
+    title: labels.catalog,
+    shortTitle: labels.catalog,
+    headline: `${labels.search} ${labels.courses.toLowerCase()}.`,
+    subtitle: `${labels.catalog}: ${labels.free}, ${labels.paid}, ${labels.duration}, ${labels.difficulty}.`,
     route: "/catalog",
     icon: Search,
     accent: "text-edsync-cyan",
-    tabs: ["Search", "Org portal", "Enroll", "Access"],
+    tabs: [labels.search, labels.featured, labels.start, labels.signIn],
     metrics: [
       { label: "Routes", value: "/catalog" },
-      { label: "Products", value: "Free + paid" },
-      { label: "Return", value: "Login next" },
+      { label: labels.courses, value: `${labels.free} + ${labels.paid}` },
+      { label: labels.signIn, value: labels.start },
     ],
     rows: [
-      { title: "Catalog search", detail: "Filter by price, duration, language, difficulty, and academy", status: "Discover" },
-      { title: "Organization portal", detail: "/org/[portalSlug] keeps school or partner catalog context", status: "Route" },
-      { title: "Enrollment guard", detail: "Free access or checkout starts after account sign-in", status: "Access" },
+      { title: labels.search, detail: `${labels.filters}: ${labels.free}, ${labels.paid}, ${labels.duration}`, status: labels.search },
+      { title: labels.featured, detail: `${labels.catalog} -> ${labels.courses}`, status: labels.catalog },
+      { title: labels.signIn, detail: `${labels.signIn} -> ${labels.start}`, status: labels.start },
     ],
-    sideTitle: "Course entry",
-    sideRows: ["Search course", "Choose academy", "Sign in once", "Return to lesson"],
-    actions: ["Search catalog", "View portals", "Start"],
+    sideTitle: labels.catalog,
+    sideRows: [labels.search, labels.filters, labels.signIn, labels.start],
+    actions: [labels.search, labels.catalog, labels.start],
   },
   {
     id: "studio",
-    title: "Studio And Lesson Builder",
-    shortTitle: "Studio",
-    headline: "Build the lesson.",
-    subtitle: "Studio keeps notes, slides, media checks, drafts, and lesson sections together.",
+    title: labels.studio,
+    shortTitle: labels.studio,
+    headline: `${labels.studio} -> ${labels.courses}.`,
+    subtitle: `${labels.studio}: ${labels.courses}, ${labels.ai}, ${labels.practice}, ${labels.grades}.`,
     route: "/studio?tab=slides",
     icon: Presentation,
     accent: "text-edsync-blue",
-    tabs: ["Rich editor", "Slides", "Media", "Drafts"],
+    tabs: [labels.studio, labels.courses, labels.ai, labels.start],
     metrics: [
-      { label: "Editor", value: "Tiptap" },
-      { label: "Slides", value: "PPTX" },
-      { label: "Drafts", value: "Local + D1" },
+      { label: labels.studio, value: "Tiptap" },
+      { label: labels.courses, value: "PPTX" },
+      { label: labels.start, value: "D1" },
     ],
     rows: [
-      { title: "Rich text toolbar", detail: "Headings, tables, callouts, images, links, formatting", status: "Editing" },
-      { title: "Slide canvas", detail: "Thumbnails, speaker notes, layouts, transitions, PPTX export", status: "Design" },
-      { title: "Lesson handoff", detail: "Insert selected Studio blocks into teacher lesson sections", status: "Assign" },
+      { title: labels.studio, detail: `${labels.courses}, ${labels.ai}, ${labels.practice}`, status: labels.start },
+      { title: labels.courses, detail: `${labels.studio} -> ${labels.courses}`, status: labels.courses },
+      { title: labels.practice, detail: `${labels.practice} -> ${labels.grades}`, status: labels.grades },
     ],
-    sideTitle: "Studio tools",
-    sideRows: ["Save draft", "Edit slides", "Check media", "Insert lesson"],
-    actions: ["Open Studio", "Create lesson", "Export deck"],
+    sideTitle: labels.studio,
+    sideRows: [labels.studio, labels.courses, labels.ai, labels.practice],
+    actions: [labels.studio, labels.courses, labels.start],
   },
   {
     id: "ai",
-    title: "AI Prompt Builder",
+    title: labels.ai,
     shortTitle: "AI",
-    headline: "Ask AI, then edit.",
-    subtitle: "Generate outlines, slides, quizzes, rubrics, and flashcards with provider fallback.",
+    headline: `${labels.ai} -> ${labels.studio}.`,
+    subtitle: `${labels.ai}: ${labels.courses}, ${labels.practice}, ${labels.grades}.`,
     route: "/ai",
     icon: Wand2,
     accent: "text-edsync-emerald",
-    tabs: ["Fields", "Provider", "Preview", "Insert"],
+    tabs: [labels.ai, labels.studio, labels.practice, labels.start],
     metrics: [
-      { label: "Endpoint", value: "/api/ai/course-workflow" },
-      { label: "Fallback", value: "Groq + Google" },
-      { label: "Mode", value: "Review first" },
+      { label: labels.ai, value: "Groq" },
+      { label: labels.ai, value: "Google" },
+      { label: labels.studio, value: labels.start },
     ],
     rows: [
-      { title: "Prompt fields", detail: "Topic, grade, duration, tone, language, output type", status: "Filled" },
-      { title: "Generated package", detail: "Outline, slides, quiz, rubric, flashcards, teacher notes", status: "Preview" },
-      { title: "Save to Studio", detail: "Writes an editable local Studio draft before publish", status: "Insert" },
+      { title: labels.ai, detail: `${labels.duration}, ${labels.difficulty}, ${labels.courses}`, status: labels.start },
+      { title: labels.practice, detail: `${labels.ai} -> ${labels.practice}`, status: labels.practice },
+      { title: labels.studio, detail: `${labels.ai} -> ${labels.studio}`, status: labels.studio },
     ],
-    sideTitle: "AI controls",
-    sideRows: ["Pick output", "Preview draft", "Regenerate part", "Save to Studio"],
-    actions: ["Run workflow", "Save to Studio", "Open AI"],
+    sideTitle: labels.ai,
+    sideRows: [labels.ai, labels.studio, labels.practice, labels.grades],
+    actions: [labels.ai, labels.studio, labels.start],
   },
   {
     id: "teacher",
-    title: "Teacher Review And Assignment",
-    shortTitle: "Review",
-    headline: "Review and assign.",
-    subtitle: "Teachers approve drafts, set due dates, add points, and keep final control.",
+    title: labels.grades,
+    shortTitle: labels.grades,
+    headline: `${labels.practice} -> ${labels.grades}.`,
+    subtitle: `${labels.grades}: ${labels.practice}, ${labels.courses}, ${labels.start}.`,
     route: "/teacher/dashboard",
     icon: CalendarCheck,
     accent: "text-edsync-blue",
-    tabs: ["Draft", "Media", "Due date", "Gradebook"],
+    tabs: [labels.studio, labels.practice, labels.duration, labels.grades],
     metrics: [
-      { label: "Review", value: "Teacher" },
-      { label: "Gradebook", value: "Weighted" },
-      { label: "Notes", value: "Student-linked" },
+      { label: labels.grades, value: labels.start },
+      { label: labels.grades, value: "24 pts" },
+      { label: labels.practice, value: labels.courses },
     ],
     rows: [
-      { title: "Publish check", detail: "Unsafe links, videos, uploads, and missing details stay visible", status: "Review" },
-      { title: "Assignment setup", detail: "Class, due date, duration, points, and feedback rules", status: "Assign" },
-      { title: "Submissions review", detail: "Score updates, comments, notes, and grade events", status: "Grade" },
+      { title: labels.studio, detail: `${labels.studio} -> ${labels.practice}`, status: labels.start },
+      { title: labels.duration, detail: `${labels.duration}, ${labels.grades}`, status: labels.practice },
+      { title: labels.grades, detail: `${labels.grades} -> ${labels.practice}`, status: labels.grades },
     ],
-    sideTitle: "Teacher loop",
-    sideRows: ["Approve draft", "Set due date", "Add points", "Send feedback"],
-    actions: ["Teacher dashboard", "Open gradebook", "Plan deadline"],
+    sideTitle: labels.grades,
+    sideRows: [labels.studio, labels.duration, labels.grades, labels.practice],
+    actions: [labels.grades, labels.practice, labels.start],
   },
   {
     id: "practice",
-    title: "Practice And Student Learning",
-    shortTitle: "Practice",
-    headline: "Practice with feedback.",
-    subtitle: "Quizzes, flashcards, sprints, retries, explanations, and review cards connect.",
+    title: labels.practice,
+    shortTitle: labels.practice,
+    headline: `${labels.practice}. ${labels.grades}.`,
+    subtitle: `${labels.practice}: quiz, sprint, flashcards, retry, review.`,
     route: "/practice",
     icon: Trophy,
     accent: "text-edsync-amber",
-    tabs: ["Quiz", "Sprint", "Flashcards", "Mistakes"],
+    tabs: [labels.practice, labels.duration, labels.grades, labels.start],
     metrics: [
-      { label: "Modes", value: "9" },
-      { label: "Timer", value: "Pause + retry" },
+      { label: labels.practice, value: "9" },
+      { label: labels.duration, value: "08:42" },
       { label: "Route", value: "/practice" },
     ],
     rows: [
-      { title: "Practice modes", detail: "Quiz, exam, flashcards, matching, sprint, true/false", status: "Choose" },
-      { title: "Attempt summary", detail: "Elapsed time, score, missed questions, explanations", status: "Review" },
-      { title: "Review cards", detail: "Save mistakes to reviews and dashboard recommendations", status: "Repeat" },
+      { title: labels.practice, detail: "quiz, exam, flashcards, sprint", status: labels.start },
+      { title: labels.duration, detail: `${labels.duration}, ${labels.grades}`, status: labels.practice },
+      { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: labels.grades },
     ],
-    sideTitle: "Student loop",
-    sideRows: ["Start timer", "See why", "Retry missed", "Save review"],
-    actions: ["Open practice", "Open quizzes", "Open games"],
+    sideTitle: labels.practice,
+    sideRows: [labels.practice, labels.duration, labels.grades, labels.start],
+    actions: [labels.practice, labels.start, labels.grades],
   },
   {
     id: "admin",
-    title: "Progress, Evidence, And Admin Controls",
-    shortTitle: "Progress",
-    headline: "Progress becomes proof.",
-    subtitle: "Attempts feed grades, recommendations, AI audits, security logs, and dashboards.",
+    title: `${labels.grades} + Admin`,
+    shortTitle: labels.grades,
+    headline: `${labels.grades} -> Admin.`,
+    subtitle: `${labels.grades}, ${labels.ai}, ${labels.catalog}, ${labels.practice}.`,
     route: "/admin/dashboard",
     icon: BarChart3,
     accent: "text-edsync-purple",
-    tabs: ["Progress", "Feedback", "AI audit", "Security"],
+    tabs: [labels.grades, labels.practice, labels.ai, labels.catalog],
     metrics: [
-      { label: "Grade", value: "Event-led" },
-      { label: "Providers", value: "Fallback" },
-      { label: "Audit", value: "Logged" },
+      { label: labels.grades, value: "Events" },
+      { label: labels.ai, value: "Fallback" },
+      { label: labels.catalog, value: "Audit" },
     ],
     rows: [
-      { title: "Grade events", detail: "Attempts, overrides, excusals, and rubric changes remain auditable", status: "Record" },
-      { title: "Recommendations", detail: "Missed concepts become review cards and next-step suggestions", status: "Guide" },
-      { title: "Admin controls", detail: "AI providers, portals, permissions, security, catalog, and billing", status: "Manage" },
+      { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: "Audit" },
+      { title: labels.practice, detail: `${labels.practice} -> ${labels.start}`, status: labels.practice },
+      { title: labels.ai, detail: `${labels.ai}, ${labels.catalog}, ${labels.grades}`, status: labels.ai },
     ],
-    sideTitle: "Evidence trail",
-    sideRows: ["Save attempt", "Explain misses", "Recommend review", "Audit AI"],
-    actions: ["Admin dashboard", "AI settings", "Security"],
+    sideTitle: labels.grades,
+    sideRows: [labels.practice, labels.grades, labels.ai, labels.catalog],
+    actions: [labels.grades, labels.ai, labels.catalog],
   },
-];
+  ];
+}
 
-function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
+function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: WorkflowSlide }) {
   if (slide.id === "overview") {
     return (
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-loop-map">
           {[
-            ["Catalog", "Preview, price, enroll"],
-            ["Studio", "Docs, slides, media"],
-            ["AI", "Outline, quiz, rubric"],
-            ["Practice", "Timer, retry, explain"],
-            ["Gradebook", "Events, feedback, proof"],
+            [labels.catalog, `${labels.search}, ${labels.free}, ${labels.start}`],
+            [labels.studio, `${labels.courses}, slides, media`],
+            [labels.ai, `${labels.courses}, quiz, rubric`],
+            [labels.practice, `${labels.duration}, retry, explain`],
+            [labels.grades, `events, feedback, proof`],
           ].map(([label, detail], index) => (
             <span key={label} className={index === 0 ? "is-active" : ""}>
               <strong>{label}</strong>
@@ -230,20 +281,20 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
     return (
       <div className="edsync-workflow-app-mock edsync-workflow-app-mock-catalog">
         <div className="edsync-workflow-mock-toolbar">
-          <span className="is-wide">Search public courses or academies</span>
-          <span>Free</span>
-          <span>30 min</span>
+          <span className="is-wide">{labels.search} {labels.courses.toLowerCase()}</span>
+          <span>{labels.free}</span>
+          <span>30m</span>
         </div>
         <div className="edsync-workflow-mock-grid">
           <article className="edsync-workflow-course-card">
             <strong>Energy Transfer Lab</strong>
-            <small>Grade 8 Science - free enrollment</small>
-            <em>Open after sign in</em>
+            <small>Grade 8 - {labels.free}</small>
+            <em>{labels.signIn} {"->"} {labels.start}</em>
           </article>
           <article className="edsync-workflow-course-card">
             <strong>Partner academy</strong>
-            <small>/org/riverside - public catalog</small>
-            <em>Portal scoped</em>
+            <small>/org/riverside - {labels.catalog}</small>
+            <em>{labels.featured}</em>
           </article>
         </div>
       </div>
@@ -254,7 +305,7 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
     return (
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-editor-ribbon">
-          {["Style", "Text", "Insert", "Media", "AI", "Assign"].map((item) => (
+          {[labels.studio, "Text", "Insert", "Media", labels.ai, labels.start].map((item) => (
             <span key={item}>{item}</span>
           ))}
         </div>
@@ -270,7 +321,7 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
             <div>
               <span>Image</span>
               <span>Video</span>
-              <span>Quiz block</span>
+              <span>{labels.practice}</span>
             </div>
           </section>
         </div>
@@ -283,9 +334,9 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-ai-grid">
           <section>
-            <small>Prompt builder</small>
-            <strong>Grade 8 - 35 minutes - student friendly</strong>
-            <span>Output: slides + quiz + rubric</span>
+            <small>{labels.ai}</small>
+            <strong>Grade 8 - 35m - {labels.difficulty}</strong>
+            <span>{labels.studio} + {labels.practice} + rubric</span>
           </section>
           <section>
             <small>Provider</small>
@@ -295,9 +346,9 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
         </div>
         <div className="edsync-workflow-preview-rows">
           <span>
-            <strong>Generated slide deck</strong>
-            <small>6 editable slides, teacher review required</small>
-            <em>Insert into Studio</em>
+            <strong>{labels.studio}</strong>
+            <small>6 slides, review required</small>
+            <em>{labels.ai} {"->"} {labels.studio}</em>
           </span>
         </div>
       </div>
@@ -309,16 +360,16 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-assignment-grid">
           <section>
-            <small>Assign</small>
+            <small>{labels.start}</small>
             <strong>Grade 8 Science</strong>
-            <span>Due Friday, 4:00 PM</span>
+            <span>{labels.duration}: 35m</span>
             <span>12 questions - 24 pts</span>
           </section>
           <section>
-            <small>Review</small>
-            <strong>3 submissions waiting</strong>
+            <small>{labels.grades}</small>
+            <strong>3 submissions</strong>
             <span>Media checks passed</span>
-            <span>AI feedback draft ready</span>
+            <span>{labels.ai} feedback ready</span>
           </section>
         </div>
       </div>
@@ -330,7 +381,7 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-practice-card">
           <div>
-            <small>Practice sprint</small>
+            <small>{labels.practice}</small>
             <strong>08:42</strong>
           </div>
           <span>Pause</span>
@@ -339,12 +390,12 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
           <span>
             <strong>Question 4 of 12</strong>
             <small>Explain why heat moved faster through metal.</small>
-            <em>Retry missed</em>
+            <em>{labels.practice}</em>
           </span>
           <span>
-            <strong>Review card saved</strong>
-            <small>Mistake goes back to dashboard recommendations.</small>
-            <em>Repeat</em>
+            <strong>{labels.grades}</strong>
+            <small>{labels.practice} {"->"} dashboard</small>
+            <em>{labels.start}</em>
           </span>
         </div>
       </div>
@@ -355,12 +406,12 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
     <div className="edsync-workflow-app-mock">
       <div className="edsync-workflow-admin-grid">
         <section>
-          <small>Grade events</small>
+          <small>{labels.grades}</small>
           <strong>24 pts</strong>
           <span>Attempt graded</span>
         </section>
         <section>
-          <small>AI providers</small>
+          <small>{labels.ai}</small>
           <strong>Healthy</strong>
           <span>Fallback audited</span>
         </section>
@@ -381,11 +432,15 @@ function WorkflowMockup({ slide }: { slide: WorkflowSlide }) {
 }
 
 const WorkflowScreen = memo(function WorkflowScreen({
+  labels,
   slide,
   index,
+  total,
 }: {
+  labels: WorkflowLabels;
   slide: WorkflowSlide;
   index: number;
+  total: number;
 }) {
   const ActiveIcon = slide.icon;
 
@@ -394,7 +449,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
       <div className="edsync-workflow-copy">
         <div className="edsync-workflow-count">
           <ActiveIcon className="h-4 w-4" />
-          {String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+          {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
         </div>
         <h3>{slide.headline}</h3>
         <p>{slide.subtitle}</p>
@@ -439,7 +494,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
               </div>
               <span>{slide.metrics[0]?.value}</span>
             </div>
-            <WorkflowMockup slide={slide} />
+            <WorkflowMockup labels={labels} slide={slide} />
             <div className="edsync-workflow-preview-metrics">
               {slide.metrics.map((metric) => (
                 <span key={metric.label}>
@@ -455,7 +510,9 @@ const WorkflowScreen = memo(function WorkflowScreen({
   );
 });
 
-export default function WorkflowShowcase() {
+export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
+  const labels = useMemo(() => labelsForLanguage(language), [language]);
+  const slides = useMemo(() => buildWorkflowSlides(labels), [labels]);
   const [activeIndex, setActiveIndex] = useState(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
@@ -469,7 +526,7 @@ export default function WorkflowShowcase() {
     if (activeIndexRef.current === safeIndex) return;
     activeIndexRef.current = safeIndex;
     startTransition(() => setActiveIndex(safeIndex));
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
     if (!window.matchMedia("(min-width: 901px)").matches) return;
@@ -557,7 +614,7 @@ export default function WorkflowShowcase() {
     const safeIndex = (index + slides.length) % slides.length;
     manualControlUntilRef.current = Date.now() + 9000;
     setActiveSlide(safeIndex);
-  }, [setActiveSlide]);
+  }, [setActiveSlide, slides.length]);
 
   return (
     <>
@@ -567,14 +624,20 @@ export default function WorkflowShowcase() {
             <div>
               <span className="edsync-workflow-eyebrow">
                 <Wand2 className="h-4 w-4" />
-                Product workflow
+                {labels.workflow}
               </span>
             </div>
-            <span className="edsync-workflow-live-label">Auto-playing gallery</span>
+            <span className="edsync-workflow-live-label">{labels.start}</span>
           </div>
 
           <div className="edsync-workflow-stage">
-            <WorkflowScreen key={activeSlide.id} slide={activeSlide} index={activeIndex} />
+            <WorkflowScreen
+              key={activeSlide.id}
+              labels={labels}
+              slide={activeSlide}
+              index={activeIndex}
+              total={slides.length}
+            />
           </div>
 
           <div className="edsync-workflow-controls" aria-label="Workflow gallery controls">
