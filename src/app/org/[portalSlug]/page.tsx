@@ -80,8 +80,7 @@ export default async function OrganizationPortalPage({
                 {portal.name}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">
-                Browse {portal.tenant_name} courses, then enter the organization when your school,
-                cohort, or company manages your access.
+                {portal.tenant_name}: {copy.courses}, {copy.catalogLabel}, {copy.start}.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.audience}</span>
@@ -92,14 +91,14 @@ export default async function OrganizationPortalPage({
                   href={`/auth/login?org=${encodeURIComponent(portal.tenant_slug)}`}
                   className="btn-primary justify-center"
                 >
-                  Enter organization
+                  {copy.signIn}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href={`/auth/signup?org=${encodeURIComponent(portal.tenant_slug)}`}
                   className="btn-secondary justify-center"
                 >
-                  Create account
+                  {copy.start}
                 </Link>
               </div>
             </div>
@@ -159,16 +158,16 @@ export default async function OrganizationPortalPage({
           <div className="grid gap-3">
             <div className="premium-card rounded-2xl p-5">
               <Globe2 className="mb-3 h-8 w-8 text-edsync-blue" />
-              <p className="font-semibold">Scoped portal</p>
+              <p className="font-semibold">{copy.academies}</p>
               <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-                Courses, branding, access, and reports stay inside this academy.
+                {copy.catalogLabel}. {copy.courses}. {copy.start}.
               </p>
             </div>
             <div className="premium-card rounded-2xl p-5">
               <UsersRound className="mb-3 h-8 w-8 text-edsync-emerald" />
-              <p className="font-semibold">Member flow</p>
+              <p className="font-semibold">{copy.signIn}</p>
               <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-                Sign in with the organization context, then continue as teacher, student, or manager.
+                {copy.signIn}. {copy.start}. {copy.courses}.
               </p>
             </div>
           </div>
@@ -193,10 +192,10 @@ export default async function OrganizationPortalPage({
         {items.length === 0 && (
           <div className="premium-surface mt-8 rounded-2xl border-dashed p-10 text-center">
             <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
-            <p className="font-semibold text-edsync-text">No public courses in this portal yet</p>
-            <p className="mt-2 text-sm text-edsync-subtle">Check back later or browse the global catalog.</p>
+            <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
+            <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
             <Link href="/catalog" className="btn-primary mx-auto mt-5 w-fit">
-              Browse global catalog
+              {copy.catalogLabel}
             </Link>
           </div>
         )}
