@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import PracticeWorkspace from "@/components/practice/PracticeWorkspace";
 import { getSessionUser } from "@/lib/auth/session";
-import type { PracticeMode } from "@/types";
+import { normalizePracticeMode, type PracticeSearchParams } from "@/lib/practice/modes";
 
 export const metadata = {
   title: "Practice",
@@ -11,9 +11,9 @@ export const metadata = {
 export default async function PracticePage({
   searchParams,
 }: {
-  searchParams?: { mode?: PracticeMode };
+  searchParams?: PracticeSearchParams;
 }) {
   const user = await getSessionUser().catch(() => null);
   if (!user) redirect("/auth/login?next=/practice");
-  return <PracticeWorkspace initialMode={searchParams?.mode} />;
+  return <PracticeWorkspace initialMode={normalizePracticeMode(searchParams?.mode)} />;
 }
