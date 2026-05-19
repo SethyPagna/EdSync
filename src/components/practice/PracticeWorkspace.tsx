@@ -22,6 +22,7 @@ import {
   targetSecondsFromMinutes,
   type PracticeItem,
 } from "@/lib/practice/engine";
+import { normalizePracticeMode } from "@/lib/practice/modes";
 import {
   deletePracticeReview,
   listPracticeReviews,
@@ -58,15 +59,11 @@ const starterItems: PracticeItem[] = [
   },
 ];
 
-function modeFromInitial(initialMode?: PracticeMode): PracticeMode {
-  return initialMode && PRACTICE_MODES.some((mode) => mode.mode === initialMode) ? initialMode : "quiz";
-}
-
 export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProps) {
-  const [mode, setMode] = useState<PracticeMode>(modeFromInitial(initialMode));
+  const [mode, setMode] = useState<PracticeMode>(normalizePracticeMode(initialMode));
   const [items, setItems] = useState<PracticeItem[]>(starterItems);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [targetMinutes, setTargetMinutes] = useState(() => modeFromInitial(initialMode) === "exam" ? 30 : 8);
+  const [targetMinutes, setTargetMinutes] = useState(() => normalizePracticeMode(initialMode) === "exam" ? 30 : 8);
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<PracticeAttemptSummary | null>(null);
   const [saving, setSaving] = useState(false);
