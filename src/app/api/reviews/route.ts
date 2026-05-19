@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { normalizeReviewUpdate, validateReviewCardId } from "@/lib/practice/review-validation";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 export async function GET() {
@@ -33,20 +34,25 @@ export async function PATCH(request: Request) {
     mastery?: "again" | "almost" | "mastered";
     nextReviewAt?: string | null;
   };
-  if (!body.id) {
-    return NextResponse.json({ data: null, error: "Review card id is required." }, { status: 400 });
+  let update;
+  try {
+    update = normalizeReviewUpdate(body);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid review update." },
+      { status: 400 },
+    );
   }
 
   const context = await resolveTenantContext(user);
-  const mastery = body.mastery === "mastered" || body.mastery === "almost" ? body.mastery : "again";
   await d1Query(
     `UPDATE practice_review_cards
         SET mastery = ?, next_review_at = ?, updated_at = datetime('now')
       WHERE id = ? AND tenant_id = ? AND user_id = ?`,
-    [mastery, body.nextReviewAt ?? null, body.id, context.tenant.id, user.id],
+    [update.mastery, update.nextReviewAt, update.id, context.tenant.id, user.id],
   );
 
-  return NextResponse.json({ data: { id: body.id, mastery }, error: null });
+  return NextResponse.json({ data: { id: update.id, mastery: update.mastery }, error: null });
 }
 
 export async function DELETE(request: Request) {
@@ -56,9 +62,14 @@ export async function DELETE(request: Request) {
   }
 
   const context = await resolveTenantContext(user);
-  const id = new URL(request.url).searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ data: null, error: "Review card id is required." }, { status: 400 });
+  let id: string;
+  try {
+    id = validateReviewCardId(new URL(request.url).searchParams.get("id"));
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid review card." },
+      { status: 400 },
+    );
   }
 
   await d1Query(
