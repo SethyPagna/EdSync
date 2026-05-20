@@ -24,9 +24,48 @@ function defaultValuesForContract(contract: AiPromptContract) {
   ) as Record<string, string | number | string[]>;
 }
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function sectionFromValue(title: string, value: unknown) {
+  if (!value) return "";
+  const content = typeof value === "string" ? escapeHtml(value) : `<pre>${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+  return `<section data-edsync-ai-section="${escapeHtml(title)}"><h2>${escapeHtml(title)}</h2>${content}</section>`;
+}
+
 function outputToHtml(output: unknown) {
-  const text = JSON.stringify(output, null, 2);
-  return `<h2>AI Draft</h2><pre>${text.replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>`;
+  const record = getRecord(output);
+  if (!record) return `<h2>AI Draft</h2><p>${escapeHtml(output)}</p>`;
+
+  const draft = getRecord(record.draft) ?? record;
+  const orderedSections = [
+    ["Outline", draft.outline],
+    ["Design", draft.design],
+    ["Modules", draft.modules],
+    ["Practice Plan", draft.practicePlan],
+    ["Quiz", draft.quiz],
+    ["Rubric", draft.rubric],
+    ["Tags", draft.tags],
+    ["Teacher Review", draft.review],
+  ];
+
+  return [
+    "<article data-edsync-ai-draft=\"lesson-workflow\">",
+    "<h1>AI Lesson Workflow Draft</h1>",
+    ...orderedSections.map(([title, value]) => sectionFromValue(String(title), value)),
+    "</article>",
+  ].join("");
 }
 
 function summarizeOutput(output: unknown) {
@@ -35,6 +74,40 @@ function summarizeOutput(output: unknown) {
   if (record.draft) return record.draft;
   if (record.lesson) return record.lesson;
   return record;
+}
+
+function slidesFromOutput(output: unknown, fallbackTitle: string) {
+  const summary = summarizeOutput(output);
+  const record = getRecord(summary);
+  const modules = Array.isArray(record?.modules) ? record.modules : [];
+  const outlineModules = getRecord(record?.outline)?.modules;
+  const sourceSlides = modules.length > 0 ? modules : Array.isArray(outlineModules) ? outlineModules : [];
+
+  if (sourceSlides.length === 0) {
+    return [
+      {
+        id: "slide-1",
+        title: fallbackTitle,
+        notes: JSON.stringify(summary, null, 2).slice(0, 700),
+        accent: "#2563eb",
+      },
+    ];
+  }
+
+  return sourceSlides.slice(0, 12).map((item, index) => {
+    const itemRecord = getRecord(item);
+    const title =
+      itemRecord?.title ??
+      itemRecord?.moduleTitle ??
+      itemRecord?.name ??
+      `${fallbackTitle} ${index + 1}`;
+    return {
+      id: `slide-${index + 1}`,
+      title: String(title),
+      notes: JSON.stringify(item, null, 2).slice(0, 700),
+      accent: index % 2 === 0 ? "#2563eb" : "#0e7490",
+    };
+  });
 }
 
 export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuilderProps) {
@@ -106,15 +179,13 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
       value: {
         html: outputToHtml(output),
         plainText,
-        sheet: [["Field", "Value"], ["Workflow", selectedContract.title]],
-        slides: [
-          {
-            id: "slide-1",
-            title: selectedContract.title,
-            notes: plainText.slice(0, 700),
-            accent: "#2563eb",
-          },
+        sheet: [
+          ["Field", "Value"],
+          ["Workflow", selectedContract.title],
+          ["Feature", selectedContract.feature],
+          ["Insert targets", selectedContract.insertTargets.join(", ")],
         ],
+        slides: slidesFromOutput(state.output, selectedContract.title),
       },
     });
     setState((current) => ({ ...current, inserted: true }));
