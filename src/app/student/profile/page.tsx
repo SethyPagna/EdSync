@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { validateDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS } from "@/lib/grades";
 import type { Profile, UserPreferences } from "@/types";
@@ -265,6 +266,13 @@ export default function StudentProfile() {
   };
 
   const save = async () => {
+    let normalizedFullName: string | null;
+    try {
+      normalizedFullName = validateDisplayName(fullName);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Full name is invalid.");
+      return;
+    }
     setSaving(true);
     const {
       data: { user },
@@ -277,7 +285,7 @@ export default function StudentProfile() {
     const { error } = await edsync
       .from("profiles")
       .update({
-        full_name: fullName,
+        full_name: normalizedFullName,
         grade_level: gradeLevel,
         interests,
         preferences,
@@ -290,9 +298,10 @@ export default function StudentProfile() {
       toast.success("Profile saved!");
       setProfile((prev) =>
         prev
-          ? { ...prev, full_name: fullName, grade_level: gradeLevel, interests, preferences }
+          ? { ...prev, full_name: normalizedFullName, grade_level: gradeLevel, interests, preferences }
           : null,
       );
+      setFullName(normalizedFullName || "");
       setEditing(false);
     }
     setSaving(false);
