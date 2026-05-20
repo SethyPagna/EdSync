@@ -2,6 +2,7 @@
 
 import type { DataFilter, DataOrder, DataRequest, D1Result } from "@/lib/db/d1";
 import { validateDisplayName } from "@/lib/auth/display-name";
+import { validateOrganizationCode } from "@/lib/auth/organization-code";
 import { validateLoginPassword, validateSignupPassword } from "@/lib/auth/password-validation";
 import {
   normalizeAccountType,
@@ -191,6 +192,8 @@ export function createClient() {
         }
         const authInputError = validateClientAuthInput(input.email, () => validateLoginPassword(input.password));
         if (authInputError) return authInputError;
+        const organizationCodeError = validateClientOrganizationCode(input.account_type, input.organization_code);
+        if (organizationCodeError) return organizationCodeError;
         return postJson<AuthResponse>("/api/auth/login", input);
       },
       async signUp(input: {
@@ -221,6 +224,10 @@ export function createClient() {
         }
         const authInputError = validateClientAuthInput(input.email, () => validateSignupPassword(input.password));
         if (authInputError) return authInputError;
+        const organizationCodeError = data.organization_mode === "join"
+          ? validateClientOrganizationCode(accountType, data.organization_code)
+          : null;
+        if (organizationCodeError) return organizationCodeError;
         try {
           validateDisplayName(data.full_name);
         } catch (error) {
@@ -280,5 +287,15 @@ function validateClientAuthInput(email: unknown, validatePassword: () => void): 
     return null;
   } catch (error) {
     return authValidationError(error instanceof Error ? error.message : "Authentication details are invalid.");
+  }
+}
+
+function validateClientOrganizationCode(accountType: AccountType, organizationCode: unknown): AuthResponse | null {
+  if (accountType !== "organization") return null;
+  try {
+    validateOrganizationCode(typeof organizationCode === "string" ? organizationCode : null);
+    return null;
+  } catch (error) {
+    return authValidationError(error instanceof Error ? error.message : "Organization code is invalid.");
   }
 }
