@@ -10,7 +10,6 @@ import { createClient } from "@/lib/edsync/client";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────
 type CreationMode = "ai_collab" | "ai_full" | "manual";
 type ImportMode = "objectives" | "text" | "url" | "file";
 type Step = "choose" | "import" | "generating" | "edit";
@@ -155,7 +154,6 @@ const DRAFT_INSERT_TOOLS = [
   { label: "Spacer", html: '<div class="lesson-spacer"></div>' },
 ];
 
-// ─── Main Component ───────────────────────────────────────────
 export default function CreateLesson() {
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
