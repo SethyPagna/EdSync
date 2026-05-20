@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { homeForRole, safeNextPath } from "@/lib/auth/redirects";
 import { normalizeUserRole } from "@/lib/auth/roles";
-import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import { normalizeOrganizationCode, validateOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
@@ -45,10 +45,17 @@ function LoginForm() {
     accountType === "organization" && organizationStatus === "checking";
 
   useEffect(() => {
-    const code = normalizeOrganizationCode(organizationCode);
-    if (accountType !== "organization" || !code) {
+    if (accountType !== "organization" || !organizationCode.trim()) {
       setOrganizationLookup(null);
       setOrganizationStatus("idle");
+      return;
+    }
+    let code: string;
+    try {
+      code = validateOrganizationCode(organizationCode);
+    } catch {
+      setOrganizationLookup(null);
+      setOrganizationStatus("missing");
       return;
     }
 
@@ -85,10 +92,14 @@ function LoginForm() {
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    const normalizedOrganizationCode = normalizeOrganizationCode(organizationCode);
-    if (accountType === "organization" && !normalizedOrganizationCode) {
-      toast.error(authCopy.enterOrganizationCodeFirst);
-      return;
+    let normalizedOrganizationCode = "";
+    if (accountType === "organization") {
+      try {
+        normalizedOrganizationCode = validateOrganizationCode(organizationCode);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : authCopy.enterOrganizationCodeFirst);
+        return;
+      }
     }
     if (accountType === "organization" && organizationStatus === "checking") {
       toast.error(authCopy.stillCheckingOrganization);
