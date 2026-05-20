@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { validateDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
+import { validateGradeLevel, validateOptionalProfileLine, validateSubjectAreas } from "@/lib/profile-fields";
 import { generateInitials } from "@/lib/utils";
 import type { Profile, UserPreferences } from "@/types";
 
@@ -81,14 +82,25 @@ export default function TeacherProfile() {
       toast.error(error instanceof Error ? error.message : "Full name is invalid.");
       return;
     }
+    let normalizedSchool: string | null;
+    let normalizedGradeLevel: string | null;
+    let normalizedSubjects: string[];
+    try {
+      normalizedSchool = validateOptionalProfileLine(school, "School");
+      normalizedGradeLevel = validateGradeLevel(gradeLevel);
+      normalizedSubjects = validateSubjectAreas(subjects);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Profile details are invalid.");
+      return;
+    }
     setSaving(true);
     const { error } = await edsync
       .from("profiles")
       .update({
         full_name: normalizedFullName,
-        school,
-        grade_level: gradeLevel,
-        subjects,
+        school: normalizedSchool,
+        grade_level: normalizedGradeLevel,
+        subjects: normalizedSubjects,
         preferences,
       })
       .eq("id", profile.id);
@@ -98,7 +110,17 @@ export default function TeacherProfile() {
       return;
     }
     setFullName(normalizedFullName || "");
-    setProfile({ ...profile, full_name: normalizedFullName, school, grade_level: gradeLevel, subjects, preferences });
+    setSchool(normalizedSchool || "");
+    setGradeLevel(normalizedGradeLevel || "");
+    setSubjects(normalizedSubjects);
+    setProfile({
+      ...profile,
+      full_name: normalizedFullName,
+      school: normalizedSchool,
+      grade_level: normalizedGradeLevel,
+      subjects: normalizedSubjects,
+      preferences,
+    });
     toast.success("Profile saved");
   };
 
