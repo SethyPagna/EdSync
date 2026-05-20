@@ -1,6 +1,7 @@
 "use client";
 
 import type { DataFilter, DataOrder, DataRequest, D1Result } from "@/lib/db/d1";
+import { validateDisplayName } from "@/lib/auth/display-name";
 import {
   normalizeAccountType,
   normalizeOrganizationMode,
@@ -213,6 +214,11 @@ export function createClient() {
         }
         if (accountType === "organization" && !normalizeOrganizationMode(data.organization_mode)) {
           return authValidationError("Choose whether to join or create an organization.");
+        }
+        try {
+          validateDisplayName(data.full_name);
+        } catch (error) {
+          return authValidationError(error instanceof Error ? error.message : "Full name is invalid.");
         }
         return postJson<AuthResponse>("/api/auth/signup", input);
       },
