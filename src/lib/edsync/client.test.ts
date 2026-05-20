@@ -123,6 +123,50 @@ describe("EdSync client auth validation", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("does not call signup API when organization name is missing for create mode", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signUp({
+      email: "teacher@example.com",
+      password: "password123",
+      options: {
+        data: {
+          role: "teacher",
+          account_type: "organization",
+          organization_mode: "create",
+          organization_name: "   ",
+        },
+      },
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Organization name is required.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call signup API when organization name is too long for create mode", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signUp({
+      email: "teacher@example.com",
+      password: "password123",
+      options: {
+        data: {
+          role: "teacher",
+          account_type: "organization",
+          organization_mode: "create",
+          organization_name: "x".repeat(121),
+        },
+      },
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Organization name must be 120 characters or fewer.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("does not call signup API when email is malformed", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const edsync = createClient();
