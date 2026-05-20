@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ORGANIZATION_CODE_MAX_LENGTH,
+  ORGANIZATION_CODE_INPUT_MAX_LENGTH,
   createOrganizationSlug,
   normalizeOrganizationCode,
   validateOrganizationCode,
@@ -16,6 +17,9 @@ describe("organization code helpers", () => {
     expect(validateOrganizationCode(" EdSync Academy ")).toBe("edsync-academy");
     expect(() => validateOrganizationCode("!!!")).toThrow("required");
     expect(() => validateOrganizationCode("x".repeat(ORGANIZATION_CODE_MAX_LENGTH + 1))).toThrow("characters");
+    expect(() => validateOrganizationCode(" ".repeat(ORGANIZATION_CODE_INPUT_MAX_LENGTH + 1))).toThrow(
+      "before formatting",
+    );
   });
 
   it("keeps generated organization slugs within the lookup-code length", () => {
