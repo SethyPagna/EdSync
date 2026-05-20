@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
 import { createCipheriv, randomBytes } from "node:crypto";
+import { d1Query, loadCloudflareEnv } from "./lib/cloudflare-d1.mjs";
 
 const ENCRYPTION_PREFIX = "enc:v1";
 
@@ -61,15 +61,6 @@ function endpointFor(provider) {
   return ENDPOINTS[provider];
 }
 
-function loadEnvFile(path) {
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    if (!line || line.trimStart().startsWith("#") || !line.includes("=")) continue;
-    const [key, ...rest] = line.split("=");
-    if (!process.env[key]) process.env[key] = rest.join("=").trim().replace(/^["']|["']$/g, "");
-  }
-}
-
 function encryptionKey() {
   const value = process.env.APP_ENCRYPTION_KEY;
   if (!value) throw new Error("APP_ENCRYPTION_KEY is required.");
@@ -89,26 +80,7 @@ function encrypt(value) {
   return `${ENCRYPTION_PREFIX}:${iv.toString("base64url")}:${tag.toString("base64url")}:${encrypted.toString("base64url")}`;
 }
 
-async function d1Query(sql, params = []) {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!accountId || !databaseId || !token) throw new Error("Missing Cloudflare D1 env vars.");
-
-  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ sql, params }),
-  });
-  const payload = await response.json();
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.errors?.map((error) => error.message).join("; ") || response.statusText);
-  }
-  return payload.result?.[0]?.results ?? [];
-}
-
-loadEnvFile(".env.local");
-loadEnvFile(".env");
+loadCloudflareEnv();
 
 const adminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const [admin] = adminEmail
