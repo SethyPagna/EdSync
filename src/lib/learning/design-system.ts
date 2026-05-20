@@ -13,6 +13,9 @@ export type LessonSlideLayout =
   | "reflection";
 export type LessonSlideTransition = "none" | "fade" | "slide_left" | "push" | "zoom";
 export type LessonSlideAnimation = "none" | "fade_in" | "rise" | "scale" | "wipe" | "highlight";
+export type LessonTemplatePreset = (typeof LESSON_TEMPLATE_PRESETS)[number];
+
+const DEFAULT_TEMPLATE_INDEX = 0;
 
 export const SLIDE_THEMES: SlideTheme[] = [
   {
@@ -118,36 +121,68 @@ export const LESSON_TEMPLATE_PRESETS = [
     label: "Corporate",
     themeId: "clear-classroom",
     description: "Polished training decks with crisp contrast and compact text.",
+    bestFor: ["professional training", "adult learning", "compliance", "corporate onboarding"],
+    designNotes: [
+      "Use compact headings and concise evidence blocks.",
+      "Prefer comparison, rubric, and decision-check slides.",
+      "Keep animations subtle and reduced-motion friendly.",
+    ],
     slidePlan: ["title", "content", "comparison", "quiz", "reflection"],
     transition: "fade",
     animation: "rise",
+    practiceModes: ["quiz", "scenario challenge", "retry missed"],
+    reviewSignals: ["accuracy", "professional tone", "actionable feedback"],
   },
   {
     id: "kid-friendly",
     label: "Kid-Friendly",
     themeId: "warm-workshop",
     description: "Warmer colors, activity prompts, and softer pacing.",
+    bestFor: ["younger learners", "guided practice", "introductory lessons", "visual explanation"],
+    designNotes: [
+      "Use clear short sentences and generous spacing.",
+      "Add image-focus slides, checks for understanding, and confidence prompts.",
+      "Make practice feel playful but keep answers teacher-reviewable.",
+    ],
     slidePlan: ["title", "image_focus", "activity", "quiz", "reflection"],
     transition: "slide_left",
     animation: "scale",
+    practiceModes: ["flashcards", "matching", "sprint"],
+    reviewSignals: ["readability", "encouragement", "misconception support"],
   },
   {
     id: "focus-dark",
     label: "Dark Mode",
     themeId: "focus-dark",
     description: "High-focus presentation mode for projectors and review sessions.",
+    bestFor: ["exam review", "projector delivery", "self-paced deep work", "night study"],
+    designNotes: [
+      "Use high contrast panels, fewer decorative accents, and strong focus hierarchy.",
+      "Prefer summary, two-column, and reflection slides.",
+      "Avoid motion-heavy sequences and provide static equivalents.",
+    ],
     slidePlan: ["title", "content", "two_column", "activity", "reflection"],
     transition: "fade",
     animation: "fade_in",
+    practiceModes: ["exam", "mistake retry", "true/false"],
+    reviewSignals: ["contrast", "focus", "assessment clarity"],
   },
   {
     id: "evidence-lab",
     label: "Evidence Lab",
     themeId: "evidence-lab",
     description: "Inquiry lessons with media checks, data talk, and proof of progress.",
+    bestFor: ["science inquiry", "media analysis", "project-based learning", "evidence writing"],
+    designNotes: [
+      "Show media or data first, then ask learners to make claims from evidence.",
+      "Use timeline, image-focus, and rubric-summary patterns.",
+      "Always include media safety, source context, and proof-of-progress checks.",
+    ],
     slidePlan: ["title", "image_focus", "timeline", "quiz", "reflection"],
     transition: "push",
     animation: "highlight",
+    practiceModes: ["fill-in-the-blank", "scenario challenge", "review cards"],
+    reviewSignals: ["evidence quality", "media safety", "claim clarity"],
   },
 ] as const;
 
@@ -293,7 +328,17 @@ export const DESIGN_BLOCKS: DesignBlock[] = [
 ];
 
 export function lessonTemplateById(id: unknown) {
-  return LESSON_TEMPLATE_PRESETS.find((template) => template.id === id) ?? LESSON_TEMPLATE_PRESETS[0];
+  return LESSON_TEMPLATE_PRESETS.find((template) => template.id === id) ?? LESSON_TEMPLATE_PRESETS[DEFAULT_TEMPLATE_INDEX];
+}
+
+export function listLessonTemplateOptions() {
+  return LESSON_TEMPLATE_PRESETS.map((template) => ({
+    id: template.id,
+    label: template.label,
+    description: template.description,
+    bestFor: template.bestFor,
+    themeId: template.themeId,
+  }));
 }
 
 export function buildLessonDesignPromptContext(templateId: unknown) {
@@ -308,15 +353,27 @@ export function buildLessonDesignPromptContext(templateId: unknown) {
       slidePlan: template.slidePlan,
       transition: template.transition,
       animation: template.animation,
+      bestFor: template.bestFor,
+      designNotes: template.designNotes,
+      practiceModes: template.practiceModes,
+      reviewSignals: template.reviewSignals,
     },
     theme,
     allowedLayouts: LESSON_SLIDE_LAYOUTS.map((layout) => layout.layout),
     allowedTransitions: LESSON_SLIDE_TRANSITIONS.map((transition) => transition.transition),
     allowedAnimations: LESSON_SLIDE_ANIMATIONS.map((animation) => animation.animation),
+    reusableBlocks: DESIGN_BLOCKS.map((block) => ({
+      id: block.id,
+      title: block.title,
+      kind: block.kind,
+      insertTarget: block.insertTarget,
+      estimatedMinutes: block.estimatedMinutes,
+    })),
     requiredOutput: {
       design: "theme id, palette, typography, slide layout plan, transition, animation, reduced motion fallback",
       lesson: "editable sections with duration, media notes, teacher review flags",
       practice: "quiz, flashcards, retry-missed, explanations, points, target time",
+      format: "return structured JSON that can be inserted into Studio docs, slides, practice sets, and lesson sections",
     },
   };
 }
