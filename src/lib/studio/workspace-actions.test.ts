@@ -3,6 +3,9 @@ import {
   addSheetColumn,
   addSheetRow,
   applySlideTheme,
+  createDesignBlockInsert,
+  createDesignTemplateInsert,
+  createTextBlockInsert,
   csvToSheet,
   deleteSheetColumn,
   deleteSheetRow,
@@ -15,6 +18,7 @@ import {
   updateSheetCell,
   type StudioSlideSummary,
 } from "@/lib/studio/workspace-actions";
+import { DESIGN_BLOCKS, DESIGN_TEMPLATES } from "@/lib/learning/design-system";
 
 const slides: StudioSlideSummary[] = [
   { id: "one", title: "One", notes: "A", accent: "#2563eb" },
@@ -94,5 +98,22 @@ describe("Studio workspace actions", () => {
       accent: "#60a5fa",
       themeId: "focus-dark",
     });
+  });
+
+  it("creates rich editable inserts for text, templates, and design blocks", () => {
+    const text = createTextBlockInsert("Quick check");
+    const template = createDesignTemplateInsert(
+      DESIGN_TEMPLATES.find((item) => item.id === "animation-pack") ?? DESIGN_TEMPLATES[0],
+    );
+    const block = createDesignBlockInsert(
+      DESIGN_BLOCKS.find((item) => item.id === "ai-practice-loop") ?? DESIGN_BLOCKS[0],
+    );
+
+    expect(text.html).toContain("data-edsync-insert");
+    expect(template.html).toContain("data-edsync-design-template");
+    expect(template.html).toContain("Reusable blocks");
+    expect(block.html).toContain("data-edsync-design-block");
+    expect(block.html).toContain("retry missed");
+    expect(block.plainText).toContain("AI Practice Loop");
   });
 });
