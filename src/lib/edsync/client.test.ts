@@ -51,6 +51,37 @@ describe("EdSync client auth validation", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("does not call login API when organization code is missing", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signInWithPassword({
+      email: "teacher@example.com",
+      password: "password123",
+      account_type: "organization",
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Organization code is required.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call login API when organization code is too long before formatting", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signInWithPassword({
+      email: "teacher@example.com",
+      password: "password123",
+      account_type: "organization",
+      organization_code: " ".repeat(161),
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Organization code must be 160 characters or fewer before formatting.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("does not call signup API when organization mode is missing", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const edsync = createClient();
@@ -68,6 +99,27 @@ describe("EdSync client auth validation", () => {
 
     expect(response.error?.status).toBe(400);
     expect(response.error?.message).toContain("join or create");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call signup API when organization join code is missing", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signUp({
+      email: "student@example.com",
+      password: "password123",
+      options: {
+        data: {
+          role: "student",
+          account_type: "organization",
+          organization_mode: "join",
+        },
+      },
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Organization code is required.");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
