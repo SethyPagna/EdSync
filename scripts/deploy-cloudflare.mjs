@@ -1,29 +1,9 @@
-import { existsSync, mkdtempSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { mkdtempSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { loadEnvFile, run } from "./lib/ops.mjs";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
-
-function loadEnvFile(path) {
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    if (!line || line.trimStart().startsWith("#") || !line.includes("=")) continue;
-    const [key, ...rest] = line.split("=");
-    if (!process.env[key]) process.env[key] = rest.join("=").trim().replace(/^["']|["']$/g, "");
-  }
-}
-
-function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
-    cwd: options.cwd,
-    env: options.env,
-    input: options.input,
-    stdio: options.input ? ["pipe", "inherit", "inherit"] : "inherit",
-    shell: process.platform === "win32",
-  });
-  if (result.status !== 0) process.exit(result.status ?? 1);
-}
 
 async function cf(method, path, body) {
   const token = process.env.CLOUDFLARE_API_TOKEN;
