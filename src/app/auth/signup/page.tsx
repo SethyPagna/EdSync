@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { normalizeOrganizationCode, validateOrganizationCode } from "@/lib/auth/organization-code";
+import { validateTenantName } from "@/lib/tenant-validation";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
@@ -372,6 +373,17 @@ function SignupForm() {
               if (accountType === "organization" && organizationMode === "create" && !organizationName.trim()) {
                 toast.error(authCopy.enterOrganizationNameFirst);
                 return;
+              }
+              if (accountType === "organization" && organizationMode === "create") {
+                try {
+                  validateTenantName(organizationName);
+                } catch (error) {
+                  const message = error instanceof Error
+                    ? error.message.replace("Tenant", "Organization")
+                    : authCopy.enterOrganizationNameFirst;
+                  toast.error(message);
+                  return;
+                }
               }
               setStep("role");
             }}
