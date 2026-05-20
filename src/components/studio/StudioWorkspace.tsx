@@ -81,7 +81,10 @@ import {
   addSheetColumn,
   addSheetRow,
   applySlideTheme,
+  createDesignBlockInsert,
+  createDesignTemplateInsert,
   createSlide,
+  createTextBlockInsert,
   csvToSheet,
   deleteSheetColumn,
   deleteSheetRow,
@@ -633,11 +636,14 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     setStatusMessage(`Imported ${file.name}`);
   };
 
-  const insertBlock = (label: string) => {
-    const nextHtml = `${draft.html}<hr><h2>${label}</h2><p>Add details, examples, and checks for understanding.</p>`;
-    updateDraft({ ...draft, html: nextHtml, plainText: `${draft.plainText}\n${label}` });
+  const insertStudioHtml = (insert: { html: string; plainText: string }) => {
+    updateDraft({ ...draft, html: `${draft.html}${insert.html}`, plainText: `${draft.plainText}\n${insert.plainText}` });
     activeKindRef.current = "lesson";
     setActiveKind("lesson");
+  };
+
+  const insertBlock = (label: string) => {
+    insertStudioHtml(createTextBlockInsert(label));
   };
 
   const appendImagePrompt = () => {
@@ -1225,11 +1231,11 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
               <Panel title="Design Templates" icon={Shapes}>
                 <div className="space-y-2">
-                  {DESIGN_TEMPLATES.slice(0, 5).map((template) => (
+                  {DESIGN_TEMPLATES.map((template) => (
                     <button
                       key={template.id}
                       type="button"
-                      onClick={() => insertBlock(template.title)}
+                      onClick={() => insertStudioHtml(createDesignTemplateInsert(template))}
                       className="w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40"
                     >
                       <p className="text-sm font-semibold">{template.title}</p>
@@ -1318,7 +1324,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     <button
                       key={block.id}
                       type="button"
-                      onClick={() => insertBlock(block.title)}
+                      onClick={() => insertStudioHtml(createDesignBlockInsert(block))}
                       className="flex w-full items-start gap-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40"
                     >
                       <BadgeCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-edsync-emerald" />
