@@ -153,6 +153,7 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
           sourceText: values.source || values.topic || "",
           designTemplateId: values.designTemplate || values.template || "",
           practiceMode: values.mode || values.practiceMode || "",
+          outputLength: values.outputLength || "standard",
         }),
       });
       const payload = await response.json();
