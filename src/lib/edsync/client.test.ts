@@ -21,6 +21,36 @@ describe("EdSync client auth validation", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("does not call login API when email is malformed", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signInWithPassword({
+      email: "bad",
+      password: "password123",
+      account_type: "individual",
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Email must be a valid email address.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call login API when password is too long", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signInWithPassword({
+      email: "teacher@example.com",
+      password: "x".repeat(257),
+      account_type: "individual",
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Password must be 256 characters or fewer.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("does not call signup API when organization mode is missing", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const edsync = createClient();
@@ -38,6 +68,46 @@ describe("EdSync client auth validation", () => {
 
     expect(response.error?.status).toBe(400);
     expect(response.error?.message).toContain("join or create");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call signup API when email is malformed", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signUp({
+      email: "bad",
+      password: "password123",
+      options: {
+        data: {
+          role: "student",
+          account_type: "individual",
+        },
+      },
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Email must be a valid email address.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not call signup API when password is too short", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const edsync = createClient();
+
+    const response = await edsync.auth.signUp({
+      email: "student@example.com",
+      password: "short",
+      options: {
+        data: {
+          role: "student",
+          account_type: "individual",
+        },
+      },
+    });
+
+    expect(response.error?.status).toBe(400);
+    expect(response.error?.message).toBe("Password must be at least 8 characters.");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
