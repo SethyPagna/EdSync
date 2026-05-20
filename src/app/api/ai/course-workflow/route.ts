@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     sourceText?: string;
     designTemplateId?: string;
     practiceMode?: string;
+    outputLength?: string;
   };
   if (!body.topic?.trim()) {
     return NextResponse.json({ data: null, error: "Topic is required." }, { status: 400 });
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     sourceText: body.sourceText,
     designTemplateId: body.designTemplateId,
     practiceMode: body.practiceMode,
+    outputLength: body.outputLength,
   });
   const eventId = await appendLearningEvent({
     tenantId: context.tenant.id,
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
       topic: body.topic,
       designTemplateId: body.designTemplateId,
       practiceMode: body.practiceMode,
+      outputLength: body.outputLength,
       reviewRequired: draft.review.publishRecommendation !== "ready",
       tags: draft.tags,
     },
