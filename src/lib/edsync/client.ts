@@ -2,6 +2,7 @@
 
 import type { DataFilter, DataOrder, DataRequest, D1Result } from "@/lib/db/d1";
 import { validateDisplayName } from "@/lib/auth/display-name";
+import { validateLoginPassword, validateSignupPassword } from "@/lib/auth/password-validation";
 import {
   normalizeAccountType,
   normalizeOrganizationMode,
@@ -10,6 +11,7 @@ import {
   type OrganizationMode,
   type SignupRole,
 } from "@/lib/auth/roles";
+import { validateEmailAddress } from "@/lib/email-address";
 
 type QueryOptions = {
   count?: "exact";
@@ -187,6 +189,8 @@ export function createClient() {
         if (!normalizeAccountType(input.account_type)) {
           return authValidationError("Choose individual or organization before signing in.");
         }
+        const authInputError = validateClientAuthInput(input.email, () => validateLoginPassword(input.password));
+        if (authInputError) return authInputError;
         return postJson<AuthResponse>("/api/auth/login", input);
       },
       async signUp(input: {
@@ -215,6 +219,8 @@ export function createClient() {
         if (accountType === "organization" && !normalizeOrganizationMode(data.organization_mode)) {
           return authValidationError("Choose whether to join or create an organization.");
         }
+        const authInputError = validateClientAuthInput(input.email, () => validateSignupPassword(input.password));
+        if (authInputError) return authInputError;
         try {
           validateDisplayName(data.full_name);
         } catch (error) {
@@ -265,4 +271,14 @@ export function createClient() {
       },
     },
   };
+}
+
+function validateClientAuthInput(email: unknown, validatePassword: () => void): AuthResponse | null {
+  try {
+    validateEmailAddress(email);
+    validatePassword();
+    return null;
+  } catch (error) {
+    return authValidationError(error instanceof Error ? error.message : "Authentication details are invalid.");
+  }
 }
