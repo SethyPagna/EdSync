@@ -1,22 +1,11 @@
 import { pbkdf2, randomBytes } from "node:crypto";
 import { promisify } from "node:util";
-import { existsSync, readFileSync } from "node:fs";
+import { d1Query, loadCloudflareEnv } from "./lib/cloudflare-d1.mjs";
 
 const pbkdf2Async = promisify(pbkdf2);
 const ITERATIONS = 60_000;
 const KEY_LENGTH = 32;
 const DIGEST = "sha256";
-
-function loadEnvFile(path) {
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    if (!line || line.trimStart().startsWith("#") || !line.includes("=")) continue;
-    const [key, ...rest] = line.split("=");
-    if (!process.env[key]) {
-      process.env[key] = rest.join("=").trim().replace(/^["']|["']$/g, "");
-    }
-  }
-}
 
 async function hashPassword(password) {
   const salt = randomBytes(16).toString("base64url");
@@ -24,34 +13,7 @@ async function hashPassword(password) {
   return `pbkdf2:${ITERATIONS}:${salt}:${derived.toString("base64url")}`;
 }
 
-async function d1Query(sql, params = []) {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!accountId || !databaseId || !token) {
-    throw new Error("Missing Cloudflare D1 env vars.");
-  }
-
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ sql, params }),
-    },
-  );
-  const payload = await response.json();
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.errors?.map((error) => error.message).join("; ") || response.statusText);
-  }
-  return payload.result?.[0]?.results ?? [];
-}
-
-loadEnvFile(".env.local");
-loadEnvFile(".env");
+loadCloudflareEnv();
 
 const email = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = String(process.env.ADMIN_INITIAL_PASSWORD || "");
