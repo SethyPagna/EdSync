@@ -13,6 +13,7 @@ import {
   type SignupRole,
 } from "@/lib/auth/roles";
 import { validateEmailAddress } from "@/lib/email-address";
+import { validateTenantName } from "@/lib/tenant-validation";
 
 type QueryOptions = {
   count?: "exact";
@@ -228,6 +229,10 @@ export function createClient() {
           ? validateClientOrganizationCode(accountType, data.organization_code)
           : null;
         if (organizationCodeError) return organizationCodeError;
+        const organizationNameError = data.organization_mode === "create"
+          ? validateClientOrganizationName(data.organization_name)
+          : null;
+        if (organizationNameError) return organizationNameError;
         try {
           validateDisplayName(data.full_name);
         } catch (error) {
@@ -297,5 +302,15 @@ function validateClientOrganizationCode(accountType: AccountType, organizationCo
     return null;
   } catch (error) {
     return authValidationError(error instanceof Error ? error.message : "Organization code is invalid.");
+  }
+}
+
+function validateClientOrganizationName(organizationName: unknown): AuthResponse | null {
+  try {
+    validateTenantName(organizationName);
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message.replace("Tenant", "Organization") : "Organization name is invalid.";
+    return authValidationError(message);
   }
 }
