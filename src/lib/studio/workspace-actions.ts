@@ -4,6 +4,7 @@ import type {
   LessonSlideLayout,
   LessonSlideTransition,
 } from "@/lib/studio/catalog";
+import type { DesignBlock, DesignTemplate } from "@/types";
 
 export type StudioSlideSummary = {
   id: string;
@@ -21,6 +22,67 @@ export type StudioSlideSummary = {
 };
 
 const CSV_NEEDS_QUOTING = /[",\r\n]/;
+
+export type StudioHtmlInsert = {
+  html: string;
+  plainText: string;
+};
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatList(items: readonly string[]) {
+  if (items.length === 0) return "";
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+export function createTextBlockInsert(label: string): StudioHtmlInsert {
+  return {
+    html: `<hr><section data-edsync-insert="text-block"><h2>${escapeHtml(label)}</h2><p>Add details, examples, and checks for understanding.</p></section>`,
+    plainText: label,
+  };
+}
+
+export function createDesignTemplateInsert(template: DesignTemplate): StudioHtmlInsert {
+  const blocks = formatList(template.blocks);
+  const tags = template.tags.length > 0 ? `<p><strong>Tags:</strong> ${escapeHtml(template.tags.join(", "))}</p>` : "";
+  return {
+    html: [
+      `<hr><section data-edsync-design-template="${escapeHtml(template.id)}">`,
+      `<h2>${escapeHtml(template.title)}</h2>`,
+      `<p>${escapeHtml(template.description)}</p>`,
+      `<p><strong>Use for:</strong> ${escapeHtml(template.category.replaceAll("_", " "))}</p>`,
+      `<p><strong>Tone:</strong> ${escapeHtml(template.previewTone)}</p>`,
+      tags,
+      blocks ? `<h3>Reusable blocks</h3>${blocks}` : "",
+      "</section>",
+    ].join(""),
+    plainText: `${template.title}\n${template.description}`,
+  };
+}
+
+export function createDesignBlockInsert(block: DesignBlock): StudioHtmlInsert {
+  const content = Object.entries(block.content)
+    .map(([key, value]) => `<li><strong>${escapeHtml(key)}:</strong> ${escapeHtml(Array.isArray(value) ? value.join(", ") : value)}</li>`)
+    .join("");
+  return {
+    html: [
+      `<hr><section data-edsync-design-block="${escapeHtml(block.id)}">`,
+      `<h2>${escapeHtml(block.title)}</h2>`,
+      `<p>${escapeHtml(block.description)}</p>`,
+      `<p><strong>Target:</strong> ${escapeHtml(block.insertTarget.replaceAll("_", " "))} · <strong>Estimated:</strong> ${block.estimatedMinutes} min</p>`,
+      content ? `<h3>Editable structure</h3><ul>${content}</ul>` : "",
+      "</section>",
+    ].join(""),
+    plainText: `${block.title}\n${block.description}`,
+  };
+}
 
 export function createEmptySheetRow(columnCount: number) {
   return Array.from({ length: Math.max(columnCount, 1) }, () => "");
