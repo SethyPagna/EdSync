@@ -14,8 +14,10 @@ export type LessonSlideLayout =
 export type LessonSlideTransition = "none" | "fade" | "slide_left" | "push" | "zoom";
 export type LessonSlideAnimation = "none" | "fade_in" | "rise" | "scale" | "wipe" | "highlight";
 export type LessonTemplatePreset = (typeof LESSON_TEMPLATE_PRESETS)[number];
+export type LessonOutputLength = "micro" | "standard" | "extended";
 
 const DEFAULT_TEMPLATE_INDEX = 0;
+const DEFAULT_OUTPUT_LENGTH: LessonOutputLength = "standard";
 
 export const SLIDE_THEMES: SlideTheme[] = [
   {
@@ -115,6 +117,72 @@ export const LESSON_SLIDE_ANIMATIONS: Array<{
   { animation: "highlight", label: "Highlight", durationMs: 420 },
 ];
 
+export const LESSON_OUTPUT_LENGTHS: Record<
+  LessonOutputLength,
+  {
+    label: string;
+    slideCount: string;
+    sectionDepth: string;
+    practiceCount: string;
+    aiInstruction: string;
+  }
+> = {
+  micro: {
+    label: "Micro",
+    slideCount: "3-5 slides",
+    sectionDepth: "one short explanation, one example, one check",
+    practiceCount: "3-5 questions or cards",
+    aiInstruction: "Keep it fast, highly scannable, and ready for a short class starter or review.",
+  },
+  standard: {
+    label: "Standard",
+    slideCount: "6-9 slides",
+    sectionDepth: "clear sections with examples, media notes, and teacher checkpoints",
+    practiceCount: "6-10 questions or cards with explanations and retry-missed support",
+    aiInstruction: "Build a complete lesson flow that can be taught, practiced, reviewed, and graded.",
+  },
+  extended: {
+    label: "Extended",
+    slideCount: "10-14 slides",
+    sectionDepth: "deeper scaffolding with variants, enrichment, remediation, and rubric evidence",
+    practiceCount: "10-16 questions or cards across mixed modes",
+    aiInstruction: "Create a polished unit-ready lesson with multiple versions, differentiation, and review loops.",
+  },
+};
+
+export const LESSON_DESIGN_TOOL_GROUPS = [
+  {
+    id: "text-style",
+    label: "Text and style",
+    tools: ["heading", "subheading", "font", "size", "bold", "italic", "color", "highlight", "spacing"],
+  },
+  {
+    id: "layout",
+    label: "Layout",
+    tools: ["columns", "grid", "align", "distribute", "margins", "callout", "timeline", "comparison"],
+  },
+  {
+    id: "media",
+    label: "Media",
+    tools: ["image", "video", "link", "caption", "alt text", "source check", "safe embed"],
+  },
+  {
+    id: "motion",
+    label: "Motion",
+    tools: ["transition", "entrance", "emphasis", "exit", "duration", "reduced motion fallback"],
+  },
+  {
+    id: "practice",
+    label: "Practice",
+    tools: ["quiz", "exam", "flashcards", "matching", "sprint", "retry missed", "review cards"],
+  },
+  {
+    id: "evidence",
+    label: "Evidence",
+    tools: ["rubric", "grade event", "feedback", "reflection", "progress signal", "dashboard recommendation"],
+  },
+] as const;
+
 export const LESSON_TEMPLATE_PRESETS = [
   {
     id: "corporate",
@@ -183,6 +251,40 @@ export const LESSON_TEMPLATE_PRESETS = [
     animation: "highlight",
     practiceModes: ["fill-in-the-blank", "scenario challenge", "review cards"],
     reviewSignals: ["evidence quality", "media safety", "claim clarity"],
+  },
+  {
+    id: "creator-studio",
+    label: "Creator Studio",
+    themeId: "clear-classroom",
+    description: "Office-style lesson creation with documents, slides, media, and export-ready structure.",
+    bestFor: ["manual authoring", "slide design", "rich documents", "teacher-created lessons"],
+    designNotes: [
+      "Expose text, insert, layout, design, references, and navigation tools as compact toolbar groups.",
+      "Use slide thumbnails, editor canvas, inspector controls, and persistent draft status.",
+      "Keep AI output editable and insertable into docs, slides, quizzes, or lesson sections.",
+    ],
+    slidePlan: ["title", "content", "two_column", "activity", "quiz", "reflection"],
+    transition: "fade",
+    animation: "rise",
+    practiceModes: ["quiz", "flashcards", "generated-from-Studio"],
+    reviewSignals: ["draft persistence", "layout clarity", "teacher editability"],
+  },
+  {
+    id: "exam-prep",
+    label: "Exam Prep",
+    themeId: "focus-dark",
+    description: "Structured review, timed practice, mistake retry, and clear performance evidence.",
+    bestFor: ["test preparation", "retrieval practice", "mastery review", "student self-study"],
+    designNotes: [
+      "Lead with target time, expected duration, and visible attempt summary.",
+      "Use compact explanations, retry missed, and save-to-review loops.",
+      "Separate high-stakes exam mode from lower-pressure practice mode.",
+    ],
+    slidePlan: ["title", "content", "quiz", "activity", "reflection"],
+    transition: "zoom",
+    animation: "highlight",
+    practiceModes: ["exam", "sprint", "mistake retry", "true/false"],
+    reviewSignals: ["timing", "missed concepts", "readiness"],
   },
 ] as const;
 
@@ -259,6 +361,24 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
     previewTone: "specific and fair",
     blocks: ["criteria", "evidence", "feedback", "next-step"],
   },
+  {
+    id: "animation-pack",
+    title: "Animation Pack",
+    category: "slide_theme",
+    description: "Reduced-motion-safe transition and object animation presets for lesson slideshows.",
+    tags: ["slides", "motion", "presentation"],
+    previewTone: "smooth and focused",
+    blocks: ["transition", "entrance", "emphasis", "reduced-motion"],
+  },
+  {
+    id: "ai-lesson-response",
+    title: "AI Lesson Response",
+    category: "lesson_hero",
+    description: "Structured AI output for outline, slide deck, quiz, rubric, practice, and review insertion.",
+    tags: ["ai", "studio", "lesson"],
+    previewTone: "organized and editable",
+    blocks: ["outline", "slides", "practice", "rubric", "review"],
+  },
 ];
 
 export const DESIGN_BLOCKS: DesignBlock[] = [
@@ -325,6 +445,24 @@ export const DESIGN_BLOCKS: DesignBlock[] = [
     estimatedMinutes: 4,
     content: { checks: ["Allowed source", "Clear caption", "Alt text", "Student action"] },
   },
+  {
+    id: "slide-animation-sequence",
+    title: "Slide Animation Sequence",
+    kind: "design",
+    description: "Transition, object animation, duration, and reduced-motion fallback settings.",
+    insertTarget: "new_slide_deck",
+    estimatedMinutes: 3,
+    content: { transition: "fade", animation: "rise", durationMs: 450, reducedMotion: "static reveal" },
+  },
+  {
+    id: "ai-practice-loop",
+    title: "AI Practice Loop",
+    kind: "practice",
+    description: "Generate practice, explain mistakes, save review cards, and recommend the next action.",
+    insertTarget: "practice_set",
+    estimatedMinutes: 8,
+    content: { modes: ["quiz", "flashcards", "retry missed"], output: ["explanations", "review cards", "progress signal"] },
+  },
 ];
 
 export function lessonTemplateById(id: unknown) {
@@ -341,9 +479,15 @@ export function listLessonTemplateOptions() {
   }));
 }
 
-export function buildLessonDesignPromptContext(templateId: unknown) {
+export function resolveLessonOutputLength(length: unknown) {
+  return typeof length === "string" && length in LESSON_OUTPUT_LENGTHS ? (length as LessonOutputLength) : DEFAULT_OUTPUT_LENGTH;
+}
+
+export function buildLessonDesignPromptContext(templateId: unknown, outputLength: unknown = DEFAULT_OUTPUT_LENGTH) {
   const template = lessonTemplateById(templateId);
   const theme = SLIDE_THEMES.find((slideTheme) => slideTheme.id === template.themeId) ?? SLIDE_THEMES[0];
+  const length = resolveLessonOutputLength(outputLength);
+  const lengthPlan = LESSON_OUTPUT_LENGTHS[length];
 
   return {
     template: {
@@ -362,6 +506,11 @@ export function buildLessonDesignPromptContext(templateId: unknown) {
     allowedLayouts: LESSON_SLIDE_LAYOUTS.map((layout) => layout.layout),
     allowedTransitions: LESSON_SLIDE_TRANSITIONS.map((transition) => transition.transition),
     allowedAnimations: LESSON_SLIDE_ANIMATIONS.map((animation) => animation.animation),
+    outputLength: {
+      id: length,
+      ...lengthPlan,
+    },
+    toolGroups: LESSON_DESIGN_TOOL_GROUPS,
     reusableBlocks: DESIGN_BLOCKS.map((block) => ({
       id: block.id,
       title: block.title,
@@ -371,9 +520,10 @@ export function buildLessonDesignPromptContext(templateId: unknown) {
     })),
     requiredOutput: {
       design: "theme id, palette, typography, slide layout plan, transition, animation, reduced motion fallback",
-      lesson: "editable sections with duration, media notes, teacher review flags",
-      practice: "quiz, flashcards, retry-missed, explanations, points, target time",
+      lesson: `editable sections with duration, media notes, teacher review flags, and ${lengthPlan.sectionDepth}`,
+      practice: `${lengthPlan.practiceCount}; include retry-missed, explanations, points, target time, and save-to-review`,
       format: "return structured JSON that can be inserted into Studio docs, slides, practice sets, and lesson sections",
+      aiInstruction: lengthPlan.aiInstruction,
     },
   };
 }
