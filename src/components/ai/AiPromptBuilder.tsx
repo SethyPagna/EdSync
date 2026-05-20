@@ -78,6 +78,8 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
           durationMinutes: Number(values.slideCount || 45),
           tone: values.tone || "clear, student-friendly, professional",
           sourceText: values.source || values.topic || "",
+          designTemplateId: values.designTemplate || values.template || "",
+          practiceMode: values.mode || values.practiceMode || "",
         }),
       });
       const payload = await response.json();
