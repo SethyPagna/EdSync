@@ -1,6 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { cloudflareGetOptional, cloudflareRequest, loadCloudflareApiEnv } from "./lib/cloudflare-api.mjs";
 
-const API_BASE = "https://api.cloudflare.com/client/v4";
 const MANAGED_REFS = new Set([
   "edsync-edge-sensitive-paths",
   "edsync-edge-dangerous-extensions",
@@ -13,61 +12,17 @@ const MANAGED_REFS = new Set([
   "edsync-edge-data-rate-limit",
 ]);
 
-function loadEnvFile(path) {
-  if (!existsSync(path)) return;
-  const lines = readFileSync(path, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    if (!line || line.trimStart().startsWith("#") || !line.includes("=")) continue;
-    const [key, ...rest] = line.split("=");
-    if (!process.env[key]) {
-      process.env[key] = rest.join("=").trim().replace(/^["']|["']$/g, "");
-    }
-  }
-}
+loadCloudflareApiEnv();
 
-loadEnvFile(".env.local");
-loadEnvFile(".env");
-
-const token = process.env.CLOUDFLARE_API_TOKEN;
 const zoneId = process.env.CLOUDFLARE_ZONE_ID;
 const domain = process.env.CLOUDFLARE_DOMAIN;
-
-if (!token) {
-  throw new Error("CLOUDFLARE_API_TOKEN is required.");
-}
 
 if (!zoneId || !domain) {
   throw new Error("CLOUDFLARE_ZONE_ID and CLOUDFLARE_DOMAIN are required so edge rules only target the EdSync hostname.");
 }
 
-async function cloudflare(method, path, body) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.success === false) {
-    const message = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
-    throw new Error(`${method} ${path} failed: ${message}`);
-  }
-  return payload.result;
-}
-
 async function getEntryPoint(phase) {
-  const response = await fetch(`${API_BASE}/zones/${zoneId}/rulesets/phases/${phase}/entrypoint`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (response.status === 404) return null;
-  const payload = await response.json();
-  if (!response.ok || payload.success === false) {
-    const message = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
-    throw new Error(`GET ${phase} entrypoint failed: ${message}`);
-  }
-  return payload.result;
+  return cloudflareGetOptional(`/zones/${zoneId}/rulesets/phases/${phase}/entrypoint`);
 }
 
 function scoped(expression) {
@@ -218,7 +173,7 @@ async function upsertEntryPoint(phase, rules, description) {
   const nextRules = [...preservedRules, ...rules];
 
   if (!entryPoint) {
-    await cloudflare("POST", `/zones/${zoneId}/rulesets`, {
+    await cloudflareRequest("POST", `/zones/${zoneId}/rulesets`, {
       name: `EdSync ${phase}`,
       description,
       kind: "zone",
@@ -228,7 +183,7 @@ async function upsertEntryPoint(phase, rules, description) {
     return "created";
   }
 
-  await cloudflare("PUT", `/zones/${zoneId}/rulesets/${entryPoint.id}`, {
+  await cloudflareRequest("PUT", `/zones/${zoneId}/rulesets/${entryPoint.id}`, {
     ...entryPoint,
     description: entryPoint.description || description,
     rules: nextRules,
