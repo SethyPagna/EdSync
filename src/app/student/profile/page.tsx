@@ -4,6 +4,7 @@ import Image from "next/image";
 import { validateDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS } from "@/lib/grades";
+import { INTEREST_AREAS, validateGradeLevel, validateInterestAreas } from "@/lib/profile-fields";
 import type { Profile, UserPreferences } from "@/types";
 import toast from "react-hot-toast";
 import { generateInitials } from "@/lib/utils";
@@ -176,24 +177,6 @@ function polarPoint(
   };
 }
 
-const INTEREST_OPTIONS = [
-  "Space & Astronomy",
-  "Sports",
-  "Music",
-  "Gaming",
-  "Art & Design",
-  "Technology",
-  "Nature & Environment",
-  "Cooking & Food",
-  "Travel",
-  "Movies & TV",
-  "History",
-  "Health & Fitness",
-  "Animals",
-  "Fashion",
-  "Business",
-];
-
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: "light",
   text_size: "medium",
@@ -273,6 +256,15 @@ export default function StudentProfile() {
       toast.error(error instanceof Error ? error.message : "Full name is invalid.");
       return;
     }
+    let normalizedGradeLevel: string | null;
+    let normalizedInterests: string[];
+    try {
+      normalizedGradeLevel = validateGradeLevel(gradeLevel);
+      normalizedInterests = validateInterestAreas(interests);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Profile details are invalid.");
+      return;
+    }
     setSaving(true);
     const {
       data: { user },
@@ -286,8 +278,8 @@ export default function StudentProfile() {
       .from("profiles")
       .update({
         full_name: normalizedFullName,
-        grade_level: gradeLevel,
-        interests,
+        grade_level: normalizedGradeLevel,
+        interests: normalizedInterests,
         preferences,
       })
       .eq("id", user.id);
@@ -298,10 +290,18 @@ export default function StudentProfile() {
       toast.success("Profile saved!");
       setProfile((prev) =>
         prev
-          ? { ...prev, full_name: normalizedFullName, grade_level: gradeLevel, interests, preferences }
+          ? {
+              ...prev,
+              full_name: normalizedFullName,
+              grade_level: normalizedGradeLevel,
+              interests: normalizedInterests,
+              preferences,
+            }
           : null,
       );
       setFullName(normalizedFullName || "");
+      setGradeLevel(normalizedGradeLevel || "");
+      setInterests(normalizedInterests);
       setEditing(false);
     }
     setSaving(false);
@@ -481,7 +481,7 @@ export default function StudentProfile() {
           lessons
         </p>
         <div className="flex flex-wrap gap-2">
-          {INTEREST_OPTIONS.map((interest) => {
+          {INTEREST_AREAS.map((interest) => {
             const selected = interests.includes(interest);
             return (
               <button
@@ -512,7 +512,7 @@ export default function StudentProfile() {
             onClick={() => setEditing(true)}
             className="btn-ghost mt-4 text-sm"
           >
-            Update interests →
+            Update interests -&gt;
           </button>
         )}
       </div>
