@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { validateDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
 import { generateInitials } from "@/lib/utils";
@@ -73,11 +74,18 @@ export default function TeacherProfile() {
 
   const save = async () => {
     if (!profile) return;
+    let normalizedFullName: string | null;
+    try {
+      normalizedFullName = validateDisplayName(fullName);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Full name is invalid.");
+      return;
+    }
     setSaving(true);
     const { error } = await edsync
       .from("profiles")
       .update({
-        full_name: fullName,
+        full_name: normalizedFullName,
         school,
         grade_level: gradeLevel,
         subjects,
@@ -89,7 +97,8 @@ export default function TeacherProfile() {
       toast.error(error.message);
       return;
     }
-    setProfile({ ...profile, full_name: fullName, school, grade_level: gradeLevel, subjects, preferences });
+    setFullName(normalizedFullName || "");
+    setProfile({ ...profile, full_name: normalizedFullName, school, grade_level: gradeLevel, subjects, preferences });
     toast.success("Profile saved");
   };
 
