@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
-import { normalizeOrganizationCode } from "@/lib/auth/organization-code";
+import { normalizeOrganizationCode, validateOrganizationCode } from "@/lib/auth/organization-code";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
@@ -77,10 +77,17 @@ function SignupForm() {
   }, [preset]);
 
   useEffect(() => {
-    const code = normalizeOrganizationCode(organizationCode);
-    if (accountType !== "organization" || organizationMode !== "join" || !code) {
+    if (accountType !== "organization" || organizationMode !== "join" || !organizationCode.trim()) {
       setOrganizationLookup(null);
       setOrganizationStatus("idle");
+      return;
+    }
+    let code: string;
+    try {
+      code = validateOrganizationCode(organizationCode);
+    } catch {
+      setOrganizationLookup(null);
+      setOrganizationStatus("missing");
       return;
     }
 
@@ -345,6 +352,14 @@ function SignupForm() {
               if (accountType === "organization" && organizationMode === "join" && !organizationCode.trim()) {
                 toast.error(authCopy.enterOrganizationCodeFirst);
                 return;
+              }
+              if (accountType === "organization" && organizationMode === "join") {
+                try {
+                  validateOrganizationCode(organizationCode);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : authCopy.enterOrganizationCodeFirst);
+                  return;
+                }
               }
               if (accountType === "organization" && organizationMode === "join" && organizationStatus === "checking") {
                 toast.error(authCopy.stillCheckingOrganization);
