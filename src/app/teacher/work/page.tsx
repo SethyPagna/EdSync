@@ -45,7 +45,14 @@ export default function TeacherWorkPage() {
   const load = () => {
     fetch("/api/teacher/roster", { cache: "no-store" })
       .then((response) => response.json())
-      .then((payload) => setClasses(payload.data?.classes ?? []));
+      .then((payload) => {
+        const classRows = payload.data?.classes ?? [];
+        setClasses(classRows);
+        setForm((current) => ({
+          ...current,
+          classId: current.classId || classRows[0]?.id || "",
+        }));
+      });
     fetch("/api/work", { cache: "no-store" })
       .then((response) => response.json())
       .then((payload) => setItems(payload.data ?? []));
@@ -57,6 +64,10 @@ export default function TeacherWorkPage() {
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!form.classId) {
+      toast.error("Choose a class so assignments, quizzes, and deadlines stay connected.");
+      return;
+    }
     const response = await fetch("/api/work", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,7 +83,7 @@ export default function TeacherWorkPage() {
       return;
     }
     toast.success("Work item created.");
-    setForm({ title: "", workType: "task", classId: "", instructions: "", pointsPossible: "100", dueAt: "", status: "published" });
+    setForm((current) => ({ title: "", workType: "task", classId: current.classId, instructions: "", pointsPossible: "100", dueAt: "", status: "published" }));
     setFormOpen(false);
     load();
   };
@@ -84,7 +95,7 @@ export default function TeacherWorkPage() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <div className="page-shell space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -93,7 +104,7 @@ export default function TeacherWorkPage() {
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Assignments</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {publishedCount} published, {submissionCount} submissions
+              {publishedCount} published, {submissionCount} submissions. Class due dates are added to Planner automatically.
             </p>
           </div>
           <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
@@ -136,7 +147,7 @@ export default function TeacherWorkPage() {
               value={form.classId}
               onChange={(event) => setForm({ ...form, classId: event.target.value })}
             >
-              <option value="">All classes</option>
+              <option value="">Choose class</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -161,7 +172,7 @@ export default function TeacherWorkPage() {
               className="edsync-input min-h-24 lg:col-span-5"
               value={form.instructions}
               onChange={(event) => setForm({ ...form, instructions: event.target.value })}
-              placeholder="Instructions, rubric, links, or discussion prompt"
+              placeholder="Instructions, rubric, links, practice rules, or quiz prompt"
             />
             <button className="btn-primary justify-center" type="submit">
               Create
