@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { validateDisplayName } from "@/lib/auth/display-name";
+import SectionOrderSettings from "@/components/SectionOrderSettings";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS } from "@/lib/grades";
 import { INTEREST_AREAS, validateGradeLevel, validateInterestAreas } from "@/lib/profile-fields";
@@ -338,13 +339,18 @@ export default function StudentProfile() {
     .slice(0, 2);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto animate-fade-in">
-      <h1 className="font-display font-bold text-3xl text-edsync-text mb-6">
-        My Profile
-      </h1>
+    <div className="page-shell max-w-3xl animate-fade-in space-y-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
+          Account
+        </p>
+        <h1 className="font-display text-3xl font-bold text-edsync-text">
+          Profile & Settings
+        </h1>
+      </div>
 
       {/* Avatar & basic info */}
-      <div className="edsync-card mb-6">
+      <div className="edsync-card">
         <div className="flex items-start gap-6">
           <div className="relative flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan font-display text-3xl font-bold text-white">
             {profile?.avatar_url ? (
@@ -408,7 +414,7 @@ export default function StudentProfile() {
         </label>
       </div>
 
-      <div className="edsync-card mb-6">
+      <div className="edsync-card">
         <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
           Preferences
         </h3>
@@ -472,7 +478,7 @@ export default function StudentProfile() {
       </div>
 
       {/* Interests */}
-      <div className="edsync-card mb-6">
+      <div className="edsync-card">
         <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
           My Interests
         </h3>
@@ -518,6 +524,20 @@ export default function StudentProfile() {
       </div>
 
       {/* Learning Stats Hexagon */}
+      <SectionOrderSettings
+        storageKey="edsync-student-profile-section-order"
+        sections={[
+          "Dashboard",
+          "Lessons",
+          "Work",
+          "Activities",
+          "AI Coach",
+          "Grades",
+          "Notes",
+          "Discussions",
+        ]}
+      />
+
       <div className="edsync-card">
         <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
           Learning Stats Hexagon
