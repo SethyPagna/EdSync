@@ -157,7 +157,7 @@ export default function TeacherPlannerPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-5 sm:p-6">
+    <div className="page-shell space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-edsync-blue">Class planner</p>
@@ -165,7 +165,7 @@ export default function TeacherPlannerPage() {
             Announcements, deadlines, and schedule
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-edsync-subtle">
-            Keep students aligned with short updates, visible deadlines, and class events.
+            Keep students aligned with class updates, visible work deadlines, and events.
           </p>
         </div>
         <button
