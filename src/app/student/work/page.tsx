@@ -87,7 +87,7 @@ export default function StudentWorkPage() {
   const submittedCount = items.length - openCount;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
+    <div className="page-shell max-w-6xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
