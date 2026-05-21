@@ -21,9 +21,11 @@ import {
   BookOpenCheck,
   CalendarClock,
   CheckCircle2,
+  Compass,
   GraduationCap,
   Megaphone,
   Plus,
+  ShoppingBag,
   Timer,
   Target,
 } from "lucide-react";
@@ -41,6 +43,34 @@ type StudentPlannerData = {
 type EnrollmentRow = { class_id: string };
 type AssignmentRow = { lesson_id: string };
 type SectionLessonRow = { lesson_id: string };
+type EntitlementRow = {
+  id: string;
+  product_id: string | null;
+  source_type: string;
+  status: "active" | "expired" | "revoked";
+};
+type BillingProductRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  product_type: string;
+  course_id: string | null;
+  metadata: Record<string, unknown> | string | null;
+};
+type IndividualCourse = {
+  id: string;
+  title: string;
+  description: string;
+  courseId: string | null;
+  sourceType: string;
+};
+type CatalogSuggestion = {
+  id: string;
+  title: string;
+  description: string | null;
+  price?: { label?: string; isFree?: boolean };
+  metadata?: { category?: string | null; difficulty?: string | null };
+};
 type DashboardVisibility = {
   notifications: boolean;
   assignments: boolean;
@@ -74,6 +104,26 @@ function formatMinutes(totalMinutes: number) {
   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
+function parseProductMetadata(value: BillingProductRow["metadata"]) {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function productDescription(product: BillingProductRow) {
+  const metadata = parseProductMetadata(product.metadata);
+  return (
+    product.description ||
+    String(metadata.previewSummary ?? "") ||
+    String(metadata.category ?? "") ||
+    "Personal catalog course"
+  );
+}
+
 export default function StudentDashboard() {
   const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -81,6 +131,8 @@ export default function StudentDashboard() {
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [reflections, setReflections] = useState<LearningReflection[]>([]);
   const [reviewCards, setReviewCards] = useState<PracticeReviewCardRow[]>([]);
+  const [individualCourses, setIndividualCourses] = useState<IndividualCourse[]>([]);
+  const [catalogSuggestions, setCatalogSuggestions] = useState<CatalogSuggestion[]>([]);
   const [planner, setPlanner] = useState<StudentPlannerData>({
     announcements: [],
     events: [],
@@ -104,7 +156,7 @@ export default function StudentDashboard() {
         return;
       }
 
-      const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes, reviewsRes] =
+      const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes, reviewsRes, entitlementsRes, catalogRes] =
         await Promise.all([
           edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
           edsync
@@ -128,6 +180,14 @@ export default function StudentDashboard() {
             res.json(),
           ),
           listPracticeReviews().catch(() => []),
+          edsync
+            .from("entitlements")
+            .select("id, product_id, source_type, status")
+            .eq("user_id", user.id)
+            .eq("status", "active"),
+          fetch("/api/catalog", { cache: "no-store" })
+            .then((res) => res.json())
+            .catch(() => ({ data: { items: [] } })),
         ]);
 
       setProfile(profileRes.data);
@@ -135,6 +195,38 @@ export default function StudentDashboard() {
       setReflections(reflectionsRes.data || []);
       setPlanner(plannerRes.data || { announcements: [], events: [] });
       setReviewCards(reviewsRes ?? []);
+      setCatalogSuggestions((catalogRes.data?.items ?? []).slice(0, 3));
+
+      const entitlements = (entitlementsRes.data || []) as EntitlementRow[];
+      const productIds = Array.from(
+        new Set(entitlements.map((entitlement) => entitlement.product_id).filter(Boolean) as string[]),
+      );
+      if (productIds.length > 0) {
+        const { data: products } = await edsync
+          .from("billing_products")
+          .select("id, title, description, product_type, course_id, metadata")
+          .in("id", productIds)
+          .eq("status", "active");
+        const productById = new Map(((products || []) as BillingProductRow[]).map((product) => [product.id, product]));
+        setIndividualCourses(
+          entitlements.flatMap((entitlement) => {
+            if (!entitlement.product_id) return [];
+            const product = productById.get(entitlement.product_id);
+            if (!product) return [];
+            return [
+              {
+                id: entitlement.id,
+                title: product.title,
+                description: productDescription(product),
+                courseId: product.course_id,
+                sourceType: entitlement.source_type,
+              },
+            ];
+          }),
+        );
+      } else {
+        setIndividualCourses([]);
+      }
 
       const classIds = ((enrollmentsRes.data || []) as EnrollmentRow[]).map(
         (row) => row.class_id,
@@ -428,6 +520,74 @@ export default function StudentDashboard() {
           ))}
         </div>
       </header>
+
+      <section className="premium-surface rounded-2xl p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Individual learning</p>
+            <h2 className="font-display text-xl font-bold">Your catalog courses</h2>
+          </div>
+          <Link href="/catalog" className="btn-secondary w-fit px-3 py-2 text-sm">
+            <Compass className="h-4 w-4" />
+            Browse catalog
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {individualCourses.length > 0
+            ? individualCourses.slice(0, 3).map((course) => (
+                <Link
+                  key={course.id}
+                  href={course.courseId ? `/student/lessons/${course.courseId}` : "/catalog"}
+                  className="rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                      <ShoppingBag className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-edsync-text">{course.title}</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">{course.description}</p>
+                      <span className="mt-3 inline-flex text-xs font-bold uppercase tracking-wide text-edsync-blue">
+                        {course.sourceType.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            : catalogSuggestions.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/catalog/${item.id}`}
+                  className="rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-emerald/40 hover:bg-edsync-card"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-emerald/10 text-edsync-emerald">
+                      <Compass className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold text-edsync-text">{item.title}</p>
+                        <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
+                          {item.price?.label ?? "Catalog"}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">
+                        {item.description || "Start a public EdSync course."}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+          {individualCourses.length === 0 && catalogSuggestions.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-5 md:col-span-3">
+              <p className="font-semibold text-edsync-text">No personal courses yet</p>
+              <p className="mt-1 text-sm text-edsync-subtle">
+                Browse the catalog to enroll in free courses or start checkout for paid courses.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="premium-surface rounded-2xl p-4 sm:p-5">
