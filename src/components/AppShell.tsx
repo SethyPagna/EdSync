@@ -93,6 +93,14 @@ function pathWithoutQuery(href: string) {
   return href.split("?")[0];
 }
 
+function appendAdminViewMode(href: string, mode: "teacher" | "student" | null) {
+  if (!mode || href.includes("adminView=")) return href;
+  if (href.startsWith("/teacher") || href.startsWith("/student") || href === "/ai" || href === "/practice") {
+    return `${href}${href.includes("?") ? "&" : "?"}adminView=${mode}`;
+  }
+  return href;
+}
+
 function workspaceContextFromStorage(): WorkspaceContext | null {
   if (typeof window === "undefined") return null;
   try {
@@ -262,6 +270,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     if (!isAdminViewMode) return;
 
     const mode = role === "teacher" ? "teacher" : "student";
+    document.cookie = `edsync-admin-view-mode=${mode}; path=/; max-age=3600; SameSite=Lax`;
     const path = `${window.location.pathname}${window.location.search}`;
     const auditKey = `edsync-admin-view-audit:${mode}:${path}`;
     if (window.sessionStorage.getItem(auditKey)) return;
@@ -276,6 +285,11 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       window.sessionStorage.removeItem(auditKey);
     });
   }, [isAdminViewMode, pathname, role]);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+    document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
+  }, [role]);
 
   const handleLogout = async () => {
     await edsync.auth.signOut();
@@ -312,10 +326,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const Icon = item.icon;
     const itemPath = pathWithoutQuery(item.href);
     const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+    const viewMode = isAdminViewMode ? (role === "teacher" ? "teacher" : "student") : null;
+    const href = appendAdminViewMode(item.href, viewMode);
     return (
       <Link
         key={item.href}
-        href={item.href}
+        href={href}
         onClick={() => setMobileOpen(false)}
         title={collapsed ? item.label : undefined}
         className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
@@ -407,17 +423,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             </div>
           )}
           {role === "student" && (
-            <div className="mt-3">
-              <div className="mb-1 flex justify-between text-xs text-edsync-subtle">
-                <span>{profile?.total_xp ?? 0} XP</span>
-                <span>{profile?.streak_days ?? 0} day streak</span>
-              </div>
-              <div className="progress-bar">
-                <div
-                  className="progress-bar-fill"
-                  style={{ width: `${(profile?.total_xp ?? 0) % 100}%` }}
-                />
-              </div>
+            <div className="mt-3 rounded-xl border border-edsync-emerald/20 bg-edsync-emerald/10 px-3 py-2 text-xs font-semibold text-edsync-emerald">
+              Lessons, support, grades, and personal notes.
             </div>
           )}
         </div>
@@ -427,7 +434,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         {isAdminViewMode && (
           <Link
             href="/admin/dashboard"
-            onClick={() => setMobileOpen(false)}
+            onClick={() => {
+              document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
+              setMobileOpen(false);
+            }}
             title={collapsed ? "Back to Admin" : undefined}
             className={`mb-2 flex items-center gap-3 rounded-xl border border-edsync-blue/25 bg-edsync-blue/10 px-3 py-3 text-sm font-bold text-edsync-blue shadow-sm transition-all hover:bg-edsync-blue/15 ${
               collapsed ? "justify-center" : ""
