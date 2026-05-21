@@ -7,7 +7,6 @@ import { createClient } from "@/lib/edsync/client";
 import { listPracticeReviews, type PracticeReviewCardRow } from "@/lib/practice/reviews";
 import { summarizePracticeReviewCards } from "@/lib/practice/review-recommendations";
 import { MetricTile } from "@/components/WorkspacePrimitives";
-import OrganizationContextBanner from "@/components/OrganizationContextBanner";
 import type {
   LearningGoal,
   LearningReflection,
@@ -43,6 +42,19 @@ type StudentPlannerData = {
 type EnrollmentRow = { class_id: string };
 type AssignmentRow = { lesson_id: string };
 type SectionLessonRow = { lesson_id: string };
+type DashboardVisibility = {
+  notifications: boolean;
+  assignments: boolean;
+  deadlines: boolean;
+  newContent: boolean;
+};
+
+const defaultVisibility: DashboardVisibility = {
+  notifications: true,
+  assignments: true,
+  deadlines: true,
+  newContent: true,
+};
 
 function formatPlannerDate(value: string | null) {
   if (!value) return "No time set";
@@ -73,6 +85,7 @@ export default function StudentDashboard() {
   const [joiningClass, setJoiningClass] = useState(false);
   const [savingStudy, setSavingStudy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [visibility, setVisibility] = useState<DashboardVisibility>(defaultVisibility);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -184,6 +197,24 @@ export default function StudentDashboard() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem("edsync-student-dashboard-visibility");
+    if (!raw) return;
+    try {
+      setVisibility({ ...defaultVisibility, ...(JSON.parse(raw) as Partial<DashboardVisibility>) });
+    } catch {
+      setVisibility(defaultVisibility);
+    }
+  }, []);
+
+  const toggleVisibility = (key: keyof DashboardVisibility) => {
+    setVisibility((current) => {
+      const nextValue = { ...current, [key]: !current[key] };
+      window.localStorage.setItem("edsync-student-dashboard-visibility", JSON.stringify(nextValue));
+      return nextValue;
+    });
+  };
 
   const joinClass = async () => {
     if (!joinCode.trim()) return;
@@ -312,10 +343,21 @@ export default function StudentDashboard() {
     () => summarizePracticeReviewCards(reviewCards),
     [reviewCards],
   );
+  const assignmentEvents = useMemo(
+    () => planner.events.filter((event) => event.event_type === "deadline"),
+    [planner.events],
+  );
+  const otherEvents = useMemo(
+    () => planner.events.filter((event) => event.event_type !== "deadline"),
+    [planner.events],
+  );
+  const visibleEvents = [
+    ...(visibility.deadlines ? assignmentEvents : []),
+    ...(visibility.assignments ? otherEvents : []),
+  ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-      <OrganizationContextBanner />
+    <div className="page-shell space-y-5">
       <header className="premium-panel rounded-2xl p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
@@ -454,19 +496,19 @@ export default function StudentDashboard() {
 
         <section className="premium-surface rounded-2xl p-4 sm:p-5">
           <h2 className="font-display text-xl font-bold">Join a class</h2>
-          <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-1">
+          <div className="mt-3 flex gap-2">
             <input
               value={joinCode}
               onChange={(event) => setJoinCode(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && joinClass()}
               placeholder="EDSYNC8"
-              className="edsync-input font-mono uppercase"
+              className="edsync-input min-w-0 flex-1 py-2 font-mono uppercase"
             />
             <button
               type="button"
               onClick={joinClass}
               disabled={joiningClass || !joinCode.trim()}
-              className="btn-primary justify-center px-4"
+              className="btn-primary flex-none justify-center px-4 py-2"
             >
               Join
             </button>
@@ -479,13 +521,16 @@ export default function StudentDashboard() {
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Learning path</h2>
-              <p className="text-sm text-edsync-subtle">
-                Grouped by what needs attention.
-              </p>
+              <p className="text-sm text-edsync-subtle">Grouped by what needs attention.</p>
             </div>
           </div>
 
-          {loading ? (
+          {!visibility.newContent ? (
+            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
+              <p className="font-semibold text-edsync-text">Learning path hidden</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Turn on New content in Notifications to show lessons here.</p>
+            </div>
+          ) : loading ? (
             <div className="space-y-3">
               {[...Array(4)].map((_, index) => (
                 <div key={index} className="h-24 animate-pulse rounded-lg bg-edsync-surface" />
@@ -514,16 +559,46 @@ export default function StudentDashboard() {
 
         <aside className="space-y-5">
           <section className="premium-surface rounded-2xl p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-xl font-bold">Announcements</h2>
+                <h2 className="font-display text-xl font-bold">Notifications</h2>
+                <p className="text-sm text-edsync-subtle">Choose what appears on your dashboard.</p>
               </div>
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {[
+                ["notifications", "Class updates"],
+                ["assignments", "Assignments"],
+                ["deadlines", "Deadlines"],
+                ["newContent", "New content"],
+              ].map(([key, label]) => {
+                const typedKey = key as keyof DashboardVisibility;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleVisibility(typedKey)}
+                    className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
+                      visibility[typedKey]
+                        ? "border-edsync-blue/35 bg-edsync-blue/10 text-edsync-blue"
+                        : "border-edsync-border bg-edsync-surface text-edsync-subtle"
+                    }`}
+                    aria-pressed={visibility[typedKey]}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="space-y-3">
-              {planner.announcements.length === 0 ? (
+              {!visibility.notifications ? (
+                <p className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
+                  Class updates are hidden.
+                </p>
+              ) : planner.announcements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  New class announcements will appear here.
+                  New class notifications will appear here.
                 </p>
               ) : (
                 planner.announcements.slice(0, 3).map((item) => (
@@ -577,12 +652,12 @@ export default function StudentDashboard() {
               </div>
             </div>
             <div className="space-y-3">
-              {planner.events.length === 0 ? (
+              {visibleEvents.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   Deadlines and personal study blocks will appear here.
                 </p>
               ) : (
-                planner.events.slice(0, 5).map((event) => (
+                visibleEvents.slice(0, 5).map((event) => (
                   <div
                     key={event.id}
                     className="rounded-2xl border border-edsync-border bg-edsync-surface p-4"
