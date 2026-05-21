@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
+import { listPracticeReviews, type PracticeReviewCardRow } from "@/lib/practice/reviews";
+import { summarizePracticeReviewCards } from "@/lib/practice/review-recommendations";
 import { MetricTile } from "@/components/WorkspacePrimitives";
 import OrganizationContextBanner from "@/components/OrganizationContextBanner";
 import type {
@@ -60,6 +62,7 @@ export default function StudentDashboard() {
   const [lessons, setLessons] = useState<AssignedLesson[]>([]);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [reflections, setReflections] = useState<LearningReflection[]>([]);
+  const [reviewCards, setReviewCards] = useState<PracticeReviewCardRow[]>([]);
   const [planner, setPlanner] = useState<StudentPlannerData>({
     announcements: [],
     events: [],
@@ -82,7 +85,7 @@ export default function StudentDashboard() {
         return;
       }
 
-      const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes] =
+      const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes, reviewsRes] =
         await Promise.all([
           edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
           edsync
@@ -105,12 +108,14 @@ export default function StudentDashboard() {
           fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
             res.json(),
           ),
+          listPracticeReviews().catch(() => []),
         ]);
 
       setProfile(profileRes.data);
       setGoals(goalsRes.data || []);
       setReflections(reflectionsRes.data || []);
       setPlanner(plannerRes.data || { announcements: [], events: [] });
+      setReviewCards(reviewsRes ?? []);
 
       const classIds = ((enrollmentsRes.data || []) as EnrollmentRow[]).map(
         (row) => row.class_id,
@@ -279,21 +284,15 @@ export default function StudentDashboard() {
     await loadDashboard();
   };
 
-  const { completed, active, next, avgScore } = useMemo(() => {
+  const { completed, active, next } = useMemo(() => {
     const completedLessons: AssignedLesson[] = [];
     const activeLessons: AssignedLesson[] = [];
     const nextLessons: AssignedLesson[] = [];
-    let scoreTotal = 0;
-    let scoreCount = 0;
 
     for (const lesson of lessons) {
       const status = lesson.progress?.status;
       if (status === "completed") {
         completedLessons.push(lesson);
-        if (lesson.progress?.score != null) {
-          scoreTotal += Number(lesson.progress.score);
-          scoreCount += 1;
-        }
       } else if (status === "in_progress") {
         activeLessons.push(lesson);
       } else {
@@ -305,11 +304,14 @@ export default function StudentDashboard() {
       completed: completedLessons,
       active: activeLessons,
       next: nextLessons,
-      avgScore: scoreCount > 0 ? Math.round(scoreTotal / scoreCount) : 0,
     };
   }, [lessons]);
 
   const recommendation = active[0] || next[0] || completed[0];
+  const reviewRecommendation = useMemo(
+    () => summarizePracticeReviewCards(reviewCards),
+    [reviewCards],
+  );
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
@@ -358,8 +360,8 @@ export default function StudentDashboard() {
               tone: "text-edsync-emerald",
             },
             {
-              label: "Score",
-              value: avgScore ? `${avgScore}%` : "N/A",
+              label: "Reviews",
+              value: reviewRecommendation?.count ?? 0,
               icon: GraduationCap,
               tone: "text-edsync-amber",
             },
@@ -387,32 +389,60 @@ export default function StudentDashboard() {
             </Link>
           </div>
           {recommendation ? (
-            <Link
-              href={`/student/lessons/${recommendation.id}`}
-              className="premium-card group block rounded-2xl p-4 transition hover:-translate-y-0.5"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-                  <BookOpenCheck className="h-6 w-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-display text-2xl font-bold text-edsync-text">
-                    {recommendation.title}
-                  </p>
-                  <p className="mt-1 text-sm text-edsync-subtle">
-                    {recommendation.subject || "General"} - {recommendation.estimated_duration} min
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                      {recommendation.progress?.status?.replace("_", " ") || "not started"}
-                    </span>
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                      Open lesson <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </span>
+            <div className="space-y-3">
+              {reviewRecommendation && (
+                <Link
+                  href={reviewRecommendation.href}
+                  className="group block rounded-2xl border border-edsync-amber/30 bg-edsync-amber/10 p-4 transition hover:-translate-y-0.5"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-amber/15 text-edsync-amber">
+                      <Flame className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="badge bg-edsync-amber/15 text-edsync-amber">
+                          {reviewRecommendation.label}
+                        </span>
+                        <p className="font-semibold text-edsync-text">{reviewRecommendation.title}</p>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">
+                        {reviewRecommendation.subtitle}
+                      </p>
+                      <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-amber">
+                        Review now <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              )}
+              <Link
+                href={`/student/lessons/${recommendation.id}`}
+                className="premium-card group block rounded-2xl p-4 transition hover:-translate-y-0.5"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+                    <BookOpenCheck className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display text-2xl font-bold text-edsync-text">
+                      {recommendation.title}
+                    </p>
+                    <p className="mt-1 text-sm text-edsync-subtle">
+                      {recommendation.subject || "General"} - {recommendation.estimated_duration} min
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                        {recommendation.progress?.status?.replace("_", " ") || "not started"}
+                      </span>
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
+                        Open lesson <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
               <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
