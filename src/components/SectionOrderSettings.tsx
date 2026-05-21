@@ -9,6 +9,13 @@ type SectionOrderSettingsProps = {
   title?: string;
 };
 
+export const SECTION_ORDER_EVENT = "edsync-section-order-updated";
+
+export type SectionOrderEventDetail = {
+  storageKey: string;
+  order: string[];
+};
+
 function normalizeOrder(saved: string[] | null, sections: string[]) {
   if (!saved) return sections;
   const known = new Set(sections);
@@ -39,6 +46,11 @@ export default function SectionOrderSettings({
   const persist = (next: string[]) => {
     setOrder(next);
     window.localStorage.setItem(storageKey, JSON.stringify(next));
+    window.dispatchEvent(
+      new CustomEvent<SectionOrderEventDetail>(SECTION_ORDER_EVENT, {
+        detail: { storageKey, order: next },
+      }),
+    );
   };
 
   const move = (index: number, direction: -1 | 1) => {
