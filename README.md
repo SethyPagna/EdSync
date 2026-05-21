@@ -48,5 +48,25 @@ background automation.
 ```powershell
 npm.cmd run typecheck
 npm.cmd run lint
+npm.cmd run test
 npm.cmd run build
+```
+
+## Local Cleanup
+
+Generated build output can become large during Cloudflare and Next.js deploy
+testing. Use the safe local cleanup command before archiving or when disk space
+gets tight:
+
+```powershell
+npm.cmd run clean:local
+```
+
+This removes rebuildable folders such as `.next`, `.open-next`, `.wrangler`,
+`coverage`, `dist`, and TypeScript build info while keeping `node_modules` so
+the app can still run. To also remove installed dependencies, use:
+
+```powershell
+npm.cmd run clean:all
+npm.cmd install
 ```
