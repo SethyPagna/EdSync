@@ -3,8 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { ExternalLink, ImageIcon, Link2, Palette, Plus, Save, StickyNote, Video } from "lucide-react";
-import { listStudioItems, saveStudioItem, type StudioServerItem } from "@/lib/studio/api";
+import {
+  Archive,
+  Copy,
+  Edit3,
+  ExternalLink,
+  ImageIcon,
+  Link2,
+  Palette,
+  Plus,
+  Save,
+  StickyNote,
+  Video,
+  X,
+} from "lucide-react";
+import {
+  archiveStudioItem,
+  listStudioItems,
+  saveStudioItem,
+  updateStudioItem,
+  type StudioServerItem,
+} from "@/lib/studio/api";
 import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
 
 type TeacherNote = {
@@ -30,6 +49,16 @@ const emptyDraft: NoteDraft = {
   design: "clean",
 };
 
+function getNoteMediaUrl(item: StudioServerItem) {
+  if (typeof item.metadata.media !== "object" || !item.metadata.media) return "";
+  return String((item.metadata.media as { url?: unknown }).url ?? "");
+}
+
+function getNoteDesign(item: StudioServerItem): NoteDraft["design"] {
+  const design = String(item.metadata.design ?? "clean");
+  return designOptions.some((option) => option.id === design) ? (design as NoteDraft["design"]) : "clean";
+}
+
 const designOptions: Array<{ id: NoteDraft["design"]; label: string; className: string }> = [
   { id: "clean", label: "Clean", className: "border-edsync-border bg-edsync-card" },
   { id: "focus", label: "Focus", className: "border-edsync-blue/30 bg-edsync-blue/10" },
@@ -51,6 +80,7 @@ export default function StudentNotesPage() {
   const [teacherNotes, setTeacherNotes] = useState<TeacherNote[]>([]);
   const [personalNotes, setPersonalNotes] = useState<StudioServerItem[]>([]);
   const [draft, setDraft] = useState<NoteDraft>(emptyDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -70,7 +100,29 @@ export default function StudentNotesPage() {
     load();
   }, []);
 
-  const createPersonalNote = async (event: React.FormEvent) => {
+  const resetComposer = () => {
+    setDraft(emptyDraft);
+    setEditingId(null);
+    setComposerOpen(false);
+  };
+
+  const buildNotePayload = (media: SafeMediaUrl | null) => ({
+    content: {
+      type: "personal_note",
+      body: draft.body,
+      blocks: [
+        { type: "paragraph", text: draft.body },
+        ...(media ? [{ type: media.kind, url: media.url, embedUrl: media.embedUrl }] : []),
+      ],
+    },
+    metadata: {
+      design: draft.design,
+      media,
+      source: "student_notes",
+    },
+  });
+
+  const savePersonalNote = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!draft.title.trim() || !draft.body.trim()) {
       toast.error("Add a title and note body first.");
@@ -83,33 +135,77 @@ export default function StudentNotesPage() {
 
     setSaving(true);
     try {
-      await saveStudioItem({
-        kind: "note",
-        title: draft.title,
-        plainText: draft.body,
-        status: "draft",
-        content: {
-          type: "personal_note",
-          body: draft.body,
-          blocks: [
-            { type: "paragraph", text: draft.body },
-            ...(safeMedia ? [{ type: safeMedia.kind, url: safeMedia.url, embedUrl: safeMedia.embedUrl }] : []),
-          ],
-        },
-        metadata: {
-          design: draft.design,
-          media: safeMedia,
-          source: "student_notes",
-        },
-      });
-      toast.success("Personal note saved.");
-      setDraft(emptyDraft);
-      setComposerOpen(false);
+      const payload = buildNotePayload(safeMedia);
+      if (editingId) {
+        await updateStudioItem({
+          id: editingId,
+          title: draft.title,
+          plainText: draft.body,
+          status: "draft",
+          ...payload,
+        });
+      } else {
+        await saveStudioItem({
+          kind: "note",
+          title: draft.title,
+          plainText: draft.body,
+          status: "draft",
+          ...payload,
+        });
+      }
+      toast.success(editingId ? "Personal note updated." : "Personal note saved.");
+      resetComposer();
       load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Note was not saved.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const editPersonalNote = (note: StudioServerItem) => {
+    setDraft({
+      title: note.title,
+      body: plainTextOf(note),
+      mediaUrl: getNoteMediaUrl(note),
+      design: getNoteDesign(note),
+    });
+    setEditingId(note.id);
+    setComposerOpen(true);
+  };
+
+  const duplicatePersonalNote = async (note: StudioServerItem) => {
+    const media = classifySafeMediaUrl(getNoteMediaUrl(note));
+    try {
+      await saveStudioItem({
+        kind: "note",
+        title: `${note.title} copy`,
+        plainText: plainTextOf(note),
+        status: "draft",
+        content: note.content,
+        metadata: {
+          ...note.metadata,
+          media,
+          duplicatedFrom: note.id,
+          source: "student_notes",
+        },
+      });
+      toast.success("Note duplicated.");
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Note was not duplicated.");
+    }
+  };
+
+  const archivePersonalNote = async (note: StudioServerItem) => {
+    const confirmed = window.confirm(`Archive "${note.title}"? You can still restore it from Studio history later.`);
+    if (!confirmed) return;
+    try {
+      await archiveStudioItem(note.id);
+      toast.success("Note archived.");
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Note was not archived.");
     }
   };
 
@@ -124,19 +220,41 @@ export default function StudentNotesPage() {
               Save personal notes with designs, images, video links, references, and teacher feedback in one place.
             </p>
           </div>
-          <button type="button" className="btn-primary justify-center" onClick={() => setComposerOpen((value) => !value)}>
-            <Plus className="h-4 w-4" />
-            {composerOpen ? "Close" : "New note"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {composerOpen && (
+              <button type="button" className="btn-secondary justify-center" onClick={resetComposer}>
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-primary justify-center"
+              onClick={() => {
+                if (composerOpen) {
+                  resetComposer();
+                } else {
+                  setComposerOpen(true);
+                }
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New note
+            </button>
+          </div>
         </div>
       </section>
 
       {composerOpen && (
-        <form onSubmit={createPersonalNote} className="premium-surface rounded-2xl p-4 sm:p-5">
+        <form onSubmit={savePersonalNote} className="premium-surface rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Quick note builder</h2>
-              <p className="text-sm text-edsync-subtle">Personal notes are saved as Studio drafts so you can expand them later.</p>
+              <p className="text-sm text-edsync-subtle">
+                {editingId
+                  ? "Update this personal Studio draft without losing its workspace history."
+                  : "Personal notes are saved as Studio drafts so you can expand them later."}
+              </p>
             </div>
             <Palette className="h-5 w-5 text-edsync-blue" />
           </div>
@@ -246,6 +364,20 @@ export default function StudentNotesPage() {
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => editPersonalNote(note)}>
+                        <Edit3 className="h-4 w-4" />
+                        Edit
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => duplicatePersonalNote(note)}>
+                        <Copy className="h-4 w-4" />
+                        Duplicate
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => archivePersonalNote(note)}>
+                        <Archive className="h-4 w-4" />
+                        Archive
+                      </button>
+                    </div>
                   </article>
                 );
               })}
