@@ -81,6 +81,7 @@ export default async function CatalogPage({
       />
 
       <section className="mx-auto max-w-[90rem] px-4">
+        <div id="workflow-start" className="edsync-workflow-anchor" aria-hidden="true" />
         <WorkflowShowcase language={filters.language} />
 
         <section id="catalog-search-panel" className="edsync-catalog-availability scroll-mt-20 py-10">
