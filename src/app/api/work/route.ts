@@ -24,6 +24,34 @@ function workPredicateParams(tenantId: string) {
   return workScopeParams(tenantId).slice(1);
 }
 
+async function getScopedClass({
+  classId,
+  tenantId,
+  userId,
+  role,
+}: {
+  classId?: string | null;
+  tenantId: string;
+  userId: string;
+  role: string;
+}) {
+  if (!classId) return null;
+  const ownerWhere = role === "admin" ? "1=1" : "c.teacher_id = ?";
+  const ownerParams = role === "admin" ? [] : [userId];
+  const [row] = await d1Query<{ id: string; name: string }>(
+    `SELECT c.id, c.name
+       FROM classes c
+       ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+        AND c.id = ?
+        AND c.is_active = 1
+        AND ${ownerWhere}
+      LIMIT 1`,
+    [...tenantObjectParams({ objectTable: "classes", tenantId }), classId, ...ownerParams],
+  );
+  return row ?? null;
+}
+
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
@@ -142,6 +170,16 @@ export async function POST(request: Request) {
 
   const id = crypto.randomUUID();
   const context = await resolveTenantContext(user);
+  const scopedClass = await getScopedClass({
+    classId: body.classId,
+    tenantId: context.tenant.id,
+    userId: user.id,
+    role: user.user_metadata.role,
+  });
+  if (body.classId && !scopedClass) {
+    return NextResponse.json({ data: null, error: "Choose one of your active classes." }, { status: 400 });
+  }
+
   await d1Query(
     `INSERT INTO learning_work_items (
        id, teacher_id, class_id, lesson_id, category_id, title, description, work_type,
@@ -194,6 +232,31 @@ export async function POST(request: Request) {
     );
   }
 
+  if (body.classId && body.dueAt) {
+    await d1Query(
+      `INSERT INTO schedule_events (
+         id, owner_id, class_id, lesson_id, title, description, event_type,
+         starts_at, ends_at, due_at, location, visibility, metadata, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, 'deadline', NULL, NULL, ?, NULL, 'class', ?, datetime('now'), datetime('now'))`,
+      [
+        crypto.randomUUID(),
+        user.id,
+        body.classId,
+        body.lessonId ?? null,
+        body.title.trim(),
+        body.instructions ?? body.description ?? null,
+        body.dueAt,
+        JSON.stringify({
+          type: "work_deadline",
+          workItemId: id,
+          workType,
+          className: scopedClass?.name ?? null,
+          pointsPossible,
+        }),
+      ],
+    );
+  }
+
   await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "learning_work_items", objectId: id });
   await appendLearningEvent({
     tenantId: context.tenant.id,
@@ -202,7 +265,7 @@ export async function POST(request: Request) {
     sourceType: "learning_work_item",
     sourceId: id,
     eventType: `work.${workType}.created`,
-    payload: { title: body.title.trim(), status, pointsPossible },
+    payload: { title: body.title.trim(), status, pointsPossible, dueAt: body.dueAt ?? null, classId: body.classId ?? null },
   });
 
   return NextResponse.json({ data: { id }, error: null });
