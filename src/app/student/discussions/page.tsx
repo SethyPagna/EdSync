@@ -63,7 +63,7 @@ export default function StudentDiscussionsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6">
+    <div className="page-shell max-w-5xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
           Class conversations
