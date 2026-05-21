@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson, Profile, StudentProgress } from "@/types";
 
@@ -144,27 +145,35 @@ export default function TeacherReports() {
   // (for now show a summary bar chart instead of time-series since we'd need historical snapshots)
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+    <div className="page-shell animate-fade-in space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
+            Analytics & Reports
+          </p>
           <h1 className="font-display font-bold text-3xl text-edsync-text">
-            Reports
+            Lesson reports
           </h1>
           <p className="text-edsync-subtle">
-            Detailed insights for grading and parent conferences
+            Detailed lesson evidence for grading, family updates, and interventions.
           </p>
         </div>
-        <button
-          onClick={exportCSV}
-          disabled={reports.length === 0}
-          className="btn-secondary disabled:opacity-40"
-        >
-          Export CSV
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/teacher/analytics" className="btn-secondary px-4 py-2 text-sm">
+            Analytics overview
+          </Link>
+          <button
+            onClick={exportCSV}
+            disabled={reports.length === 0}
+            className="btn-primary px-4 py-2 text-sm disabled:opacity-40"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Lesson selector */}
-      <div className="mb-6">
+      <div>
         {loadingLessons ? (
           <div className="h-10 w-64 bg-edsync-card rounded-xl shimmer" />
         ) : lessons.length === 0 ? (
@@ -248,7 +257,6 @@ export default function TeacherReports() {
           {/* Student Report Table */}
           <div className="edsync-card">
             <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-              {" "}
               Individual Student Report
             </h3>
             <div className="overflow-x-auto">
