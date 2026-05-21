@@ -3996,6 +3996,12 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   scroll-margin-top: 0;
 }
 
+.edsync-public-launch .edsync-workflow-anchor {
+  height: 1px;
+  margin-top: -1px;
+  scroll-margin-top: 0;
+}
+
 .edsync-public-launch .edsync-workflow-showcase .edsync-workflow-sticky {
   top: 0;
   min-height: 100vh;
