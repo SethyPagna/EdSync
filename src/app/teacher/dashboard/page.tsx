@@ -300,8 +300,8 @@ export default function TeacherDashboard() {
             <Link href="/teacher/gradebook" className="btn-secondary justify-center text-sm">
               <ClipboardList className="h-4 w-4" /> Gradebook
             </Link>
-            <Link href="/teacher/reports" className="btn-secondary justify-center text-sm">
-              <TrendingUp className="h-4 w-4" /> Reports
+            <Link href="/teacher/analytics" className="btn-secondary justify-center text-sm">
+              <TrendingUp className="h-4 w-4" /> Analytics & Reports
             </Link>
           </div>
         </aside>
