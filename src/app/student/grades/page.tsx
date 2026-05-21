@@ -36,7 +36,7 @@ export default function StudentGradesPage() {
   const feedbackCount = useMemo(() => scores.filter((score) => Boolean(score.feedback)).length, [scores]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6">
+    <div className="page-shell max-w-5xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-center">
           <div>
