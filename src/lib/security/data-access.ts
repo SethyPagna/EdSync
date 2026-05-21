@@ -111,6 +111,32 @@ async function lessonChildBelongsToTeacher(userId: string, table: "lesson_sectio
   return Boolean(row);
 }
 
+async function lessonAssignmentBelongsToTeacher(userId: string, assignmentId: unknown) {
+  if (typeof assignmentId !== "string" || !assignmentId) return false;
+  const [assignment] = await d1Query<{ id: string }>(
+    `SELECT la.id
+       FROM lesson_assignments la
+       JOIN lessons l ON l.id = la.lesson_id
+      WHERE la.id = ? AND (l.teacher_id = ? OR la.assigned_by = ?)
+      LIMIT 1`,
+    [assignmentId, userId, userId],
+  );
+  return Boolean(assignment);
+}
+
+async function classEnrollmentBelongsToTeacher(userId: string, enrollmentId: unknown) {
+  if (typeof enrollmentId !== "string" || !enrollmentId) return false;
+  const [enrollment] = await d1Query<{ id: string }>(
+    `SELECT ce.id
+       FROM class_enrollments ce
+       JOIN classes c ON c.id = ce.class_id
+      WHERE ce.id = ? AND c.teacher_id = ?
+      LIMIT 1`,
+    [enrollmentId, userId],
+  );
+  return Boolean(enrollment);
+}
+
 async function authorizeTeacherOwnedWrite(user: SessionUser, request: DataRequest) {
   if (!["update", "delete"].includes(request.action)) return null;
 
@@ -133,7 +159,8 @@ async function authorizeTeacherOwnedWrite(user: SessionUser, request: DataReques
   }
 
   if (request.table === "lesson_assignments") {
-    return (await lessonBelongsToTeacher(user.id, eqValue(request, "lesson_id")))
+    if (await lessonBelongsToTeacher(user.id, eqValue(request, "lesson_id"))) return null;
+    return (await lessonAssignmentBelongsToTeacher(user.id, eqValue(request, "id")))
       ? null
       : "Assignment changes must target a lesson owned by the signed-in teacher.";
   }
@@ -179,6 +206,40 @@ async function authorizeStudentOwnedWrite(user: SessionUser, request: DataReques
   return null;
 }
 
+async function authorizeClassEnrollmentWrite(user: SessionUser, request: DataRequest) {
+  if (request.table !== "class_enrollments") return null;
+  if (user.user_metadata.role === "admin") return null;
+
+  if (request.action === "insert" || request.action === "upsert") {
+    const rows = valuesArray(request);
+    if (user.user_metadata.role === "student") {
+      return rows.every((row) => row.student_id === user.id) ? null : "Students can only join classes as themselves.";
+    }
+    if (user.user_metadata.role === "teacher") {
+      for (const row of rows) {
+        if (!(await classBelongsToTeacher(user.id, row.class_id))) {
+          return "Teachers can only manage enrollments for their own classes.";
+        }
+      }
+      return null;
+    }
+  }
+
+  if (request.action === "update" || request.action === "delete") {
+    if (user.user_metadata.role === "student") {
+      return hasFilter(request, "student_id", user.id) ? null : "Students can only change their own class enrollment.";
+    }
+    if (user.user_metadata.role === "teacher") {
+      if (await classBelongsToTeacher(user.id, eqValue(request, "class_id"))) return null;
+      return (await classEnrollmentBelongsToTeacher(user.id, eqValue(request, "id")))
+        ? null
+        : "Teachers can only manage enrollments for their own classes.";
+    }
+  }
+
+  return null;
+}
+
 export async function authorizeDataRequest(user: SessionUser, request: DataRequest) {
   if (SERVER_ONLY_TABLES.has(request.table)) {
     return "This table is server-only.";
@@ -216,6 +277,9 @@ export async function authorizeDataRequest(user: SessionUser, request: DataReque
 
   const teacherOwnedWriteDenied = await authorizeTeacherOwnedWrite(user, request);
   if (teacherOwnedWriteDenied) return teacherOwnedWriteDenied;
+
+  const classEnrollmentWriteDenied = await authorizeClassEnrollmentWrite(user, request);
+  if (classEnrollmentWriteDenied) return classEnrollmentWriteDenied;
 
   const studentOwnedWriteDenied = await authorizeStudentOwnedWrite(user, request);
   if (studentOwnedWriteDenied) return studentOwnedWriteDenied;
