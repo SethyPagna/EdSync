@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { normalizePracticeReviewCardRow } from "@/lib/practice/review-cards";
 import { normalizeReviewUpdate, validateReviewCardId } from "@/lib/practice/review-validation";
 import { resolveTenantContext } from "@/lib/tenancy";
 
@@ -20,7 +21,10 @@ export async function GET() {
     [context.tenant.id, user.id],
   );
 
-  return NextResponse.json({ data: rows, error: null });
+  return NextResponse.json({
+    data: rows.map((row) => normalizePracticeReviewCardRow(row)),
+    error: null,
+  });
 }
 
 export async function PATCH(request: Request) {
