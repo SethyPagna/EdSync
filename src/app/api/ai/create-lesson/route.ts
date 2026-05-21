@@ -7,6 +7,7 @@ import {
   loadAiUserContext,
   type GenerationStyle,
 } from "@/lib/ai/personalization";
+import { buildCreateLessonDesignInstruction } from "@/lib/ai/lesson-design-context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const preferredRegion = ["hkg1", "sin1"];
@@ -68,6 +69,7 @@ function buildLessonUserPrompt({
   profilePrompt,
   stylePrompt,
   versionInstruction,
+  designInstruction,
 }: {
   mode: string;
   safeContent: string;
@@ -78,6 +80,7 @@ function buildLessonUserPrompt({
   profilePrompt: string;
   stylePrompt: string;
   versionInstruction?: string;
+  designInstruction: string;
 }) {
   const sourceType =
     mode === "url" ? "url" : mode === "text" ? "text" : "objectives";
@@ -98,6 +101,7 @@ ${profilePrompt}
 
 Generation style:
 ${stylePrompt}
+${designInstruction ? `\n${designInstruction}` : ""}
 ${versionInstruction ? `\nVersion focus:\n${versionInstruction}` : ""}
 
 Input type: ${sourceType}
@@ -352,6 +356,8 @@ export async function POST(request: NextRequest) {
       languageStyle = "student_friendly",
       versionCount = 1,
       audienceLanguage = "English",
+      designTemplateId = "corporate",
+      outputLength,
     } = await request.json();
 
     const normalizedContent = typeof content === "string" ? content.trim() : "";
@@ -398,6 +404,11 @@ export async function POST(request: NextRequest) {
       audienceLanguage,
     };
     const stylePrompt = buildGenerationStylePrompt(generationStyle);
+    const { instruction: designInstruction } = buildCreateLessonDesignInstruction({
+      designTemplateId,
+      outputLength,
+      depth,
+    });
     const requestedVersions = Math.min(3, Math.max(1, Number(versionCount || 1)));
 
     const makeUserPrompt = (versionInstruction?: string) =>
@@ -411,6 +422,7 @@ export async function POST(request: NextRequest) {
         profilePrompt: aiContext.prompt,
         stylePrompt,
         versionInstruction,
+        designInstruction,
       });
 
     const userPrompt = makeUserPrompt(
