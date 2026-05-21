@@ -165,8 +165,9 @@ export default function AdminPortalsPage() {
   };
 
   return (
-    <div className="page-shell space-y-6">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="page-shell max-w-6xl space-y-5">
+      <header className="premium-panel rounded-2xl p-4 sm:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Tenant command</p>
           <h1 className="font-display text-3xl font-bold text-edsync-text">Organizations & Portals</h1>
@@ -174,7 +175,7 @@ export default function AdminPortalsPage() {
             Portals work like branded academies: one organization can run internal training, partner learning, customer education, or a public course catalog.
           </p>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
+        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle xl:max-w-md">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start">
             <span>
               Organization code:{" "}
@@ -185,6 +186,7 @@ export default function AdminPortalsPage() {
               Copy code
             </button>
           </div>
+        </div>
         </div>
       </header>
 
@@ -201,7 +203,7 @@ export default function AdminPortalsPage() {
             <span className="block text-sm text-edsync-subtle">Create a branded public, internal, customer, or partner space.</span>
           </span>
         </div>
-        <form onSubmit={createPortal} className="grid gap-3 border-t border-edsync-border p-4 lg:grid-cols-6">
+        <form onSubmit={createPortal} className="grid gap-3 border-t border-edsync-border p-4 md:grid-cols-2 xl:grid-cols-6">
           <input className="edsync-input lg:col-span-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, slug: form.slug || slugify(event.target.value) })} placeholder="Portal name" required />
           <input className="edsync-input" value={form.slug} onChange={(event) => setForm({ ...form, slug: slugify(event.target.value) })} placeholder="slug" />
           <select className="edsync-input" value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value })}>
@@ -219,7 +221,7 @@ export default function AdminPortalsPage() {
             <input type="checkbox" checked={form.featuredOnly} onChange={(event) => setForm({ ...form, featuredOnly: event.target.checked })} />
             Show featured products first
           </label>
-          <button className="btn-primary w-fit lg:col-span-2" type="submit" disabled={busy}>Create portal</button>
+          <button className="btn-primary w-full justify-center md:w-fit lg:col-span-2" type="submit" disabled={busy}>Create portal</button>
         </form>
       </section>
 
@@ -235,7 +237,7 @@ export default function AdminPortalsPage() {
             const domains = domainsByPortal.get(portal.id) ?? [];
             return (
               <section key={portal.id} className="grid gap-3 px-4 py-4 text-sm">
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px] lg:items-start">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px] xl:items-start">
                   <div className="min-w-0">
                     {editing ? (
                       <div className="grid gap-3 md:grid-cols-2">
@@ -283,7 +285,7 @@ export default function AdminPortalsPage() {
                     )}
                   </div>
 
-                  <div className="flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 lg:justify-end">
+                  <div className="flex min-w-0 flex-wrap gap-2 xl:flex-nowrap xl:justify-end xl:overflow-x-visible">
                     {editing ? (
                       <>
                         <button type="button" className="btn-primary flex-none px-3 py-2 text-sm" onClick={() => savePortal(portal)} disabled={busy}>
