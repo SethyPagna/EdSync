@@ -3,7 +3,26 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent } from "@/lib/learning-events";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
 import { validateWorkPoints, validateWorkStatus, validateWorkType } from "@/lib/work/validation";
+
+const WORK_ITEM_TABLE = "learning_work_items";
+
+function workScopeParams(tenantId: string) {
+  return tenantObjectParams({ objectTable: WORK_ITEM_TABLE, tenantId });
+}
+
+function workObjectTableParam() {
+  return WORK_ITEM_TABLE;
+}
+
+function workPredicateParams(tenantId: string) {
+  return workScopeParams(tenantId).slice(1);
+}
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -11,6 +30,7 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
   const classId = params.get("classId");
+  const context = await resolveTenantContext(user);
 
   if (user.user_metadata.role === "student") {
     const work = await d1Query(
@@ -20,14 +40,31 @@ export async function GET(request: Request) {
               ls.percent AS submission_percent,
               ls.feedback AS submission_feedback
          FROM learning_work_items wi
+         ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
          LEFT JOIN classes c ON c.id = wi.class_id
          LEFT JOIN class_enrollments ce ON ce.class_id = wi.class_id AND ce.student_id = ?
          LEFT JOIN learning_submissions ls ON ls.work_item_id = wi.id AND ls.student_id = ?
-        WHERE wi.status = 'published'
+        WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+          AND wi.status = 'published'
           AND (wi.class_id IS NULL OR ce.student_id = ?)
           ${classId ? "AND wi.class_id = ?" : ""}
         ORDER BY COALESCE(wi.due_at, wi.created_at) ASC`,
-      classId ? [user.id, user.id, user.id, classId] : [user.id, user.id, user.id],
+      classId
+        ? [
+            workObjectTableParam(),
+            user.id,
+            user.id,
+            ...workPredicateParams(context.tenant.id),
+            user.id,
+            classId,
+          ]
+        : [
+            workObjectTableParam(),
+            user.id,
+            user.id,
+            ...workPredicateParams(context.tenant.id),
+            user.id,
+          ],
     );
     return NextResponse.json({ data: work, error: null });
   }
@@ -42,13 +79,17 @@ export async function GET(request: Request) {
     `SELECT wi.*, c.name AS class_name,
             COUNT(ls.id) AS submission_count
        FROM learning_work_items wi
+       ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
        LEFT JOIN classes c ON c.id = wi.class_id
        LEFT JOIN learning_submissions ls ON ls.work_item_id = wi.id
-      WHERE ${ownerWhere}
+      WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+        AND ${ownerWhere}
         ${classId ? "AND wi.class_id = ?" : ""}
       GROUP BY wi.id
       ORDER BY wi.updated_at DESC`,
-    classId ? [...ownerParams, classId] : ownerParams,
+    classId
+      ? [...workScopeParams(context.tenant.id), ...ownerParams, classId]
+      : [...workScopeParams(context.tenant.id), ...ownerParams],
   );
   return NextResponse.json({ data: work, error: null });
 }
