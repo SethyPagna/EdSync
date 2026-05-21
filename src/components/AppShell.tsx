@@ -119,23 +119,22 @@ export const teacherNavItems: ShellNavItem[] = [
   { href: "/studio", label: "Studio", icon: Layers3 },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
   { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus },
-  { href: "/practice", label: "Practice", icon: Timer },
-  { href: "/ai", label: "AI Tutor", icon: Brain },
+  { href: "/practice", label: "Activities", icon: Timer },
+  { href: "/ai", label: "AI Co-creator", icon: Brain },
   { href: "/teacher/work", label: "Work", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
   { href: "/teacher/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
-  { href: "/teacher/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/teacher/reports", label: "Reports", icon: ClipboardList },
+  { href: "/teacher/analytics", label: "Analytics & Reports", icon: BarChart3 },
   { href: "/teacher/profile", label: "Profile", icon: UserRound },
 ];
 
 export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/practice", label: "Practice", icon: Timer },
-  { href: "/ai", label: "AI Tutor", icon: Brain },
+  { href: "/practice", label: "Activities", icon: Timer },
+  { href: "/ai", label: "AI Coach", icon: Brain },
   { href: "/student/work", label: "My Work", icon: FileCheck2 },
   { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
@@ -182,7 +181,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
       { label: "Home", items: pick(["/teacher/dashboard"]) },
       { label: "Create", items: pick(["/studio", "/teacher/lessons", "/teacher/lessons/create", "/practice", "/ai"]) },
       { label: "Classroom", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
-      { label: "Insights", items: pick(["/teacher/analytics", "/teacher/reports"]) },
+      { label: "Insights", items: pick(["/teacher/analytics"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
     ];
   }
@@ -346,7 +345,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
+      className={`${collapsed ? "lg:w-28" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
     >
       <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
@@ -460,13 +459,13 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </nav>
 
       <div className="border-t border-edsync-border p-3">
-        <div className={`mb-2 flex items-center ${collapsed ? "justify-center" : "justify-between px-3 py-1"}`}>
-          {!collapsed && <span className="text-sm font-semibold text-edsync-subtle">Alerts</span>}
-          <NotificationMenu />
-        </div>
-        <div className={`mb-1 flex gap-2 ${collapsed ? "justify-center" : "justify-start px-3"}`}>
-          <ThemeToggle compact onThemeChange={handleThemeChange} />
-          <LanguageMenu compact align="left" />
+        <div className={`mb-2 flex items-center gap-2 ${collapsed ? "justify-center" : "justify-between px-2 py-1"}`}>
+          {!collapsed && <span className="min-w-0 text-sm font-semibold text-edsync-subtle">Workspace</span>}
+          <div className={`flex min-w-0 items-center gap-1.5 ${collapsed ? "[&_.premium-icon-button]:h-6 [&_.premium-icon-button]:w-6 [&_.premium-icon-button_svg]:h-3.5 [&_.premium-icon-button_svg]:w-3.5" : ""}`}>
+            <NotificationMenu />
+            <ThemeToggle compact onThemeChange={handleThemeChange} />
+            <LanguageMenu compact align="left" />
+          </div>
         </div>
         <button
           type="button"
@@ -516,7 +515,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
       <div>
         <div
-          className={`${collapsed ? "lg:w-[76px]" : "lg:w-72"} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}
+          className={`${collapsed ? "lg:w-28" : "lg:w-72"} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}
         >
           {sidebar}
         </div>
@@ -532,7 +531,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </div>
         )}
         <main
-          className={`${collapsed ? "lg:ml-[76px]" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
+          className={`${collapsed ? "lg:ml-28" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
         >
           {isAdminViewMode && (
             <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-0 lg:px-6">
