@@ -142,7 +142,7 @@ export default async function CatalogLaunchHero({
   return (
     <section className="edsync-launch-hero-v2" aria-labelledby="edsync-public-title">
       <div className="edsync-launch-topline" role="navigation" aria-label="EdSync public navigation">
-        <Link href="/" className="edsync-launch-brand-inline" aria-label="EdSync home">
+        <Link href="/" prefetch={false} className="edsync-launch-brand-inline" aria-label="EdSync home">
           <span className="edsync-launch-brand-mark">
             <GraduationCap className="h-5 w-5" />
           </span>
@@ -160,7 +160,7 @@ export default async function CatalogLaunchHero({
           </a>
           <ThemeToggle compact className="edsync-launch-icon" />
           <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
-          <Link href={signedIn ? workspaceHref : loginHref} className="edsync-launch-signin">
+          <Link href={signedIn ? workspaceHref : loginHref} prefetch={false} className="edsync-launch-signin">
             <span>{signedIn ? copy.start : copy.signIn}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -172,14 +172,14 @@ export default async function CatalogLaunchHero({
           <h1 id="edsync-public-title">{title}</h1>
           <p>{description}</p>
           <div className="edsync-launch-cta-row">
-            <Link href="#showcase" className="edsync-launch-primary">
+            <Link href="#showcase" prefetch={false} className="edsync-launch-primary">
               {primaryLabel}
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href={signupHref} className="edsync-launch-secondary">
+            <Link href={signupHref} prefetch={false} className="edsync-launch-secondary">
               {secondaryLabel}
             </Link>
-            <Link href="#catalog-search-panel" className="edsync-launch-tertiary">
+            <Link href="#catalog-search-panel" prefetch={false} className="edsync-launch-tertiary">
               {copy.catalogLabel}
             </Link>
           </div>
