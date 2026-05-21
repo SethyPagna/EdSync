@@ -25,6 +25,16 @@ export function summarizeTeacherPracticeReviews(
   };
 }
 
+export async function fetchTeacherPracticeReviewSignal(): Promise<TeacherPracticeReviewSignal> {
+  const response = await fetch("/api/teacher/review-signal", { credentials: "include" });
+  if (!response.ok) return summarizeTeacherPracticeReviews([]);
+
+  const payload = (await response.json()) as {
+    data?: TeacherPracticeReviewSignal | null;
+  };
+  return payload.data ?? summarizeTeacherPracticeReviews([]);
+}
+
 function topReviewMode(cards: PracticeReviewCardRow[]) {
   const counts = new Map<string, number>();
   for (const card of cards) {
