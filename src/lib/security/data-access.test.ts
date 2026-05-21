@@ -123,4 +123,55 @@ describe("authorizeDataRequest", () => {
       }),
     ).resolves.toBeNull();
   });
+
+  it("allows students to join classes only as themselves", async () => {
+    await expect(
+      authorizeDataRequest(student, {
+        table: "class_enrollments",
+        action: "upsert",
+        values: { class_id: "class-1", student_id: "student-1", is_active: true },
+      }),
+    ).resolves.toBeNull();
+
+    await expect(
+      authorizeDataRequest(student, {
+        table: "class_enrollments",
+        action: "upsert",
+        values: { class_id: "class-1", student_id: "student-2", is_active: true },
+      }),
+    ).resolves.toBe("Students can only join classes as themselves.");
+  });
+
+  it("allows teachers to manage enrollments only for owned classes", async () => {
+    queryMock.mockResolvedValueOnce([{ id: "class-1" }]).mockResolvedValueOnce([]);
+
+    await expect(
+      authorizeDataRequest(user, {
+        table: "class_enrollments",
+        action: "insert",
+        values: { class_id: "class-1", student_id: "student-1", is_active: true },
+      }),
+    ).resolves.toBeNull();
+
+    await expect(
+      authorizeDataRequest(user, {
+        table: "class_enrollments",
+        action: "insert",
+        values: { class_id: "class-2", student_id: "student-1", is_active: true },
+      }),
+    ).resolves.toBe("Teachers can only manage enrollments for their own classes.");
+  });
+
+  it("allows assignment updates by id after verifying teacher ownership", async () => {
+    queryMock.mockResolvedValueOnce([{ id: "assignment-1" }]);
+
+    await expect(
+      authorizeDataRequest(user, {
+        table: "lesson_assignments",
+        action: "update",
+        values: { is_active: false },
+        filters: [{ op: "eq", column: "id", value: "assignment-1" }],
+      }),
+    ).resolves.toBeNull();
+  });
 });
