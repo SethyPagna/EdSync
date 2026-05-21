@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
+import { normalizePracticeReviewCardRow, type PracticeReviewCardRow } from "@/lib/practice/review-cards";
+import {
+  summarizeTeacherPracticeReviews,
+  type TeacherPracticeReviewSignal,
+} from "@/lib/practice/teacher-review-signals";
 import { MetricTile } from "@/components/WorkspacePrimitives";
 import OrganizationContextBanner from "@/components/OrganizationContextBanner";
 import type { Class, Lesson, Profile, TeacherAlert } from "@/types";
@@ -26,9 +31,11 @@ type DashboardStats = {
   avgScore: number;
   interactions: number;
   lowConfidence: number;
+  pendingReviews: number;
 };
 
 type ScoreRow = { score: number | string | null };
+type EnrollmentStudentRow = { student_id: string };
 
 export default function TeacherDashboard() {
   const edsync = useMemo(() => createClient(), []);
@@ -43,7 +50,11 @@ export default function TeacherDashboard() {
     avgScore: 0,
     interactions: 0,
     lowConfidence: 0,
+    pendingReviews: 0,
   });
+  const [reviewSignal, setReviewSignal] = useState<TeacherPracticeReviewSignal>(
+    summarizeTeacherPracticeReviews([]),
+  );
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -86,10 +97,10 @@ export default function TeacherDashboard() {
           classIds.length
             ? edsync
                 .from("class_enrollments")
-                .select("id", { count: "exact", head: true })
+                .select("student_id", { count: "exact" })
                 .in("class_id", classIds)
                 .eq("is_active", true)
-            : Promise.resolve({ count: 0 }),
+            : Promise.resolve({ count: 0, data: [] }),
           lessonIds.length
             ? edsync
                 .from("student_progress")
@@ -112,6 +123,22 @@ export default function TeacherDashboard() {
             : Promise.resolve({ data: [] }),
         ]);
 
+      const studentIds = Array.from(
+        new Set(((enrollmentRes.data || []) as EnrollmentStudentRow[]).map((row) => row.student_id)),
+      );
+      const reviewRows = studentIds.length
+        ? ((await edsync
+            .from("practice_review_cards")
+            .select("*")
+            .in("user_id", studentIds)
+            .neq("mastery", "mastered")
+            .order("created_at", { ascending: false })
+            .limit(100)).data || [])
+        : [];
+      const reviewCards = (reviewRows as Record<string, unknown>[]).map((row) =>
+        normalizePracticeReviewCardRow(row),
+      );
+      const nextReviewSignal = summarizeTeacherPracticeReviews(reviewCards as PracticeReviewCardRow[]);
       const scores = ((progressRes.data || []) as ScoreRow[])
         .map((row) => Number(row.score))
         .filter(Number.isFinite);
@@ -121,12 +148,14 @@ export default function TeacherDashboard() {
       setClasses(classRows);
       setRecentLessons(lessonRows);
       setAlerts(alertsRes.data || []);
+      setReviewSignal(nextReviewSignal);
       setStats({
         totalStudents: enrollmentRes.count || 0,
         activeLessons: lessonRows.filter((lesson) => lesson.status === "published").length,
         avgScore: scores.length > 0 ? Math.round(scoreTotal / scores.length) : 0,
         interactions: interactionRes.count || 0,
         lowConfidence: reflectionRes.data?.length || 0,
+        pendingReviews: nextReviewSignal.pendingCount,
       });
     } finally {
       setLoading(false);
@@ -193,8 +222,8 @@ export default function TeacherDashboard() {
               tone: "text-edsync-amber",
             },
             {
-              label: "AI chats",
-              value: stats.interactions,
+              label: "Reviews",
+              value: stats.pendingReviews,
               icon: Sparkles,
               tone: "text-edsync-cyan",
             },
@@ -226,9 +255,9 @@ export default function TeacherDashboard() {
             {[
               {
                 href: "/teacher/analytics",
-                title: "Review support",
-                value: `${stats.lowConfidence}`,
-                copy: "students need attention",
+                title: "Review queue",
+                value: `${stats.pendingReviews}`,
+                copy: reviewSignal.copy,
                 icon: AlertTriangle,
                 tone: "text-edsync-amber",
               },
