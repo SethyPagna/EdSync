@@ -29,20 +29,90 @@ export const PRACTICE_MODES: Array<{
   label: string;
   description: string;
   targetMinutes: number;
+  loop: string[];
+  bestFor: string;
+  output: string;
 }> = [
-  { mode: "quiz", label: "Quiz", description: "Fast checks with instant explanations.", targetMinutes: 8 },
-  { mode: "exam", label: "Exam", description: "Longer timed attempts with summary review.", targetMinutes: 30 },
-  { mode: "flashcards", label: "Flashcards", description: "Flip, recall, and save weak cards.", targetMinutes: 10 },
-  { mode: "matching", label: "Matching", description: "Pair terms, examples, and definitions.", targetMinutes: 6 },
-  { mode: "sprint", label: "Sprint", description: "Timed streak practice for quick recall.", targetMinutes: 5 },
-  { mode: "mistake_retry", label: "Mistake Retry", description: "Practice only missed or weak items.", targetMinutes: 7 },
-  { mode: "fill_blank", label: "Fill in the Blank", description: "Recall key terms in context.", targetMinutes: 8 },
-  { mode: "true_false", label: "True or False", description: "Quick misconception checks.", targetMinutes: 5 },
+  {
+    mode: "quiz",
+    label: "Quiz",
+    description: "Fast checks with instant explanations.",
+    targetMinutes: 8,
+    loop: ["answer", "explain", "retry missed"],
+    bestFor: "Low-stakes comprehension checks after a lesson section.",
+    output: "Score, explanations, and review cards for missed questions.",
+  },
+  {
+    mode: "exam",
+    label: "Exam",
+    description: "Longer timed attempts with summary review.",
+    targetMinutes: 30,
+    loop: ["attempt", "grade", "review readiness"],
+    bestFor: "Formal checks, unit reviews, and evidence for gradebook decisions.",
+    output: "Attempt summary, points, missed concepts, and teacher-review evidence.",
+  },
+  {
+    mode: "flashcards",
+    label: "Flashcards",
+    description: "Flip, recall, and save weak cards.",
+    targetMinutes: 10,
+    loop: ["recall", "flip", "space review"],
+    bestFor: "Vocabulary, formulas, definitions, and quick memory practice.",
+    output: "Again/almost/mastered review queue.",
+  },
+  {
+    mode: "matching",
+    label: "Matching",
+    description: "Pair terms, examples, and definitions.",
+    targetMinutes: 6,
+    loop: ["match", "check", "fix pairs"],
+    bestFor: "Connections between concepts, examples, and categories.",
+    output: "Matched pairs, missed pairs, and explanation prompts.",
+  },
+  {
+    mode: "sprint",
+    label: "Sprint",
+    description: "Timed streak practice for quick recall.",
+    targetMinutes: 5,
+    loop: ["timer", "streak", "quick retry"],
+    bestFor: "Warmups, exit reviews, and high-energy recall.",
+    output: "Elapsed time, streak signal, points, and retry set.",
+  },
+  {
+    mode: "mistake_retry",
+    label: "Mistake Retry",
+    description: "Practice only missed or weak items.",
+    targetMinutes: 7,
+    loop: ["load misses", "explain", "master"],
+    bestFor: "Closing gaps from previous attempts without repeating mastered work.",
+    output: "Mastery changes and next review date recommendations.",
+  },
+  {
+    mode: "fill_blank",
+    label: "Fill in the Blank",
+    description: "Recall key terms in context.",
+    targetMinutes: 8,
+    loop: ["read context", "fill", "compare"],
+    bestFor: "Terminology, procedures, and sentence-level academic language.",
+    output: "Missing terms, model answer, and misconception notes.",
+  },
+  {
+    mode: "true_false",
+    label: "True or False",
+    description: "Quick misconception checks.",
+    targetMinutes: 5,
+    loop: ["decide", "justify", "correct misconception"],
+    bestFor: "Surfacing common false beliefs before deeper practice.",
+    output: "Misconception list and short corrections.",
+  },
   {
     mode: "generated_from_studio",
     label: "Generated from Studio",
     description: "Create practice from notes, docs, sheets, or slides.",
     targetMinutes: 12,
+    loop: ["select Studio item", "AI generate", "attempt"],
+    bestFor: "Turning notes, documents, sheets, slides, or lesson sections into practice.",
+    output: "Generated quiz, flashcards, explanations, and saved review cards.",
   },
 ];
 
