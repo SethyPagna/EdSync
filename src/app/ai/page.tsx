@@ -18,7 +18,7 @@ export default async function AiPage({ searchParams }: AiPageProps) {
 
   return (
     <main className="min-h-screen bg-edsync-bg text-edsync-text">
-      <section className="mx-auto max-w-6xl px-4 py-8">
+      <section className="page-shell max-w-6xl space-y-5">
         <div className="rounded-xl border border-edsync-border bg-edsync-card p-6">
           <p className="text-sm font-semibold text-edsync-blue">AI insert-back workspace</p>
           <h1 className="mt-2 font-display text-4xl font-bold">AI Tutor and Prompt Builder</h1>
