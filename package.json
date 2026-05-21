@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm run build",
+    "clean:local": "node scripts/clean-local.mjs",
+    "clean:all": "node scripts/clean-local.mjs --include-node-modules",
     "check:extraction": "node scripts/check-extraction-bounds.mjs",
     "deploy:vercel": "node scripts/deploy-vercel.mjs",
     "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
