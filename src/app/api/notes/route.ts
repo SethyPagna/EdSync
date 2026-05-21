@@ -95,6 +95,36 @@ async function canCreateStudentNote(input: {
   return rows.length > 0;
 }
 
+async function canManageStudentNote(input: {
+  user: SessionUser;
+  context: TenantContext;
+  noteId: string;
+}) {
+  const isAdmin = input.user.user_metadata.role === "admin";
+  const [row] = await d1Query<{ id: string }>(
+    `SELECT sn.id
+       FROM student_notes sn
+       ${tenantObjectJoin({ objectTable: NOTE_TABLE, objectAlias: "sn", linkAlias: "note_link" })}
+       LEFT JOIN classes c ON c.id = sn.class_id
+       ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
+      WHERE (${tenantObjectPredicate({ linkAlias: "note_link" })}
+          OR (sn.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
+        AND sn.id = ?
+        AND (? = 1 OR sn.teacher_id = ?)
+      LIMIT 1`,
+    [
+      NOTE_TABLE,
+      CLASS_TABLE,
+      ...notePredicateParams(input.context.tenant.id),
+      ...classPredicateParams(input.context.tenant.id),
+      input.noteId,
+      isAdmin ? 1 : 0,
+      input.user.id,
+    ],
+  );
+  return Boolean(row);
+}
+
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
@@ -241,4 +271,80 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ data: { id }, error: null });
+}
+
+export async function PATCH(request: Request) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
+    return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
+  }
+  const context = await resolveTenantContext(user);
+  const body = (await request.json()) as {
+    id?: string;
+    title?: string;
+    body?: string;
+    visibility?: "teacher" | "student" | "guardian";
+    priority?: "low" | "normal" | "high";
+  };
+  if (!body.id) return NextResponse.json({ data: null, error: "Note id is required." }, { status: 400 });
+  const canManage = await canManageStudentNote({ user, context, noteId: body.id });
+  if (!canManage) return NextResponse.json({ data: null, error: "Note not found." }, { status: 404 });
+
+  let note;
+  try {
+    note = normalizeStudentNoteInput({
+      title: body.title,
+      body: body.body,
+      visibility: body.visibility,
+      priority: body.priority,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid student note." },
+      { status: 400 },
+    );
+  }
+
+  await d1Query(
+    `UPDATE student_notes
+        SET title = ?, body = ?, visibility = ?, priority = ?, updated_at = datetime('now')
+      WHERE id = ?`,
+    [note.title, note.body, note.visibility, note.priority, body.id],
+  );
+
+  if (note.visibility !== "teacher") {
+    const [row] = await d1Query<{ student_id: string }>("SELECT student_id FROM student_notes WHERE id = ? LIMIT 1", [body.id]);
+    if (row?.student_id) {
+      await createNotification({
+        userId: row.student_id,
+        actorId: user.id,
+        type: "student_note",
+        title: note.title,
+        message: note.body.slice(0, 180),
+        actionUrl: "/student/notes",
+        priority: note.priority,
+        metadata: { noteId: body.id, updated: true },
+      });
+    }
+  }
+
+  return NextResponse.json({ data: { id: body.id }, error: null });
+}
+
+export async function DELETE(request: Request) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
+    return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
+  }
+  const context = await resolveTenantContext(user);
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ data: null, error: "Note id is required." }, { status: 400 });
+  const canManage = await canManageStudentNote({ user, context, noteId: id });
+  if (!canManage) return NextResponse.json({ data: null, error: "Note not found." }, { status: 404 });
+
+  await d1Query("DELETE FROM tenant_object_links WHERE object_table = ? AND object_id = ?", [NOTE_TABLE, id]);
+  await d1Query("DELETE FROM student_notes WHERE id = ?", [id]);
+  return NextResponse.json({ data: { id, deleted: true }, error: null });
 }
