@@ -351,8 +351,23 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                 )}
                 {reviewCards.slice(0, 5).map((card) => (
                   <div key={card.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
-                    <p className="line-clamp-2 text-sm font-semibold">{card.prompt}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold">{card.prompt}</p>
+                      {card.mode_label && (
+                        <span className="rounded-full bg-edsync-blue/10 px-2 py-0.5 text-[11px] font-bold text-edsync-blue">
+                          {card.mode_label}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 text-xs capitalize text-edsync-subtle">{card.mastery}</p>
+                    {card.loop.length > 0 && (
+                      <p className="mt-2 line-clamp-1 text-[11px] font-semibold text-edsync-blue">
+                        {card.loop.join(" -> ")}
+                      </p>
+                    )}
+                    {card.next_action && (
+                      <p className="mt-1 line-clamp-2 text-xs text-edsync-subtle">{card.next_action}</p>
+                    )}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "again")}>
                         Again
