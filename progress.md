@@ -1,6 +1,6 @@
 # EdSync Improvement Progress
 
-**Last Updated:** 2026-05-19
+**Last Updated:** 2026-05-21
 
 **Current Track:** Comprehensive workflow, design, architecture, AI, templates, lessons, slides, discussions, quizzes, activities, and tracking improvements.
 
@@ -414,6 +414,8 @@
 - Verification for this teacher lesson generation pass: focused lesson-design/design-system tests passed with 9 tests, then `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed with 200 tests. Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `0862256c-eac1-4396-b23e-7005fc3f3dba`. Live smoke checks returned 200 for `/auth/login`, `/catalog?language=Spanish`, and `/api/catalog`; protected `/ai` and `/studio` returned 307 redirects for unauthenticated users as expected. No Cloudflare D1/R2 data cleanup or deletion was performed in this pass because no exact deletion target was specified.
 - Continued Practice loop refinement on 2026-05-21: expanded `PRACTICE_MODES` with mode-specific loop steps, best-use guidance, and expected output metadata for quiz, exam, flashcards, matching, sprint, mistake retry, fill-in-the-blank, true/false, and generated-from-Studio practice. Updated the Practice workspace so mode cards show target time and loop flow, the Timing panel explains the selected mode's use/output, and the Learning Loop panel changes with the active mode instead of showing one generic sequence.
 - Verification for this Practice loop pass: focused practice mode/engine tests passed with 7 tests, then `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed with 201 tests. Redeployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `232e61cd-5452-408c-849d-c802b0708697`. Live smoke checks returned 200 for `/auth/login`, `/catalog?language=Spanish`, and `/api/catalog`; protected `/ai` and `/studio` returned 307 redirects for unauthenticated users as expected. No Cloudflare D1/R2 data cleanup or deletion was performed in this pass because no exact deletion target was specified.
+- Continued Practice attempt context refinement on 2026-05-21: added a Practice-domain attempt context helper so saved attempts, attempt items, review cards, and learning-event payloads retain mode label, target timing, loop steps, best-use guidance, output expectations, source context, review-card count, and a dashboard-ready recommendation without changing the existing score summary shape.
+- Verification for this Practice attempt context pass: focused `attempt-context` and `modes` tests passed with 7 tests, then `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` all passed with 204 tests. Cloudflare redeploy is next for this pass. No Cloudflare D1/R2 data cleanup or deletion was performed because no exact safe deletion target was specified.
 
 ## Update Protocol
 
