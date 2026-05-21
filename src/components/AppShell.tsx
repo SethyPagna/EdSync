@@ -7,6 +7,7 @@ import { createClient } from "@/lib/edsync/client";
 import NotificationMenu from "@/components/NotificationMenu";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle, { type ThemePreference } from "@/components/ThemeToggle";
+import { SECTION_ORDER_EVENT, type SectionOrderEventDetail } from "@/components/SectionOrderSettings";
 import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
@@ -122,6 +123,49 @@ function sidebarCollapsedFromStorage() {
   return window.localStorage.getItem("edsync-sidebar-collapsed") === "true";
 }
 
+function sectionOrderStorageKey(role: AppShellProps["role"]) {
+  if (role === "admin") return "edsync-admin-settings-section-order";
+  if (role === "teacher") return "edsync-teacher-profile-section-order";
+  return "edsync-student-profile-section-order";
+}
+
+function readSectionOrder(storageKey: string) {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "[]") as unknown;
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function navOrderLabel(item: ShellNavItem) {
+  if (item.label === "Portals") return "Organizations";
+  if (item.label === "AI") return "AI providers";
+  return item.label;
+}
+
+function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: string[]) {
+  if (preferredOrder.length === 0) return groups;
+  const orderIndex = new Map(preferredOrder.map((label, index) => [label, index]));
+  const groupRank = (group: ShellNavGroup) =>
+    Math.min(...group.items.map((item) => orderIndex.get(navOrderLabel(item)) ?? Number.MAX_SAFE_INTEGER));
+
+  return groups
+    .map((group, originalIndex) => ({
+      ...group,
+      originalIndex,
+      rank: groupRank(group),
+      items: [...group.items].sort((left, right) => {
+        const leftRank = orderIndex.get(navOrderLabel(left)) ?? Number.MAX_SAFE_INTEGER;
+        const rightRank = orderIndex.get(navOrderLabel(right)) ?? Number.MAX_SAFE_INTEGER;
+        return leftRank - rightRank;
+      }),
+    }))
+    .sort((left, right) => left.rank - right.rank || left.originalIndex - right.originalIndex)
+    .map((group) => ({ label: group.label, items: group.items }));
+}
+
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/studio", label: "Studio", icon: Layers3 },
@@ -214,6 +258,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
   const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(() => workspaceContextFromStorage());
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => readSectionOrder(sectionOrderStorageKey(role)));
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
 
@@ -227,6 +272,26 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   useEffect(() => {
     window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
   }, [collapsed]);
+
+  useEffect(() => {
+    const storageKey = sectionOrderStorageKey(role);
+    setSectionOrder(readSectionOrder(storageKey));
+
+    const handleOrderChange = (event: Event) => {
+      const detail = (event as CustomEvent<SectionOrderEventDetail>).detail;
+      if (detail?.storageKey === storageKey) setSectionOrder(detail.order);
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === storageKey) setSectionOrder(readSectionOrder(storageKey));
+    };
+
+    window.addEventListener(SECTION_ORDER_EVENT, handleOrderChange);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(SECTION_ORDER_EVENT, handleOrderChange);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [role]);
 
   useEffect(() => {
     edsync.auth.getUser().then(({ data: { user } }) => {
@@ -308,7 +373,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const visibleNavGroups = useMemo(() => {
     const grantedPermissions = new Set(permissions);
 
-    return navGroupsForRole(role, navItems)
+    const groups = navGroupsForRole(role, navItems)
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
@@ -320,7 +385,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         }),
       }))
       .filter((group) => group.items.length > 0);
-  }, [navItems, permissions, planTier, role]);
+    return reorderGroupsByPreference(groups, sectionOrder);
+  }, [navItems, permissions, planTier, role, sectionOrder]);
 
   const renderNavItem = (item: ShellNavItem) => {
     const Icon = item.icon;
