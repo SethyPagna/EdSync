@@ -3,10 +3,102 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { createNotification } from "@/lib/engagement/server";
 import { normalizeStudentNoteInput } from "@/lib/notes/validation";
+import type { SessionUser } from "@/lib/auth/session";
+import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
+
+const CLASS_TABLE = "classes";
+const NOTE_TABLE = "student_notes";
+
+function classScopeParams(tenantId: string) {
+  return tenantObjectParams({ objectTable: CLASS_TABLE, tenantId });
+}
+
+function noteScopeParams(tenantId: string) {
+  return tenantObjectParams({ objectTable: NOTE_TABLE, tenantId });
+}
+
+function classPredicateParams(tenantId: string) {
+  return classScopeParams(tenantId).slice(1);
+}
+
+function notePredicateParams(tenantId: string) {
+  return noteScopeParams(tenantId).slice(1);
+}
+
+async function canCreateStudentNote(input: {
+  user: SessionUser;
+  context: TenantContext;
+  studentId: string;
+  classId?: string | null;
+}) {
+  const isAdmin = input.user.user_metadata.role === "admin";
+  if (input.classId) {
+    const [row] = await d1Query<{ id: string }>(
+      `SELECT c.id
+         FROM classes c
+         ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
+         JOIN class_enrollments ce
+           ON ce.class_id = c.id
+          AND ce.student_id = ?
+          AND ce.is_active = 1
+        WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+          AND c.id = ?
+          AND c.is_active = 1
+          AND (? = 1 OR c.teacher_id = ?)
+        LIMIT 1`,
+      [
+        CLASS_TABLE,
+        input.studentId,
+        ...classPredicateParams(input.context.tenant.id),
+        input.classId,
+        isAdmin ? 1 : 0,
+        input.user.id,
+      ],
+    );
+    return Boolean(row);
+  }
+
+  const rows = isAdmin
+    ? await d1Query<{ id: string }>(
+        `SELECT p.id
+           FROM profiles p
+           JOIN tenant_memberships tm
+             ON tm.user_id = p.id
+            AND tm.tenant_id = ?
+            AND tm.status = 'active'
+          WHERE p.id = ?
+            AND p.role = 'student'
+          LIMIT 1`,
+        [input.context.tenant.id, input.studentId],
+      )
+    : await d1Query<{ id: string }>(
+        `SELECT p.id
+           FROM profiles p
+           JOIN class_enrollments ce
+             ON ce.student_id = p.id
+            AND ce.is_active = 1
+           JOIN classes c ON c.id = ce.class_id
+           ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
+          WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+            AND p.id = ?
+            AND p.role = 'student'
+            AND c.is_active = 1
+            AND c.teacher_id = ?
+          LIMIT 1`,
+        [CLASS_TABLE, ...classPredicateParams(input.context.tenant.id), input.studentId, input.user.id],
+      );
+  return rows.length > 0;
+}
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  const context = await resolveTenantContext(user);
 
   const params = new URL(request.url).searchParams;
   const studentId = params.get("studentId");
@@ -15,11 +107,22 @@ export async function GET(request: Request) {
     const rows = await d1Query(
       `SELECT sn.*, p.full_name AS teacher_name
          FROM student_notes sn
+         ${tenantObjectJoin({ objectTable: NOTE_TABLE, objectAlias: "sn", linkAlias: "note_link" })}
+         LEFT JOIN classes c ON c.id = sn.class_id
+         ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
          JOIN profiles p ON p.id = sn.teacher_id
-        WHERE sn.student_id = ?
+        WHERE (${tenantObjectPredicate({ linkAlias: "note_link" })}
+            OR (sn.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
+          AND sn.student_id = ?
           AND sn.visibility IN ('student', 'guardian')
         ORDER BY sn.created_at DESC`,
-      [user.id],
+      [
+        NOTE_TABLE,
+        CLASS_TABLE,
+        ...notePredicateParams(context.tenant.id),
+        ...classPredicateParams(context.tenant.id),
+        user.id,
+      ],
     );
     return NextResponse.json({ data: rows, error: null });
   }
@@ -33,11 +136,31 @@ export async function GET(request: Request) {
   const rows = await d1Query(
     `SELECT sn.*, p.full_name AS student_name, p.email AS student_email
        FROM student_notes sn
+       ${tenantObjectJoin({ objectTable: NOTE_TABLE, objectAlias: "sn", linkAlias: "note_link" })}
+       LEFT JOIN classes c ON c.id = sn.class_id
+       ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
        JOIN profiles p ON p.id = sn.student_id
-      WHERE ${ownerWhere}
+      WHERE (${tenantObjectPredicate({ linkAlias: "note_link" })}
+          OR (sn.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
+        AND ${ownerWhere}
         ${studentId ? "AND sn.student_id = ?" : ""}
       ORDER BY sn.created_at DESC`,
-    studentId ? [...ownerParams, studentId] : ownerParams,
+    studentId
+      ? [
+          NOTE_TABLE,
+          CLASS_TABLE,
+          ...notePredicateParams(context.tenant.id),
+          ...classPredicateParams(context.tenant.id),
+          ...ownerParams,
+          studentId,
+        ]
+      : [
+          NOTE_TABLE,
+          CLASS_TABLE,
+          ...notePredicateParams(context.tenant.id),
+          ...classPredicateParams(context.tenant.id),
+          ...ownerParams,
+        ],
   );
   return NextResponse.json({ data: rows, error: null });
 }
@@ -47,6 +170,7 @@ export async function POST(request: Request) {
   if (!user || (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin")) {
     return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
   }
+  const context = await resolveTenantContext(user);
 
   const body = (await request.json()) as {
     studentId?: string;
@@ -69,6 +193,15 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  const canCreate = await canCreateStudentNote({
+    user,
+    context,
+    studentId: body.studentId,
+    classId: body.classId,
+  });
+  if (!canCreate) {
+    return NextResponse.json({ data: null, error: "Student not found." }, { status: 404 });
+  }
 
   const id = crypto.randomUUID();
   await d1Query(
@@ -86,6 +219,12 @@ export async function POST(request: Request) {
       note.priority,
     ],
   );
+  await linkTenantObject({
+    tenantId: context.tenant.id,
+    portalId: context.portal?.id,
+    table: NOTE_TABLE,
+    objectId: id,
+  });
 
   if (note.visibility !== "teacher") {
     await createNotification({
