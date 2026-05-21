@@ -167,7 +167,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user || (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin")) {
+  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
     return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
   }
   const context = await resolveTenantContext(user);
