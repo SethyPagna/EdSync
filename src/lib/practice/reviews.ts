@@ -1,12 +1,6 @@
-export type PracticeReviewCardRow = {
-  id: string;
-  prompt: string;
-  correct_answer: string | null;
-  explanation: string | null;
-  mastery: "again" | "almost" | "mastered";
-  next_review_at: string | null;
-  created_at: string;
-};
+import type { PracticeReviewCardRow } from "@/lib/practice/review-cards";
+
+export type { PracticeReviewCardRow } from "@/lib/practice/review-cards";
 
 type ApiResponse<T> = {
   data: T | null;
