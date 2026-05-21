@@ -24,7 +24,10 @@ export async function getPermissionSet(user: SessionUser, context: TenantContext
   const membership = context.membership;
   const direct = new Set<string>(membership?.permissions ?? []);
   if (membership?.role_profile_id) {
-    const [profile] = await d1Query<RoleProfile>("SELECT * FROM role_profiles WHERE id = ? LIMIT 1", [membership.role_profile_id]);
+    const [profile] = await d1Query<RoleProfile>(
+      "SELECT * FROM role_profiles WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL OR is_system = 1) LIMIT 1",
+      [membership.role_profile_id, context.tenant.id],
+    );
     for (const permission of profile?.permissions ?? []) direct.add(permission);
   }
 
