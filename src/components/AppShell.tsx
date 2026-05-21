@@ -128,18 +128,19 @@ export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics & Reports", icon: BarChart3 },
-  { href: "/teacher/profile", label: "Profile", icon: UserRound },
+  { href: "/teacher/profile", label: "Profile & Settings", icon: UserRound },
 ];
 
 export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/student/lessons", label: "Lessons", icon: BookOpenCheck },
+  { href: "/student/work", label: "My Work", icon: FileCheck2 },
   { href: "/practice", label: "Activities", icon: Timer },
   { href: "/ai", label: "AI Coach", icon: Brain },
-  { href: "/student/work", label: "My Work", icon: FileCheck2 },
   { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
-  { href: "/student/profile", label: "Profile", icon: UserRound },
+  { href: "/student/profile", label: "Profile & Settings", icon: UserRound },
 ];
 
 export const adminNavItems: ShellNavItem[] = [
@@ -188,8 +189,8 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
 
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
-    { label: "Learning", items: pick(["/practice", "/ai", "/student/work", "/student/grades"]) },
-    { label: "Support", items: pick(["/student/notes", "/student/discussions"]) },
+    { label: "Learning", items: pick(["/student/lessons", "/student/work"]) },
+    { label: "Support", items: pick(["/practice", "/ai", "/student/grades", "/student/notes", "/student/discussions"]) },
     { label: "Account", items: pick(["/student/profile"]) },
   ];
 }
