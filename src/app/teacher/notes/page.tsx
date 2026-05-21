@@ -72,16 +72,16 @@ export default function TeacherNotesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
+    <div className="page-shell max-w-6xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
               Student support
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Student notes</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">Teacher notes for students</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {notes.length} notes, {visibleCount} visible to students
+              {notes.length} teacher notes, {visibleCount} shared with students
             </p>
           </div>
           <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
