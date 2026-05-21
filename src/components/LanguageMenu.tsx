@@ -75,7 +75,7 @@ export default function LanguageMenu({
     <details ref={detailsRef} className={`group relative inline-block ${className}`}>
       <summary
         className={`${compact ? "premium-icon-button" : "btn-secondary px-4 py-2 text-sm"} list-none marker:hidden [&::-webkit-details-marker]:hidden`}
-        aria-label={languageLabel}
+        aria-label="Language"
         title={languageLabel}
       >
         <Languages className="h-4 w-4" />
