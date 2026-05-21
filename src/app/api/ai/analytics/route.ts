@@ -17,6 +17,14 @@ type AnalyticsLessonStat = {
   knowledgeGaps: string[];
 };
 
+type AnalyticsReviewSignal = {
+  pendingCount: number;
+  againCount: number;
+  almostCount: number;
+  topModeLabel: string;
+  copy: string;
+};
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -52,6 +60,29 @@ function normalizeLessonStat(value: unknown): AnalyticsLessonStat {
   };
 }
 
+function normalizeReviewSignal(value: unknown): AnalyticsReviewSignal {
+  const row = asRecord(value);
+  return {
+    pendingCount: boundedCount(row.pendingCount),
+    againCount: boundedCount(row.againCount),
+    almostCount: boundedCount(row.almostCount),
+    topModeLabel: safeShortText(row.topModeLabel, "Review"),
+    copy: safeShortText(row.copy, "No pending practice reviews"),
+  };
+}
+
+function boundedCount(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(1000, Math.max(0, Math.round(value)))
+    : 0;
+}
+
+function safeShortText(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, 180) : fallback;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { user } = await getAuthenticatedUser();
@@ -80,6 +111,7 @@ export async function POST(request: NextRequest) {
     const lessonStats = Array.isArray(payload.lessonStats)
       ? payload.lessonStats.map(normalizeLessonStat)
       : [];
+    const reviewSignal = normalizeReviewSignal(payload.reviewSignal);
     const aiContext = await loadAiUserContext(user.id);
 
     const atRisk = studentStats.filter((student) => (student.avgScore ?? 0) < 60);
@@ -114,6 +146,9 @@ ${aiContext.prompt}
 - Advanced (80%+): ${advanced.length}
 - Reflection entries logged: ${reflectionsLogged}
 - Low-confidence reflections (1-2/5): ${lowConfidenceReflections}
+- Pending practice reviews: ${reviewSignal.pendingCount}
+- Practice review mode needing attention: ${reviewSignal.topModeLabel}
+- Practice review status: ${reviewSignal.copy}
 - Common knowledge gaps: ${uniqueGaps.slice(0, 6).join(", ") || "none identified yet"}
 - Avg class score: ${classAverage}%
 `;
