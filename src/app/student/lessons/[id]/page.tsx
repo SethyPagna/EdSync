@@ -51,6 +51,20 @@ type ExtendedLearningPayload = {
   quiz?: unknown;
 };
 
+const ACTIVE_TICK_MS = 15_000;
+const ACTIVE_IDLE_LIMIT_MS = 45_000;
+const ACTIVE_FLUSH_MINUTES = 1;
+const TRACKED_LESSON_PHASES = new Set<Phase>([
+  "diagnostic",
+  "learning",
+  "quiz_section",
+  "micro_check",
+  "final_quiz",
+  "reflection",
+  "choose_path",
+  "extended_learning",
+]);
+
 function isExtendedQuizQuestion(value: unknown): value is ExtendedQuizQuestion {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const question = (value as { question?: unknown }).question;
@@ -601,6 +615,10 @@ export default function StudentLesson() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<StudentProgress | null>(null);
+  const phaseRef = useRef<Phase>("loading");
+  const pendingActiveMinutesRef = useRef(0);
+  const lastInteractionAtRef = useRef(Date.now());
 
   // Section quiz state
   const [sectionQs, setSectionQs] = useState<QuizQuestion[]>([]);
@@ -608,6 +626,77 @@ export default function StudentLesson() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  const markActiveLearning = useCallback(() => {
+    lastInteractionAtRef.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    const flushActiveMinutes = async () => {
+      const progressRecord = progressRef.current;
+      const pendingMinutes = pendingActiveMinutesRef.current;
+      if (!progressRecord || pendingMinutes < 0.05) return;
+
+      pendingActiveMinutesRef.current = 0;
+      const now = new Date().toISOString();
+      const nextTimeSpent = Number(progressRecord.time_spent ?? 0) + pendingMinutes;
+      const { error } = await edsync
+        .from("student_progress")
+        .update({ time_spent: nextTimeSpent, last_active: now })
+        .eq("id", progressRecord.id);
+
+      if (error) {
+        pendingActiveMinutesRef.current += pendingMinutes;
+        return;
+      }
+
+      setProgress((current) =>
+        current && current.id === progressRecord.id
+          ? { ...current, time_spent: nextTimeSpent, last_active: now }
+          : current,
+      );
+    };
+
+    const recordVisibleTick = () => {
+      const visible = typeof document === "undefined" || !document.hidden;
+      const isTrackedPhase = TRACKED_LESSON_PHASES.has(phaseRef.current);
+      const recentlyActive = Date.now() - lastInteractionAtRef.current <= ACTIVE_IDLE_LIMIT_MS;
+      if (!visible || !isTrackedPhase || !recentlyActive || !progressRef.current) return;
+
+      pendingActiveMinutesRef.current += ACTIVE_TICK_MS / 60_000;
+      if (pendingActiveMinutesRef.current >= ACTIVE_FLUSH_MINUTES) {
+        void flushActiveMinutes();
+      }
+    };
+
+    const flushWhenHidden = () => {
+      if (document.hidden) void flushActiveMinutes();
+    };
+
+    const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart"];
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, markActiveLearning, { passive: true });
+    });
+    document.addEventListener("visibilitychange", flushWhenHidden);
+    const timer = window.setInterval(recordVisibleTick, ACTIVE_TICK_MS);
+
+    return () => {
+      window.clearInterval(timer);
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, markActiveLearning);
+      });
+      document.removeEventListener("visibilitychange", flushWhenHidden);
+      void flushActiveMinutes();
+    };
+  }, [edsync, markActiveLearning]);
 
   // Memoized filtered questions for performance
   const diagQs = useMemo(
