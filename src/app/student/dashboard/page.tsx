@@ -21,11 +21,10 @@ import {
   BookOpenCheck,
   CalendarClock,
   CheckCircle2,
-  Flame,
   GraduationCap,
   Megaphone,
   Plus,
-  Sparkles,
+  Timer,
   Target,
 } from "lucide-react";
 
@@ -66,6 +65,13 @@ function formatPlannerDate(value: string | null) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatMinutes(totalMinutes: number) {
+  if (totalMinutes < 60) return `${Math.max(0, Math.round(totalMinutes))}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
 export default function StudentDashboard() {
@@ -339,6 +345,10 @@ export default function StudentDashboard() {
   }, [lessons]);
 
   const recommendation = active[0] || next[0] || completed[0];
+  const totalTimeSpent = useMemo(
+    () => lessons.reduce((sum, lesson) => sum + Number(lesson.progress?.time_spent ?? 0), 0),
+    [lessons],
+  );
   const reviewRecommendation = useMemo(
     () => summarizePracticeReviewCards(reviewCards),
     [reviewCards],
@@ -370,12 +380,12 @@ export default function StudentDashboard() {
           </div>
           <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 shadow-sm">
             <div className="flex items-center gap-3">
-              <Flame className="h-5 w-5 text-edsync-amber" />
+              <Timer className="h-5 w-5 text-edsync-blue" />
               <div>
                 <p className="font-display text-2xl font-bold">
-                  {profile?.streak_days ?? 0}
+                  {formatMinutes(totalTimeSpent)}
                 </p>
-                <p className="text-xs text-edsync-subtle">day streak</p>
+                <p className="text-xs text-edsync-subtle">active learning time</p>
               </div>
             </div>
           </div>
@@ -384,9 +394,9 @@ export default function StudentDashboard() {
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "XP",
-              value: profile?.total_xp ?? 0,
-              icon: Sparkles,
+              label: "Time spent",
+              value: formatMinutes(totalTimeSpent),
+              icon: Timer,
               tone: "text-edsync-cyan",
             },
             {
@@ -439,7 +449,7 @@ export default function StudentDashboard() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-amber/15 text-edsync-amber">
-                      <Flame className="h-5 w-5" />
+                      <GraduationCap className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
