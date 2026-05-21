@@ -5,6 +5,9 @@ import { d1Query } from "@/lib/db/d1";
 import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateUploadFile } from "@/lib/security/upload";
+import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+
+const CONTENT_EXTRACTION_TABLE = "content_extractions";
 
 function fileKind(file: File) {
   if (file.type.startsWith("image/")) return "image";
@@ -28,6 +31,8 @@ function mediaPrompt(file: File, kind: string) {
 }
 
 async function saveExtraction(input: {
+  tenantId: string;
+  portalId?: string | null;
   userId: string;
   file: File;
   kind: string;
@@ -35,13 +40,14 @@ async function saveExtraction(input: {
   warning: string | null;
   metadata?: Record<string, unknown>;
 }) {
+  const id = crypto.randomUUID();
   await d1Query(
     `INSERT INTO content_extractions (
        id, user_id, file_name, content_type, size_bytes, extraction_kind,
        extracted_text, warning, metadata, created_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     [
-      crypto.randomUUID(),
+      id,
       input.userId,
       input.file.name,
       input.file.type || null,
@@ -50,11 +56,19 @@ async function saveExtraction(input: {
       input.text,
       input.warning,
       JSON.stringify({
+        tenantId: input.tenantId,
         lastModified: input.file.lastModified || null,
         ...input.metadata,
       }),
     ],
   );
+  await linkTenantObject({
+    tenantId: input.tenantId,
+    portalId: input.portalId,
+    table: CONTENT_EXTRACTION_TABLE,
+    objectId: id,
+  });
+  return id;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,6 +76,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const context = await resolveTenantContext(user);
 
   const rate = await enforceRateLimit({
     request,
@@ -133,7 +148,15 @@ export async function POST(request: NextRequest) {
   const mediaText = mediaPrompt(file, kind);
   if (mediaText) {
     const warning = "Media files are stored as lesson context. Add captions, timestamps, or alt text before publishing.";
-    await saveExtraction({ userId: user.id, file, kind, text: mediaText, warning });
+    await saveExtraction({
+      tenantId: context.tenant.id,
+      portalId: context.portal?.id,
+      userId: user.id,
+      file,
+      kind,
+      text: mediaText,
+      warning,
+    });
     return NextResponse.json({
       text: mediaText,
       fileName: file.name,
@@ -150,6 +173,8 @@ export async function POST(request: NextRequest) {
     const text = normalizeExtractedText(new TextDecoder("utf-8").decode(buffer));
     const responseText = `Document: "${file.name}"\n\n${text}`;
     await saveExtraction({
+      tenantId: context.tenant.id,
+      portalId: context.portal?.id,
       userId: user.id,
       file,
       kind,
@@ -170,6 +195,8 @@ export async function POST(request: NextRequest) {
       ? "No reliable text was found. Use the generated outline as a starting point and review carefully before publishing."
       : "PDF and Word extraction uses a safe sampled-text fallback in this deployment. Review generated lessons before publishing.";
   await saveExtraction({
+    tenantId: context.tenant.id,
+    portalId: context.portal?.id,
     userId: user.id,
     file,
     kind,
