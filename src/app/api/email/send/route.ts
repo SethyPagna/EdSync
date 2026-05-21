@@ -13,6 +13,11 @@ import {
 } from "@/lib/engagement/email-validation";
 import { queueEmail } from "@/lib/engagement/server";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 type EmailStatus = "queued" | "composed" | "sent" | "failed" | "skipped";
@@ -80,11 +85,18 @@ export async function POST(request: Request) {
            FROM class_enrollments ce
            JOIN classes c ON c.id = ce.class_id
            JOIN profiles p ON p.id = ce.student_id
-          WHERE ce.class_id = ?
+           ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+          WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+            AND ce.class_id = ?
             AND ce.is_active = 1
             AND c.is_active = 1
             AND (? = 1 OR c.teacher_id = ?)`,
-        [classId, user.user_metadata.role === "admin" ? 1 : 0, user.id],
+        [
+          ...tenantObjectParams({ objectTable: "classes", tenantId: context.tenant.id }),
+          classId,
+          user.user_metadata.role === "admin" ? 1 : 0,
+          user.id,
+        ],
       )
     : [];
   if (classId && classRecipients.length === 0 && !body.to) {
