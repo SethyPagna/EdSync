@@ -5,6 +5,10 @@ import { getSessionUser } from "@/lib/auth/session";
 import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateObjectPath, validateUploadFile } from "@/lib/security/upload";
+import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+
+const MEDIA_ASSET_TABLE = "media_assets";
+const STORAGE_OBJECT_TABLE = "storage_objects";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -14,6 +18,7 @@ export async function POST(request: Request) {
       { status: 401 },
     );
   }
+  const context = await resolveTenantContext(user);
 
   const form = await request.formData();
   const file = form.get("file");
@@ -73,7 +78,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const objectKey = `${env}/users/${user.id}/${safeBucketAlias}/${safePath}`.replace(/\/+/g, "/");
+  const objectKey = `${env}/tenants/${context.tenant.id}/users/${user.id}/${safeBucketAlias}/${safePath}`.replace(/\/+/g, "/");
   const fileBuffer = Buffer.from(await file.arrayBuffer());
   const malwareScan = await scanUploadBuffer({
     buffer: fileBuffer,
@@ -124,13 +129,20 @@ export async function POST(request: Request) {
       JSON.stringify({ malwareScan }),
     ],
   );
+  await linkTenantObject({
+    tenantId: context.tenant.id,
+    portalId: context.portal?.id,
+    table: STORAGE_OBJECT_TABLE,
+    objectId: storageObjectId,
+  });
 
+  const mediaAssetId = crypto.randomUUID();
   await d1Query(
     `INSERT INTO media_assets (
        id, owner_id, storage_object_id, asset_type, title, public_url, source, metadata, created_at
      ) VALUES (?, ?, ?, ?, ?, ?, 'upload', ?, datetime('now'))`,
     [
-      crypto.randomUUID(),
+      mediaAssetId,
       user.id,
       storageObjectId,
       safeFile.assetType,
@@ -145,9 +157,17 @@ export async function POST(request: Request) {
       }),
     ],
   );
+  await linkTenantObject({
+    tenantId: context.tenant.id,
+    portalId: context.portal?.id,
+    table: MEDIA_ASSET_TABLE,
+    objectId: mediaAssetId,
+  });
 
   return NextResponse.json({
     data: {
+      id: mediaAssetId,
+      storageObjectId,
       path: uploaded.key,
       publicUrl: uploaded.publicUrl,
       assetType: safeFile.assetType,
