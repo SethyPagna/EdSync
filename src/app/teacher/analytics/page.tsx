@@ -1,6 +1,11 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
+import { normalizePracticeReviewCardRow, type PracticeReviewCardRow } from "@/lib/practice/review-cards";
+import {
+  summarizeTeacherPracticeReviews,
+  type TeacherPracticeReviewSignal,
+} from "@/lib/practice/teacher-review-signals";
 import type { Lesson } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -95,6 +100,9 @@ export default function TeacherAnalytics() {
   const [loading, setLoading] = useState(true);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [gettingSuggestions, setGettingSuggestions] = useState(false);
+  const [reviewSignal, setReviewSignal] = useState<TeacherPracticeReviewSignal>(
+    summarizeTeacherPracticeReviews([]),
+  );
   const edsync = useMemo(() => createClient(), []);
 
   const loadData = useCallback(async () => {
@@ -119,6 +127,7 @@ export default function TeacherAnalytics() {
         setStudentStats([]);
         setSocraticLog([]);
         setReflectionLog([]);
+        setReviewSignal(summarizeTeacherPracticeReviews([]));
         return;
       }
 
@@ -154,6 +163,20 @@ export default function TeacherAnalytics() {
           profileMap.set(profile.id, { full_name: profile.full_name, email: profile.email }),
         );
       }
+
+      const reviewRows = allStudentIds.length
+        ? ((await edsync
+            .from("practice_review_cards")
+            .select("*")
+            .in("user_id", allStudentIds)
+            .neq("mastery", "mastered")
+            .order("created_at", { ascending: false })
+            .limit(100)).data || [])
+        : [];
+      const reviewCards = (reviewRows as Record<string, unknown>[]).map((row) =>
+        normalizePracticeReviewCardRow(row),
+      );
+      setReviewSignal(summarizeTeacherPracticeReviews(reviewCards as PracticeReviewCardRow[]));
 
       const progressByLesson = new Map<string, AnalyticsProgressRow[]>();
       progressData.forEach((progress) => {
@@ -354,7 +377,7 @@ export default function TeacherAnalytics() {
     .slice(0, 8);
 
   const chartData = filteredLessonStats.map((l) => ({
-    name: l.title.length > 16 ? l.title.slice(0, 14) + "…" : l.title,
+    name: l.title.length > 16 ? l.title.slice(0, 14) + "..." : l.title,
     Started: l.studentsStarted,
     Completed: l.studentsCompleted,
     Score: l.avgScore ?? 0,
@@ -397,14 +420,14 @@ export default function TeacherAnalytics() {
         {[
           {
             label: "Total Students",
-            value: loading ? "…" : studentStats.length,
+            value: loading ? "..." : studentStats.length,
             icon: "STU",
             color: "blue",
           },
           {
             label: "Class Avg Score",
             value: loading
-              ? "…"
+              ? "..."
               : studentStats.length === 0
                 ? "N/A"
                 : `${avgScore}%`,
@@ -413,28 +436,28 @@ export default function TeacherAnalytics() {
           },
           {
             label: "At Risk (<60%)",
-            value: loading ? "…" : atRisk.length,
+            value: loading ? "..." : atRisk.length,
             icon: "RISK",
             color: "red",
           },
           {
             label: "AI Interactions",
             value: loading
-              ? "…"
+              ? "..."
               : studentStats.reduce((a, s) => a + s.aiInteractions, 0),
             icon: "AI",
             color: "purple",
           },
           {
             label: "Reflections Logged",
-            value: loading ? "…" : totalReflections,
+            value: loading ? "..." : totalReflections,
             icon: "RFL",
             color: "cyan",
           },
           {
-            label: "Low Confidence Reflections",
-            value: loading ? "…" : lowConfidenceReflections,
-            icon: "LC",
+            label: "Practice Reviews",
+            value: loading ? "..." : reviewSignal.pendingCount,
+            icon: "REV",
             color: "amber",
           },
         ].map((s, i) => (
@@ -608,7 +631,7 @@ export default function TeacherAnalytics() {
                             >
                               <span className="block truncate">
                                 {l.title.slice(0, 14)}
-                                {l.title.length > 14 ? "…" : ""}
+                                {l.title.length > 14 ? "..." : ""}
                               </span>
                             </th>
                           ))}
@@ -971,6 +994,28 @@ export default function TeacherAnalytics() {
           {/* ── INTERVENTIONS ── */}
           {tab === "interventions" && (
             <div className="animate-fade-in space-y-6">
+              {reviewSignal.pendingCount > 0 && (
+                <div className="edsync-card border-edsync-amber/30 bg-edsync-amber/5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
+                        Practice review queue
+                      </p>
+                      <h3 className="mt-1 font-display text-lg font-semibold text-edsync-text">
+                        {reviewSignal.pendingCount} missed practice item
+                        {reviewSignal.pendingCount === 1 ? "" : "s"} need attention
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-edsync-subtle">
+                        {reviewSignal.copy}. Use this alongside confidence and score signals before assigning more work.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-sm font-semibold text-edsync-amber">
+                      {reviewSignal.topModeLabel}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="edsync-card">
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -1105,7 +1150,7 @@ export default function TeacherAnalytics() {
                           {entry.lesson_title && (
                             <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20 text-xs">
                               {entry.lesson_title.slice(0, 20)}
-                              {entry.lesson_title.length > 20 ? "…" : ""}
+                              {entry.lesson_title.length > 20 ? "..." : ""}
                             </span>
                           )}
                           <span className="text-xs text-edsync-subtle">
