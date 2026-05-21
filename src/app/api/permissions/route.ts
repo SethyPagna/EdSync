@@ -12,7 +12,9 @@ export async function GET() {
   const context = await resolveTenantContext(user);
   const [catalogRows, roleRows, granted] = await Promise.all([
     d1Query("SELECT * FROM permission_catalog ORDER BY category, label"),
-    d1Query("SELECT * FROM role_profiles WHERE tenant_id = ? OR tenant_id IS NULL ORDER BY is_system DESC, label", [context.tenant.id]),
+    d1Query("SELECT * FROM role_profiles WHERE tenant_id = ? OR tenant_id IS NULL OR is_system = 1 ORDER BY is_system DESC, label", [
+      context.tenant.id,
+    ]),
     getPermissionSet(user, context),
   ]);
   const catalog = catalogRows.map((row) => deserializeRow("permission_catalog", row));
@@ -99,6 +101,13 @@ export async function POST(request: Request) {
       { data: null, error: error instanceof Error ? error.message : "Invalid role profile." },
       { status: 400 },
     );
+  }
+  const [existingProfile] = await d1Query<{ id: string }>(
+    "SELECT id FROM role_profiles WHERE tenant_id = ? AND profile_key = ? LIMIT 1",
+    [context.tenant.id, profileInput.profileKey],
+  );
+  if (existingProfile) {
+    return NextResponse.json({ data: null, error: "A role profile with this key already exists for this organization." }, { status: 409 });
   }
   await d1Query(
     `INSERT INTO role_profiles (id, tenant_id, profile_key, label, description, permissions, is_system, created_at, updated_at)
