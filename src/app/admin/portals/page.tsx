@@ -283,19 +283,19 @@ export default function AdminPortalsPage() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                  <div className="flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 lg:justify-end">
                     {editing ? (
                       <>
-                        <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => savePortal(portal)} disabled={busy}>
+                        <button type="button" className="btn-primary flex-none px-3 py-2 text-sm" onClick={() => savePortal(portal)} disabled={busy}>
                           <Save className="h-4 w-4" /> Save
                         </button>
-                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}>
+                        <button type="button" className="btn-secondary flex-none px-3 py-2 text-sm" onClick={() => setEditingId(null)}>
                           <X className="h-4 w-4" /> Cancel
                         </button>
                       </>
                     ) : (
                       <>
-                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startEdit(portal)}>
+                        <button type="button" className="btn-secondary flex-none px-3 py-2 text-sm" onClick={() => startEdit(portal)}>
                           <Edit3 className="h-4 w-4" /> Edit
                         </button>
                         <ActionMenu label="More">
@@ -310,7 +310,7 @@ export default function AdminPortalsPage() {
                           </button>
                         </ActionMenu>
                         {portal.audience === "public" && (
-                          <Link href={`/org/${portal.slug}`} className="btn-ghost px-3 py-2 text-sm">
+                          <Link href={`/org/${portal.slug}`} className="btn-ghost flex-none px-3 py-2 text-sm">
                             <Globe2 className="h-4 w-4" /> Open
                           </Link>
                         )}
