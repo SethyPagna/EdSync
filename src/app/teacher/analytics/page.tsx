@@ -334,7 +334,7 @@ export default function TeacherAnalytics() {
       const res = await fetch("/api/ai/analytics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentStats, lessonStats }),
+        body: JSON.stringify({ studentStats, lessonStats, reviewSignal }),
       });
       const data = await res.json();
       if (data.suggestions) setAiSuggestions(data.suggestions);
