@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { summarizeTeacherPracticeReviews } from "@/lib/practice/teacher-review-signals";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  fetchTeacherPracticeReviewSignal,
+  summarizeTeacherPracticeReviews,
+} from "@/lib/practice/teacher-review-signals";
 import type { PracticeReviewCardRow } from "@/lib/practice/review-cards";
 
 const card: PracticeReviewCardRow = {
@@ -18,7 +21,14 @@ const card: PracticeReviewCardRow = {
   next_action: "Retry missed items.",
 };
 
+const originalFetch = global.fetch;
+
 describe("teacher practice review signals", () => {
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
   it("summarizes pending student review cards for teacher attention", () => {
     const signal = summarizeTeacherPracticeReviews([
       card,
@@ -43,6 +53,35 @@ describe("teacher practice review signals", () => {
       againCount: 0,
       almostCount: 0,
       topModeLabel: "Review",
+      copy: "No pending practice reviews",
+    });
+  });
+
+  it("loads the server-scoped teacher review signal", async () => {
+    global.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            pendingCount: 3,
+            againCount: 2,
+            almostCount: 1,
+            topModeLabel: "Sprint",
+            copy: "2 need another try in Sprint",
+          },
+        }),
+      )) as typeof fetch;
+
+    await expect(fetchTeacherPracticeReviewSignal()).resolves.toMatchObject({
+      pendingCount: 3,
+      topModeLabel: "Sprint",
+    });
+  });
+
+  it("falls back to an empty signal when the scoped endpoint fails", async () => {
+    global.fetch = (async () => new Response(null, { status: 403 })) as typeof fetch;
+
+    await expect(fetchTeacherPracticeReviewSignal()).resolves.toMatchObject({
+      pendingCount: 0,
       copy: "No pending practice reviews",
     });
   });
