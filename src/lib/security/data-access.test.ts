@@ -13,6 +13,12 @@ const user = {
   user_metadata: { role: "teacher" },
 } satisfies SessionUser;
 
+const student = {
+  id: "student-1",
+  email: "student@example.com",
+  user_metadata: { role: "student" },
+} satisfies SessionUser;
+
 const queryMock = vi.mocked(d1Query);
 
 describe("authorizeDataRequest", () => {
@@ -74,6 +80,46 @@ describe("authorizeDataRequest", () => {
         table: "quiz_questions",
         action: "delete",
         filters: [{ op: "eq", column: "lesson_id", value: "lesson-1" }],
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("allows student progress updates when the request is scoped to the signed-in student", async () => {
+    await expect(
+      authorizeDataRequest(student, {
+        table: "student_progress",
+        action: "update",
+        values: { last_active_at: new Date().toISOString() },
+        filters: [
+          { op: "eq", column: "student_id", value: "student-1" },
+          { op: "eq", column: "lesson_id", value: "lesson-1" },
+        ],
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("blocks student record updates when ownership cannot be verified", async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await expect(
+      authorizeDataRequest(student, {
+        table: "learning_goals",
+        action: "update",
+        values: { status: "complete" },
+        filters: [{ op: "eq", column: "id", value: "goal-2" }],
+      }),
+    ).resolves.toBe("Student record changes must target the signed-in student.");
+  });
+
+  it("allows student record updates by id after verifying ownership", async () => {
+    queryMock.mockResolvedValueOnce([{ id: "goal-1" }]);
+
+    await expect(
+      authorizeDataRequest(student, {
+        table: "learning_goals",
+        action: "update",
+        values: { status: "complete" },
+        filters: [{ op: "eq", column: "id", value: "goal-1" }],
       }),
     ).resolves.toBeNull();
   });
