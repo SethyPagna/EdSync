@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { Brain, CreditCard, Edit3, LockKeyhole, Save, ShieldCheck, SlidersHorizontal, Trash2, UsersRound, X } from "lucide-react";
+import SectionOrderSettings from "@/components/SectionOrderSettings";
 import { InfoPopover } from "@/components/WorkspacePrimitives";
 
 type Flag = {
@@ -139,6 +140,21 @@ export default function AdminSettingsPage() {
           </Link>
         ))}
       </section>
+
+      <SectionOrderSettings
+        storageKey="edsync-admin-settings-section-order"
+        sections={[
+          "Dashboard",
+          "Users",
+          "Organizations",
+          "Permissions",
+          "Governance",
+          "AI providers",
+          "Catalog",
+          "Security",
+          "Settings",
+        ]}
+      />
 
       <section className="edsync-card overflow-hidden p-0">
         <div className="border-b border-edsync-border px-4 py-3">
