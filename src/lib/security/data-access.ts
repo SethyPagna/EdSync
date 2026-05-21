@@ -1,6 +1,7 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import type { DataRequest } from "@/lib/db/d1";
+import type { TableName } from "@/lib/db/schema";
 
 const SERVER_ONLY_TABLES = new Set([
   "auth_users",
@@ -59,6 +60,15 @@ const SERVER_ONLY_TABLES = new Set([
   "practice_attempts",
   "practice_attempt_items",
   "practice_review_cards",
+]);
+
+const STUDENT_OWNED_TABLES = new Set<TableName>([
+  "learning_goals",
+  "learning_reflections",
+  "student_progress",
+  "quiz_attempts",
+  "socratic_interactions",
+  "knowledge_nodes",
 ]);
 
 function hasFilter(request: DataRequest, column: string, value: unknown) {
@@ -144,6 +154,31 @@ async function authorizeTeacherOwnedInsert(user: SessionUser, request: DataReque
   return null;
 }
 
+async function recordBelongsToStudent(userId: string, table: TableName, id: unknown) {
+  if (typeof id !== "string" || !id) return false;
+  const [row] = await d1Query<{ id: string }>(`SELECT id FROM ${table} WHERE id = ? AND student_id = ? LIMIT 1`, [id, userId]);
+  return Boolean(row);
+}
+
+async function authorizeStudentOwnedWrite(user: SessionUser, request: DataRequest) {
+  if (!STUDENT_OWNED_TABLES.has(request.table)) return null;
+
+  if (request.action === "insert" || request.action === "upsert") {
+    return valuesArray(request).every((row) => row.student_id === user.id)
+      ? null
+      : "Student records must belong to the signed-in student.";
+  }
+
+  if (request.action === "update" || request.action === "delete") {
+    if (hasFilter(request, "student_id", user.id)) return null;
+    return (await recordBelongsToStudent(user.id, request.table, eqValue(request, "id")))
+      ? null
+      : "Student record changes must target the signed-in student.";
+  }
+
+  return null;
+}
+
 export async function authorizeDataRequest(user: SessionUser, request: DataRequest) {
   if (SERVER_ONLY_TABLES.has(request.table)) {
     return "This table is server-only.";
@@ -182,21 +217,8 @@ export async function authorizeDataRequest(user: SessionUser, request: DataReque
   const teacherOwnedWriteDenied = await authorizeTeacherOwnedWrite(user, request);
   if (teacherOwnedWriteDenied) return teacherOwnedWriteDenied;
 
-  if (
-    [
-      "learning_goals",
-      "learning_reflections",
-      "student_progress",
-      "quiz_attempts",
-      "socratic_interactions",
-      "knowledge_nodes",
-    ].includes(request.table) &&
-    (request.action === "insert" || request.action === "upsert")
-  ) {
-    return valuesArray(request).every((row) => row.student_id === user.id)
-      ? null
-      : "Student records must belong to the signed-in student.";
-  }
+  const studentOwnedWriteDenied = await authorizeStudentOwnedWrite(user, request);
+  if (studentOwnedWriteDenied) return studentOwnedWriteDenied;
 
   if (request.table === "lesson_assignments" && (request.action === "insert" || request.action === "upsert")) {
     return valuesArray(request).every((row) => row.assigned_by === user.id)
