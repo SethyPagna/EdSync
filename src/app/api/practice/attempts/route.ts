@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
+import type { SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import {
   createReviewCards,
@@ -12,8 +13,18 @@ import {
   buildPracticeReviewContext,
 } from "@/lib/practice/attempt-context";
 import { isPracticeMode } from "@/lib/practice/modes";
-import { resolveTenantContext } from "@/lib/tenancy";
+import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
 import type { PracticeMode } from "@/types";
+
+const ATTEMPT_TABLE = "practice_attempts";
+const CLASS_TABLE = "classes";
+const LESSON_TABLE = "lessons";
+const LOCAL_PRACTICE_SOURCE_ID = "local-practice";
 
 type PracticeAttemptBody = {
   mode?: string;
@@ -23,6 +34,88 @@ type PracticeAttemptBody = {
   targetSeconds?: number | null;
   items?: PracticeItem[];
 };
+
+function predicateParams(objectTable: string, tenantId: string) {
+  return tenantObjectParams({ objectTable, tenantId }).slice(1);
+}
+
+async function canUseStudioSource(input: {
+  user: SessionUser;
+  context: TenantContext;
+  sourceId: string;
+}) {
+  const [row] = await d1Query<{ id: string }>(
+    `SELECT id
+       FROM studio_documents
+      WHERE id = ?
+        AND tenant_id = ?
+        AND (owner_id = ? OR status = 'published')
+      LIMIT 1`,
+    [input.sourceId, input.context.tenant.id, input.user.id],
+  );
+  return Boolean(row);
+}
+
+async function canUseLessonSource(input: {
+  user: SessionUser;
+  context: TenantContext;
+  sourceId: string;
+}) {
+  const [row] = await d1Query<{ id: string }>(
+    `SELECT l.id
+       FROM lessons l
+       ${tenantObjectJoin({ objectTable: LESSON_TABLE, objectAlias: "l", linkAlias: "lesson_link" })}
+       LEFT JOIN classes c ON c.id = l.class_id
+       ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
+      WHERE l.id = ?
+        AND (${tenantObjectPredicate({ linkAlias: "lesson_link" })}
+          OR (l.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
+        AND (
+          l.class_id IS NULL
+          OR EXISTS (
+            SELECT 1
+              FROM class_enrollments ce
+             WHERE ce.class_id = l.class_id
+               AND ce.student_id = ?
+               AND ce.is_active = 1
+          )
+        )
+      LIMIT 1`,
+    [
+      LESSON_TABLE,
+      CLASS_TABLE,
+      input.sourceId,
+      ...predicateParams(LESSON_TABLE, input.context.tenant.id),
+      ...predicateParams(CLASS_TABLE, input.context.tenant.id),
+      input.user.id,
+    ],
+  );
+  return Boolean(row);
+}
+
+async function canUsePracticeSource(input: {
+  user: SessionUser;
+  context: TenantContext;
+  sourceType: string;
+  sourceId: string | null;
+}) {
+  if (!input.sourceId || input.sourceId === LOCAL_PRACTICE_SOURCE_ID) return true;
+  if (input.sourceType === "studio" || input.sourceType === "studio_document") {
+    return canUseStudioSource({
+      user: input.user,
+      context: input.context,
+      sourceId: input.sourceId,
+    });
+  }
+  if (input.sourceType === "lesson") {
+    return canUseLessonSource({
+      user: input.user,
+      context: input.context,
+      sourceId: input.sourceId,
+    });
+  }
+  return true;
+}
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -43,6 +136,15 @@ export async function POST(request: Request) {
   const attemptId = crypto.randomUUID();
   const sourceType = body.sourceType || "studio";
   const sourceId = body.sourceId || null;
+  const canUseSource = await canUsePracticeSource({
+    user,
+    context,
+    sourceType,
+    sourceId,
+  });
+  if (!canUseSource) {
+    return NextResponse.json({ data: null, error: "Practice source not found." }, { status: 404 });
+  }
   const summary = summarizePracticeAttempt({
     mode,
     items: body.items,
@@ -76,6 +178,12 @@ export async function POST(request: Request) {
       JSON.stringify({ ...summary, context: attemptContext }),
     ],
   );
+  await linkTenantObject({
+    tenantId: context.tenant.id,
+    portalId: context.portal?.id,
+    table: ATTEMPT_TABLE,
+    objectId: attemptId,
+  });
 
   const reviewCards = createReviewCards(body.items, attemptId);
   for (const item of body.items) {
