@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const denied = authorizeDataRequest(user, payload);
+  const denied = await authorizeDataRequest(user, payload);
   if (denied) {
     await logSecurityEvent({
       request,
