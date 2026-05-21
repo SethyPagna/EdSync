@@ -248,7 +248,7 @@ function LessonRow({
         <div className="flex items-center gap-2">
           <Link
             href={`/teacher/lessons/${lesson.id}`}
-            className="btn-primary flex-1 justify-center py-2 text-sm lg:flex-none"
+            className="btn-primary min-w-0 flex-1 justify-center py-2 text-sm"
           >
             Edit
           </Link>
