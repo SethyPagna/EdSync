@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ClipboardList, MessageSquareText, TrendingUp } from "lucide-react";
+import { CheckCircle2, ClipboardList, Eye, EyeOff, MessageSquareText, TrendingUp } from "lucide-react";
 
 type Score = {
   id: string;
@@ -14,6 +14,17 @@ type Score = {
   category_name?: string | null;
   updated_at: string;
 };
+type GradeVisibility = {
+  overall: boolean;
+  scores: boolean;
+  feedback: boolean;
+};
+
+const defaultVisibility: GradeVisibility = {
+  overall: true,
+  scores: true,
+  feedback: true,
+};
 
 function percentText(value: number | null) {
   return value === null ? "Not graded" : `${value}%`;
@@ -22,6 +33,7 @@ function percentText(value: number | null) {
 export default function StudentGradesPage() {
   const [scores, setScores] = useState<Score[]>([]);
   const [overall, setOverall] = useState<number | null>(null);
+  const [visibility, setVisibility] = useState<GradeVisibility>(defaultVisibility);
 
   useEffect(() => {
     fetch("/api/grades", { cache: "no-store" })
@@ -30,7 +42,23 @@ export default function StudentGradesPage() {
         setScores(payload.data?.scores ?? []);
         setOverall(payload.data?.overall ?? null);
       });
+    try {
+      const saved = JSON.parse(window.localStorage.getItem("edsync-student-grade-visibility") || "null") as
+        | Partial<GradeVisibility>
+        | null;
+      if (saved) setVisibility({ ...defaultVisibility, ...saved });
+    } catch {
+      setVisibility(defaultVisibility);
+    }
   }, []);
+
+  const toggleVisibility = (key: keyof GradeVisibility) => {
+    setVisibility((current) => {
+      const next = { ...current, [key]: !current[key] };
+      window.localStorage.setItem("edsync-student-grade-visibility", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const gradedScores = useMemo(() => scores.filter((score) => score.percent !== null), [scores]);
   const feedbackCount = useMemo(() => scores.filter((score) => Boolean(score.feedback)).length, [scores]);
@@ -50,13 +78,50 @@ export default function StudentGradesPage() {
           </div>
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-center">
             <p className="text-sm font-semibold text-edsync-subtle">Overall</p>
-            <p className="mt-2 font-display text-4xl font-bold">{percentText(overall)}</p>
+            <p className="mt-2 font-display text-4xl font-bold">{visibility.overall ? percentText(overall) : "Hidden"}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-lg font-bold">Grade visibility</h2>
+            <p className="text-sm text-edsync-subtle">Choose what appears on this page. This only changes your view.</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              ["overall", "Overall"],
+              ["scores", "Scores"],
+              ["feedback", "Feedback"],
+            ].map(([key, label]) => {
+              const typedKey = key as keyof GradeVisibility;
+              const Icon = visibility[typedKey] ? Eye : EyeOff;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleVisibility(typedKey)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                    visibility[typedKey]
+                      ? "border-edsync-blue/35 bg-edsync-blue/10 text-edsync-blue"
+                      : "border-edsync-border bg-edsync-surface text-edsync-subtle"
+                  }`}
+                  aria-pressed={visibility[typedKey]}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <SummaryTile icon={TrendingUp} label="Current overall" value={percentText(overall)} tone="text-edsync-blue" />
+        <SummaryTile icon={TrendingUp} label="Current overall" value={visibility.overall ? percentText(overall) : "Hidden"} tone="text-edsync-blue" />
         <SummaryTile icon={CheckCircle2} label="Graded" value={gradedScores.length} tone="text-edsync-emerald" />
         <SummaryTile icon={MessageSquareText} label="Feedback" value={feedbackCount} tone="text-edsync-amber" />
       </section>
@@ -80,14 +145,17 @@ export default function StudentGradesPage() {
                   <p className="mt-1 text-sm text-edsync-subtle">
                     {score.points_earned} / {score.points_possible} points
                   </p>
-                  {score.feedback && (
+                  {visibility.feedback && score.feedback && (
                     <p className="mt-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm leading-6">
                       {score.feedback}
                     </p>
                   )}
+                  {!visibility.feedback && score.feedback && (
+                    <p className="mt-3 text-sm font-semibold text-edsync-subtle">Feedback hidden</p>
+                  )}
                 </div>
                 <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-center">
-                  <p className="font-display text-2xl font-bold">{percentText(score.percent)}</p>
+                  <p className="font-display text-2xl font-bold">{visibility.scores ? percentText(score.percent) : "Hidden"}</p>
                   <p className="mt-1 text-xs text-edsync-subtle">
                     {new Date(score.updated_at).toLocaleDateString()}
                   </p>
