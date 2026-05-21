@@ -12,6 +12,8 @@ import {
 } from "@/lib/studio/content-block-validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
+const CONTENT_BLOCK_TABLE = "content_blocks";
+
 type ContentBlockRow = {
   id: string;
   tenant_id: string;
@@ -98,9 +100,15 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
+  const isAdmin = user.user_metadata.role === "admin";
   const blocks = await d1Query<ContentBlockRow>(
-    "SELECT * FROM content_blocks WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 100",
-    [context.tenant.id],
+    `SELECT *
+       FROM content_blocks
+      WHERE tenant_id = ?
+        AND (? = 1 OR owner_id = ? OR status = 'published')
+      ORDER BY updated_at DESC
+      LIMIT 100`,
+    [context.tenant.id, isAdmin ? 1 : 0, user.id],
   );
   return NextResponse.json({ data: { blocks: blocks.map(serializeBlock), context }, error: null });
 }
@@ -139,7 +147,7 @@ export async function POST(request: Request) {
       JSON.stringify(tags),
     ],
   );
-  await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "content_blocks", objectId: id });
+  await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: CONTENT_BLOCK_TABLE, objectId: id });
   await recordBlockEvent({
     tenantId: context.tenant.id,
     actorId: user.id,
@@ -266,6 +274,11 @@ export async function DELETE(request: Request) {
       blockId: id,
       eventType: "content_block.deleted",
     });
+    await d1Query("DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = ? AND object_id = ?", [
+      context.tenant.id,
+      CONTENT_BLOCK_TABLE,
+      id,
+    ]);
     await d1Query("DELETE FROM content_blocks WHERE id = ? AND tenant_id = ?", [id, context.tenant.id]);
     return NextResponse.json({ data: { id, deleted: true }, error: null });
   }
