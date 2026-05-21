@@ -21,9 +21,9 @@ export default function StudentNotesPage() {
   }, []);
 
   return (
-    <div className="space-y-5 p-5 lg:p-8">
+    <div className="page-shell max-w-5xl space-y-5">
       <div>
-        <h1 className="font-display text-3xl font-bold">Notes</h1>
+        <h1 className="font-display text-3xl font-bold">Notes from teachers</h1>
         <p className="mt-2 text-sm text-edsync-subtle">Teacher feedback, next steps, and reminders collected for you.</p>
       </div>
       <div className="grid gap-3">
@@ -33,7 +33,9 @@ export default function StudentNotesPage() {
               <h2 className="font-display text-lg font-bold">{note.title}</h2>
               <span className="text-xs text-edsync-subtle">{new Date(note.created_at).toLocaleString()}</span>
             </div>
-            <p className="mt-1 text-sm text-edsync-subtle">{note.teacher_name || "Teacher"} · {note.priority}</p>
+            <p className="mt-1 text-sm text-edsync-subtle">
+              {note.teacher_name || "Teacher"} / {note.priority}
+            </p>
             <p className="mt-3 text-sm leading-6">{note.body}</p>
           </article>
         ))}
