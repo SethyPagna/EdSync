@@ -1385,6 +1385,10 @@ h6 {
   @apply edsync-card cursor-pointer hover:border-edsync-blue/40 hover:shadow-card-hover;
 }
 
+.page-shell {
+  @apply mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 lg:px-8;
+}
+
 /* Button variants */
 .btn-primary {
   @apply flex items-center gap-2 rounded-xl bg-edsync-blue px-6 py-3 font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-edsync-blue/90 hover:shadow-lg active:translate-y-0 active:scale-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none;
@@ -1489,11 +1493,56 @@ h6 {
 }
 
 .premium-overlay {
-  background: var(--overlay-strong);
-  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--overlay-strong) 96%, white 4%), var(--overlay-strong));
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   box-shadow: var(--shadow-menu);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+.action-menu-panel {
+  color: var(--text);
+}
+
+.action-menu-panel :where(button, a) {
+  display: flex;
+  width: 100%;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.15;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.action-menu-panel :where(button, a):hover {
+  background: rgba(var(--blue-rgb), 0.1);
+  color: var(--blue);
+  transform: translateX(2px);
+}
+
+.action-menu-panel :where(button, a):focus-visible {
+  outline: 2px solid rgba(var(--blue-rgb), 0.5);
+  outline-offset: 2px;
+}
+
+html.dark .premium-overlay {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--overlay-strong) 92%, white 8%), var(--overlay-strong));
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .action-menu-panel :where(button, a):hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text);
 }
 
 .premium-icon-button {
