@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import SectionOrderSettings from "@/components/SectionOrderSettings";
 import { validateDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
@@ -125,9 +126,10 @@ export default function TeacherProfile() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="page-shell max-w-4xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold text-edsync-text">Teacher Profile</h1>
+        <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Account</p>
+        <h1 className="font-display text-3xl font-bold text-edsync-text">Profile & Settings</h1>
         <p className="text-sm text-edsync-subtle">Manage identity, teaching context, and notifications.</p>
       </div>
 
@@ -227,6 +229,21 @@ export default function TeacherProfile() {
           ))}
         </div>
       </div>
+
+      <SectionOrderSettings
+        storageKey="edsync-teacher-profile-section-order"
+        sections={[
+          "Dashboard",
+          "Studio",
+          "Lessons",
+          "Work",
+          "Gradebook",
+          "Notes",
+          "Planner",
+          "Students",
+          "Analytics & Reports",
+        ]}
+      />
 
       <button type="button" onClick={save} disabled={saving} className="btn-primary">
         {saving ? "Saving..." : "Save profile"}
