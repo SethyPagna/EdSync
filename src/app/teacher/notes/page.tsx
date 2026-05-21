@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Eye, LockKeyhole, Plus, Send, StickyNote } from "lucide-react";
+import { Edit3, Eye, LockKeyhole, Plus, Send, StickyNote, Trash2, X } from "lucide-react";
 
 type StudentRow = {
   id: string;
@@ -13,6 +13,8 @@ type StudentRow = {
 };
 type Note = {
   id: string;
+  student_id: string;
+  class_id: string | null;
   title: string;
   body: string;
   priority: string;
@@ -37,6 +39,7 @@ export default function TeacherNotesPage() {
     visibility: "student",
     priority: "normal",
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = () => {
     fetch("/api/teacher/roster", { cache: "no-store" })
@@ -53,21 +56,58 @@ export default function TeacherNotesPage() {
 
   const visibleCount = useMemo(() => notes.filter((note) => note.visibility !== "teacher").length, [notes]);
 
-  const create = async (event: React.FormEvent) => {
+  const resetForm = () => {
+    setForm({ studentId: "", title: "", body: "", visibility: "student", priority: "normal" });
+    setEditingId(null);
+    setFormOpen(false);
+  };
+
+  const save = async (event: React.FormEvent) => {
     event.preventDefault();
     const student = students.find((item) => item.id === form.studentId);
+    const method = editingId ? "PATCH" : "POST";
     const response = await fetch("/api/notes", {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, classId: student?.class_id ?? null }),
+      body: JSON.stringify({
+        ...form,
+        id: editingId ?? undefined,
+        classId: editingId ? undefined : student?.class_id ?? null,
+      }),
     });
     if (!response.ok) {
       toast.error("Note was not saved.");
       return;
     }
-    toast.success("Note saved.");
-    setForm({ studentId: "", title: "", body: "", visibility: "student", priority: "normal" });
-    setFormOpen(false);
+    toast.success(editingId ? "Note updated." : "Note saved.");
+    resetForm();
+    load();
+  };
+
+  const edit = (note: Note) => {
+    setForm({
+      studentId: note.student_id,
+      title: note.title,
+      body: note.body,
+      visibility: note.visibility,
+      priority: note.priority,
+    });
+    setEditingId(note.id);
+    setFormOpen(true);
+  };
+
+  const remove = async (note: Note) => {
+    const confirmed = window.confirm(`Delete "${note.title}"? This removes it for the teacher and student.`);
+    if (!confirmed) return;
+    const response = await fetch(`/api/notes?id=${encodeURIComponent(note.id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      toast.error("Note was not deleted.");
+      return;
+    }
+    toast.success("Note deleted.");
     load();
   };
 
@@ -84,20 +124,35 @@ export default function TeacherNotesPage() {
               {notes.length} teacher notes, {visibleCount} shared with students
             </p>
           </div>
-          <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
-            <Plus className="h-4 w-4" />
-            {formOpen ? "Close" : "New note"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {formOpen && (
+              <button type="button" onClick={resetForm} className="btn-secondary justify-center">
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            )}
+            <button type="button" onClick={() => setFormOpen(true)} className="btn-primary justify-center">
+              <Plus className="h-4 w-4" />
+              New note
+            </button>
+          </div>
         </div>
       </section>
 
       {formOpen && (
-        <form onSubmit={create} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <form onSubmit={save} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+          <div className="mb-3">
+            <h2 className="font-display text-lg font-bold">{editingId ? "Edit feedback note" : "New feedback note"}</h2>
+            <p className="text-sm text-edsync-subtle">
+              Shared notes appear in the student's personal notes workspace when visibility allows it.
+            </p>
+          </div>
           <div className="grid gap-3 md:grid-cols-4">
             <select
               className="edsync-input"
               value={form.studentId}
               onChange={(event) => setForm({ ...form, studentId: event.target.value })}
+              disabled={Boolean(editingId)}
               required
             >
               <option value="">Student</option>
@@ -141,7 +196,7 @@ export default function TeacherNotesPage() {
             />
             <button className="btn-primary justify-center" type="submit">
               <Send className="h-4 w-4" />
-              Save
+              {editingId ? "Update" : "Save"}
             </button>
           </div>
         </form>
@@ -176,6 +231,16 @@ export default function TeacherNotesPage() {
                       <StickyNote className="h-4 w-4 text-edsync-amber" />
                       {new Date(note.created_at).toLocaleDateString()}
                     </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs" onClick={() => edit(note)}>
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs text-edsync-red" onClick={() => remove(note)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
