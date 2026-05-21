@@ -42,6 +42,15 @@ type NoteDraft = {
   design: "clean" | "focus" | "visual" | "review";
 };
 
+type UploadResponse = {
+  data: {
+    publicUrl: string;
+    assetType: string;
+    scanStatus: string;
+  } | null;
+  error: { message: string } | null;
+};
+
 const emptyDraft: NoteDraft = {
   title: "",
   body: "",
@@ -83,6 +92,7 @@ export default function StudentNotesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const safeMedia = useMemo(() => classifySafeMediaUrl(draft.mediaUrl), [draft.mediaUrl]);
   const selectedDesign = designOptions.find((option) => option.id === draft.design) ?? designOptions[0];
@@ -209,6 +219,32 @@ export default function StudentNotesPage() {
     }
   };
 
+  const uploadNoteMedia = async (file: File | null) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("bucket", "notes");
+      form.set("path", `${Date.now()}-${file.name}`);
+      const response = await fetch("/api/storage/upload", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const payload = (await response.json().catch(() => null)) as UploadResponse | null;
+      if (!response.ok || payload?.error || !payload?.data?.publicUrl) {
+        throw new Error(payload?.error?.message || "Upload failed.");
+      }
+      setDraft((current) => ({ ...current, mediaUrl: payload.data?.publicUrl ?? current.mediaUrl }));
+      toast.success(`${payload.data.assetType} uploaded and scanned.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="page-shell max-w-6xl space-y-5">
       <section className="premium-panel rounded-2xl p-4 sm:p-5">
@@ -280,6 +316,23 @@ export default function StudentNotesPage() {
                 onChange={(event) => setDraft({ ...draft, mediaUrl: event.target.value })}
                 placeholder="Optional HTTPS image, video, YouTube, Vimeo, or reference link"
               />
+              <label className="flex flex-col gap-2 rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  <span className="font-semibold text-edsync-text">Upload media</span>
+                  <span className="block text-xs">Images, videos, audio, PDFs, and docs are checked before attaching.</span>
+                </span>
+                <span className="btn-secondary w-fit px-3 py-2 text-sm">{uploading ? "Uploading..." : "Choose file"}</span>
+                <input
+                  type="file"
+                  className="sr-only"
+                  disabled={uploading}
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md,.csv"
+                  onChange={(event) => {
+                    void uploadNoteMedia(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
             </div>
             <aside className={`rounded-2xl border p-4 ${selectedDesign.className}`}>
               <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Design</p>
