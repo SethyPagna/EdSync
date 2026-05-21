@@ -9,6 +9,11 @@ import {
 } from "@/lib/engagement/assignment-notifications";
 import { notifyAndEmail } from "@/lib/engagement/server";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 type AssignmentPayload = {
@@ -56,8 +61,13 @@ export async function POST(request: Request) {
   }
 
   const [lesson] = await d1Query<LessonRow>(
-    "SELECT id, title, teacher_id FROM lessons WHERE id = ? LIMIT 1",
-    [assignment.lessonId],
+    `SELECT l.id, l.title, l.teacher_id
+       FROM lessons l
+       ${tenantObjectJoin({ objectTable: "lessons", objectAlias: "l", linkAlias: "lesson_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "lesson_link" })}
+        AND l.id = ?
+      LIMIT 1`,
+    [...tenantObjectParams({ objectTable: "lessons", tenantId: context.tenant.id }), assignment.lessonId],
   );
   const isAdmin = user.user_metadata.role === "admin";
   if (!lesson || (!isAdmin && lesson.teacher_id !== user.id)) {
@@ -66,8 +76,14 @@ export async function POST(request: Request) {
 
   if (assignment.classId) {
     const [classRow] = await d1Query<{ id: string; teacher_id: string }>(
-      "SELECT id, teacher_id FROM classes WHERE id = ? AND is_active = 1 LIMIT 1",
-      [assignment.classId],
+      `SELECT c.id, c.teacher_id
+         FROM classes c
+         ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+        WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+          AND c.id = ?
+          AND c.is_active = 1
+        LIMIT 1`,
+      [...tenantObjectParams({ objectTable: "classes", tenantId: context.tenant.id }), assignment.classId],
     );
     if (!classRow || (!isAdmin && classRow.teacher_id !== user.id)) {
       return jsonError("Class not found.", 404);
@@ -81,7 +97,9 @@ export async function POST(request: Request) {
                FROM class_enrollments ce
                JOIN classes c ON c.id = ce.class_id
                JOIN profiles p ON p.id = ce.student_id
-              WHERE ce.class_id = ?
+               ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+              WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+                AND ce.class_id = ?
                 AND ce.student_id = ?
                 AND ce.is_active = 1
                 AND p.role = 'student'
@@ -89,26 +107,46 @@ export async function POST(request: Request) {
               LIMIT 1`
           : `SELECT DISTINCT p.id, p.email, p.full_name, p.preferences
                FROM profiles p
-               LEFT JOIN class_enrollments ce ON ce.student_id = p.id AND ce.is_active = 1
-               LEFT JOIN classes c ON c.id = ce.class_id AND c.is_active = 1
-              WHERE p.id = ?
+               JOIN class_enrollments ce ON ce.student_id = p.id AND ce.is_active = 1
+               JOIN classes c ON c.id = ce.class_id AND c.is_active = 1
+               ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+              WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+                AND p.id = ?
                 AND p.role = 'student'
                 AND (? = 1 OR c.teacher_id = ?)
               LIMIT 1`,
         assignment.classId
-          ? [assignment.classId, assignment.studentId, isAdmin ? 1 : 0, user.id]
-          : [assignment.studentId, isAdmin ? 1 : 0, user.id],
+          ? [
+              ...tenantObjectParams({ objectTable: "classes", tenantId: context.tenant.id }),
+              assignment.classId,
+              assignment.studentId,
+              isAdmin ? 1 : 0,
+              user.id,
+            ]
+          : [
+              ...tenantObjectParams({ objectTable: "classes", tenantId: context.tenant.id }),
+              assignment.studentId,
+              isAdmin ? 1 : 0,
+              user.id,
+            ],
       )
     : await d1Query<StudentRow>(
         `SELECT p.id, p.email, p.full_name, p.preferences
            FROM class_enrollments ce
            JOIN classes c ON c.id = ce.class_id
            JOIN profiles p ON p.id = ce.student_id
-          WHERE ce.class_id = ?
+           ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+          WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+            AND ce.class_id = ?
             AND ce.is_active = 1
             AND p.role = 'student'
             AND (? = 1 OR c.teacher_id = ?)`,
-        [assignment.classId, isAdmin ? 1 : 0, user.id],
+        [
+          ...tenantObjectParams({ objectTable: "classes", tenantId: context.tenant.id }),
+          assignment.classId,
+          isAdmin ? 1 : 0,
+          user.id,
+        ],
       );
 
   if (students.length === 0) return jsonError("No active student recipients found.", 404);
