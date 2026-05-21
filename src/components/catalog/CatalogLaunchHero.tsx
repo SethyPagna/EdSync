@@ -152,7 +152,7 @@ export default async function CatalogLaunchHero({
           </span>
         </Link>
         <div className="edsync-launch-actions-inline">
-          <a href="#showcase" className="edsync-launch-mini-link">
+          <a href="#workflow-start" className="edsync-launch-mini-link">
             {copy.workflowLabel}
           </a>
           <a href="#catalog-search-panel" className="edsync-launch-mini-link">
@@ -172,7 +172,7 @@ export default async function CatalogLaunchHero({
           <h1 id="edsync-public-title">{title}</h1>
           <p>{description}</p>
           <div className="edsync-launch-cta-row">
-            <Link href="#showcase" prefetch={false} className="edsync-launch-primary">
+            <Link href="#workflow-start" prefetch={false} className="edsync-launch-primary">
               {primaryLabel}
               <ArrowRight className="h-4 w-4" />
             </Link>
