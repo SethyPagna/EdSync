@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
-import { normalizePracticeReviewCardRow, type PracticeReviewCardRow } from "@/lib/practice/review-cards";
 import {
+  fetchTeacherPracticeReviewSignal,
   summarizeTeacherPracticeReviews,
   type TeacherPracticeReviewSignal,
 } from "@/lib/practice/teacher-review-signals";
@@ -113,21 +113,24 @@ export default function TeacherAnalytics() {
       } = await edsync.auth.getUser();
       if (!user) return;
 
-      const { data: lessonData } = await edsync
-        .from("lessons")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .order("created_at", { ascending: false });
+      const [lessonResult, nextReviewSignal] = await Promise.all([
+        edsync
+          .from("lessons")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .order("created_at", { ascending: false }),
+        fetchTeacherPracticeReviewSignal(),
+      ]);
 
-      const myLessons: Lesson[] = lessonData || [];
+      const myLessons: Lesson[] = lessonResult.data || [];
       setLessons(myLessons);
+      setReviewSignal(nextReviewSignal);
 
       if (myLessons.length === 0) {
         setLessonStats([]);
         setStudentStats([]);
         setSocraticLog([]);
         setReflectionLog([]);
-        setReviewSignal(summarizeTeacherPracticeReviews([]));
         return;
       }
 
@@ -163,20 +166,6 @@ export default function TeacherAnalytics() {
           profileMap.set(profile.id, { full_name: profile.full_name, email: profile.email }),
         );
       }
-
-      const reviewRows = allStudentIds.length
-        ? ((await edsync
-            .from("practice_review_cards")
-            .select("*")
-            .in("user_id", allStudentIds)
-            .neq("mastery", "mastered")
-            .order("created_at", { ascending: false })
-            .limit(100)).data || [])
-        : [];
-      const reviewCards = (reviewRows as Record<string, unknown>[]).map((row) =>
-        normalizePracticeReviewCardRow(row),
-      );
-      setReviewSignal(summarizeTeacherPracticeReviews(reviewCards as PracticeReviewCardRow[]));
 
       const progressByLesson = new Map<string, AnalyticsProgressRow[]>();
       progressData.forEach((progress) => {
