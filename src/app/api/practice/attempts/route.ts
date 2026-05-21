@@ -6,6 +6,11 @@ import {
   summarizePracticeAttempt,
   type PracticeItem,
 } from "@/lib/practice/engine";
+import {
+  buildPracticeAttemptContext,
+  buildPracticeItemContext,
+  buildPracticeReviewContext,
+} from "@/lib/practice/attempt-context";
 import { isPracticeMode } from "@/lib/practice/modes";
 import { resolveTenantContext } from "@/lib/tenancy";
 import type { PracticeMode } from "@/types";
@@ -36,11 +41,19 @@ export async function POST(request: Request) {
   const context = await resolveTenantContext(user);
   const mode: PracticeMode = body.mode;
   const attemptId = crypto.randomUUID();
+  const sourceType = body.sourceType || "studio";
+  const sourceId = body.sourceId || null;
   const summary = summarizePracticeAttempt({
     mode,
     items: body.items,
     elapsedSeconds: Number(body.elapsedSeconds ?? 0),
     targetSeconds: body.targetSeconds ?? null,
+  });
+  const attemptContext = buildPracticeAttemptContext({
+    mode,
+    sourceType,
+    sourceId,
+    summary,
   });
 
   await d1Query(
@@ -52,15 +65,15 @@ export async function POST(request: Request) {
       attemptId,
       context.tenant.id,
       user.id,
-      body.sourceType || "studio",
-      body.sourceId || null,
+      sourceType,
+      sourceId,
       mode,
       summary.targetSeconds,
       summary.elapsedSeconds,
       summary.percent,
       summary.pointsEarned,
       summary.pointsPossible,
-      JSON.stringify(summary),
+      JSON.stringify({ ...summary, context: attemptContext }),
     ],
   );
 
@@ -68,6 +81,7 @@ export async function POST(request: Request) {
   for (const item of body.items) {
     const itemId = crypto.randomUUID();
     const response = item.response === undefined ? null : JSON.stringify(item.response);
+    const isCorrect = !summary.reviewCardIds.includes(item.id);
     await d1Query(
       `INSERT INTO practice_attempt_items (
         id, attempt_id, prompt, expected_answer, response, is_correct, points, explanation, metadata
@@ -78,10 +92,10 @@ export async function POST(request: Request) {
         item.prompt,
         JSON.stringify(item.answer),
         response,
-        summary.reviewCardIds.includes(item.id) ? 0 : 1,
+        isCorrect ? 1 : 0,
         item.points ?? 1,
         item.explanation ?? null,
-        JSON.stringify({ clientItemId: item.id }),
+        JSON.stringify(buildPracticeItemContext({ item, mode, isCorrect })),
       ],
     );
 
@@ -104,7 +118,7 @@ export async function POST(request: Request) {
           card.explanation,
           card.mastery,
           card.nextReviewAt,
-          JSON.stringify({ clientItemId: item.id }),
+          JSON.stringify(buildPracticeReviewContext({ item, mode })),
         ],
       );
     }
@@ -120,9 +134,9 @@ export async function POST(request: Request) {
       user.id,
       user.id,
       attemptId,
-      JSON.stringify({ summary }),
+      JSON.stringify({ summary, context: attemptContext }),
     ],
   );
 
-  return NextResponse.json({ data: { attemptId, summary }, error: null });
+  return NextResponse.json({ data: { attemptId, summary, context: attemptContext }, error: null });
 }
