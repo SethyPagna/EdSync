@@ -1,4 +1,5 @@
 import { d1Query } from "@/lib/db/d1";
+import { linkTenantObject } from "@/lib/tenancy";
 
 export type LearningEventInput = {
   tenantId: string;
@@ -94,5 +95,22 @@ export async function recordGradeEvent(input: LearningEventInput & {
       JSON.stringify({ lastEventId: eventId, eventSourced: true }),
     ],
   );
-  return { eventId, percent };
+  const [score] = await d1Query<{ id: string }>(
+    `SELECT id
+       FROM gradebook_scores
+      WHERE student_id = ?
+        AND source_type = ?
+        AND source_id = ?
+      ORDER BY updated_at DESC
+      LIMIT 1`,
+    [input.studentId ?? null, input.sourceType, input.sourceId ?? null],
+  );
+  if (score) {
+    await linkTenantObject({
+      tenantId: input.tenantId,
+      table: "gradebook_scores",
+      objectId: score.id,
+    });
+  }
+  return { eventId, scoreId: score?.id ?? null, percent };
 }
