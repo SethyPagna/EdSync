@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
-import { normalizePracticeReviewCardRow, type PracticeReviewCardRow } from "@/lib/practice/review-cards";
 import {
+  fetchTeacherPracticeReviewSignal,
   summarizeTeacherPracticeReviews,
   type TeacherPracticeReviewSignal,
 } from "@/lib/practice/teacher-review-signals";
@@ -35,7 +35,6 @@ type DashboardStats = {
 };
 
 type ScoreRow = { score: number | string | null };
-type EnrollmentStudentRow = { student_id: string };
 
 export default function TeacherDashboard() {
   const edsync = useMemo(() => createClient(), []);
@@ -92,7 +91,7 @@ export default function TeacherDashboard() {
       const lessonIds = lessonRows.map((lesson) => lesson.id);
       const classIds = classRows.map((cls) => cls.id);
 
-      const [enrollmentRes, progressRes, interactionRes, reflectionRes] =
+      const [enrollmentRes, progressRes, interactionRes, reflectionRes, nextReviewSignal] =
         await Promise.all([
           classIds.length
             ? edsync
@@ -121,24 +120,9 @@ export default function TeacherDashboard() {
                 .in("lesson_id", lessonIds)
                 .lte("confidence", 2)
             : Promise.resolve({ data: [] }),
+          fetchTeacherPracticeReviewSignal(),
         ]);
 
-      const studentIds = Array.from(
-        new Set(((enrollmentRes.data || []) as EnrollmentStudentRow[]).map((row) => row.student_id)),
-      );
-      const reviewRows = studentIds.length
-        ? ((await edsync
-            .from("practice_review_cards")
-            .select("*")
-            .in("user_id", studentIds)
-            .neq("mastery", "mastered")
-            .order("created_at", { ascending: false })
-            .limit(100)).data || [])
-        : [];
-      const reviewCards = (reviewRows as Record<string, unknown>[]).map((row) =>
-        normalizePracticeReviewCardRow(row),
-      );
-      const nextReviewSignal = summarizeTeacherPracticeReviews(reviewCards as PracticeReviewCardRow[]);
       const scores = ((progressRes.data || []) as ScoreRow[])
         .map((row) => Number(row.score))
         .filter(Number.isFinite);
