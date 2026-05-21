@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
-import { DEFAULT_TENANT_ID, resolveTenantContext } from "@/lib/tenancy";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
+import { resolveTenantContext } from "@/lib/tenancy";
 
 type TeacherRosterScope = {
   tenantId: string;
@@ -31,7 +36,7 @@ function teacherClassPredicate(scope: TeacherRosterScope) {
 }
 
 function scopeParams(scope: TeacherRosterScope) {
-  const params = [scope.tenantId, scope.tenantId, DEFAULT_TENANT_ID];
+  const params = tenantObjectParams({ objectTable: "classes", tenantId: scope.tenantId });
   if (!scope.isAdmin) params.push(scope.teacherId);
   return params;
 }
@@ -40,10 +45,8 @@ function listClasses(scope: TeacherRosterScope) {
   return d1Query(
     `SELECT id, name, subject, grade_level, teacher_id
        FROM classes c
-       LEFT JOIN tenant_object_links tol
-         ON tol.object_table = 'classes'
-        AND tol.object_id = c.id
-      WHERE (tol.tenant_id = ? OR (? = ? AND tol.id IS NULL))
+       ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "tol" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "tol" })}
         AND c.is_active = 1
         ${teacherClassPredicate(scope)}
       ORDER BY name`,
@@ -57,11 +60,9 @@ function listStudents(scope: TeacherRosterScope) {
        FROM class_enrollments ce
        JOIN classes c ON c.id = ce.class_id
        JOIN profiles p ON p.id = ce.student_id
-       LEFT JOIN tenant_object_links tol
-         ON tol.object_table = 'classes'
-        AND tol.object_id = c.id
+       ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "tol" })}
       WHERE ce.is_active = 1
-        AND (tol.tenant_id = ? OR (? = ? AND tol.id IS NULL))
+        AND ${tenantObjectPredicate({ linkAlias: "tol" })}
         AND c.is_active = 1
         ${teacherClassPredicate(scope)}
       ORDER BY c.name, p.full_name, p.email`,
