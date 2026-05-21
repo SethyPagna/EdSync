@@ -523,7 +523,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
             <span />
           </div>
           <span className="truncate text-xs font-bold text-edsync-subtle">{slide.route}</span>
-          <Link href={slide.route} className="edsync-workflow-open">
+          <Link href={slide.route} prefetch={false} className="edsync-workflow-open">
             {labels.start}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
