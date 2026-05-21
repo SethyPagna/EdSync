@@ -679,8 +679,8 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   };
 
   return (
-    <main className="min-h-screen bg-edsync-bg text-edsync-text">
-      <div className="grid min-h-screen lg:grid-cols-[260px_minmax(0,1fr)]">
+    <section className="min-h-[calc(100dvh-1.5rem)] p-2 text-edsync-text sm:p-3 lg:p-0">
+      <div className="grid min-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-3xl border border-edsync-border bg-edsync-surface shadow-sm lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="border-b border-edsync-border bg-edsync-card p-4 lg:border-b-0 lg:border-r">
           <Link href="/" className="mb-5 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white">
@@ -815,36 +815,36 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   aria-label="Studio item title"
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={saveDraft} className="btn-secondary px-3 py-2 text-sm">
+              <div className="flex max-w-full gap-2 overflow-x-auto pb-1 xl:justify-end">
+                <button type="button" onClick={saveDraft} className="btn-secondary flex-none px-3 py-2 text-sm">
                   <Save className="h-4 w-4" />
                   Save
                 </button>
-                <button type="button" onClick={publishCurrentItem} className="btn-secondary px-3 py-2 text-sm">
+                <button type="button" onClick={publishCurrentItem} className="btn-secondary flex-none px-3 py-2 text-sm">
                   <CheckCircle2 className="h-4 w-4" />
                   Publish
                 </button>
-                <button type="button" onClick={saveAsContentBlock} className="btn-secondary px-3 py-2 text-sm">
+                <button type="button" onClick={saveAsContentBlock} className="btn-secondary flex-none px-3 py-2 text-sm">
                   <Layers3 className="h-4 w-4" />
                   Save Block
                 </button>
-                <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setStatusMessage("Split panes are ready for the next layout pass")}>
+                <button type="button" className="btn-secondary flex-none px-3 py-2 text-sm" onClick={() => setStatusMessage("Split panes are ready for the next layout pass")}>
                   <SplitSquareHorizontal className="h-4 w-4" />
                   Split
                 </button>
-                <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadHistory}>
+                <button type="button" className="btn-secondary flex-none px-3 py-2 text-sm" onClick={loadHistory}>
                   <History className="h-4 w-4" />
                   History
                 </button>
-                <button type="button" onClick={exportDraft} className="btn-secondary px-3 py-2 text-sm">
+                <button type="button" onClick={exportDraft} className="btn-secondary flex-none px-3 py-2 text-sm">
                   <Download className="h-4 w-4" />
                   Export
                 </button>
-                <button type="button" onClick={resetDraft} className="btn-secondary px-3 py-2 text-sm">
+                <button type="button" onClick={resetDraft} className="btn-secondary flex-none px-3 py-2 text-sm">
                   <RotateCcw className="h-4 w-4" />
                   Reset
                 </button>
-                <Link href="/ai" className="btn-primary px-3 py-2 text-sm">
+                <Link href="/ai" className="btn-primary flex-none px-3 py-2 text-sm">
                   <Sparkles className="h-4 w-4" />
                   Ask AI
                 </Link>
@@ -1464,7 +1464,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
         </motion.div>
         )}
       </AnimatePresence>
-    </main>
+    </section>
   );
 }
 
