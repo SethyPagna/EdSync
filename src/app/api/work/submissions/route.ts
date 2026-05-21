@@ -3,10 +3,25 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent, recordGradeEvent } from "@/lib/learning-events";
 import { resolveTenantContext } from "@/lib/tenancy";
+import {
+  tenantObjectJoin,
+  tenantObjectParams,
+  tenantObjectPredicate,
+} from "@/lib/tenancy/object-scope";
 import { validateEarnedWorkPoints, validateWorkPoints, validateWorkResponse } from "@/lib/work/validation";
+
+const WORK_ITEM_TABLE = "learning_work_items";
 
 function percent(pointsEarned: number, pointsPossible: number) {
   return pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 10000) / 100 : null;
+}
+
+function workScopeParams(tenantId: string) {
+  return tenantObjectParams({ objectTable: WORK_ITEM_TABLE, tenantId });
+}
+
+function workPredicateParams(tenantId: string) {
+  return workScopeParams(tenantId).slice(1);
 }
 
 export async function GET(request: Request) {
@@ -15,16 +30,21 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
   const workItemId = params.get("workItemId");
+  const context = await resolveTenantContext(user);
 
   if (user.user_metadata.role === "student") {
     const rows = await d1Query(
       `SELECT ls.*, wi.title, wi.work_type, wi.due_at
          FROM learning_submissions ls
          JOIN learning_work_items wi ON wi.id = ls.work_item_id
-        WHERE ls.student_id = ?
+         ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
+        WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+          AND ls.student_id = ?
           ${workItemId ? "AND ls.work_item_id = ?" : ""}
         ORDER BY ls.updated_at DESC`,
-      workItemId ? [user.id, workItemId] : [user.id],
+      workItemId
+        ? [...workScopeParams(context.tenant.id), user.id, workItemId]
+        : [...workScopeParams(context.tenant.id), user.id],
     );
     return NextResponse.json({ data: rows, error: null });
   }
@@ -41,10 +61,14 @@ export async function GET(request: Request) {
        FROM learning_submissions ls
        JOIN learning_work_items wi ON wi.id = ls.work_item_id
        JOIN profiles p ON p.id = ls.student_id
-      WHERE ${ownerWhere}
+       ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+        AND ${ownerWhere}
         ${workItemId ? "AND ls.work_item_id = ?" : ""}
       ORDER BY ls.updated_at DESC`,
-    workItemId ? [...ownerParams, workItemId] : ownerParams,
+    workItemId
+      ? [...workScopeParams(context.tenant.id), ...ownerParams, workItemId]
+      : [...workScopeParams(context.tenant.id), ...ownerParams],
   );
   return NextResponse.json({ data: rows, error: null });
 }
@@ -61,15 +85,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: "Work item is required." }, { status: 400 });
   }
 
+  const context = await resolveTenantContext(user);
   const [work] = await d1Query<{
     id: string;
     class_id: string | null;
     status: string;
     allow_late: number;
     due_at: string | null;
-  }>("SELECT id, class_id, status, allow_late, due_at FROM learning_work_items WHERE id = ? LIMIT 1", [
-    body.workItemId,
-  ]);
+  }>(
+    `SELECT wi.id, wi.class_id, wi.status, wi.allow_late, wi.due_at
+       FROM learning_work_items wi
+       ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
+       LEFT JOIN class_enrollments ce
+         ON ce.class_id = wi.class_id
+        AND ce.student_id = ?
+        AND ce.is_active = 1
+      WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+        AND wi.id = ?
+        AND (wi.class_id IS NULL OR ce.student_id = ?)
+      LIMIT 1`,
+    [WORK_ITEM_TABLE, user.id, ...workPredicateParams(context.tenant.id), body.workItemId, user.id],
+  );
   if (!work || work.status !== "published") {
     return NextResponse.json({ data: null, error: "Work item is not available." }, { status: 404 });
   }
@@ -85,7 +121,6 @@ export async function POST(request: Request) {
   }
 
   const id = crypto.randomUUID();
-  const context = await resolveTenantContext(user);
   await d1Query(
     `INSERT INTO learning_submissions (
        id, work_item_id, student_id, class_id, response, status, submitted_at, created_at, updated_at
@@ -126,6 +161,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ data: null, error: "Submission id is required." }, { status: 400 });
   }
 
+  const context = await resolveTenantContext(user);
   const [submission] = await d1Query<{
     id: string;
     work_item_id: string;
@@ -139,11 +175,13 @@ export async function PATCH(request: Request) {
   }>(
     `SELECT ls.id, ls.work_item_id, ls.student_id, ls.class_id,
             wi.title, wi.work_type, wi.teacher_id, wi.category_id, wi.points_possible
-       FROM learning_submissions ls
-       JOIN learning_work_items wi ON wi.id = ls.work_item_id
-      WHERE ls.id = ?
+      FROM learning_submissions ls
+      JOIN learning_work_items wi ON wi.id = ls.work_item_id
+      ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+        AND ls.id = ?
       LIMIT 1`,
-    [body.submissionId],
+    [...workScopeParams(context.tenant.id), body.submissionId],
   );
   if (!submission) return NextResponse.json({ data: null, error: "Submission not found." }, { status: 404 });
   if (user.user_metadata.role !== "admin" && submission.teacher_id !== user.id) {
@@ -171,7 +209,6 @@ export async function PATCH(request: Request) {
     [pointsEarned, pointsPossible, scorePercent, body.feedback ?? null, body.submissionId],
   );
 
-  const context = await resolveTenantContext(user);
   const result = await recordGradeEvent({
     tenantId: context.tenant.id,
     actorId: user.id,
