@@ -89,7 +89,7 @@ export function ActionMenu({ label = "Actions", children }: ActionMenuProps) {
         <Ellipsis className="h-4 w-4" />
         <span className="sr-only">{label}</span>
       </summary>
-      <div className="premium-overlay animate-overlay-in absolute right-0 z-30 mt-2 grid max-h-[min(70vh,28rem)] w-[min(18rem,calc(100vw-2rem))] gap-1 overflow-y-auto rounded-2xl p-2">
+      <div className="premium-overlay action-menu-panel animate-overlay-in absolute right-0 z-30 mt-2 grid max-h-[min(70vh,28rem)] w-[min(18rem,calc(100vw-2rem))] gap-1 overflow-y-auto rounded-2xl p-2">
         {children}
       </div>
     </details>
