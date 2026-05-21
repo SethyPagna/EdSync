@@ -207,8 +207,16 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                       : "border-edsync-border bg-edsync-card text-edsync-subtle hover:border-edsync-blue/40"
                   }`}
                 >
-                  <p className="font-semibold">{entry.label}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold">{entry.label}</p>
+                    <span className="rounded-full bg-edsync-surface px-2 py-0.5 text-[11px] font-bold text-edsync-subtle">
+                      {entry.targetMinutes}m
+                    </span>
+                  </div>
                   <p className="mt-1 line-clamp-2 text-xs">{entry.description}</p>
+                  <p className="mt-2 line-clamp-1 text-[11px] font-semibold text-edsync-blue">
+                    {entry.loop.join(" -> ")}
+                  </p>
                 </button>
               ))}
             </div>
@@ -282,6 +290,10 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                   onChange={(event) => setTargetMinutes(Math.max(1, Number(event.target.value || 1)))}
                 />
               </label>
+              <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-xs leading-5 text-edsync-subtle">
+                <p className="font-semibold text-edsync-text">{modeConfig.bestFor}</p>
+                <p className="mt-1">{modeConfig.output}</p>
+              </div>
             </section>
 
             <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
@@ -317,7 +329,7 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                 <h2 className="font-semibold">Learning Loop</h2>
               </div>
               <div className="space-y-2 text-sm text-edsync-subtle">
-                {["Import or write", "AI cleanup", "Generate practice", "Attempt", "Explain mistake", "Save review"].map((step, index) => (
+                {modeConfig.loop.map((step, index) => (
                   <div key={step} className="flex items-center gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-edsync-blue/10 text-xs font-bold text-edsync-blue">{index + 1}</span>
                     {step}
