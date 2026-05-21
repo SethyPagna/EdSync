@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
 import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
 import { createClient } from "@/lib/edsync/client";
+import { listLessonTemplateOptions } from "@/lib/learning/design-system";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
 
@@ -119,6 +120,7 @@ type DraftStorageContent = {
   languageStyle: LanguageStyle;
   audienceLanguage: string;
   versionCount: number;
+  designTemplateId: string;
   creationMode: CreationMode;
   importMode: ImportMode;
   activeTab: "overview" | "sections" | "questions" | "glossary";
@@ -154,6 +156,8 @@ const DRAFT_INSERT_TOOLS = [
   { label: "Spacer", html: '<div class="lesson-spacer"></div>' },
 ];
 
+const lessonTemplateOptions = listLessonTemplateOptions();
+
 export default function CreateLesson() {
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
@@ -170,6 +174,7 @@ export default function CreateLesson() {
   const [languageStyle, setLanguageStyle] = useState<LanguageStyle>("student_friendly");
   const [audienceLanguage, setAudienceLanguage] = useState("English");
   const [versionCount, setVersionCount] = useState(1);
+  const [designTemplateId, setDesignTemplateId] = useState("corporate");
   const [variants, setVariants] = useState<AILessonDraft[]>([]);
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [genStep, setGenStep] = useState(0);
@@ -203,6 +208,7 @@ export default function CreateLesson() {
         if (parsed.languageStyle) setLanguageStyle(parsed.languageStyle);
         if (parsed.audienceLanguage) setAudienceLanguage(parsed.audienceLanguage);
         if (typeof parsed.versionCount === "number") setVersionCount(parsed.versionCount);
+        if (parsed.designTemplateId) setDesignTemplateId(parsed.designTemplateId);
         if (parsed.creationMode) setCreationMode(parsed.creationMode);
         if (parsed.importMode) setImportMode(parsed.importMode);
         if (parsed.activeTab) setActiveTab(parsed.activeTab);
@@ -230,6 +236,7 @@ export default function CreateLesson() {
         languageStyle,
         audienceLanguage,
         versionCount,
+        designTemplateId,
         creationMode,
         importMode,
         activeTab,
@@ -259,6 +266,7 @@ export default function CreateLesson() {
     audienceLanguage,
     complexity,
     creationMode,
+    designTemplateId,
     draft,
     draftLoaded,
     generationDepth,
@@ -425,6 +433,13 @@ export default function CreateLesson() {
           languageStyle,
           audienceLanguage,
           versionCount,
+          designTemplateId,
+          outputLength:
+            generationDepth === "quick"
+              ? "micro"
+              : generationDepth === "zero_to_expert"
+                ? "extended"
+                : "standard",
         }),
       });
       const data = await res.json();
@@ -893,6 +908,22 @@ export default function CreateLesson() {
               Teaching Style
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
+                  Lesson design
+                </span>
+                <select
+                  value={designTemplateId}
+                  onChange={(event) => setDesignTemplateId(event.target.value)}
+                  className="edsync-input py-2"
+                >
+                  {lessonTemplateOptions.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="block">
                 <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
                   Depth
