@@ -1,4 +1,5 @@
 import type { SessionUser } from "@/lib/auth/session";
+import { d1Query } from "@/lib/db/d1";
 import type { DataRequest } from "@/lib/db/d1";
 
 const SERVER_ONLY_TABLES = new Set([
@@ -71,7 +72,79 @@ function valuesArray(request: DataRequest) {
   return Array.isArray(request.values) ? request.values : [request.values];
 }
 
-export function authorizeDataRequest(user: SessionUser, request: DataRequest) {
+function eqValue(request: DataRequest, column: string) {
+  return (request.filters ?? []).find((filter) => filter.op === "eq" && filter.column === column)?.value;
+}
+
+async function lessonBelongsToTeacher(userId: string, lessonId: unknown) {
+  if (typeof lessonId !== "string" || !lessonId) return false;
+  const [lesson] = await d1Query<{ id: string }>("SELECT id FROM lessons WHERE id = ? AND teacher_id = ? LIMIT 1", [lessonId, userId]);
+  return Boolean(lesson);
+}
+
+async function classBelongsToTeacher(userId: string, classId: unknown) {
+  if (typeof classId !== "string" || !classId) return false;
+  const [klass] = await d1Query<{ id: string }>("SELECT id FROM classes WHERE id = ? AND teacher_id = ? LIMIT 1", [classId, userId]);
+  return Boolean(klass);
+}
+
+async function lessonChildBelongsToTeacher(userId: string, table: "lesson_sections" | "quiz_questions" | "glossary_terms", id: unknown) {
+  if (typeof id !== "string" || !id) return false;
+  const [row] = await d1Query<{ id: string }>(
+    `SELECT child.id
+       FROM ${table} child
+       JOIN lessons l ON l.id = child.lesson_id
+      WHERE child.id = ? AND l.teacher_id = ?
+      LIMIT 1`,
+    [id, userId],
+  );
+  return Boolean(row);
+}
+
+async function authorizeTeacherOwnedWrite(user: SessionUser, request: DataRequest) {
+  if (!["update", "delete"].includes(request.action)) return null;
+
+  if (request.table === "classes") {
+    if (hasFilter(request, "teacher_id", user.id)) return null;
+    return (await classBelongsToTeacher(user.id, eqValue(request, "id"))) ? null : "Class changes must target a class owned by the signed-in teacher.";
+  }
+
+  if (request.table === "lessons") {
+    if (hasFilter(request, "teacher_id", user.id)) return null;
+    return (await lessonBelongsToTeacher(user.id, eqValue(request, "id"))) ? null : "Lesson changes must target a lesson owned by the signed-in teacher.";
+  }
+
+  if (request.table === "lesson_sections" || request.table === "quiz_questions" || request.table === "glossary_terms") {
+    const lessonId = eqValue(request, "lesson_id");
+    if (await lessonBelongsToTeacher(user.id, lessonId)) return null;
+    return (await lessonChildBelongsToTeacher(user.id, request.table, eqValue(request, "id")))
+      ? null
+      : "Lesson content changes must target content owned by the signed-in teacher.";
+  }
+
+  if (request.table === "lesson_assignments") {
+    return (await lessonBelongsToTeacher(user.id, eqValue(request, "lesson_id")))
+      ? null
+      : "Assignment changes must target a lesson owned by the signed-in teacher.";
+  }
+
+  return null;
+}
+
+async function authorizeTeacherOwnedInsert(user: SessionUser, request: DataRequest) {
+  if (!["insert", "upsert"].includes(request.action)) return null;
+  if (request.table !== "lesson_sections" && request.table !== "quiz_questions" && request.table !== "glossary_terms") return null;
+
+  const rows = valuesArray(request);
+  for (const row of rows) {
+    if (!(await lessonBelongsToTeacher(user.id, row.lesson_id))) {
+      return "Lesson content can only be added to lessons owned by the signed-in teacher.";
+    }
+  }
+  return null;
+}
+
+export async function authorizeDataRequest(user: SessionUser, request: DataRequest) {
   if (SERVER_ONLY_TABLES.has(request.table)) {
     return "This table is server-only.";
   }
@@ -102,6 +175,12 @@ export function authorizeDataRequest(user: SessionUser, request: DataRequest) {
         : "Lessons must belong to the signed-in teacher.";
     }
   }
+
+  const teacherOwnedInsertDenied = await authorizeTeacherOwnedInsert(user, request);
+  if (teacherOwnedInsertDenied) return teacherOwnedInsertDenied;
+
+  const teacherOwnedWriteDenied = await authorizeTeacherOwnedWrite(user, request);
+  if (teacherOwnedWriteDenied) return teacherOwnedWriteDenied;
 
   if (
     [
