@@ -627,6 +627,69 @@
 
 ---
 
+## Phase 24 - Portal Workflow, Notes, Practice AI, And Canva-Style Lesson Editing
+
+**Goal:** Make the teacher, student, individual, and admin portals feel like one working learning product instead of separate partially connected pages. Notes become a personal multimedia workspace, practice and AI tutor become one guided support surface, lesson creation moves away from raw HTML editing, and work/planner/discussion/deadline flows stay tied to the class or course they were created for.
+
+**Requirements From Latest Review:**
+- Notes:
+  - Treat notes as personal for every user type, not teacher-only.
+  - Support add/edit/delete/duplicate/archive, design presets, images, videos, links, safe media validation, and AI cleanup/formatting.
+  - Keep teacher-to-student feedback notes as a separate connected feedback lane rather than mixing them with personal notes.
+- Grades, work, and feedback:
+  - Teachers can provide feedback for assignments, projects, quizzes, practice attempts, grades, and discussions.
+  - Students can see feedback by work item and decide whether grades, feedback, deadlines, notifications, and new-content widgets appear on their dashboard.
+  - Replace XP with real time-spent/activity signals that exclude idle/offline time.
+- Student portal:
+  - Rename announcements to notifications.
+  - Add dashboard toggles for notifications, assignments, deadlines, new content, grades, practice, and feedback.
+  - Compact the join-class card so the join button does not leave large empty whitespace.
+  - Keep Practice and AI Tutor available, but merge them into one support surface and place Practice/AI/Grades under the Support sidebar group.
+  - Ensure student lesson, practice, AI, grades, and notes pages always render the student sidebar, including when a platform admin is viewing as a student.
+- Teacher portal:
+  - Keep lesson creation, work, planner, discussions, deadlines, assignments, projects, quizzes, and activities class-scoped.
+  - Connect planner events, notifications, deadlines, and work items so one class action can appear in the correct student dashboard and lesson/work surfaces.
+  - Add teacher notes as a personal multimedia workspace plus a feedback-management lane for students.
+- Individual learner and course marketplace:
+  - Signup/signin supports individual and organization paths without creating disconnected experiences.
+  - Individual users get a combined learner/creator-friendly surface for browsing, buying/free-enrolling in public courses, personal notes, practice, progress, and optional teaching tools.
+  - Course-for-sale pages avoid traditional class-only language where marketplace language is more appropriate.
+- Admin and layout:
+  - Admin portal pages need consistent sidebar-aware margins, responsive spacing, and readable dark mode.
+  - Admin view-as teacher/student must keep the proper app sidebar and a visible return path.
+  - Profile becomes Profile & Settings, with reorderable dashboard/section preferences for admin, teacher, student, and individual modes.
+- Lesson editor:
+  - Remove raw HTML-style section editing from teacher lesson creation/editing.
+  - Use a Canva-style visual section editor: compact mini-sidebar/tools, content blocks, safe media insert, practice blocks, callouts, slide/deck blocks, and clear block previews.
+  - AI-generated lesson responses should insert into designed blocks and templates rather than dumping markup into textareas.
+  - Lesson player may use a mini-sidebar or a dedicated lesson page shell with a back button, but it must preserve portal navigation context.
+- Practice and AI:
+  - Remove the standalone Studio page from primary navigation.
+  - Merge Practice with AI Tutor into a single learning support loop: generate, attempt, explain missed, retry, review, and recommend.
+  - Keep `/practice`, `/ai`, `/quizzes`, and `/games` route compatibility by redirecting or aliasing into the merged support surface.
+  - Add Kahoot-style modes where useful: colorful activity cards, join flow, speed/accuracy points, retry missed, and teacher-controlled publishing.
+- Canva/Kahoot-inspired design system:
+  - Use Canva-style side tools, panels, property controls, share/download menus, template libraries, color/font pickers, animation/position panels, and bottom page thumbnails where they fit EdSync.
+  - Keep EdSync native; do not depend on Canva as a required editor.
+  - Practice activities can use more playful color, pacing, points, speed, accuracy, and class-join design.
+
+**Implementation Slices:**
+- 24.1 Update navigation and route wrappers so student/teacher/admin shared pages never lose the correct sidebar.
+- 24.2 Replace raw lesson section snippets with clean readable block text and add a visual block adapter for existing legacy HTML sections.
+- 24.3 Add the merged Practice + AI support shell and route aliases.
+- 24.4 Connect planner, work, discussions, deadlines, notifications, and lesson assignments through shared class-scoped helpers.
+- 24.5 Expand personal notes and feedback notes with safe media/design actions for all relevant roles.
+- 24.6 Add dashboard visibility preferences and Profile & Settings section ordering.
+- 24.7 Add Canva-style lesson editor panels, template controls, slide thumbnails, and safe insert menus.
+- 24.8 Add Kahoot-style activity presentation and join/play polish for class practice.
+
+**Verification:**
+- Run `npm.cmd run typecheck`, `npm.cmd run lint`, focused tests, and `npm.cmd run build`.
+- Browser-test student dashboard toggles, teacher lesson create/edit, notes add/edit/delete, admin view-as routes, portals spacing, merged Practice/AI, planner/work/discussion class scoping, and dark/light menu contrast.
+- Live-test the Cloudflare Worker after deployment and record the URL/version in `progress.md`.
+
+---
+
 ## Cross-Phase Architecture Targets
 
 - Keep AI contracts, validators, template engines, and conversion helpers outside UI components.
