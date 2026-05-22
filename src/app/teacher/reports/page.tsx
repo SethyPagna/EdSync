@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson, Profile, StudentProgress } from "@/types";
+import { BarChart3, CheckCircle2, Download, FileSpreadsheet, Timer, UsersRound } from "lucide-react";
 
 interface StudentReport {
   id: string;
@@ -146,34 +147,38 @@ export default function TeacherReports() {
 
   return (
     <div className="page-shell animate-fade-in space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-            Analytics & Reports
-          </p>
-          <h1 className="font-display font-bold text-3xl text-edsync-text">
-            Lesson reports
-          </h1>
-          <p className="text-edsync-subtle">
-            Detailed lesson evidence for grading, family updates, and interventions.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/teacher/analytics" className="btn-secondary px-4 py-2 text-sm">
-            Analytics overview
-          </Link>
-          <button
-            onClick={exportCSV}
-            disabled={reports.length === 0}
-            className="btn-primary px-4 py-2 text-sm disabled:opacity-40"
-          >
-            Export CSV
-          </button>
+      <div className="premium-panel rounded-2xl p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
+              Analytics & Reports
+            </p>
+            <h1 className="font-display font-bold text-3xl text-edsync-text">
+              Lesson reports
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-edsync-subtle">
+              Detailed lesson evidence for grading, family updates, and interventions.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/teacher/analytics" className="btn-secondary px-4 py-2 text-sm">
+              <BarChart3 className="h-4 w-4" />
+              Analytics overview
+            </Link>
+            <button
+              onClick={exportCSV}
+              disabled={reports.length === 0}
+              className="btn-primary px-4 py-2 text-sm disabled:opacity-40"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Lesson selector */}
-      <div>
+      <div className="premium-surface rounded-2xl p-4 sm:p-5">
         {loadingLessons ? (
           <div className="h-10 w-64 bg-edsync-card rounded-xl shimmer" />
         ) : lessons.length === 0 ? (
@@ -184,7 +189,7 @@ export default function TeacherReports() {
           <select
             value={selectedLesson}
             onChange={(e) => setSelectedLesson(e.target.value)}
-            className="edsync-input max-w-sm py-2"
+            className="edsync-input w-full max-w-md py-2"
           >
             {lessons.map((l) => (
               <option key={l.id} value={l.id}>
@@ -202,7 +207,8 @@ export default function TeacherReports() {
           ))}
         </div>
       ) : reports.length === 0 && selectedLesson ? (
-        <div className="edsync-card text-center py-16">
+        <div className="premium-surface rounded-2xl py-16 text-center">
+          <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-edsync-subtle" />
           <h3 className="font-display font-bold text-xl text-edsync-text mb-2">
             No student data yet
           </h3>
@@ -214,51 +220,60 @@ export default function TeacherReports() {
       ) : reports.length > 0 ? (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
               {
                 label: "Total Students",
                 value: reports.length,
-                icon: "STU",
-                color: "blue",
+                icon: UsersRound,
+                tone: "text-edsync-blue",
               },
               {
                 label: "Completed",
                 value: summary.completedCount,
-                icon: "DONE",
-                color: "emerald",
+                icon: CheckCircle2,
+                tone: "text-edsync-emerald",
               },
               {
                 label: "In Progress",
                 value: summary.inProgressCount,
-                icon: "LIVE",
-                color: "blue",
+                icon: Timer,
+                tone: "text-edsync-cyan",
               },
               {
                 label: "Avg Score",
                 value: summary.avgScore !== null ? `${summary.avgScore}%` : "N/A",
-                icon: "AVG",
-                color:
-                  summary.avgScore !== null && summary.avgScore >= 70 ? "emerald" : "amber",
+                icon: BarChart3,
+                tone:
+                  summary.avgScore !== null && summary.avgScore >= 70 ? "text-edsync-emerald" : "text-edsync-amber",
               },
-            ].map((s, i) => (
-              <div key={i} className="edsync-card">
-                <span className="text-xs font-semibold tracking-wide text-edsync-subtle block mb-2">
-                  {s.icon}
-                </span>
-                <p className="font-display font-bold text-2xl text-edsync-text">
-                  {s.value}
-                </p>
-                <p className="text-edsync-subtle text-xs mt-1">{s.label}</p>
-              </div>
-            ))}
+            ].map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className="premium-card rounded-2xl p-4">
+                  <Icon className={`mb-3 h-5 w-5 ${s.tone}`} />
+                  <p className="font-display font-bold text-2xl text-edsync-text">
+                    {s.value}
+                  </p>
+                  <p className="text-edsync-subtle text-xs mt-1">{s.label}</p>
+                </div>
+              );
+            })}
           </div>
 
           {/* Student Report Table */}
-          <div className="edsync-card">
-            <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-              Individual Student Report
-            </h3>
+          <div className="premium-surface rounded-2xl p-4 sm:p-5">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-display font-semibold text-lg text-edsync-text">
+                  Individual student report
+                </h3>
+                <p className="text-sm text-edsync-subtle">
+                  Scores, time, progress, and knowledge gaps for the selected lesson.
+                </p>
+              </div>
+              <span className="badge bg-edsync-blue/10 text-edsync-blue">{reports.length} records</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead>
@@ -318,16 +333,16 @@ export default function TeacherReports() {
                             {Math.round(r.score)}%
                           </span>
                         ) : (
-                          <span className="text-edsync-subtle text-xs">—</span>
+                          <span className="text-edsync-subtle text-xs">-</span>
                         )}
                       </td>
                       <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {r.diagnosticScore !== null
                           ? `${Math.round(r.diagnosticScore)}%`
-                          : "—"}
+                          : "-"}
                       </td>
                       <td className="py-3 pr-4 text-sm text-edsync-subtle">
-                        {r.timeSpent > 0 ? Math.round(r.timeSpent / 60) : "—"}
+                        {r.timeSpent > 0 ? Math.round(r.timeSpent / 60) : "-"}
                       </td>
                       <td className="py-3 pr-4 text-sm text-edsync-subtle">
                         {r.sectionsCompleted}
