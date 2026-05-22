@@ -470,6 +470,8 @@
 - Verification for this reports UI pass: `npm.cmd run typecheck`, `npm.cmd run lint`, and focused teacher analytics/review tests passed. Deployment was deferred until the next broader pass because this was a small UI-only route update.
 - Continued admin portal responsiveness cleanup on 2026-05-22: widened the Portals page container, upgraded portal creation and directory cards to premium surfaces, added a compact organization context block, improved wrapping for portal/domain text, moved portal metadata into a contained status card, and replaced hardcoded light-only badges with theme-safe EdSync tokens.
 - Verification for this admin portals pass: `npm.cmd run typecheck` and `npm.cmd run lint` passed. Deployment was deferred until the next broader pass because this was a small UI-only route update.
+- Continued portal workflow planning and lesson authoring cleanup on 2026-05-23: added Phase 24 to `plan.md` for personal multimedia notes, student notification/widget toggles, merged Practice + AI support, class-scoped work/planner/discussion flows, individual marketplace behavior, admin view-as sidebar continuity, and Canva/Kahoot-inspired lesson/activity editing. Also converted shared lesson section templates and teacher lesson-create insert tools from raw HTML snippets into readable block text, and normalized legacy HTML draft content before it appears in the manual section editor.
+- Verification for this authoring cleanup pass: `npm.cmd run typecheck`, `npm.cmd run lint`, focused Studio/media tests, and `npm.cmd run build` passed. Deployment is queued for the next broader portal/UI pass so the remaining sidebar and merged Practice + AI work can ship together.
 
 ## Update Protocol
 
