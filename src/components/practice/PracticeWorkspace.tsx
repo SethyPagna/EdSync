@@ -15,7 +15,8 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { PRACTICE_MODES } from "@/lib/studio/catalog";
+import AiPromptBuilder from "@/components/ai/AiPromptBuilder";
+import { AI_PROMPT_CONTRACTS, PRACTICE_MODES } from "@/lib/studio/catalog";
 import {
   missedPracticeItems,
   summarizePracticeAttempt,
@@ -32,6 +33,8 @@ import {
 import type { PracticeAttemptSummary, PracticeMode } from "@/types";
 
 type PracticeWorkspaceProps = {
+  initialAiOpen?: boolean;
+  initialAiTask?: string;
   initialMode?: PracticeMode;
 };
 
@@ -59,8 +62,9 @@ const starterItems: PracticeItem[] = [
   },
 ];
 
-export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProps) {
+export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask, initialMode }: PracticeWorkspaceProps) {
   const [mode, setMode] = useState<PracticeMode>(normalizePracticeMode(initialMode));
+  const [aiOpen, setAiOpen] = useState(initialAiOpen);
   const [items, setItems] = useState<PracticeItem[]>(starterItems);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [targetMinutes, setTargetMinutes] = useState(() => normalizePracticeMode(initialMode) === "exam" ? 30 : 8);
@@ -186,9 +190,31 @@ export default function PracticeWorkspace({ initialMode }: PracticeWorkspaceProp
                     <Save className="h-4 w-4" />
                     {saving ? "Saving..." : "Submit"}
                   </button>
+                  <button type="button" onClick={() => setAiOpen((value) => !value)} className="btn-secondary px-3 py-2 text-sm">
+                    <Sparkles className="h-4 w-4" />
+                    {aiOpen ? "Hide AI" : "AI Tutor"}
+                  </button>
                 </div>
               </div>
             </div>
+
+            {aiOpen && (
+              <section className="rounded-xl border border-edsync-blue/25 bg-edsync-card p-4 shadow-sm">
+                <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Practice + AI</p>
+                    <h2 className="mt-1 font-display text-2xl font-bold">Generate, explain, and insert learning support</h2>
+                    <p className="mt-1 max-w-3xl text-sm leading-6 text-edsync-subtle">
+                      Use AI to clean source notes, generate practice, create review cards, and send the result back into the learning loop.
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setAiOpen(false)} className="btn-ghost px-3 py-2 text-sm">
+                    Close
+                  </button>
+                </div>
+                <AiPromptBuilder contracts={AI_PROMPT_CONTRACTS} initialTask={initialAiTask ?? "generate-practice"} />
+              </section>
+            )}
 
             <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-4">
               {PRACTICE_MODES.map((entry) => (
