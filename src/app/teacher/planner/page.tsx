@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { CalendarClock, Megaphone, Plus, Send, TimerReset } from "lucide-react";
+import { CalendarClock, Megaphone, Plus, Send, TimerReset, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
 import type { Announcement, Class, ScheduleEvent } from "@/types";
 
@@ -154,6 +154,22 @@ export default function TeacherPlannerPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const deletePlannerItem = async (type: "announcement" | "event", id: string, title: string) => {
+    const confirmed = window.confirm(`Delete "${title}"? Students will no longer see this ${type}.`);
+    if (!confirmed) return;
+    const response = await fetch(`/api/planner?type=${type}&id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || payload?.error) {
+      toast.error(payload?.error?.message || payload?.error || "Planner item was not deleted.");
+      return;
+    }
+    toast.success(type === "announcement" ? "Announcement deleted." : "Schedule item deleted.");
+    await loadPlanner();
   };
 
   return (
@@ -366,6 +382,16 @@ export default function TeacherPlannerPage() {
                     {event.description && (
                       <p className="mt-3 text-sm leading-6 text-edsync-subtle">{event.description}</p>
                     )}
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        className="btn-secondary px-3 py-2 text-xs text-edsync-red"
+                        onClick={() => deletePlannerItem("event", event.id, event.title)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -395,6 +421,16 @@ export default function TeacherPlannerPage() {
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        className="btn-secondary px-3 py-2 text-xs text-edsync-red"
+                        onClick={() => deletePlannerItem("announcement", item.id, item.title)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
