@@ -6,6 +6,15 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { listPracticeReviews, type PracticeReviewCardRow } from "@/lib/practice/reviews";
 import { summarizePracticeReviewCards } from "@/lib/practice/review-recommendations";
+import {
+  ACTIVE_TIME_WEEKLY_TARGET_MINUTES,
+  STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY,
+  areStudentNotificationsPaused,
+  defaultStudentDashboardVisibility,
+  mergeStudentDashboardVisibility,
+  studentNotificationToggleOptions,
+  type StudentDashboardVisibility,
+} from "@/lib/student/dashboard-preferences";
 import { MetricTile } from "@/components/WorkspacePrimitives";
 import type {
   LearningGoal,
@@ -71,47 +80,6 @@ type CatalogSuggestion = {
   price?: { label?: string; isFree?: boolean };
   metadata?: { category?: string | null; difficulty?: string | null };
 };
-type DashboardVisibility = {
-  assignments: boolean;
-  deadlines: boolean;
-  feedback: boolean;
-  grades: boolean;
-  newContent: boolean;
-  notifications: boolean;
-  practice: boolean;
-};
-
-const defaultVisibility: DashboardVisibility = {
-  assignments: true,
-  deadlines: true,
-  feedback: true,
-  grades: true,
-  newContent: true,
-  notifications: true,
-  practice: true,
-};
-
-const ACTIVE_TIME_WEEKLY_TARGET_MINUTES = 240;
-
-const notificationToggleOptions: Array<{ key: keyof DashboardVisibility; label: string }> = [
-  { key: "notifications", label: "Master" },
-  { key: "assignments", label: "Assignments" },
-  { key: "deadlines", label: "Deadlines" },
-  { key: "newContent", label: "New content" },
-  { key: "practice", label: "Practice + AI" },
-  { key: "grades", label: "Grades" },
-  { key: "feedback", label: "Feedback" },
-];
-
-const notificationTypeKeys: Array<keyof DashboardVisibility> = [
-  "assignments",
-  "deadlines",
-  "newContent",
-  "practice",
-  "grades",
-  "feedback",
-];
-
 function formatPlannerDate(value: string | null) {
   if (!value) return "No time set";
   const date = new Date(value);
@@ -170,7 +138,7 @@ export default function StudentDashboard() {
   const [joiningClass, setJoiningClass] = useState(false);
   const [savingStudy, setSavingStudy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [visibility, setVisibility] = useState<DashboardVisibility>(defaultVisibility);
+  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(defaultStudentDashboardVisibility);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -324,19 +292,19 @@ export default function StudentDashboard() {
   }, [loadDashboard]);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem("edsync-student-dashboard-visibility");
+    const raw = window.localStorage.getItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY);
     if (!raw) return;
     try {
-      setVisibility({ ...defaultVisibility, ...(JSON.parse(raw) as Partial<DashboardVisibility>) });
+      setVisibility(mergeStudentDashboardVisibility(JSON.parse(raw) as Partial<StudentDashboardVisibility>));
     } catch {
-      setVisibility(defaultVisibility);
+      setVisibility(defaultStudentDashboardVisibility);
     }
   }, []);
 
-  const toggleVisibility = (key: keyof DashboardVisibility) => {
+  const toggleVisibility = (key: keyof StudentDashboardVisibility) => {
     setVisibility((current) => {
       const nextValue = { ...current, [key]: !current[key] };
-      window.localStorage.setItem("edsync-student-dashboard-visibility", JSON.stringify(nextValue));
+      window.localStorage.setItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY, JSON.stringify(nextValue));
       return nextValue;
     });
   };
@@ -486,8 +454,7 @@ export default function StudentDashboard() {
     ...(visibility.deadlines ? assignmentEvents : []),
     ...(visibility.assignments ? otherEvents : []),
   ];
-  const notificationTypesPaused = notificationTypeKeys.every((key) => !visibility[key]);
-  const notificationsPaused = !visibility.notifications || notificationTypesPaused;
+  const notificationsPaused = areStudentNotificationsPaused(visibility);
 
   return (
     <div className="page-shell space-y-5">
@@ -760,7 +727,7 @@ export default function StudentDashboard() {
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
             <div className="mb-4 grid grid-cols-2 gap-2">
-              {notificationToggleOptions.map(({ key, label }) => {
+              {studentNotificationToggleOptions.map(({ key, label }) => {
                 return (
                   <button
                     key={key}
