@@ -4,7 +4,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ArrowRight, Languages } from "lucide-react";
+import {
+  ArrowRight,
+  Blocks,
+  Download,
+  Film,
+  Image as ImageIcon,
+  Languages,
+  LayoutTemplate,
+  Palette,
+  Play,
+  Type,
+  Wand2,
+} from "lucide-react";
 import {
   SECTION_INSERT_TOOLS,
   SECTION_TEMPLATES,
@@ -21,6 +33,7 @@ type ImportMode = "objectives" | "text" | "url" | "file";
 type Step = "choose" | "import" | "generating" | "edit";
 type GenerationDepth = "quick" | "standard" | "zero_to_expert";
 type LanguageStyle = "student_friendly" | "professional" | "speaking" | "simple";
+type StudioPanel = "templates" | "blocks" | "media" | "text" | "brand" | "animate" | "export";
 
 type DraftSection = {
   title: string;
@@ -137,6 +150,16 @@ type DraftStoragePayload = Partial<DraftStorageContent> & {
 
 const lessonTemplateOptions = listLessonTemplateOptions();
 
+const STUDIO_TOOL_RAIL = [
+  { id: "templates", label: "Templates", icon: LayoutTemplate },
+  { id: "blocks", label: "Blocks", icon: Blocks },
+  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "text", label: "Text", icon: Type },
+  { id: "brand", label: "Brand", icon: Palette },
+  { id: "animate", label: "Animate", icon: Wand2 },
+  { id: "export", label: "Export", icon: Download },
+] as const;
+
 const normalizeDraftForAuthoring = (draft: Draft): Draft => ({
   ...draft,
   sections: draft.sections.map((section) => ({
@@ -162,6 +185,7 @@ export default function CreateLesson() {
   const [audienceLanguage, setAudienceLanguage] = useState("English");
   const [versionCount, setVersionCount] = useState(1);
   const [designTemplateId, setDesignTemplateId] = useState("corporate");
+  const [studioPanel, setStudioPanel] = useState<StudioPanel>("templates");
   const [variants, setVariants] = useState<AILessonDraft[]>([]);
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [genStep, setGenStep] = useState(0);
@@ -340,6 +364,177 @@ export default function CreateLesson() {
       draft.sections.length,
     ],
   );
+  const selectedTemplateOption = useMemo(
+    () => lessonTemplateOptions.find((template) => template.id === designTemplateId) ?? lessonTemplateOptions[0],
+    [designTemplateId],
+  );
+
+  const renderStudioPanel = () => {
+    if (studioPanel === "templates") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Templates</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Apply a lesson look</h2>
+          </div>
+          <div className="space-y-2">
+            {lessonTemplateOptions.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => setDesignTemplateId(template.id)}
+                className={`w-full rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+                  designTemplateId === template.id
+                    ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
+                    : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/40"
+                }`}
+              >
+                <p className="font-semibold text-edsync-text">{template.label}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5">{template.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (studioPanel === "blocks") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Blocks</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Add learning blocks</h2>
+          </div>
+          <button type="button" onClick={() => addDraftSection()} className="btn-primary w-full justify-center py-2 text-sm">
+            Blank section
+          </button>
+          <div className="grid gap-2">
+            {SECTION_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => addDraftSection(template)}
+                className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/40 hover:bg-edsync-card"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
+                  <span className="rounded-full bg-edsync-blue/10 px-2 py-0.5 text-[10px] font-bold uppercase text-edsync-blue">
+                    {template.contentType}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-edsync-subtle">{template.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (studioPanel === "media") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Media</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Safe image and video inserts</h2>
+          </div>
+          <button type="button" onClick={() => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "media-analysis") ?? SECTION_TEMPLATES[0])} className="btn-primary w-full justify-center py-2 text-sm">
+            Add media analysis
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "Image", hint: "PNG, JPG, WEBP, GIF", icon: ImageIcon },
+              { label: "Video", hint: "YouTube, Vimeo, MP4", icon: Film },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                  <Icon className="h-5 w-5 text-edsync-blue" />
+                  <p className="mt-2 text-sm font-semibold text-edsync-text">{item.label}</p>
+                  <p className="mt-1 text-xs text-edsync-subtle">{item.hint}</p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="rounded-xl border border-edsync-border bg-edsync-surface p-3 text-xs leading-5 text-edsync-subtle">
+            Unsafe SVG, script links, credentials, executable files, and unknown embeds stay blocked by the shared media validator.
+          </p>
+        </div>
+      );
+    }
+
+    if (studioPanel === "text") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Text</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Readable section tools</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {SECTION_INSERT_TOOLS.map((tool) => (
+              <div key={tool.label} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                <p className="text-sm font-semibold text-edsync-text">{tool.label}</p>
+                <p className="mt-1 text-xs text-edsync-subtle">{tool.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (studioPanel === "brand") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Brand</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Palette and tone</h2>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {["#2557D6", "#0F766E", "#F59E0B", "#EF4444", "#7C3AED", "#0EA5E9", "#111827", "#F8FAFC", "#22C55E", "#F97316"].map((color) => (
+              <span key={color} className="h-10 rounded-2xl border border-edsync-border shadow-sm" style={{ background: color }} />
+            ))}
+          </div>
+          <p className="rounded-xl border border-edsync-border bg-edsync-surface p-3 text-xs leading-5 text-edsync-subtle">
+            Current template: <strong className="text-edsync-text">{selectedTemplateOption?.label}</strong>. Template switching keeps the lesson content and reflows the visual treatment.
+          </p>
+        </div>
+      );
+    }
+
+    if (studioPanel === "animate") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Animate</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Motion presets</h2>
+          </div>
+          {["Fade", "Rise", "Slide left", "Highlight", "Reduced motion fallback"].map((preset) => (
+            <button key={preset} type="button" className="w-full rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold text-edsync-text hover:border-edsync-blue/40">
+              {preset}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Export</p>
+          <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Preview and publish</h2>
+        </div>
+        <button type="button" className="btn-secondary w-full justify-center py-2 text-sm">
+          <Play className="h-4 w-4" />
+          Preview lesson
+        </button>
+        <button type="button" onClick={() => save("draft")} disabled={saving || !draft.title.trim()} className="btn-secondary w-full justify-center py-2 text-sm disabled:opacity-40">
+          Save draft
+        </button>
+        <button type="button" onClick={() => save("published")} disabled={saving || !draft.title.trim()} className="btn-primary w-full justify-center py-2 text-sm disabled:opacity-40">
+          Publish lesson
+        </button>
+      </div>
+    );
+  };
 
   const clearSavedDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -567,7 +762,7 @@ export default function CreateLesson() {
 
   // ─── Render ────────────────────────────────────────────────
   return (
-    <div className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto animate-fade-in overflow-x-clip">
+    <div className="min-h-screen p-4 sm:p-6 max-w-[1600px] mx-auto animate-fade-in overflow-x-clip">
       {/* Header */}
       <div className="flex flex-wrap items-start sm:items-center gap-3 sm:gap-4 mb-6">
         <button
@@ -1044,7 +1239,32 @@ export default function CreateLesson() {
 
       {/* ── STEP: EDIT ── */}
       {step === "edit" && (
-        <div className="animate-slide-up space-y-6">
+        <div className="animate-slide-up space-y-5">
+          <div className="grid gap-4 lg:grid-cols-[72px_280px_minmax(0,1fr)]">
+            <aside className="order-2 flex gap-2 overflow-x-auto rounded-3xl border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:sticky lg:top-6 lg:h-[calc(100dvh-8rem)] lg:flex-col lg:overflow-y-auto">
+              {STUDIO_TOOL_RAIL.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    onClick={() => setStudioPanel(tool.id)}
+                    className={`flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-semibold transition ${
+                      studioPanel === tool.id
+                        ? "bg-edsync-blue text-white shadow-sm"
+                        : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{tool.label}</span>
+                  </button>
+                );
+              })}
+            </aside>
+            <aside className="order-3 rounded-3xl border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto">
+              {renderStudioPanel()}
+            </aside>
+            <div className="order-1 min-w-0 space-y-6 lg:order-3">
           {variants.length > 1 && (
             <div className="edsync-card">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -1834,6 +2054,35 @@ export default function CreateLesson() {
           )}
 
           {/* Save Actions — sticky bottom */}
+          <div className="rounded-3xl border border-edsync-border bg-edsync-card p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Pages</p>
+                <p className="text-sm text-edsync-subtle">Click a block to jump back into editing. Drag reorder comes next.</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
+                <span>Fit width</span>
+                <span className="rounded-full bg-edsync-surface px-2 py-1">{draft.sections.length || 0} pages</span>
+              </div>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {draft.sections.map((section, index) => (
+                <button
+                  key={`${section.title}-${index}`}
+                  type="button"
+                  onClick={() => setActiveTab("sections")}
+                  className="min-w-36 rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/40 hover:bg-edsync-card"
+                >
+                  <span className="text-xs font-bold text-edsync-blue">{index + 1}</span>
+                  <p className="mt-1 line-clamp-1 text-sm font-semibold text-edsync-text">{section.title || "Untitled"}</p>
+                  <p className="mt-1 text-[11px] uppercase tracking-wide text-edsync-subtle">
+                    {section.content_type} - {section.duration_minutes}m
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="sticky bottom-3 pt-4 border-t border-edsync-border bg-edsync-bg">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button
@@ -1850,6 +2099,8 @@ export default function CreateLesson() {
               >
                 {saving ? "Saving..." : "Publish Lesson"}
               </button>
+            </div>
+          </div>
             </div>
           </div>
         </div>
