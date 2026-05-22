@@ -23,6 +23,7 @@ import {
   normalizeLessonAuthoringContent,
   type SectionTemplate,
 } from "@/lib/content/section-library";
+import LessonBlockEditor from "@/components/lesson/LessonBlockEditor";
 import { createClient } from "@/lib/edsync/client";
 import { listLessonTemplateOptions } from "@/lib/learning/design-system";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
@@ -338,16 +339,6 @@ export default function CreateLesson() {
         ...draft.sections.slice(index + 1),
       ],
     });
-  };
-
-  const appendDraftSectionContent = (index: number, content: string) => {
-    const sections = [...draft.sections];
-    const current = normalizeLessonAuthoringContent(sections[index]?.content || "");
-    sections[index] = {
-      ...sections[index],
-      content: `${current}${current ? "\n\n" : ""}${content}`,
-    };
-    setDraft({ ...draft, sections });
   };
 
   const draftSummaryItems = useMemo(
@@ -1797,30 +1788,24 @@ export default function CreateLesson() {
                       );
                     })()
                   ) : (
-                    <div className="space-y-3">
-                      <div className="grid gap-2 rounded-xl border border-edsync-border bg-edsync-surface p-2 sm:grid-cols-2 lg:grid-cols-4">
-                        {SECTION_INSERT_TOOLS.map((tool) => (
-                          <button
-                            key={tool.label}
-                            type="button"
-                            onClick={() => appendDraftSectionContent(i, tool.content)}
-                            className="rounded-lg border border-transparent px-2.5 py-2 text-left transition hover:border-edsync-blue/40 hover:bg-edsync-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edsync-blue"
-                          >
-                            <span className="block text-xs font-semibold text-edsync-text">{tool.label}</span>
-                            <span className="block text-[11px] leading-4 text-edsync-subtle">{tool.description}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        value={normalizeLessonAuthoringContent(sec.content || "")}
-                        onChange={(e) => {
+                    <LessonBlockEditor
+                      value={sec.content || ""}
+                      insertTools={SECTION_INSERT_TOOLS}
+                      contentTypeLabel={
+                        sec.content_type === "quiz"
+                          ? "Quiz"
+                          : sec.content_type === "activity"
+                            ? "Activity"
+                            : sec.content_type === "discussion"
+                              ? "Discussion"
+                              : "Lesson"
+                      }
+                      onChange={(value) => {
                           const ss = [...draft.sections];
-                          ss[i] = { ...ss[i], content: e.target.value };
+                          ss[i] = { ...ss[i], content: value };
                           setDraft({ ...draft, sections: ss });
                         }}
-                        rows={7}
-                        className="edsync-textarea min-h-[220px] text-sm leading-6"
-                        placeholder={
+                      placeholder={
                           sec.content_type === "quiz"
                             ? "Quiz title (questions are managed in the Questions tab)..."
                             : sec.content_type === "activity"
@@ -1829,8 +1814,7 @@ export default function CreateLesson() {
                                 ? "Discussion prompt or open-ended question..."
                                 : "Write your section content here..."
                         }
-                      />
-                    </div>
+                    />
                   )}
                 </div>
               ))}
