@@ -84,6 +84,53 @@ async function getTeacherClass(userId: string, tenantId: string, classId?: strin
   return row ?? null;
 }
 
+async function canManageAnnouncement(input: {
+  userId: string;
+  tenantId: string;
+  announcementId: string;
+}) {
+  const [row] = await d1Query<{ id: string }>(
+    `SELECT a.id
+       FROM announcements a
+       JOIN classes c ON c.id = a.class_id
+       ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+        AND a.id = ?
+        AND a.teacher_id = ?
+      LIMIT 1`,
+    [...classScopeParams(input.tenantId), input.announcementId, input.userId],
+  );
+  return Boolean(row);
+}
+
+async function canManageScheduleEvent(input: {
+  userId: string;
+  tenantId: string;
+  eventId: string;
+}) {
+  const [row] = await d1Query<{ id: string }>(
+    `SELECT e.id
+       FROM schedule_events e
+       LEFT JOIN classes c ON c.id = e.class_id
+       ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+      WHERE e.id = ?
+        AND (
+          (e.owner_id = ? AND e.class_id IS NULL)
+          OR (${tenantObjectPredicate({ linkAlias: "class_link" })} AND (e.owner_id = ? OR c.teacher_id = ?))
+        )
+      LIMIT 1`,
+    [
+      classScopeParams(input.tenantId)[0],
+      input.eventId,
+      input.userId,
+      ...classPredicateParams(input.tenantId),
+      input.userId,
+      input.userId,
+    ],
+  );
+  return Boolean(row);
+}
+
 async function getClassStudents(classId: string, tenantId: string) {
   return d1Query<StudentRow>(
     `SELECT p.id, p.email, p.full_name, p.preferences
@@ -370,4 +417,41 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ data: { id: eventId, notified: students.length }, error: null });
+}
+
+export async function DELETE(request: Request) {
+  const user = await getSessionUser();
+  if (!user) return jsonError("Authentication required.", 401);
+  const context = await resolveTenantContext(user);
+  const params = new URL(request.url).searchParams;
+  const type = params.get("type");
+  const id = params.get("id");
+  if (!id) return jsonError("Planner item id is required.", 400);
+
+  if (type === "announcement") {
+    if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
+      return jsonError("Teacher access required.", 403);
+    }
+    const canManage = await canManageAnnouncement({
+      userId: user.id,
+      tenantId: context.tenant.id,
+      announcementId: id,
+    });
+    if (!canManage) return jsonError("Announcement not found.", 404);
+    await d1Query("DELETE FROM announcements WHERE id = ?", [id]);
+    return NextResponse.json({ data: { id, deleted: true }, error: null });
+  }
+
+  if (type === "event") {
+    const canManage = await canManageScheduleEvent({
+      userId: user.id,
+      tenantId: context.tenant.id,
+      eventId: id,
+    });
+    if (!canManage) return jsonError("Schedule item not found.", 404);
+    await d1Query("DELETE FROM schedule_events WHERE id = ?", [id]);
+    return NextResponse.json({ data: { id, deleted: true }, error: null });
+  }
+
+  return jsonError("Choose announcement or event.", 400);
 }
