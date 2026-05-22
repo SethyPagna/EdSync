@@ -688,6 +688,62 @@
 - Browser-test student dashboard toggles, teacher lesson create/edit, notes add/edit/delete, admin view-as routes, portals spacing, merged Practice/AI, planner/work/discussion class scoping, and dark/light menu contrast.
 - Live-test the Cloudflare Worker after deployment and record the URL/version in `progress.md`.
 
+**Master UX Contract:**
+- Visual system:
+  - Canva is the primary editor metaphor: block-based editing, drag/drop, template libraries, asset panels, compact property controls, color/font pickers, bottom page thumbnails, smooth animations, and no raw HTML/CSS editing.
+  - Kahoot is the activity metaphor: vivid answer states, points, speed, accuracy, celebratory feedback, class join/play moments, and teacher-controlled publishing.
+  - AI is a co-creator that reads prompts, filters, grade level, language, output length, and selected template, then injects content into designed blocks that can be restyled without losing content.
+- Role model:
+  - Student: lessons, work, Practice + AI Tutor, grades, discussions, planner, notifications, personal notes.
+  - Teacher: courses, lesson creation studio, assignments, gradebook and feedback, discussions, planner, Practice + AI preview, students, notifications, personal notes.
+  - Individual: marketplace-first course buyer plus personal learning dashboard, self-paced courses, personal multimedia notes, Practice + AI, progress, optional creator tools.
+  - Admin: platform oversight, portals, all role previews with persistent sidebar and visible exit-view affordance.
+- Sign-in/signup:
+  - Use a two-step identity path: Individual or Organization.
+  - Individual users can stay independent or later join an organization.
+  - Organization users use org/portal/SSO-ready entry without creating a disconnected product.
+- Global navigation:
+  - Every authenticated page has a main sidebar except intentional full-screen editors, which still expose a collapse/expand or return control.
+  - Main sidebar subareas can open a mini-sidebar for contextual tabs.
+  - Student Lessons mini-sidebar: Content, Discussions, Planner, My Work, with a back button on subpages.
+  - Multi-page content uses a Canva-style bottom thumbnail strip with slide/page numbers, jump, drag-reorder in edit mode, and fit-width/fit-height/actual-size controls.
+  - Content keeps at least 24px spacing from the main sidebar, with admin Portals using at least 32px and a responsive 12-column grid.
+- Student dashboard:
+  - No hero image and no XP.
+  - Show active time spent only when the tab/window is active and the user has recent interaction; ignore idle/offline time.
+  - Notifications replace announcements and expose toggles for New content, Assignments, Deadlines, Grades posted, Practice, and Feedback.
+  - If all notification toggles are off, collapse into a slim "Notifications are paused" state.
+  - Join Class stays compact with input and Join button in one row, max width 400px, and minimal vertical padding.
+- Student sidebar target:
+  - Dashboard, Lessons with mini-sidebar, Teachers & Classes, Discussions, Planner, Support, Notifications, Profile & Settings.
+  - Support contains Practice + AI Tutor and Grades.
+- Teacher sidebar target:
+  - Dashboard, My Courses, Create Lesson, Assignments, Gradebook & Feedback, Discussions, Planner, Practice + AI Tutor preview, Students, Notifications, Profile & Settings.
+- Individual sidebar target:
+  - Explore Courses, My Courses, Notes, Practice + AI Tutor, Progress, Profile & Settings.
+- Notes:
+  - Notes are personal across roles and can optionally link to lessons.
+  - Notes support headings, images, safe videos/embeds, links, tables, sketches/drawings, rich text, grid/list views, AI cleanup, and design presets.
+- Practice + AI Tutor:
+  - One merged page.
+  - Left side is AI copilot/chat/prompting/upload.
+  - Right side is generated practice and attempts.
+  - Include filters for subject, difficulty, question type, and mode.
+  - Include points, speed meter, accuracy ring, color transitions, attempt summary, retry missed, and AI next-topic/difficulty suggestion.
+- Lesson Creation Studio:
+  - Replaces old standalone Studio as the primary teacher creation path.
+  - Uses Canva-style editor: left tool rail, templates/assets/uploads/text/brand/tools panels, center canvas, top compact toolbar, bottom slide/page strip, preview, export/share menus, and property panels for font, color, spacing, animation, position, and media.
+  - Blocks include text, image, video, quiz, poll, embed, shape, table, flashcard, audio, callout, practice card, discussion prompt, and exit ticket.
+  - AI prompt bar can generate full lessons by topic, grade level, slide count, language, quiz inclusion, style, and template.
+  - AI output appears as selectable slides/blocks with placeholders for media and quizzes; Apply Template reflows content without losing it.
+- Feedback and grades:
+  - Teachers can leave rich feedback on all work types.
+  - Feedback panel supports bold, color, links/media, voice-note placeholder, and visibility controls.
+  - Grade visibility can be toggled per student/per item.
+- Profile & Settings:
+  - Single merged entry everywhere.
+  - Account, Notifications, Privacy, Appearance, Dashboard Sections, and Role Preferences appear as draggable/reorderable cards with persisted order.
+
 ---
 
 ## Cross-Phase Architecture Targets
