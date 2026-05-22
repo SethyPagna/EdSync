@@ -476,6 +476,7 @@
 - Verification for this merged support pass: `npm.cmd run typecheck`, `npm.cmd run lint`, focused practice tests, and `npm.cmd run build` passed. Deployment is still queued for the next broader portal/sidebar pass.
 - Continued student dashboard personalization on 2026-05-23: expanded dashboard visibility preferences with Practice + AI, Grades, and Feedback toggles; renamed class-update wording to Notifications; hid practice recommendations when Practice + AI is turned off; and added compact support shortcuts that respect the student's selected dashboard sections.
 - Verification for this student dashboard pass: `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run build` passed. Deployment remains queued for the next grouped portal release.
+- Deployed the grouped Phase 24 portal/navigation update to the existing Cloudflare Worker on 2026-05-23. Live URL: `https://edsync-dev.learn-app.workers.dev`; Version ID: `43705cb6-95af-410e-937c-6dfb6e4c3a02`. Live smoke checks returned 200 for `/api/catalog` and 307 redirects for unauthenticated `/ai`, `/practice`, and `/student/dashboard`. Generated `.next`, `.open-next`, `.wrangler`, and `tsconfig.tsbuildinfo` artifacts were removed with `npm.cmd run clean:local` after deployment.
 
 ## Update Protocol
 
