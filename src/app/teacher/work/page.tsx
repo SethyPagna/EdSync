@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { CalendarClock, ClipboardList, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound } from "lucide-react";
+import { Archive, CalendarClock, ClipboardList, Edit3, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound, X } from "lucide-react";
 
 type ClassRow = { id: string; name: string };
 type WorkItem = {
@@ -11,6 +11,7 @@ type WorkItem = {
   title: string;
   work_type: string;
   status: string;
+  instructions: string | null;
   due_at: string | null;
   points_possible: number;
   class_name?: string | null;
@@ -56,6 +57,7 @@ export default function TeacherWorkPage() {
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
   const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
     workType: "task",
@@ -65,6 +67,12 @@ export default function TeacherWorkPage() {
     dueAt: "",
     status: "published",
   });
+
+  const resetForm = (classId = form.classId) => {
+    setForm({ title: "", workType: "task", classId, instructions: "", pointsPossible: "100", dueAt: "", status: "published" });
+    setEditingId(null);
+    setFormOpen(false);
+  };
 
   const load = () => {
     fetch("/api/teacher/roster", { cache: "no-store" })
@@ -104,29 +112,60 @@ export default function TeacherWorkPage() {
     load();
   }, []);
 
-  const create = async (event: React.FormEvent) => {
+  const saveWork = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.classId) {
+    if (!form.classId && !editingId) {
       toast.error("Choose a class so assignments, quizzes, and deadlines stay connected.");
       return;
     }
+    const method = editingId ? "PATCH" : "POST";
     const response = await fetch("/api/work", {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        id: editingId ?? undefined,
         classId: form.classId || null,
         pointsPossible: Number(form.pointsPossible),
         dueAt: form.dueAt || null,
       }),
     });
     if (!response.ok) {
-      toast.error("Work item was not created.");
+      toast.error(`Work item was not ${editingId ? "updated" : "created"}.`);
       return;
     }
-    toast.success("Work item created.");
-    setForm((current) => ({ title: "", workType: "task", classId: current.classId, instructions: "", pointsPossible: "100", dueAt: "", status: "published" }));
-    setFormOpen(false);
+    toast.success(editingId ? "Work item updated." : "Work item created.");
+    resetForm(form.classId);
+    load();
+  };
+
+  const editWork = (item: WorkItem) => {
+    setEditingId(item.id);
+    setForm({
+      title: item.title,
+      workType: item.work_type,
+      classId: classes.find((cls) => cls.name === item.class_name)?.id ?? form.classId,
+      instructions: item.instructions ?? "",
+      pointsPossible: String(item.points_possible ?? 100),
+      dueAt: item.due_at ? item.due_at.slice(0, 16) : "",
+      status: item.status,
+    });
+    setFormOpen(true);
+  };
+
+  const archiveWork = async (item: WorkItem) => {
+    const confirmed = window.confirm(`Archive "${item.title}"? Students will no longer see it as open work.`);
+    if (!confirmed) return;
+    const response = await fetch(`/api/work?id=${encodeURIComponent(item.id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || payload?.error) {
+      toast.error(payload?.error || "Work item was not archived.");
+      return;
+    }
+    toast.success("Work item archived.");
     load();
   };
 
@@ -180,19 +219,25 @@ export default function TeacherWorkPage() {
               <CalendarClock className="h-4 w-4" />
               Planner
             </Link>
-            <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
+            {formOpen && (
+              <button type="button" onClick={() => resetForm()} className="btn-secondary justify-center">
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            )}
+            <button type="button" onClick={() => setFormOpen(true)} className="btn-primary justify-center">
               <Plus className="h-4 w-4" />
-              {formOpen ? "Close builder" : "Create work"}
+              Create work
             </button>
           </div>
         </div>
       </section>
 
       {formOpen && (
-        <form onSubmit={create} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+        <form onSubmit={saveWork} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-bold">New work item</h2>
+              <h2 className="font-display text-xl font-bold">{editingId ? "Edit work item" : "New work item"}</h2>
               <p className="text-sm text-edsync-subtle">
                 Quiz, test, task, discussion, or activity. Published class work creates notifications; due dates sync to Planner.
               </p>
@@ -222,6 +267,7 @@ export default function TeacherWorkPage() {
               className="edsync-input"
               value={form.classId}
               onChange={(event) => setForm({ ...form, classId: event.target.value })}
+              disabled={Boolean(editingId)}
             >
               <option value="">Choose class</option>
               {classes.map((item) => (
@@ -252,7 +298,7 @@ export default function TeacherWorkPage() {
             />
             <button className="btn-primary justify-center" type="submit">
               <Send className="h-4 w-4" />
-              Publish
+              {editingId ? "Update" : "Publish"}
             </button>
           </div>
         </form>
@@ -291,6 +337,16 @@ export default function TeacherWorkPage() {
                     <FileCheck2 className="h-4 w-4 text-edsync-blue" />
                     {item.submission_count ?? 0} submissions
                   </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs" onClick={() => editWork(item)}>
+                      <Edit3 className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                    <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs text-edsync-red" onClick={() => archiveWork(item)}>
+                      <Archive className="h-3.5 w-3.5" />
+                      Archive
+                    </button>
+                  </div>
                 </div>
               </article>
             ))
