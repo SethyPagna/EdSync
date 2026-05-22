@@ -474,6 +474,8 @@
 - Verification for this authoring cleanup pass: `npm.cmd run typecheck`, `npm.cmd run lint`, focused Studio/media tests, and `npm.cmd run build` passed. Deployment is queued for the next broader portal/UI pass so the remaining sidebar and merged Practice + AI work can ship together.
 - Continued Practice + AI navigation consolidation on 2026-05-23: removed Studio and standalone AI from primary teacher/student sidebar navigation, renamed the shared support entry to Practice + AI, added an embedded AI Tutor prompt-builder panel inside the Practice workspace, allowed `/practice?ai=1&task=...` to open that panel directly, and changed `/ai` into a compatibility redirect into the merged support surface. Existing `/quizzes` and `/games` aliases continue to route into Practice modes.
 - Verification for this merged support pass: `npm.cmd run typecheck`, `npm.cmd run lint`, focused practice tests, and `npm.cmd run build` passed. Deployment is still queued for the next broader portal/sidebar pass.
+- Continued student dashboard personalization on 2026-05-23: expanded dashboard visibility preferences with Practice + AI, Grades, and Feedback toggles; renamed class-update wording to Notifications; hid practice recommendations when Practice + AI is turned off; and added compact support shortcuts that respect the student's selected dashboard sections.
+- Verification for this student dashboard pass: `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run build` passed. Deployment remains queued for the next grouped portal release.
 
 ## Update Protocol
 
