@@ -14,12 +14,14 @@ type WorkItem = {
   class_name: string | null;
   submission_status: string | null;
   submission_percent: number | null;
+  submission_feedback: string | null;
 };
 
-type WorkFilter = "open" | "submitted" | "all";
+type WorkFilter = "open" | "dueSoon" | "submitted" | "all";
 
 const FILTERS: Array<{ key: WorkFilter; label: string }> = [
   { key: "open", label: "To do" },
+  { key: "dueSoon", label: "Due soon" },
   { key: "submitted", label: "Submitted" },
   { key: "all", label: "All" },
 ];
@@ -36,6 +38,17 @@ function dueLabel(value: string | null) {
 
 function isSubmitted(item: WorkItem) {
   return item.submission_status === "submitted" || item.submission_status === "graded";
+}
+
+function dueState(value: string | null) {
+  if (!value) return { label: "No due date", tone: "bg-edsync-surface text-edsync-subtle", urgent: false };
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return { label: "Due date", tone: "bg-edsync-surface text-edsync-subtle", urgent: false };
+  const delta = time - Date.now();
+  if (delta < 0) return { label: "Overdue", tone: "bg-edsync-red/10 text-edsync-red", urgent: true };
+  if (delta <= 24 * 60 * 60 * 1000) return { label: "Due today", tone: "bg-edsync-amber/10 text-edsync-amber", urgent: true };
+  if (delta <= 7 * 24 * 60 * 60 * 1000) return { label: "This week", tone: "bg-edsync-blue/10 text-edsync-blue", urgent: true };
+  return { label: "Scheduled", tone: "bg-edsync-emerald/10 text-edsync-emerald", urgent: false };
 }
 
 export default function StudentWorkPage() {
@@ -79,8 +92,13 @@ export default function StudentWorkPage() {
 
   const filteredItems = useMemo(() => {
     if (filter === "submitted") return items.filter(isSubmitted);
+    if (filter === "dueSoon") return items.filter((item) => !isSubmitted(item) && dueState(item.due_at).urgent);
     if (filter === "open") return items.filter((item) => !isSubmitted(item));
-    return items;
+    return [...items].sort((left, right) => {
+      const leftTime = left.due_at ? new Date(left.due_at).getTime() : Number.MAX_SAFE_INTEGER;
+      const rightTime = right.due_at ? new Date(right.due_at).getTime() : Number.MAX_SAFE_INTEGER;
+      return leftTime - rightTime;
+    });
   }, [filter, items]);
 
   const openCount = items.filter((item) => !isSubmitted(item)).length;
@@ -99,7 +117,7 @@ export default function StudentWorkPage() {
               {openCount} to do, {submittedCount} submitted
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {FILTERS.map((item) => (
               <button
                 key={item.key}
@@ -140,6 +158,17 @@ export default function StudentWorkPage() {
             <article key={item.id} className="rounded-xl border border-edsync-border bg-edsync-card p-4">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem]">
                 <div className="min-w-0">
+                  {(() => {
+                    const state = dueState(item.due_at);
+                    return (
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className={`badge ${state.tone}`}>{state.label}</span>
+                        {item.submission_feedback && (
+                          <span className="badge bg-edsync-amber/10 text-edsync-amber">feedback ready</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="badge bg-edsync-blue/10 text-edsync-blue">
                       {item.work_type}
@@ -161,6 +190,12 @@ export default function StudentWorkPage() {
                     <p className="mt-3 line-clamp-2 text-sm leading-6 text-edsync-text">
                       {item.instructions}
                     </p>
+                  )}
+                  {item.submission_feedback && (
+                    <div className="mt-3 rounded-xl border border-edsync-amber/25 bg-edsync-amber/10 p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Teacher feedback</p>
+                      <p className="mt-1 text-sm leading-6 text-edsync-text">{item.submission_feedback}</p>
+                    </div>
                   )}
                 </div>
                 <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
