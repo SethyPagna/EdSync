@@ -1,8 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
-import { Edit3, Eye, LockKeyhole, Plus, Send, StickyNote, Trash2, X } from "lucide-react";
+import {
+  Archive,
+  Copy,
+  Edit3,
+  ExternalLink,
+  Eye,
+  ImageIcon,
+  Link2,
+  LockKeyhole,
+  Palette,
+  Plus,
+  Save,
+  Send,
+  StickyNote,
+  Trash2,
+  Video,
+  X,
+} from "lucide-react";
+import {
+  archiveStudioItem,
+  listStudioItems,
+  saveStudioItem,
+  updateStudioItem,
+  type StudioServerItem,
+} from "@/lib/studio/api";
+import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
 
 type StudentRow = {
   id: string;
@@ -23,14 +49,59 @@ type Note = {
   student_email: string;
   created_at: string;
 };
+type PersonalDraft = {
+  title: string;
+  body: string;
+  mediaUrl: string;
+  design: "clean" | "planning" | "feedback" | "resource";
+};
+
+const emptyPersonalDraft: PersonalDraft = {
+  title: "",
+  body: "",
+  mediaUrl: "",
+  design: "clean",
+};
+
+const designOptions: Array<{ id: PersonalDraft["design"]; label: string; className: string }> = [
+  { id: "clean", label: "Clean", className: "border-edsync-border bg-edsync-card" },
+  { id: "planning", label: "Planning", className: "border-edsync-blue/30 bg-edsync-blue/10" },
+  { id: "feedback", label: "Feedback", className: "border-edsync-amber/30 bg-edsync-amber/10" },
+  { id: "resource", label: "Resource", className: "border-edsync-emerald/30 bg-edsync-emerald/10" },
+];
 
 function visibilityIcon(value: string) {
   return value === "teacher" ? LockKeyhole : Eye;
 }
 
+function getPersonalMediaUrl(item: StudioServerItem) {
+  if (typeof item.metadata.media !== "object" || !item.metadata.media) return "";
+  return String((item.metadata.media as { url?: unknown }).url ?? "");
+}
+
+function getPersonalDesign(item: StudioServerItem): PersonalDraft["design"] {
+  const design = String(item.metadata.design ?? "clean");
+  return designOptions.some((option) => option.id === design) ? (design as PersonalDraft["design"]) : "clean";
+}
+
+function personalNoteText(item: StudioServerItem) {
+  return item.plainText || (typeof item.content.body === "string" ? item.content.body : "");
+}
+
+function mediaIcon(media: SafeMediaUrl | null) {
+  if (media?.kind === "image") return ImageIcon;
+  if (media?.kind === "video") return Video;
+  return Link2;
+}
+
 export default function TeacherNotesPage() {
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [personalNotes, setPersonalNotes] = useState<StudioServerItem[]>([]);
+  const [personalOpen, setPersonalOpen] = useState(false);
+  const [personalDraft, setPersonalDraft] = useState<PersonalDraft>(emptyPersonalDraft);
+  const [editingPersonalId, setEditingPersonalId] = useState<string | null>(null);
+  const [savingPersonal, setSavingPersonal] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     studentId: "",
@@ -48,6 +119,9 @@ export default function TeacherNotesPage() {
     fetch("/api/notes", { cache: "no-store" })
       .then((response) => response.json())
       .then((payload) => setNotes(payload.data ?? []));
+    listStudioItems("note")
+      .then((items) => setPersonalNotes(items.filter((item) => item.metadata.source === "teacher_notes" || item.metadata.source === "student_notes" || !item.metadata.source)))
+      .catch(() => setPersonalNotes([]));
   };
 
   useEffect(() => {
@@ -55,6 +129,8 @@ export default function TeacherNotesPage() {
   }, []);
 
   const visibleCount = useMemo(() => notes.filter((note) => note.visibility !== "teacher").length, [notes]);
+  const safePersonalMedia = useMemo(() => classifySafeMediaUrl(personalDraft.mediaUrl), [personalDraft.mediaUrl]);
+  const selectedPersonalDesign = designOptions.find((option) => option.id === personalDraft.design) ?? designOptions[0];
 
   const resetForm = () => {
     setForm({ studentId: "", title: "", body: "", visibility: "student", priority: "normal" });
@@ -111,17 +187,125 @@ export default function TeacherNotesPage() {
     load();
   };
 
+  const resetPersonal = () => {
+    setPersonalDraft(emptyPersonalDraft);
+    setEditingPersonalId(null);
+    setPersonalOpen(false);
+  };
+
+  const buildPersonalPayload = (media: SafeMediaUrl | null) => ({
+    content: {
+      type: "teacher_personal_note",
+      body: personalDraft.body,
+      blocks: [
+        { type: "paragraph", text: personalDraft.body },
+        ...(media ? [{ type: media.kind, url: media.url, embedUrl: media.embedUrl }] : []),
+      ],
+    },
+    metadata: {
+      design: personalDraft.design,
+      media,
+      source: "teacher_notes",
+    },
+  });
+
+  const savePersonalNote = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!personalDraft.title.trim() || !personalDraft.body.trim()) {
+      toast.error("Add a title and note body first.");
+      return;
+    }
+    if (personalDraft.mediaUrl.trim() && !safePersonalMedia) {
+      toast.error("Use a safe HTTPS image, video, YouTube, Vimeo, or normal link.");
+      return;
+    }
+    setSavingPersonal(true);
+    try {
+      const payload = buildPersonalPayload(safePersonalMedia);
+      if (editingPersonalId) {
+        await updateStudioItem({
+          id: editingPersonalId,
+          title: personalDraft.title,
+          plainText: personalDraft.body,
+          status: "draft",
+          ...payload,
+        });
+      } else {
+        await saveStudioItem({
+          kind: "note",
+          title: personalDraft.title,
+          plainText: personalDraft.body,
+          status: "draft",
+          ...payload,
+        });
+      }
+      toast.success(editingPersonalId ? "Teaching note updated." : "Teaching note saved.");
+      resetPersonal();
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Teaching note was not saved.");
+    } finally {
+      setSavingPersonal(false);
+    }
+  };
+
+  const editPersonal = (note: StudioServerItem) => {
+    setPersonalDraft({
+      title: note.title,
+      body: personalNoteText(note),
+      mediaUrl: getPersonalMediaUrl(note),
+      design: getPersonalDesign(note),
+    });
+    setEditingPersonalId(note.id);
+    setPersonalOpen(true);
+  };
+
+  const duplicatePersonal = async (note: StudioServerItem) => {
+    const media = classifySafeMediaUrl(getPersonalMediaUrl(note));
+    try {
+      await saveStudioItem({
+        kind: "note",
+        title: `${note.title} copy`,
+        plainText: personalNoteText(note),
+        status: "draft",
+        content: note.content,
+        metadata: {
+          ...note.metadata,
+          media,
+          duplicatedFrom: note.id,
+          source: "teacher_notes",
+        },
+      });
+      toast.success("Teaching note duplicated.");
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Teaching note was not duplicated.");
+    }
+  };
+
+  const archivePersonal = async (note: StudioServerItem) => {
+    const confirmed = window.confirm(`Archive "${note.title}"?`);
+    if (!confirmed) return;
+    try {
+      await archiveStudioItem(note.id);
+      toast.success("Teaching note archived.");
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Teaching note was not archived.");
+    }
+  };
+
   return (
     <div className="page-shell max-w-6xl space-y-5">
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
+      <section className="premium-panel rounded-2xl p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-              Student support
+              Notes workspace
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Teacher notes for students</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">Notes</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {notes.length} teacher notes, {visibleCount} shared with students
+              {personalNotes.length} teaching drafts, {notes.length} student feedback notes, {visibleCount} shared.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -133,11 +317,89 @@ export default function TeacherNotesPage() {
             )}
             <button type="button" onClick={() => setFormOpen(true)} className="btn-primary justify-center">
               <Plus className="h-4 w-4" />
-              New note
+              Student feedback
+            </button>
+            <button type="button" onClick={() => setPersonalOpen(true)} className="btn-secondary justify-center">
+              <StickyNote className="h-4 w-4" />
+              Teaching note
             </button>
           </div>
         </div>
       </section>
+
+      {personalOpen && (
+        <form onSubmit={savePersonalNote} className="premium-surface rounded-2xl p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-bold">
+                {editingPersonalId ? "Edit teaching note" : "New teaching note"}
+              </h2>
+              <p className="text-sm text-edsync-subtle">
+                Save lesson ideas, references, media, links, and planning notes as Studio drafts.
+              </p>
+            </div>
+            <Palette className="h-5 w-5 text-edsync-amber" />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="grid gap-3">
+              <input
+                className="edsync-input"
+                value={personalDraft.title}
+                onChange={(event) => setPersonalDraft({ ...personalDraft, title: event.target.value })}
+                placeholder="Teaching note title"
+                required
+              />
+              <textarea
+                className="edsync-input min-h-32"
+                value={personalDraft.body}
+                onChange={(event) => setPersonalDraft({ ...personalDraft, body: event.target.value })}
+                placeholder="Plan, reference, link, rubric idea, media note, or follow-up..."
+                required
+              />
+              <input
+                className="edsync-input"
+                value={personalDraft.mediaUrl}
+                onChange={(event) => setPersonalDraft({ ...personalDraft, mediaUrl: event.target.value })}
+                placeholder="Optional HTTPS image, video, YouTube, Vimeo, or reference link"
+              />
+            </div>
+            <aside className={`rounded-2xl border p-4 ${selectedPersonalDesign.className}`}>
+              <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Design</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {designOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setPersonalDraft({ ...personalDraft, design: option.id })}
+                    className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
+                      personalDraft.design === option.id
+                        ? "border-edsync-amber bg-edsync-amber text-white"
+                        : "border-edsync-border bg-edsync-surface text-edsync-subtle"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 rounded-xl border border-edsync-border bg-edsync-card p-3">
+                <p className="font-display text-lg font-bold">{personalDraft.title || "Preview title"}</p>
+                <p className="mt-2 line-clamp-4 text-sm leading-6 text-edsync-subtle">
+                  {personalDraft.body || "Your teaching note preview will appear here."}
+                </p>
+                {personalDraft.mediaUrl && (
+                  <p className={`mt-3 text-xs font-semibold ${safePersonalMedia ? "text-edsync-emerald" : "text-rose-600"}`}>
+                    {safePersonalMedia ? `Safe ${safePersonalMedia.kind} detected` : "Unsupported or unsafe URL"}
+                  </p>
+                )}
+              </div>
+              <button type="submit" disabled={savingPersonal} className="btn-primary mt-4 w-full justify-center">
+                <Save className="h-4 w-4" />
+                {savingPersonal ? "Saving..." : "Save note"}
+              </button>
+            </aside>
+          </div>
+        </form>
+      )}
 
       {formOpen && (
         <form onSubmit={save} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
@@ -202,7 +464,74 @@ export default function TeacherNotesPage() {
         </form>
       )}
 
-      <section className="rounded-xl border border-edsync-border bg-edsync-card">
+      <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold">Teaching notes</h2>
+              <p className="text-sm text-edsync-subtle">Personal planning notes saved in Studio.</p>
+            </div>
+            <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
+              Open Studio
+            </Link>
+          </div>
+          {personalNotes.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
+              <StickyNote className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
+              <p className="font-semibold text-edsync-text">No teaching notes yet</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Create a note for planning, media, links, or lesson ideas.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {personalNotes.map((note) => {
+                const media = classifySafeMediaUrl(getPersonalMediaUrl(note));
+                const Icon = mediaIcon(media);
+                return (
+                  <article key={note.id} className="premium-card rounded-2xl p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          <span className="badge bg-edsync-amber/10 text-edsync-amber">teacher</span>
+                          <span className="badge bg-edsync-blue/10 text-edsync-blue">{String(note.metadata.design ?? "clean")}</span>
+                        </div>
+                        <h3 className="truncate font-display text-lg font-bold">{note.title}</h3>
+                      </div>
+                      {media && <Icon className="h-5 w-5 text-edsync-blue" />}
+                    </div>
+                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-edsync-subtle">{personalNoteText(note)}</p>
+                    {media && (
+                      <a href={media.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
+                        Open attached {media.kind}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => editPersonal(note)}>
+                        <Edit3 className="h-4 w-4" />
+                        Edit
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => duplicatePersonal(note)}>
+                        <Copy className="h-4 w-4" />
+                        Duplicate
+                      </button>
+                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => archivePersonal(note)}>
+                        <Archive className="h-4 w-4" />
+                        Archive
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-3">
+          <div>
+            <h2 className="font-display text-xl font-bold">Student feedback</h2>
+            <p className="text-sm text-edsync-subtle">Notes shared with or kept about students.</p>
+          </div>
+          <div className="rounded-2xl border border-edsync-border bg-edsync-card">
         <div className="divide-y divide-edsync-border">
           {notes.length === 0 ? (
             <p className="p-5 text-sm text-edsync-subtle">No notes yet.</p>
@@ -247,6 +576,8 @@ export default function TeacherNotesPage() {
             })
           )}
         </div>
+          </div>
+        </aside>
       </section>
     </div>
   );
