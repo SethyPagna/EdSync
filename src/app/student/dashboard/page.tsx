@@ -72,17 +72,23 @@ type CatalogSuggestion = {
   metadata?: { category?: string | null; difficulty?: string | null };
 };
 type DashboardVisibility = {
-  notifications: boolean;
   assignments: boolean;
   deadlines: boolean;
+  feedback: boolean;
+  grades: boolean;
   newContent: boolean;
+  notifications: boolean;
+  practice: boolean;
 };
 
 const defaultVisibility: DashboardVisibility = {
-  notifications: true,
   assignments: true,
   deadlines: true,
+  feedback: true,
+  grades: true,
   newContent: true,
+  notifications: true,
+  practice: true,
 };
 
 function formatPlannerDate(value: string | null) {
@@ -445,6 +451,7 @@ export default function StudentDashboard() {
     () => summarizePracticeReviewCards(reviewCards),
     [reviewCards],
   );
+  const visibleReviewRecommendation = visibility.practice ? reviewRecommendation : null;
   const assignmentEvents = useMemo(
     () => planner.events.filter((event) => event.event_type === "deadline"),
     [planner.events],
@@ -596,15 +603,17 @@ export default function StudentDashboard() {
               <h2 className="font-display text-xl font-bold">Continue learning</h2>
               <p className="text-sm text-edsync-subtle">Your next recommended step.</p>
             </div>
-            <Link href="/practice" className="btn-secondary justify-center text-sm">
-              Practice
-            </Link>
+            {visibility.practice && (
+              <Link href="/practice" className="btn-secondary justify-center text-sm">
+                Practice + AI
+              </Link>
+            )}
           </div>
           {recommendation ? (
             <div className="space-y-3">
-              {reviewRecommendation && (
+              {visibleReviewRecommendation && (
                 <Link
-                  href={reviewRecommendation.href}
+                  href={visibleReviewRecommendation.href}
                   className="group block rounded-2xl border border-edsync-amber/30 bg-edsync-amber/10 p-4 transition hover:-translate-y-0.5"
                 >
                   <div className="flex items-start gap-3">
@@ -614,12 +623,12 @@ export default function StudentDashboard() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="badge bg-edsync-amber/15 text-edsync-amber">
-                          {reviewRecommendation.label}
+                          {visibleReviewRecommendation.label}
                         </span>
-                        <p className="font-semibold text-edsync-text">{reviewRecommendation.title}</p>
+                        <p className="font-semibold text-edsync-text">{visibleReviewRecommendation.title}</p>
                       </div>
                       <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">
-                        {reviewRecommendation.subtitle}
+                        {visibleReviewRecommendation.subtitle}
                       </p>
                       <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-amber">
                         Review now <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
@@ -738,10 +747,13 @@ export default function StudentDashboard() {
             </div>
             <div className="mb-4 grid grid-cols-2 gap-2">
               {[
-                ["notifications", "Class updates"],
+                ["notifications", "Notifications"],
                 ["assignments", "Assignments"],
                 ["deadlines", "Deadlines"],
                 ["newContent", "New content"],
+                ["practice", "Practice + AI"],
+                ["grades", "Grades"],
+                ["feedback", "Feedback"],
               ].map(([key, label]) => {
                 const typedKey = key as keyof DashboardVisibility;
                 return (
@@ -764,7 +776,7 @@ export default function StudentDashboard() {
             <div className="space-y-3">
               {!visibility.notifications ? (
                 <p className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Class updates are hidden.
+                  Notifications are hidden.
                 </p>
               ) : planner.announcements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
@@ -788,6 +800,29 @@ export default function StudentDashboard() {
               )}
             </div>
           </section>
+
+          {(visibility.practice || visibility.grades || visibility.feedback) && (
+            <section className="premium-surface rounded-2xl p-4 sm:p-5">
+              <h2 className="font-display text-xl font-bold">Support shortcuts</h2>
+              <div className="mt-4 grid gap-2">
+                {visibility.practice && (
+                  <Link href="/practice" className="btn-secondary justify-between px-3 py-2 text-sm">
+                    Practice + AI <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+                {visibility.grades && (
+                  <Link href="/student/grades" className="btn-secondary justify-between px-3 py-2 text-sm">
+                    Grades <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+                {visibility.feedback && (
+                  <Link href="/student/notes" className="btn-secondary justify-between px-3 py-2 text-sm">
+                    Feedback notes <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="premium-surface rounded-2xl p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
