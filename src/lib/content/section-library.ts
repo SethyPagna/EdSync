@@ -11,6 +11,57 @@ export type SectionTemplate = {
   content: string;
 };
 
+export type SectionInsertTool = {
+  label: string;
+  description: string;
+  content: string;
+};
+
+export const SECTION_INSERT_TOOLS: SectionInsertTool[] = [
+  {
+    label: "H2",
+    description: "Large heading",
+    content: "## Section heading",
+  },
+  {
+    label: "H3",
+    description: "Small heading",
+    content: "### Subheading",
+  },
+  {
+    label: "Slide",
+    description: "Slide-style block",
+    content:
+      "Slide title\n- Main point\n- Evidence or example\n- Student action",
+  },
+  {
+    label: "Table",
+    description: "Two-column table",
+    content: "Table\nItem | Notes\nExample | Add details",
+  },
+  {
+    label: "Checklist",
+    description: "Success criteria",
+    content: "Checklist\n[ ] Step one\n[ ] Step two\n[ ] Reflection",
+  },
+  {
+    label: "Practice",
+    description: "Timed activity",
+    content:
+      "Practice Sprint\nSet a short timer, answer the prompt, then revise once after feedback.\n1. Try it without notes.\n2. Compare with the success criteria.\n3. Write one correction or upgrade.",
+  },
+  {
+    label: "Callout",
+    description: "Key reminder",
+    content: "Callout: Remember\nAdd a key reminder, warning, or example.",
+  },
+  {
+    label: "Spacer",
+    description: "Visual pause",
+    content: "---",
+  },
+];
+
 export const SECTION_TEMPLATES: SectionTemplate[] = [
   {
     id: "concept-brief",
@@ -21,7 +72,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 8,
     title: "Concept Brief",
     content:
-      "<h2>Key idea</h2><p>Explain the concept in plain language.</p><h3>Example</h3><p>Show one realistic example.</p><h3>Check</h3><p>Ask one quick question before moving on.</p>",
+      "## Key idea\nExplain the concept in plain language.\n\n### Example\nShow one realistic example.\n\n### Check\nAsk one quick question before moving on.",
   },
   {
     id: "slide-deck",
@@ -32,7 +83,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 12,
     title: "Slide Deck",
     content:
-      '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence or example</li><li>Student action</li></ul></div><hr><div class="lesson-slide"><h2>Practice slide</h2><p>Add a prompt, scenario, or image cue.</p></div>',
+      "Slide 1: Slide title\n- Main point\n- Evidence or example\n- Student action\n\n---\n\nSlide 2: Practice slide\nAdd a prompt, scenario, or image cue.",
   },
   {
     id: "guided-notes",
@@ -54,7 +105,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 12,
     title: "Practice Sprint",
     content:
-      '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Set a short timer, answer the prompt, then revise once after feedback.</p><ol><li>Try it without notes.</li><li>Compare with the success criteria.</li><li>Write one correction or upgrade.</li></ol></section>',
+      "Practice Sprint\nSet a short timer, answer the prompt, then revise once after feedback.\n\n1. Try it without notes.\n2. Compare with the success criteria.\n3. Write one correction or upgrade.",
   },
   {
     id: "flashcard-round",
@@ -65,7 +116,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 8,
     title: "Flashcard Round",
     content:
-      '<section class="lesson-practice-card"><h3>Flashcard Round</h3><table><tbody><tr><th>Front</th><th>Back</th></tr><tr><td>Key term or question</td><td>Answer, example, or hint</td></tr><tr><td>Application prompt</td><td>Model response</td></tr></tbody></table><p>Students mark each card as Again, Almost, or Mastered.</p></section>',
+      "Flashcard Round\n\nFront | Back\nKey term or question | Answer, example, or hint\nApplication prompt | Model response\n\nStudents mark each card as Again, Almost, or Mastered.",
   },
   {
     id: "scenario-game",
@@ -76,7 +127,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 15,
     title: "Scenario Game",
     content:
-      '<section class="lesson-practice-card"><h3>Scenario Game</h3><p>Give students a realistic situation and three choices. Award points for evidence-backed reasoning.</p><ol><li>Choose a response.</li><li>Explain why it works.</li><li>Unlock the next scenario after a strong answer.</li></ol></section>',
+      "Scenario Game\nGive students a realistic situation and three choices. Award points for evidence-backed reasoning.\n\n1. Choose a response.\n2. Explain why it works.\n3. Unlock the next scenario after a strong answer.",
   },
   {
     id: "media-analysis",
@@ -113,4 +164,33 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
 
 export function sectionTemplateById(id: string) {
   return SECTION_TEMPLATES.find((template) => template.id === id) ?? SECTION_TEMPLATES[0];
+}
+
+export function normalizeLessonAuthoringContent(content: string) {
+  if (!content || !/[<>]/.test(content)) return content;
+
+  return content
+    .replace(/<hr\s*\/?>/gi, "\n\n---\n\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(h1|h2)>/gi, "\n")
+    .replace(/<(h1|h2)[^>]*>/gi, "## ")
+    .replace(/<\/(h3|h4)>/gi, "\n")
+    .replace(/<(h3|h4)[^>]*>/gi, "### ")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<p[^>]*>/gi, "")
+    .replace(/<th[^>]*>/gi, "")
+    .replace(/<\/th>/gi, " | ")
+    .replace(/<td[^>]*>/gi, "")
+    .replace(/<\/td>/gi, " | ")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
