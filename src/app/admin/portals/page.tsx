@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Edit3, Globe2, Home, Save, Trash2, X } from "lucide-react";
+import { Building2, Check, Copy, Edit3, Globe2, Home, Save, Trash2, X } from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
 import type { Tenant, TenantPortal } from "@/types";
 
@@ -165,28 +165,31 @@ export default function AdminPortalsPage() {
   };
 
   return (
-    <div className="page-shell max-w-6xl space-y-5">
+    <div className="page-shell max-w-7xl space-y-5">
       <header className="premium-panel rounded-2xl p-4 sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Tenant command</p>
-          <h1 className="font-display text-3xl font-bold text-edsync-text">Organizations & Portals</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Portals work like branded academies: one organization can run internal training, partner learning, customer education, or a public course catalog.
-          </p>
-        </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle xl:max-w-md">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start">
-            <span>
-              Organization code:{" "}
-              <span className="font-semibold text-edsync-text">{payload?.context.tenant.slug || "loading"}</span>
-            </span>
-            <button type="button" className="btn-secondary w-fit px-3 py-2 text-xs" onClick={copyTenantCode}>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Tenant command</p>
+            <h1 className="font-display text-3xl font-bold text-edsync-text">Organizations & Portals</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
+              Manage branded academy spaces, domains, public catalogs, and scoped organization access.
+            </p>
+          </div>
+          <div className="grid gap-2 rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle sm:min-w-80">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-edsync-text">{payload?.context.tenant.name || "EdSync organization"}</p>
+                <p className="truncate text-xs text-edsync-subtle">Code: {payload?.context.tenant.slug || "loading"}</p>
+              </div>
+            </div>
+            <button type="button" className="btn-secondary w-full justify-center px-3 py-2 text-xs" onClick={copyTenantCode}>
               <Copy className="h-3.5 w-3.5" />
-              Copy code
+              Copy organization code
             </button>
           </div>
-        </div>
         </div>
       </header>
 
@@ -196,15 +199,15 @@ export default function AdminPortalsPage() {
         </div>
       )}
 
-      <section className="edsync-card p-0">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <section className="premium-surface rounded-2xl p-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <span>
             <span className="font-display text-xl font-bold">Add organization portal</span>
             <span className="block text-sm text-edsync-subtle">Create a branded public, internal, customer, or partner space.</span>
           </span>
         </div>
-        <form onSubmit={createPortal} className="grid gap-3 border-t border-edsync-border p-4 md:grid-cols-2 xl:grid-cols-6">
-          <input className="edsync-input lg:col-span-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, slug: form.slug || slugify(event.target.value) })} placeholder="Portal name" required />
+        <form onSubmit={createPortal} className="grid gap-3 border-t border-edsync-border p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-6">
+          <input className="edsync-input xl:col-span-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, slug: form.slug || slugify(event.target.value) })} placeholder="Portal name" required />
           <input className="edsync-input" value={form.slug} onChange={(event) => setForm({ ...form, slug: slugify(event.target.value) })} placeholder="slug" />
           <select className="edsync-input" value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value })}>
             <option value="internal">Internal</option>
@@ -212,21 +215,21 @@ export default function AdminPortalsPage() {
             <option value="partner">Partner</option>
             <option value="public">Public</option>
           </select>
-          <input className="edsync-input lg:col-span-2" value={form.domain} onChange={(event) => setForm({ ...form, domain: event.target.value })} placeholder="portal.example.com" />
-          <label className="flex items-center gap-2 text-sm text-edsync-subtle lg:col-span-2">
+          <input className="edsync-input xl:col-span-2" value={form.domain} onChange={(event) => setForm({ ...form, domain: event.target.value })} placeholder="portal.example.com" />
+          <label className="flex items-center gap-2 rounded-xl border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle xl:col-span-2">
             <input type="checkbox" checked={form.catalogEnabled} onChange={(event) => setForm({ ...form, catalogEnabled: event.target.checked })} />
             Catalog enabled
           </label>
-          <label className="flex items-center gap-2 text-sm text-edsync-subtle lg:col-span-2">
+          <label className="flex items-center gap-2 rounded-xl border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle xl:col-span-2">
             <input type="checkbox" checked={form.featuredOnly} onChange={(event) => setForm({ ...form, featuredOnly: event.target.checked })} />
             Show featured products first
           </label>
-          <button className="btn-primary w-full justify-center md:w-fit lg:col-span-2" type="submit" disabled={busy}>Create portal</button>
+          <button className="btn-primary w-full justify-center md:w-fit xl:col-span-2" type="submit" disabled={busy}>Create portal</button>
         </form>
       </section>
 
-      <div className="edsync-card overflow-visible p-0">
-        <div className="border-b border-edsync-border px-4 py-3">
+      <div className="premium-surface overflow-visible rounded-2xl p-0">
+        <div className="border-b border-edsync-border px-4 py-3 sm:px-5">
           <h2 className="font-display text-xl font-bold">Portal directory</h2>
           <p className="text-sm text-edsync-subtle">Edit, toggle, delete, and open public organization portals from one place.</p>
         </div>
@@ -236,8 +239,8 @@ export default function AdminPortalsPage() {
             const settings = settingsOf(portal);
             const domains = domainsByPortal.get(portal.id) ?? [];
             return (
-              <section key={portal.id} className="grid gap-3 px-4 py-4 text-sm">
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px] xl:items-start">
+              <section key={portal.id} className="grid gap-3 px-4 py-4 text-sm sm:px-5">
+                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_240px_260px] 2xl:items-start">
                   <div className="min-w-0">
                     {editing ? (
                       <div className="grid gap-3 md:grid-cols-2">
@@ -251,14 +254,14 @@ export default function AdminPortalsPage() {
                           <span className="font-semibold text-edsync-text">{portal.name}</span>
                           <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.is_default ? "Default" : "Portal"}</span>
                           <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{portal.audience}</span>
-                          {settings.enabled === false && <span className="badge bg-slate-100 text-slate-500">Catalog off</span>}
+                          {settings.enabled === false && <span className="badge bg-edsync-muted/30 text-edsync-subtle">Catalog off</span>}
                         </div>
-                        <p className="mt-1 text-edsync-subtle">/{portal.slug} / {portal.domain || "No custom domain"}</p>
+                        <p className="mt-1 break-words text-edsync-subtle">/{portal.slug} / {portal.domain || "No custom domain"}</p>
                       </>
                     )}
                   </div>
 
-                  <div className="grid gap-1 text-edsync-subtle">
+                  <div className="grid gap-2 rounded-2xl border border-edsync-border bg-edsync-card p-3 text-edsync-subtle">
                     {editing ? (
                       <>
                         <select className="edsync-input" value={draft.audience} onChange={(event) => setDraft({ ...draft, audience: event.target.value })}>
@@ -285,7 +288,7 @@ export default function AdminPortalsPage() {
                     )}
                   </div>
 
-                  <div className="flex min-w-0 flex-wrap gap-2 xl:flex-nowrap xl:justify-end xl:overflow-x-visible">
+                  <div className="flex min-w-0 flex-wrap gap-2 2xl:justify-end">
                     {editing ? (
                       <>
                         <button type="button" className="btn-primary flex-none px-3 py-2 text-sm" onClick={() => savePortal(portal)} disabled={busy}>
@@ -321,7 +324,7 @@ export default function AdminPortalsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                   {domains.map((domain) => (
                     <div key={domain.id} className="flex items-center justify-between gap-3 rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2">
                       <span className="truncate">{domain.hostname}</span>
@@ -331,7 +334,7 @@ export default function AdminPortalsPage() {
                       </span>
                     </div>
                   ))}
-                  {domains.length === 0 && <p className="rounded-lg border border-dashed border-edsync-border px-3 py-2 text-edsync-subtle">No custom domain is attached.</p>}
+                  {domains.length === 0 && <p className="rounded-lg border border-dashed border-edsync-border bg-edsync-card px-3 py-2 text-edsync-subtle">No custom domain is attached.</p>}
                 </div>
               </section>
             );
