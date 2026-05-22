@@ -19,7 +19,6 @@ import {
   FileCheck2,
   GraduationCap,
   LayoutDashboard,
-  Layers3,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -29,7 +28,6 @@ import {
   ShieldCheck,
   StickyNote,
   MessageSquareText,
-  Timer,
   UserRound,
   UsersRound,
   X,
@@ -168,11 +166,9 @@ function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: stri
 
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/studio", label: "Studio", icon: Layers3 },
   { href: "/teacher/lessons", label: "Lessons", icon: BookOpenCheck },
   { href: "/teacher/lessons/create", label: "New Lesson", icon: Plus },
-  { href: "/practice", label: "Activities", icon: Timer },
-  { href: "/ai", label: "AI Co-creator", icon: Brain },
+  { href: "/practice", label: "Practice + AI", icon: Brain },
   { href: "/teacher/work", label: "Work", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Gradebook", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
@@ -187,8 +183,7 @@ export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student/lessons", label: "Lessons", icon: BookOpenCheck },
   { href: "/student/work", label: "My Work", icon: FileCheck2 },
-  { href: "/practice", label: "Activities", icon: Timer },
-  { href: "/ai", label: "AI Coach", icon: Brain },
+  { href: "/practice", label: "Practice + AI", icon: Brain },
   { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
@@ -232,7 +227,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
   if (role === "teacher") {
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
-      { label: "Create", items: pick(["/studio", "/teacher/lessons", "/teacher/lessons/create", "/practice", "/ai"]) },
+      { label: "Create", items: pick(["/teacher/lessons", "/teacher/lessons/create", "/practice"]) },
       { label: "Classroom", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
       { label: "Insights", items: pick(["/teacher/analytics"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
@@ -242,7 +237,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
     { label: "Learning", items: pick(["/student/lessons", "/student/work"]) },
-    { label: "Support", items: pick(["/practice", "/ai", "/student/grades", "/student/notes", "/student/discussions"]) },
+    { label: "Support", items: pick(["/practice", "/student/grades", "/student/notes", "/student/discussions"]) },
     { label: "Account", items: pick(["/student/profile"]) },
   ];
 }
