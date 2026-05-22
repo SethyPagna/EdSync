@@ -14,6 +14,8 @@ export const PRACTICE_MODE_VALUES = [
 
 export type PracticeSearchParams = {
   mode?: string;
+  ai?: string;
+  task?: string;
 };
 
 export function isPracticeMode(value: unknown): value is PracticeMode {
