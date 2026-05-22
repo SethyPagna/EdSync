@@ -12,6 +12,7 @@ import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
   BarChart3,
+  Bell,
   BookOpenCheck,
   CalendarClock,
   Brain,
@@ -187,6 +188,7 @@ export const studentNavItems: ShellNavItem[] = [
   { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
+  { href: "/student/notifications", label: "Notifications", icon: Bell },
   { href: "/student/profile", label: "Profile & Settings", icon: UserRound },
 ];
 
@@ -238,7 +240,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
     { label: "Home", items: pick(["/student/dashboard"]) },
     { label: "Learning", items: pick(["/student/lessons", "/student/work"]) },
     { label: "Support", items: pick(["/practice", "/student/grades", "/student/notes", "/student/discussions"]) },
-    { label: "Account", items: pick(["/student/profile"]) },
+    { label: "Account", items: pick(["/student/notifications", "/student/profile"]) },
   ];
 }
 
