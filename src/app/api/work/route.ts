@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { notifyAndEmail } from "@/lib/engagement/server";
 import { appendLearningEvent } from "@/lib/learning-events";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 import {
@@ -11,6 +12,13 @@ import {
 import { validateWorkPoints, validateWorkStatus, validateWorkType } from "@/lib/work/validation";
 
 const WORK_ITEM_TABLE = "learning_work_items";
+
+type StudentRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  preferences: string | null;
+};
 
 function workScopeParams(tenantId: string) {
   return tenantObjectParams({ objectTable: WORK_ITEM_TABLE, tenantId });
@@ -50,6 +58,76 @@ async function getScopedClass({
     [...tenantObjectParams({ objectTable: "classes", tenantId }), classId, ...ownerParams],
   );
   return row ?? null;
+}
+
+function parsePreferences(value: string | null) {
+  try {
+    return value ? (JSON.parse(value) as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function getClassStudents(classId: string, tenantId: string) {
+  return d1Query<StudentRow>(
+    `SELECT p.id, p.email, p.full_name, p.preferences
+       FROM class_enrollments ce
+       JOIN classes c ON c.id = ce.class_id
+       JOIN profiles p ON p.id = ce.student_id
+       ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
+        AND ce.class_id = ?
+        AND ce.is_active = 1
+        AND c.is_active = 1
+        AND p.role = 'student'`,
+    [...tenantObjectParams({ objectTable: "classes", tenantId }), classId],
+  );
+}
+
+async function notifyWorkStudents({
+  students,
+  actorId,
+  title,
+  message,
+  priority,
+  metadata,
+}: {
+  students: StudentRow[];
+  actorId: string;
+  title: string;
+  message: string;
+  priority: "normal" | "high";
+  metadata: Record<string, unknown>;
+}) {
+  await Promise.all(
+    students.map((student) => {
+      const preferences = parsePreferences(student.preferences);
+      const wantsEmail =
+        preferences.email_notifications !== false &&
+        preferences.assignment_notifications !== false;
+
+      return notifyAndEmail({
+        userId: student.id,
+        actorId,
+        type: "work_assigned",
+        title,
+        message,
+        actionUrl: "/student/work",
+        priority,
+        channels: wantsEmail ? ["in_app", "email"] : ["in_app"],
+        metadata,
+        email: wantsEmail
+          ? {
+              recipientUserId: student.id,
+              recipientEmail: student.email,
+              subject: `EdSync: ${title}`,
+              bodyText: `Hi ${student.full_name || "there"},\n\n${message}\n\nOpen EdSync: ${process.env.NEXT_PUBLIC_APP_URL || ""}/student/work`,
+              metadata,
+            }
+          : null,
+      });
+    }),
+  );
 }
 
 export async function GET(request: Request) {
@@ -255,6 +333,27 @@ export async function POST(request: Request) {
         }),
       ],
     );
+  }
+
+  if (body.classId && status === "published") {
+    const students = await getClassStudents(body.classId, context.tenant.id);
+    const title = `${workType[0].toUpperCase()}${workType.slice(1)}: ${body.title.trim()}`;
+    const dueText = body.dueAt ? ` Due ${body.dueAt}.` : "";
+    await notifyWorkStudents({
+      students,
+      actorId: user.id,
+      title,
+      message: `${body.instructions || body.description || "New class work is ready."}${dueText}`,
+      priority: body.dueAt ? "high" : "normal",
+      metadata: {
+        type: "work_assigned",
+        workItemId: id,
+        workType,
+        classId: body.classId,
+        dueAt: body.dueAt ?? null,
+        pointsPossible,
+      },
+    });
   }
 
   await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: "learning_work_items", objectId: id });
