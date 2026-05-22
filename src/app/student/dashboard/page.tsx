@@ -91,6 +91,27 @@ const defaultVisibility: DashboardVisibility = {
   practice: true,
 };
 
+const ACTIVE_TIME_WEEKLY_TARGET_MINUTES = 240;
+
+const notificationToggleOptions: Array<{ key: keyof DashboardVisibility; label: string }> = [
+  { key: "notifications", label: "Master" },
+  { key: "assignments", label: "Assignments" },
+  { key: "deadlines", label: "Deadlines" },
+  { key: "newContent", label: "New content" },
+  { key: "practice", label: "Practice + AI" },
+  { key: "grades", label: "Grades" },
+  { key: "feedback", label: "Feedback" },
+];
+
+const notificationTypeKeys: Array<keyof DashboardVisibility> = [
+  "assignments",
+  "deadlines",
+  "newContent",
+  "practice",
+  "grades",
+  "feedback",
+];
+
 function formatPlannerDate(value: string | null) {
   if (!value) return "No time set";
   const date = new Date(value);
@@ -447,6 +468,7 @@ export default function StudentDashboard() {
     () => lessons.reduce((sum, lesson) => sum + Number(lesson.progress?.time_spent ?? 0), 0),
     [lessons],
   );
+  const activeTimePct = Math.min(100, Math.round((totalTimeSpent / ACTIVE_TIME_WEEKLY_TARGET_MINUTES) * 100));
   const reviewRecommendation = useMemo(
     () => summarizePracticeReviewCards(reviewCards),
     [reviewCards],
@@ -464,6 +486,8 @@ export default function StudentDashboard() {
     ...(visibility.deadlines ? assignmentEvents : []),
     ...(visibility.assignments ? otherEvents : []),
   ];
+  const notificationTypesPaused = notificationTypeKeys.every((key) => !visibility[key]);
+  const notificationsPaused = !visibility.notifications || notificationTypesPaused;
 
   return (
     <div className="page-shell space-y-5">
@@ -477,17 +501,7 @@ export default function StudentDashboard() {
               Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
             </h1>
           </div>
-          <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Timer className="h-5 w-5 text-edsync-blue" />
-              <div>
-                <p className="font-display text-2xl font-bold">
-                  {formatMinutes(totalTimeSpent)}
-                </p>
-                <p className="text-xs text-edsync-subtle">active learning time</p>
-              </div>
-            </div>
-          </div>
+          <TimeSpentGauge minutes={totalTimeSpent} percent={activeTimePct} />
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -746,27 +760,18 @@ export default function StudentDashboard() {
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
             <div className="mb-4 grid grid-cols-2 gap-2">
-              {[
-                ["notifications", "Notifications"],
-                ["assignments", "Assignments"],
-                ["deadlines", "Deadlines"],
-                ["newContent", "New content"],
-                ["practice", "Practice + AI"],
-                ["grades", "Grades"],
-                ["feedback", "Feedback"],
-              ].map(([key, label]) => {
-                const typedKey = key as keyof DashboardVisibility;
+              {notificationToggleOptions.map(({ key, label }) => {
                 return (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => toggleVisibility(typedKey)}
+                    onClick={() => toggleVisibility(key)}
                     className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
-                      visibility[typedKey]
+                      visibility[key]
                         ? "border-edsync-blue/35 bg-edsync-blue/10 text-edsync-blue"
                         : "border-edsync-border bg-edsync-surface text-edsync-subtle"
                     }`}
-                    aria-pressed={visibility[typedKey]}
+                    aria-pressed={visibility[key]}
                   >
                     {label}
                   </button>
@@ -774,10 +779,13 @@ export default function StudentDashboard() {
               })}
             </div>
             <div className="space-y-3">
-              {!visibility.notifications ? (
-                <p className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Notifications are hidden.
-                </p>
+              {notificationsPaused ? (
+                <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-surface p-3">
+                  <p className="text-sm font-semibold text-edsync-text">Notifications are paused</p>
+                  <p className="mt-1 text-xs text-edsync-subtle">
+                    Turn on Master or any notification type to show updates here again.
+                  </p>
+                </div>
               ) : planner.announcements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   New class notifications will appear here.
@@ -976,6 +984,31 @@ export default function StudentDashboard() {
             </div>
           </details>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function TimeSpentGauge({ minutes, percent }: { minutes: number; percent: number }) {
+  return (
+    <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-4">
+        <div
+          className="grid h-16 w-16 place-items-center rounded-full"
+          style={{
+            background: `conic-gradient(var(--blue) ${percent}%, color-mix(in srgb, var(--border) 72%, transparent) 0)`,
+          }}
+          aria-label={`${percent}% of weekly active learning target`}
+        >
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-edsync-card">
+            <Timer className="h-5 w-5 text-edsync-blue" />
+          </div>
+        </div>
+        <div>
+          <p className="font-display text-2xl font-bold">{formatMinutes(minutes)}</p>
+          <p className="text-xs text-edsync-subtle">active learning time</p>
+          <p className="mt-1 text-[11px] font-semibold text-edsync-blue">{percent}% weekly focus</p>
+        </div>
       </div>
     </div>
   );
