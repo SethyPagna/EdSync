@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
-import { CalendarClock, ClipboardList, FileCheck2, MessageSquareText, Plus, Save, UsersRound } from "lucide-react";
+import { CalendarClock, ClipboardList, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound } from "lucide-react";
 
 type ClassRow = { id: string; name: string };
 type WorkItem = {
@@ -171,13 +172,19 @@ export default function TeacherWorkPage() {
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Assignments</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {publishedCount} published, {submissionCount} submissions. Class due dates are added to Planner automatically.
+              {publishedCount} published, {submissionCount} submissions. Published class work notifies students and due dates appear in Planner.
             </p>
           </div>
-          <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
-            <Plus className="h-4 w-4" />
-            {formOpen ? "Close builder" : "Create work"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/teacher/planner" className="btn-secondary justify-center">
+              <CalendarClock className="h-4 w-4" />
+              Planner
+            </Link>
+            <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
+              <Plus className="h-4 w-4" />
+              {formOpen ? "Close builder" : "Create work"}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -186,7 +193,9 @@ export default function TeacherWorkPage() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">New work item</h2>
-              <p className="text-sm text-edsync-subtle">Quiz, test, task, discussion, or activity.</p>
+              <p className="text-sm text-edsync-subtle">
+                Quiz, test, task, discussion, or activity. Published class work creates notifications; due dates sync to Planner.
+              </p>
             </div>
             <ClipboardList className="h-5 w-5 text-edsync-blue" />
           </div>
@@ -242,7 +251,8 @@ export default function TeacherWorkPage() {
               placeholder="Instructions, rubric, links, practice rules, or quiz prompt"
             />
             <button className="btn-primary justify-center" type="submit">
-              Create
+              <Send className="h-4 w-4" />
+              Publish
             </button>
           </div>
         </form>
