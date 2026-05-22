@@ -60,6 +60,33 @@ async function getScopedClass({
   return row ?? null;
 }
 
+async function getScopedWorkItem({
+  workItemId,
+  tenantId,
+  userId,
+  role,
+}: {
+  workItemId?: string | null;
+  tenantId: string;
+  userId: string;
+  role: string;
+}) {
+  if (!workItemId) return null;
+  const ownerWhere = role === "admin" ? "1=1" : "wi.teacher_id = ?";
+  const ownerParams = role === "admin" ? [] : [userId];
+  const [row] = await d1Query<{ id: string; class_id: string | null; status: string }>(
+    `SELECT wi.id, wi.class_id, wi.status
+       FROM learning_work_items wi
+       ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
+      WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
+        AND wi.id = ?
+        AND ${ownerWhere}
+      LIMIT 1`,
+    [...workScopeParams(tenantId), workItemId, ...ownerParams],
+  );
+  return row ?? null;
+}
+
 function parsePreferences(value: string | null) {
   try {
     return value ? (JSON.parse(value) as Record<string, unknown>) : {};
@@ -368,4 +395,131 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({ data: { id }, error: null });
+}
+
+export async function PATCH(request: Request) {
+  const user = await getSessionUser();
+  if (!user || (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin")) {
+    return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
+  }
+
+  const body = (await request.json()) as {
+    id?: string;
+    title?: string;
+    description?: string | null;
+    workType?: string;
+    instructions?: string | null;
+    pointsPossible?: number;
+    dueAt?: string | null;
+    status?: "draft" | "published" | "archived";
+    allowLate?: boolean;
+    rubric?: unknown[];
+  };
+  if (!body.id) return NextResponse.json({ data: null, error: "Work item id is required." }, { status: 400 });
+  if (!body.title?.trim()) return NextResponse.json({ data: null, error: "Title is required." }, { status: 400 });
+
+  const context = await resolveTenantContext(user);
+  const workItem = await getScopedWorkItem({
+    workItemId: body.id,
+    tenantId: context.tenant.id,
+    userId: user.id,
+    role: user.user_metadata.role,
+  });
+  if (!workItem) return NextResponse.json({ data: null, error: "Work item not found." }, { status: 404 });
+
+  let workType: ReturnType<typeof validateWorkType>;
+  let status: ReturnType<typeof validateWorkStatus>;
+  let pointsPossible: number;
+  try {
+    workType = validateWorkType(body.workType);
+    status = validateWorkStatus(body.status, { fallback: "draft" });
+    pointsPossible = validateWorkPoints(body.pointsPossible);
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: error instanceof Error ? error.message : "Invalid work item." },
+      { status: 400 },
+    );
+  }
+
+  await d1Query(
+    `UPDATE learning_work_items
+        SET title = ?, description = ?, work_type = ?, instructions = ?, points_possible = ?,
+            due_at = ?, status = ?, allow_late = ?, rubric = ?, updated_at = datetime('now')
+      WHERE id = ?`,
+    [
+      body.title.trim(),
+      body.description ?? null,
+      workType,
+      body.instructions ?? null,
+      pointsPossible,
+      body.dueAt ?? null,
+      status,
+      body.allowLate === false ? 0 : 1,
+      JSON.stringify(body.rubric ?? []),
+      body.id,
+    ],
+  );
+
+  await d1Query(
+    `UPDATE schedule_events
+        SET title = ?, description = ?, due_at = ?, metadata = ?, updated_at = datetime('now')
+      WHERE json_extract(metadata, '$.workItemId') = ?`,
+    [
+      body.title.trim(),
+      body.instructions ?? body.description ?? null,
+      body.dueAt ?? null,
+      JSON.stringify({
+        type: "work_deadline",
+        workItemId: body.id,
+        workType,
+        pointsPossible,
+      }),
+      body.id,
+    ],
+  );
+
+  await appendLearningEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    classId: workItem.class_id,
+    sourceType: "learning_work_item",
+    sourceId: body.id,
+    eventType: `work.${workType}.updated`,
+    payload: { title: body.title.trim(), status, pointsPossible, dueAt: body.dueAt ?? null },
+  });
+
+  return NextResponse.json({ data: { id: body.id }, error: null });
+}
+
+export async function DELETE(request: Request) {
+  const user = await getSessionUser();
+  if (!user || (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin")) {
+    return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
+  }
+
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ data: null, error: "Work item id is required." }, { status: 400 });
+
+  const context = await resolveTenantContext(user);
+  const workItem = await getScopedWorkItem({
+    workItemId: id,
+    tenantId: context.tenant.id,
+    userId: user.id,
+    role: user.user_metadata.role,
+  });
+  if (!workItem) return NextResponse.json({ data: null, error: "Work item not found." }, { status: 404 });
+
+  await d1Query("UPDATE learning_work_items SET status = 'archived', updated_at = datetime('now') WHERE id = ?", [id]);
+  await d1Query("DELETE FROM schedule_events WHERE json_extract(metadata, '$.workItemId') = ?", [id]);
+  await appendLearningEvent({
+    tenantId: context.tenant.id,
+    actorId: user.id,
+    classId: workItem.class_id,
+    sourceType: "learning_work_item",
+    sourceId: id,
+    eventType: "work.archived",
+    payload: { previousStatus: workItem.status },
+  });
+
+  return NextResponse.json({ data: { id, archived: true }, error: null });
 }
