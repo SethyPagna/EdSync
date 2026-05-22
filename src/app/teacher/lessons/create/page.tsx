@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ArrowRight, Languages } from "lucide-react";
-import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
+import {
+  SECTION_INSERT_TOOLS,
+  SECTION_TEMPLATES,
+  normalizeLessonAuthoringContent,
+  type SectionTemplate,
+} from "@/lib/content/section-library";
 import { createClient } from "@/lib/edsync/client";
 import { listLessonTemplateOptions } from "@/lib/learning/design-system";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
@@ -130,33 +135,15 @@ type DraftStoragePayload = Partial<DraftStorageContent> & {
   savedAt?: string;
 };
 
-const DRAFT_INSERT_TOOLS = [
-  { label: "H2", html: "<h2>Section heading</h2>" },
-  { label: "H3", html: "<h3>Subheading</h3>" },
-  {
-    label: "Slide",
-    html: '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>',
-  },
-  {
-    label: "Table",
-    html: "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>",
-  },
-  {
-    label: "Checklist",
-    html: '<ul class="lesson-checklist"><li>Step one</li><li>Step two</li><li>Reflection</li></ul>',
-  },
-  {
-    label: "Practice",
-    html: '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Try it, check it, then revise one part.</p></section>',
-  },
-  {
-    label: "Callout",
-    html: '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>',
-  },
-  { label: "Spacer", html: '<div class="lesson-spacer"></div>' },
-];
-
 const lessonTemplateOptions = listLessonTemplateOptions();
+
+const normalizeDraftForAuthoring = (draft: Draft): Draft => ({
+  ...draft,
+  sections: draft.sections.map((section) => ({
+    ...section,
+    content: normalizeLessonAuthoringContent(section.content || ""),
+  })),
+});
 
 export default function CreateLesson() {
   const router = useRouter();
@@ -199,7 +186,7 @@ export default function CreateLesson() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as DraftStoragePayload;
-        if (parsed.draft) setDraft(parsed.draft);
+        if (parsed.draft) setDraft(normalizeDraftForAuthoring(parsed.draft));
         if (typeof parsed.inputText === "string") setInputText(parsed.inputText);
         if (typeof parsed.complexity === "number") setComplexity(parsed.complexity);
         if (typeof parsed.pacing === "number") setPacing(parsed.pacing);
@@ -279,7 +266,7 @@ export default function CreateLesson() {
   ]);
 
   const applyAiDraft = (ai: AILessonDraft) => {
-    setDraft({
+    setDraft(normalizeDraftForAuthoring({
       title: ai.title || "",
       description: ai.description || "",
       objectives: ai.objectives?.length ? ai.objectives : ["", "", ""],
@@ -291,7 +278,7 @@ export default function CreateLesson() {
       glossary_terms: ai.glossary_terms || [],
       difficulty: "intermediate",
       subject: "",
-    });
+    }));
   };
 
   const addDraftSection = (template: SectionTemplate = SECTION_TEMPLATES[0]) => {
@@ -301,7 +288,7 @@ export default function CreateLesson() {
         ...current.sections,
         {
           title: template.title,
-          content: template.content,
+          content: normalizeLessonAuthoringContent(template.content),
           content_type: template.contentType,
           duration_minutes: template.durationMinutes,
         },
@@ -329,12 +316,12 @@ export default function CreateLesson() {
     });
   };
 
-  const appendDraftSectionContent = (index: number, html: string) => {
+  const appendDraftSectionContent = (index: number, content: string) => {
     const sections = [...draft.sections];
-    const current = sections[index]?.content || "";
+    const current = normalizeLessonAuthoringContent(sections[index]?.content || "");
     sections[index] = {
       ...sections[index],
-      content: `${current}${current ? "\n\n" : ""}${html}`,
+      content: `${current}${current ? "\n\n" : ""}${content}`,
     };
     setDraft({ ...draft, sections });
   };
@@ -1590,28 +1577,29 @@ export default function CreateLesson() {
                       );
                     })()
                   ) : (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-1.5 rounded-lg border border-edsync-border bg-edsync-surface p-2">
-                        {DRAFT_INSERT_TOOLS.map((tool) => (
+                    <div className="space-y-3">
+                      <div className="grid gap-2 rounded-xl border border-edsync-border bg-edsync-surface p-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {SECTION_INSERT_TOOLS.map((tool) => (
                           <button
                             key={tool.label}
                             type="button"
-                            onClick={() => appendDraftSectionContent(i, tool.html)}
-                            className="rounded-md px-2 py-1 text-xs font-semibold text-edsync-subtle transition hover:bg-edsync-card hover:text-edsync-text"
+                            onClick={() => appendDraftSectionContent(i, tool.content)}
+                            className="rounded-lg border border-transparent px-2.5 py-2 text-left transition hover:border-edsync-blue/40 hover:bg-edsync-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edsync-blue"
                           >
-                            {tool.label}
+                            <span className="block text-xs font-semibold text-edsync-text">{tool.label}</span>
+                            <span className="block text-[11px] leading-4 text-edsync-subtle">{tool.description}</span>
                           </button>
                         ))}
                       </div>
                       <textarea
-                        value={sec.content || ""}
+                        value={normalizeLessonAuthoringContent(sec.content || "")}
                         onChange={(e) => {
                           const ss = [...draft.sections];
                           ss[i] = { ...ss[i], content: e.target.value };
                           setDraft({ ...draft, sections: ss });
                         }}
                         rows={7}
-                        className="edsync-textarea text-sm font-mono"
+                        className="edsync-textarea min-h-[220px] text-sm leading-6"
                         placeholder={
                           sec.content_type === "quiz"
                             ? "Quiz title (questions are managed in the Questions tab)..."
