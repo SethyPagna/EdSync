@@ -8,8 +8,10 @@ import {
   Copy,
   Edit3,
   ExternalLink,
+  Grid2X2,
   ImageIcon,
   Link2,
+  List,
   Palette,
   Plus,
   Save,
@@ -30,6 +32,7 @@ import {
   type NoteDesignPresetId,
 } from "@/lib/learning/creator-library";
 import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
+import { readViewMode, writeViewMode, type ViewMode } from "@/lib/ui/view-preferences";
 
 type TeacherNote = {
   id: string;
@@ -63,6 +66,8 @@ const emptyDraft: NoteDraft = {
   design: "clean",
 };
 
+const STUDENT_NOTES_VIEW_KEY = "edsync-student-notes-view-mode";
+
 function getNoteMediaUrl(item: StudioServerItem) {
   if (typeof item.metadata.media !== "object" || !item.metadata.media) return "";
   return String((item.metadata.media as { url?: unknown }).url ?? "");
@@ -92,6 +97,7 @@ export default function StudentNotesPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   const safeMedia = useMemo(() => classifySafeMediaUrl(draft.mediaUrl), [draft.mediaUrl]);
   const selectedDesign = designOptions.find((option) => option.id === draft.design) ?? designOptions[0];
@@ -107,7 +113,13 @@ export default function StudentNotesPage() {
 
   useEffect(() => {
     load();
+    setViewMode(readViewMode(STUDENT_NOTES_VIEW_KEY));
   }, []);
+
+  const changeViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    writeViewMode(STUDENT_NOTES_VIEW_KEY, mode);
+  };
 
   const resetComposer = () => {
     setDraft(emptyDraft);
@@ -379,9 +391,32 @@ export default function StudentNotesPage() {
               <h2 className="font-display text-xl font-bold">Personal notes</h2>
               <p className="text-sm text-edsync-subtle">{personalNotes.length} Studio note drafts</p>
             </div>
-            <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
-              Open Studio
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
+                {[
+                  { mode: "grid" as const, label: "Grid", icon: Grid2X2 },
+                  { mode: "list" as const, label: "List", icon: List },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.mode}
+                      type="button"
+                      onClick={() => changeViewMode(item.mode)}
+                      className={`rounded-lg px-2 py-1.5 text-xs font-bold transition ${
+                        viewMode === item.mode ? "bg-edsync-blue text-white" : "text-edsync-subtle hover:text-edsync-text"
+                      }`}
+                      aria-label={`${item.label} view`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </button>
+                  );
+                })}
+              </div>
+              <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
+                Open Studio
+              </Link>
+            </div>
           </div>
           {personalNotes.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
@@ -390,7 +425,7 @@ export default function StudentNotesPage() {
               <p className="mt-1 text-sm text-edsync-subtle">Create one with text, media, links, or design style.</p>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className={viewMode === "grid" ? "grid gap-3 md:grid-cols-2" : "grid gap-3"}>
               {personalNotes.map((note) => {
                 const media = classifySafeMediaUrl(
                   typeof note.metadata.media === "object" && note.metadata.media
