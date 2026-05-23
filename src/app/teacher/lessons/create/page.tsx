@@ -817,7 +817,6 @@ export default function CreateLesson() {
     router.push(`/teacher/lessons/${lesson.id}`);
   };
 
-  // ─── Render ────────────────────────────────────────────────
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-[1600px] mx-auto animate-fade-in overflow-x-clip">
       {/* Header */}
@@ -836,11 +835,11 @@ export default function CreateLesson() {
           }
           className="btn-ghost"
         >
-          ← Back
+          Back
         </button>
         <div className="min-w-0">
           <h1 className="font-display font-bold text-2xl sm:text-3xl text-edsync-text">
-            Lesson Creation Studio
+            Create Lesson
           </h1>
           <p className="text-edsync-subtle text-sm">
             {step === "choose"
@@ -857,8 +856,8 @@ export default function CreateLesson() {
             <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
               {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Draft ready"}
             </span>
-            <Link href="/studio" className="btn-secondary px-3 py-1.5 text-xs">
-              Open Studio
+            <Link href="/teacher/lessons" className="btn-secondary px-3 py-1.5 text-xs">
+              My Courses
             </Link>
             <Link href="/practice?mode=generated_from_studio" className="btn-secondary px-3 py-1.5 text-xs">
               Generate practice
