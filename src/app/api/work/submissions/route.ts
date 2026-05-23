@@ -58,6 +58,7 @@ export async function GET(request: Request) {
   const ownerParams = user.user_metadata.role === "admin" ? [] : [user.id];
   const rows = await d1Query(
     `SELECT ls.*, wi.title, wi.work_type, wi.points_possible AS work_points_possible,
+            wi.settings AS work_settings,
             p.full_name, p.email
        FROM learning_submissions ls
        JOIN learning_work_items wi ON wi.id = ls.work_item_id
