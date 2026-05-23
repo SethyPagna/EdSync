@@ -178,9 +178,9 @@ export default function TeacherDashboard() {
               <Plus className="h-4 w-4" />
               New lesson
             </Link>
-            <Link href="/studio" className="btn-secondary justify-center">
+            <Link href="/teacher/lessons/create" className="btn-secondary justify-center">
               <Sparkles className="h-4 w-4" />
-              Open Studio
+              Open editor
             </Link>
           </div>
         </div>
