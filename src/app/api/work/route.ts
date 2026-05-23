@@ -9,6 +9,7 @@ import {
   tenantObjectParams,
   tenantObjectPredicate,
 } from "@/lib/tenancy/object-scope";
+import { normalizeWorkGradingSettings, serializeWorkGradingSettings } from "@/lib/work/grading";
 import { validateWorkPoints, validateWorkStatus, validateWorkType } from "@/lib/work/validation";
 
 const WORK_ITEM_TABLE = "learning_work_items";
@@ -245,6 +246,11 @@ export async function POST(request: Request) {
     dueAt?: string | null;
     status?: "draft" | "published";
     allowLate?: boolean;
+    settings?: unknown;
+    gradingMode?: string;
+    gradeWeightPercent?: number;
+    countsTowardGrade?: boolean;
+    participationCriteria?: string;
     rubric?: unknown[];
     questions?: Array<{
       prompt?: string;
@@ -272,6 +278,13 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  const gradingSettings = normalizeWorkGradingSettings({
+    ...(body.settings && typeof body.settings === "object" && !Array.isArray(body.settings) ? body.settings : {}),
+    mode: body.gradingMode,
+    gradeWeightPercent: body.gradeWeightPercent,
+    countsTowardGrade: body.countsTowardGrade,
+    participationCriteria: body.participationCriteria,
+  });
 
   const id = crypto.randomUUID();
   const context = await resolveTenantContext(user);
@@ -289,7 +302,7 @@ export async function POST(request: Request) {
     `INSERT INTO learning_work_items (
        id, teacher_id, class_id, lesson_id, category_id, title, description, work_type,
        instructions, points_possible, due_at, status, allow_late, rubric, settings, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', datetime('now'), datetime('now'))`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
     [
       id,
       user.id,
@@ -305,6 +318,7 @@ export async function POST(request: Request) {
       status,
       body.allowLate === false ? 0 : 1,
       JSON.stringify(body.rubric ?? []),
+      serializeWorkGradingSettings(gradingSettings),
     ],
   );
 
@@ -357,6 +371,7 @@ export async function POST(request: Request) {
           workType,
           className: scopedClass?.name ?? null,
           pointsPossible,
+          grading: gradingSettings,
         }),
       ],
     );
@@ -379,6 +394,7 @@ export async function POST(request: Request) {
         classId: body.classId,
         dueAt: body.dueAt ?? null,
         pointsPossible,
+        grading: gradingSettings,
       },
     });
   }
@@ -391,7 +407,14 @@ export async function POST(request: Request) {
     sourceType: "learning_work_item",
     sourceId: id,
     eventType: `work.${workType}.created`,
-    payload: { title: body.title.trim(), status, pointsPossible, dueAt: body.dueAt ?? null, classId: body.classId ?? null },
+    payload: {
+      title: body.title.trim(),
+      status,
+      pointsPossible,
+      grading: gradingSettings,
+      dueAt: body.dueAt ?? null,
+      classId: body.classId ?? null,
+    },
   });
 
   return NextResponse.json({ data: { id }, error: null });
@@ -413,6 +436,11 @@ export async function PATCH(request: Request) {
     dueAt?: string | null;
     status?: "draft" | "published" | "archived";
     allowLate?: boolean;
+    settings?: unknown;
+    gradingMode?: string;
+    gradeWeightPercent?: number;
+    countsTowardGrade?: boolean;
+    participationCriteria?: string;
     rubric?: unknown[];
   };
   if (!body.id) return NextResponse.json({ data: null, error: "Work item id is required." }, { status: 400 });
@@ -440,11 +468,18 @@ export async function PATCH(request: Request) {
       { status: 400 },
     );
   }
+  const gradingSettings = normalizeWorkGradingSettings({
+    ...(body.settings && typeof body.settings === "object" && !Array.isArray(body.settings) ? body.settings : {}),
+    mode: body.gradingMode,
+    gradeWeightPercent: body.gradeWeightPercent,
+    countsTowardGrade: body.countsTowardGrade,
+    participationCriteria: body.participationCriteria,
+  });
 
   await d1Query(
     `UPDATE learning_work_items
         SET title = ?, description = ?, work_type = ?, instructions = ?, points_possible = ?,
-            due_at = ?, status = ?, allow_late = ?, rubric = ?, updated_at = datetime('now')
+            due_at = ?, status = ?, allow_late = ?, rubric = ?, settings = ?, updated_at = datetime('now')
       WHERE id = ?`,
     [
       body.title.trim(),
@@ -456,6 +491,7 @@ export async function PATCH(request: Request) {
       status,
       body.allowLate === false ? 0 : 1,
       JSON.stringify(body.rubric ?? []),
+      serializeWorkGradingSettings(gradingSettings),
       body.id,
     ],
   );
@@ -473,6 +509,7 @@ export async function PATCH(request: Request) {
         workItemId: body.id,
         workType,
         pointsPossible,
+        grading: gradingSettings,
       }),
       body.id,
     ],
@@ -485,7 +522,7 @@ export async function PATCH(request: Request) {
     sourceType: "learning_work_item",
     sourceId: body.id,
     eventType: `work.${workType}.updated`,
-    payload: { title: body.title.trim(), status, pointsPossible, dueAt: body.dueAt ?? null },
+    payload: { title: body.title.trim(), status, pointsPossible, grading: gradingSettings, dueAt: body.dueAt ?? null },
   });
 
   return NextResponse.json({ data: { id: body.id }, error: null });
