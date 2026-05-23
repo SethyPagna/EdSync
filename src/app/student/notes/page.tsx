@@ -24,6 +24,11 @@ import {
   updateStudioItem,
   type StudioServerItem,
 } from "@/lib/studio/api";
+import {
+  NOTE_DESIGN_PRESETS,
+  noteDesignPresetById,
+  type NoteDesignPresetId,
+} from "@/lib/learning/creator-library";
 import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
 
 type TeacherNote = {
@@ -39,7 +44,7 @@ type NoteDraft = {
   title: string;
   body: string;
   mediaUrl: string;
-  design: "clean" | "focus" | "visual" | "review";
+  design: NoteDesignPresetId;
 };
 
 type UploadResponse = {
@@ -64,16 +69,10 @@ function getNoteMediaUrl(item: StudioServerItem) {
 }
 
 function getNoteDesign(item: StudioServerItem): NoteDraft["design"] {
-  const design = String(item.metadata.design ?? "clean");
-  return designOptions.some((option) => option.id === design) ? (design as NoteDraft["design"]) : "clean";
+  return noteDesignPresetById(item.metadata.design, "clean").id;
 }
 
-const designOptions: Array<{ id: NoteDraft["design"]; label: string; className: string }> = [
-  { id: "clean", label: "Clean", className: "border-edsync-border bg-edsync-card" },
-  { id: "focus", label: "Focus", className: "border-edsync-blue/30 bg-edsync-blue/10" },
-  { id: "visual", label: "Visual", className: "border-edsync-emerald/30 bg-edsync-emerald/10" },
-  { id: "review", label: "Review", className: "border-edsync-amber/30 bg-edsync-amber/10" },
-];
+const designOptions = NOTE_DESIGN_PRESETS.filter((option) => ["clean", "focus", "visual", "review"].includes(option.id));
 
 function mediaIcon(media: SafeMediaUrl | null) {
   if (media?.kind === "image") return ImageIcon;
@@ -347,6 +346,7 @@ export default function StudentNotesPage() {
                         ? "border-edsync-blue bg-edsync-blue text-white"
                         : "border-edsync-border bg-edsync-surface text-edsync-subtle"
                     }`}
+                    title={option.description}
                   >
                     {option.label}
                   </button>
