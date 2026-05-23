@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { Archive, CalendarClock, ClipboardList, Edit3, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound, X } from "lucide-react";
+import {
+  normalizeWorkGradingSettings,
+  workGradeContribution,
+  workGradingLabel,
+  type WorkGradingMode,
+} from "@/lib/work/grading";
 
 type ClassRow = { id: string; name: string };
 type WorkItem = {
@@ -14,6 +20,7 @@ type WorkItem = {
   instructions: string | null;
   due_at: string | null;
   points_possible: number;
+  settings: unknown;
   class_name?: string | null;
   submission_count?: number;
 };
@@ -23,6 +30,7 @@ type SubmissionRow = {
   title: string;
   work_type: string;
   work_points_possible: number;
+  work_settings: unknown;
   full_name: string | null;
   email: string;
   response: Record<string, unknown> | string | null;
@@ -40,6 +48,12 @@ type ReviewDraft = {
 };
 
 const workTypes = ["quiz", "test", "task", "discussion", "activity"];
+const gradingModes: Array<{ value: WorkGradingMode; label: string; description: string }> = [
+  { value: "points", label: "Points", description: "Score against possible points and release to gradebook." },
+  { value: "weighted", label: "Weighted", description: "Score points, then count this item as a fixed percent of the whole grade." },
+  { value: "completion", label: "Completion only", description: "Track done/not done and feedback without changing grade average." },
+  { value: "participation", label: "Participation", description: "Use criteria for engagement, discussion, or class activity evidence." },
+];
 
 function dueLabel(value: string | null) {
   if (!value) return "No due date";
@@ -64,12 +78,28 @@ export default function TeacherWorkPage() {
     classId: "",
     instructions: "",
     pointsPossible: "100",
+    gradingMode: "points" as WorkGradingMode,
+    gradeWeightPercent: "",
+    countsTowardGrade: true,
+    participationCriteria: "",
     dueAt: "",
     status: "published",
   });
 
   const resetForm = (classId = form.classId) => {
-    setForm({ title: "", workType: "task", classId, instructions: "", pointsPossible: "100", dueAt: "", status: "published" });
+    setForm({
+      title: "",
+      workType: "task",
+      classId,
+      instructions: "",
+      pointsPossible: "100",
+      gradingMode: "points",
+      gradeWeightPercent: "",
+      countsTowardGrade: true,
+      participationCriteria: "",
+      dueAt: "",
+      status: "published",
+    });
     setEditingId(null);
     setFormOpen(false);
   };
@@ -127,6 +157,10 @@ export default function TeacherWorkPage() {
         id: editingId ?? undefined,
         classId: form.classId || null,
         pointsPossible: Number(form.pointsPossible),
+        gradingMode: form.gradingMode,
+        gradeWeightPercent: form.gradeWeightPercent ? Number(form.gradeWeightPercent) : null,
+        countsTowardGrade: form.countsTowardGrade,
+        participationCriteria: form.participationCriteria,
         dueAt: form.dueAt || null,
       }),
     });
@@ -140,6 +174,7 @@ export default function TeacherWorkPage() {
   };
 
   const editWork = (item: WorkItem) => {
+    const grading = normalizeWorkGradingSettings(item.settings);
     setEditingId(item.id);
     setForm({
       title: item.title,
@@ -147,6 +182,10 @@ export default function TeacherWorkPage() {
       classId: classes.find((cls) => cls.name === item.class_name)?.id ?? form.classId,
       instructions: item.instructions ?? "",
       pointsPossible: String(item.points_possible ?? 100),
+      gradingMode: grading.mode,
+      gradeWeightPercent: grading.gradeWeightPercent === null ? "" : String(grading.gradeWeightPercent),
+      countsTowardGrade: grading.countsTowardGrade,
+      participationCriteria: grading.participationCriteria,
       dueAt: item.due_at ? item.due_at.slice(0, 16) : "",
       status: item.status,
     });
@@ -187,7 +226,7 @@ export default function TeacherWorkPage() {
       toast.error(payload?.error || "Feedback was not saved.");
       return;
     }
-    toast.success("Feedback and grade saved.");
+    toast.success("Feedback saved.");
     load();
   };
 
@@ -290,6 +329,65 @@ export default function TeacherWorkPage() {
               onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
               aria-label="Due date"
             />
+            <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 lg:col-span-6">
+              <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr_1fr]">
+                <label className="space-y-1">
+                  <span className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Scoring mode</span>
+                  <select
+                    className="edsync-input"
+                    value={form.gradingMode}
+                    onChange={(event) => {
+                      const mode = event.target.value as WorkGradingMode;
+                      setForm({
+                        ...form,
+                        gradingMode: mode,
+                        countsTowardGrade: mode === "completion" || mode === "participation" ? false : form.countsTowardGrade,
+                      });
+                    }}
+                  >
+                    {gradingModes.map((mode) => (
+                      <option key={mode.value} value={mode.value}>
+                        {mode.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Course weight</span>
+                  <input
+                    className="edsync-input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    disabled={form.gradingMode !== "weighted"}
+                    value={form.gradeWeightPercent}
+                    onChange={(event) => setForm({ ...form, gradeWeightPercent: event.target.value })}
+                    placeholder={form.gradingMode === "weighted" ? "Example: 5" : "Only weighted work"}
+                  />
+                </label>
+                <label className="flex items-center gap-3 rounded-xl border border-edsync-border bg-edsync-card px-3 py-2 text-sm font-semibold text-edsync-text">
+                  <input
+                    type="checkbox"
+                    checked={form.countsTowardGrade}
+                    disabled={form.gradingMode === "completion" || form.gradingMode === "participation"}
+                    onChange={(event) => setForm({ ...form, countsTowardGrade: event.target.checked })}
+                  />
+                  Counts toward gradebook
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-edsync-subtle">
+                {gradingModes.find((mode) => mode.value === form.gradingMode)?.description}
+              </p>
+              {form.gradingMode === "participation" && (
+                <textarea
+                  className="edsync-input mt-3 min-h-20"
+                  value={form.participationCriteria}
+                  onChange={(event) => setForm({ ...form, participationCriteria: event.target.value })}
+                  placeholder="Participation criteria, for example: posted once, replied to two peers, used evidence, joined activity."
+                />
+              )}
+            </div>
             <textarea
               className="edsync-input min-h-24 lg:col-span-5"
               value={form.instructions}
@@ -312,44 +410,50 @@ export default function TeacherWorkPage() {
           {items.length === 0 ? (
             <p className="p-5 text-sm text-edsync-subtle">No work items yet.</p>
           ) : (
-            items.map((item) => (
-              <article key={item.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
-                <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    <span className="badge bg-edsync-blue/10 text-edsync-blue">{item.work_type}</span>
-                    <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{item.status}</span>
-                    <span className="badge bg-edsync-amber/10 text-edsync-amber">{item.points_possible} pts</span>
+            items.map((item) => {
+              const grading = normalizeWorkGradingSettings(item.settings);
+              return (
+                <article key={item.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
+                  <div className="min-w-0">
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      <span className="badge bg-edsync-blue/10 text-edsync-blue">{item.work_type}</span>
+                      <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{item.status}</span>
+                      <span className="badge bg-edsync-amber/10 text-edsync-amber">{workGradingLabel(grading, item.points_possible)}</span>
+                      {!grading.countsTowardGrade && (
+                        <span className="badge bg-edsync-surface text-edsync-subtle">not averaged</span>
+                      )}
+                    </div>
+                    <h3 className="truncate font-display text-lg font-bold text-edsync-text">{item.title}</h3>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-edsync-subtle">
+                      <span className="inline-flex items-center gap-1.5">
+                        <UsersRound className="h-4 w-4" />
+                        {item.class_name || "All classes"}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarClock className="h-4 w-4" />
+                        {dueLabel(item.due_at)}
+                      </span>
+                    </p>
                   </div>
-                  <h3 className="truncate font-display text-lg font-bold text-edsync-text">{item.title}</h3>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-edsync-subtle">
-                    <span className="inline-flex items-center gap-1.5">
-                      <UsersRound className="h-4 w-4" />
-                      {item.class_name || "All classes"}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarClock className="h-4 w-4" />
-                      {dueLabel(item.due_at)}
-                    </span>
-                  </p>
-                </div>
-                <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-edsync-text">
-                    <FileCheck2 className="h-4 w-4 text-edsync-blue" />
-                    {item.submission_count ?? 0} submissions
-                  </p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs" onClick={() => editWork(item)}>
-                      <Edit3 className="h-3.5 w-3.5" />
-                      Edit
-                    </button>
-                    <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs text-edsync-red" onClick={() => archiveWork(item)}>
-                      <Archive className="h-3.5 w-3.5" />
-                      Archive
-                    </button>
+                  <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-edsync-text">
+                      <FileCheck2 className="h-4 w-4 text-edsync-blue" />
+                      {item.submission_count ?? 0} submissions
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs" onClick={() => editWork(item)}>
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs text-edsync-red" onClick={() => archiveWork(item)}>
+                        <Archive className="h-3.5 w-3.5" />
+                        Archive
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))
+                </article>
+              );
+            })
           )}
         </div>
       </section>
@@ -371,19 +475,31 @@ export default function TeacherWorkPage() {
             <p className="p-5 text-sm text-edsync-subtle">Student submissions will appear here for scoring and feedback.</p>
           ) : (
             submissions.map((submission) => {
+              const grading = normalizeWorkGradingSettings(submission.work_settings);
               const draft = reviewDrafts[submission.id] ?? {
                 pointsEarned: "",
                 pointsPossible: String(submission.work_points_possible ?? 100),
                 feedback: "",
               };
+              const contribution = workGradeContribution({
+                pointsEarned: Number(draft.pointsEarned || 0),
+                pointsPossible: Number(draft.pointsPossible || submission.work_points_possible || 0),
+                settings: grading,
+              });
               return (
                 <article key={submission.id} className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
                   <div className="min-w-0">
                     <div className="mb-2 flex flex-wrap gap-2">
                       <span className="badge bg-edsync-blue/10 text-edsync-blue">{submission.work_type}</span>
                       <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{submission.status}</span>
+                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                        {workGradingLabel(grading, submission.work_points_possible)}
+                      </span>
                       {submission.percent !== null && (
                         <span className="badge bg-edsync-amber/10 text-edsync-amber">{submission.percent}%</span>
+                      )}
+                      {contribution !== null && (
+                        <span className="badge bg-edsync-cyan/10 text-edsync-cyan">{contribution}% course credit</span>
                       )}
                     </div>
                     <h3 className="truncate font-display text-lg font-bold text-edsync-text">{submission.title}</h3>
