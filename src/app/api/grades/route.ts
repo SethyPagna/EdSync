@@ -175,7 +175,7 @@ function weightedAverage(
   const grouped = new Map<string, number[]>();
 
   for (const score of scores) {
-    if (score.status === "excused" || score.percent === null || score.percent === undefined) continue;
+    if (score.status !== "graded" || score.percent === null || score.percent === undefined) continue;
     const key = score.category_id || "uncategorized";
     grouped.set(key, [...(grouped.get(key) ?? []), Number(score.percent)]);
   }
@@ -211,6 +211,7 @@ export async function GET(request: Request) {
         WHERE gs.student_id = ?
           AND (${tenantObjectPredicate({ linkAlias: "score_link" })}
             OR (gs.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
+          AND gs.status != 'draft'
           ${classId ? "AND gs.class_id = ?" : ""}
         ORDER BY gs.updated_at DESC`,
       classId
@@ -350,6 +351,7 @@ export async function POST(request: Request) {
     pointsEarned?: number;
     pointsPossible?: number;
     feedback?: string | null;
+    status?: "draft" | "graded";
   };
 
   if (body.kind === "category") {
@@ -423,6 +425,7 @@ export async function POST(request: Request) {
     pointsEarned: grade.pointsEarned,
     pointsPossible: grade.pointsPossible,
     feedback: grade.feedback,
+    status: body.status === "draft" ? "draft" : "graded",
     payload: { categoryId: body.categoryId ?? null },
   });
 
