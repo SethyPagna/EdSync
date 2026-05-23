@@ -25,6 +25,13 @@ import {
 } from "@/lib/content/section-library";
 import LessonBlockEditor from "@/components/lesson/LessonBlockEditor";
 import { createClient } from "@/lib/edsync/client";
+import {
+  CREATOR_ASSET_CATEGORIES,
+  CREATOR_EXPORT_OPTIONS,
+  CREATOR_PALETTE_SWATCHES,
+  CREATOR_TEXT_STYLES,
+  PRACTICE_GAME_STYLE_PRESETS,
+} from "@/lib/learning/creator-library";
 import { listLessonTemplateOptions } from "@/lib/learning/design-system";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type { AILessonDraft, ContentType, DifficultyLevel } from "@/types";
@@ -390,6 +397,14 @@ export default function CreateLesson() {
     }
 
     if (studioPanel === "blocks") {
+      const practiceTemplateByPreset = {
+        "classic-quiz": "exit-ticket",
+        "speed-sprint": "practice-sprint",
+        "matching-race": "flashcard-round",
+        "mistake-retry": "practice-sprint",
+        "scenario-challenge": "scenario-game",
+      } as const;
+
       return (
         <div className="space-y-3">
           <div>
@@ -417,6 +432,28 @@ export default function CreateLesson() {
               </button>
             ))}
           </div>
+          <div className="rounded-2xl border border-edsync-border bg-edsync-card p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Practice game blocks</p>
+            <div className="mt-2 grid gap-2">
+              {PRACTICE_GAME_STYLE_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() =>
+                    addDraftSection(
+                      SECTION_TEMPLATES.find(
+                        (template) => template.id === practiceTemplateByPreset[preset.id as keyof typeof practiceTemplateByPreset],
+                      ) ?? SECTION_TEMPLATES[0],
+                    )
+                  }
+                  className="rounded-xl border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-amber/50"
+                >
+                  <span className="text-sm font-semibold text-edsync-text">{preset.label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-edsync-subtle">{preset.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       );
     }
@@ -432,16 +469,13 @@ export default function CreateLesson() {
             Add media analysis
           </button>
           <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: "Image", hint: "PNG, JPG, WEBP, GIF", icon: ImageIcon },
-              { label: "Video", hint: "YouTube, Vimeo, MP4", icon: Film },
-            ].map((item) => {
-              const Icon = item.icon;
+            {CREATOR_ASSET_CATEGORIES.filter((item) => ["photos", "videos", "audio", "frames", "mockups", "charts"].includes(item.id)).map((item) => {
+              const Icon = item.id === "videos" || item.id === "audio" ? Film : ImageIcon;
               return (
-                <div key={item.label} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                <div key={item.id} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
                   <Icon className="h-5 w-5 text-edsync-blue" />
                   <p className="mt-2 text-sm font-semibold text-edsync-text">{item.label}</p>
-                  <p className="mt-1 text-xs text-edsync-subtle">{item.hint}</p>
+                  <p className="mt-1 text-xs text-edsync-subtle">{item.description}</p>
                 </div>
               );
             })}
@@ -461,12 +495,36 @@ export default function CreateLesson() {
             <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Readable section tools</h2>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {SECTION_INSERT_TOOLS.map((tool) => (
-              <div key={tool.label} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+            {CREATOR_TEXT_STYLES.map((tool) => (
+              <div key={tool.id} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
                 <p className="text-sm font-semibold text-edsync-text">{tool.label}</p>
                 <p className="mt-1 text-xs text-edsync-subtle">{tool.description}</p>
               </div>
             ))}
+          </div>
+          <div className="rounded-2xl border border-edsync-border bg-edsync-card p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Quick inserts</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {SECTION_INSERT_TOOLS.map((tool) => (
+                <button
+                  key={tool.label}
+                  type="button"
+                  onClick={() =>
+                    addDraftSection({
+                      ...SECTION_TEMPLATES[0],
+                      id: `text-${tool.label.toLowerCase()}`,
+                      label: tool.label,
+                      title: tool.label,
+                      content: tool.content,
+                      durationMinutes: 5,
+                    })
+                  }
+                  className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-xs font-bold text-edsync-subtle hover:border-edsync-blue/50 hover:text-edsync-blue"
+                >
+                  {tool.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       );
@@ -480,7 +538,7 @@ export default function CreateLesson() {
             <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Palette and tone</h2>
           </div>
           <div className="grid grid-cols-5 gap-2">
-            {["#2557D6", "#0F766E", "#F59E0B", "#EF4444", "#7C3AED", "#0EA5E9", "#111827", "#F8FAFC", "#22C55E", "#F97316"].map((color) => (
+            {CREATOR_PALETTE_SWATCHES.map((color) => (
               <span key={color} className="h-10 rounded-2xl border border-edsync-border shadow-sm" style={{ background: color }} />
             ))}
           </div>
@@ -517,6 +575,14 @@ export default function CreateLesson() {
           <Play className="h-4 w-4" />
           Preview lesson
         </button>
+        <div className="grid gap-2">
+          {CREATOR_EXPORT_OPTIONS.map((option) => (
+            <div key={option.id} className="rounded-xl border border-edsync-border bg-edsync-surface p-3">
+              <p className="text-sm font-semibold text-edsync-text">{option.label}</p>
+              <p className="mt-1 text-xs leading-5 text-edsync-subtle">{option.description}</p>
+            </div>
+          ))}
+        </div>
         <button type="button" onClick={() => save("draft")} disabled={saving || !draft.title.trim()} className="btn-secondary w-full justify-center py-2 text-sm disabled:opacity-40">
           Save draft
         </button>
