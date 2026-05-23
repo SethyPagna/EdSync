@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { BookOpenCheck, CalendarClock, CheckCircle2, Send, TimerReset } from "lucide-react";
+import { normalizeWorkGradingSettings, workGradingLabel } from "@/lib/work/grading";
 
 type WorkItem = {
   id: string;
@@ -11,6 +12,7 @@ type WorkItem = {
   instructions: string | null;
   due_at: string | null;
   points_possible: number;
+  settings: unknown;
   class_name: string | null;
   submission_status: string | null;
   submission_percent: number | null;
@@ -154,94 +156,100 @@ export default function StudentWorkPage() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {filteredItems.map((item) => (
-            <article key={item.id} className="rounded-xl border border-edsync-border bg-edsync-card p-4">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem]">
-                <div className="min-w-0">
-                  {(() => {
-                    const state = dueState(item.due_at);
-                    return (
+          {filteredItems.map((item) => {
+              const grading = normalizeWorkGradingSettings(item.settings);
+              return (
+                <article key={item.id} className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem]">
+                    <div className="min-w-0">
+                      {(() => {
+                        const state = dueState(item.due_at);
+                        return (
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <span className={`badge ${state.tone}`}>{state.label}</span>
+                            {item.submission_feedback && (
+                              <span className="badge bg-edsync-amber/10 text-edsync-amber">feedback ready</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className={`badge ${state.tone}`}>{state.label}</span>
-                        {item.submission_feedback && (
-                          <span className="badge bg-edsync-amber/10 text-edsync-amber">feedback ready</span>
+                        <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                          {item.work_type}
+                        </span>
+                        <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
+                          {workGradingLabel(grading, item.points_possible)}
+                        </span>
+                        {!grading.countsTowardGrade && (
+                          <span className="badge bg-edsync-surface text-edsync-subtle">feedback evidence</span>
+                        )}
+                        {isSubmitted(item) && (
+                          <span className="badge bg-edsync-amber/10 text-edsync-amber">
+                            {item.submission_percent ?? 0}%
+                          </span>
                         )}
                       </div>
-                    );
-                  })()}
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                      {item.work_type}
-                    </span>
-                    <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
-                      {item.points_possible} pts
-                    </span>
-                    {isSubmitted(item) && (
-                      <span className="badge bg-edsync-amber/10 text-edsync-amber">
-                        {item.submission_percent ?? 0}%
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="truncate font-display text-xl font-bold">{item.title}</h2>
-                  <p className="mt-1 text-sm text-edsync-subtle">
-                    {item.class_name || "Class"}
-                  </p>
-                  {item.instructions && (
-                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-edsync-text">
-                      {item.instructions}
-                    </p>
-                  )}
-                  {item.submission_feedback && (
-                    <div className="mt-3 rounded-xl border border-edsync-amber/25 bg-edsync-amber/10 p-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Teacher feedback</p>
-                      <p className="mt-1 text-sm leading-6 text-edsync-text">{item.submission_feedback}</p>
+                      <h2 className="truncate font-display text-xl font-bold">{item.title}</h2>
+                      <p className="mt-1 text-sm text-edsync-subtle">
+                        {item.class_name || "Class"}
+                      </p>
+                      {item.instructions && (
+                        <p className="mt-3 line-clamp-2 text-sm leading-6 text-edsync-text">
+                          {item.instructions}
+                        </p>
+                      )}
+                      {item.submission_feedback && (
+                        <div className="mt-3 rounded-xl border border-edsync-amber/25 bg-edsync-amber/10 p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Teacher feedback</p>
+                          <p className="mt-1 text-sm leading-6 text-edsync-text">{item.submission_feedback}</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
-                  <p className="flex items-center gap-2 font-semibold text-edsync-text">
-                    <CalendarClock className="h-4 w-4 text-edsync-blue" />
-                    {dueLabel(item.due_at)}
-                  </p>
-                  <p className="mt-2 flex items-center gap-2 text-edsync-subtle">
-                    {isSubmitted(item) ? (
-                      <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
-                    ) : (
-                      <TimerReset className="h-4 w-4 text-edsync-amber" />
-                    )}
-                    {item.submission_status || "not submitted"}
-                  </p>
-                </div>
-              </div>
-
-              {!isSubmitted(item) && (
-                <details className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-edsync-text marker:hidden">
-                    <BookOpenCheck className="h-4 w-4 text-edsync-blue" />
-                    Write response
-                  </summary>
-                  <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
-                    <textarea
-                      className="edsync-input min-h-24"
-                      value={responses[item.id] ?? ""}
-                      onChange={(event) =>
-                        setResponses((current) => ({ ...current, [item.id]: event.target.value }))
-                      }
-                      placeholder="Write your response or reflection..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => submit(item.id)}
-                      className="btn-primary self-end justify-center"
-                    >
-                      <Send className="h-4 w-4" />
-                      Submit
-                    </button>
+                    <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
+                      <p className="flex items-center gap-2 font-semibold text-edsync-text">
+                        <CalendarClock className="h-4 w-4 text-edsync-blue" />
+                        {dueLabel(item.due_at)}
+                      </p>
+                      <p className="mt-2 flex items-center gap-2 text-edsync-subtle">
+                        {isSubmitted(item) ? (
+                          <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
+                        ) : (
+                          <TimerReset className="h-4 w-4 text-edsync-amber" />
+                        )}
+                        {item.submission_status || "not submitted"}
+                      </p>
+                    </div>
                   </div>
-                </details>
-              )}
-            </article>
-          ))}
+
+                  {!isSubmitted(item) && (
+                    <details className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-edsync-text marker:hidden">
+                        <BookOpenCheck className="h-4 w-4 text-edsync-blue" />
+                        Write response
+                      </summary>
+                      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+                        <textarea
+                          className="edsync-input min-h-24"
+                          value={responses[item.id] ?? ""}
+                          onChange={(event) =>
+                            setResponses((current) => ({ ...current, [item.id]: event.target.value }))
+                          }
+                          placeholder="Write your response or reflection..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => submit(item.id)}
+                          className="btn-primary self-end justify-center"
+                        >
+                          <Send className="h-4 w-4" />
+                          Submit
+                        </button>
+                      </div>
+                    </details>
+                  )}
+                </article>
+              );
+          })}
         </div>
       )}
     </div>
