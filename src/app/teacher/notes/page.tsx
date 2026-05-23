@@ -9,8 +9,10 @@ import {
   Edit3,
   ExternalLink,
   Eye,
+  Grid2X2,
   ImageIcon,
   Link2,
+  List,
   LockKeyhole,
   Palette,
   Plus,
@@ -35,6 +37,7 @@ import {
   type NoteDesignPresetId,
 } from "@/lib/learning/creator-library";
 import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
+import { readViewMode, writeViewMode, type ViewMode } from "@/lib/ui/view-preferences";
 
 type StudentRow = {
   id: string;
@@ -78,6 +81,8 @@ const emptyPersonalDraft: PersonalDraft = {
   design: "clean",
 };
 
+const TEACHER_NOTES_VIEW_KEY = "edsync-teacher-notes-view-mode";
+
 const designOptions = NOTE_DESIGN_PRESETS.filter((option) => ["clean", "planning", "feedback", "resource"].includes(option.id));
 
 function visibilityIcon(value: string) {
@@ -112,6 +117,7 @@ export default function TeacherNotesPage() {
   const [editingPersonalId, setEditingPersonalId] = useState<string | null>(null);
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [uploadingPersonal, setUploadingPersonal] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     studentId: "",
@@ -136,7 +142,13 @@ export default function TeacherNotesPage() {
 
   useEffect(() => {
     load();
+    setViewMode(readViewMode(TEACHER_NOTES_VIEW_KEY));
   }, []);
+
+  const changeViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    writeViewMode(TEACHER_NOTES_VIEW_KEY, mode);
+  };
 
   const visibleCount = useMemo(() => notes.filter((note) => note.visibility !== "teacher").length, [notes]);
   const safePersonalMedia = useMemo(() => classifySafeMediaUrl(personalDraft.mediaUrl), [personalDraft.mediaUrl]);
@@ -528,9 +540,32 @@ export default function TeacherNotesPage() {
               <h2 className="font-display text-xl font-bold">Teaching notes</h2>
               <p className="text-sm text-edsync-subtle">Personal planning notes saved in Studio.</p>
             </div>
-            <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
-              Open Studio
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
+                {[
+                  { mode: "grid" as const, label: "Grid", icon: Grid2X2 },
+                  { mode: "list" as const, label: "List", icon: List },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.mode}
+                      type="button"
+                      onClick={() => changeViewMode(item.mode)}
+                      className={`rounded-lg px-2 py-1.5 text-xs font-bold transition ${
+                        viewMode === item.mode ? "bg-edsync-amber text-white" : "text-edsync-subtle hover:text-edsync-text"
+                      }`}
+                      aria-label={`${item.label} view`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </button>
+                  );
+                })}
+              </div>
+              <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
+                Open Studio
+              </Link>
+            </div>
           </div>
           {personalNotes.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
@@ -539,7 +574,7 @@ export default function TeacherNotesPage() {
               <p className="mt-1 text-sm text-edsync-subtle">Create a note for planning, media, links, or lesson ideas.</p>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className={viewMode === "grid" ? "grid gap-3 md:grid-cols-2" : "grid gap-3"}>
               {personalNotes.map((note) => {
                 const media = classifySafeMediaUrl(getPersonalMediaUrl(note));
                 const Icon = mediaIcon(media);
