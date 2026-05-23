@@ -18,6 +18,7 @@ import {
   Send,
   StickyNote,
   Trash2,
+  UploadCloud,
   Video,
   X,
 } from "lucide-react";
@@ -28,6 +29,11 @@ import {
   updateStudioItem,
   type StudioServerItem,
 } from "@/lib/studio/api";
+import {
+  NOTE_DESIGN_PRESETS,
+  noteDesignPresetById,
+  type NoteDesignPresetId,
+} from "@/lib/learning/creator-library";
 import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
 
 type StudentRow = {
@@ -53,7 +59,16 @@ type PersonalDraft = {
   title: string;
   body: string;
   mediaUrl: string;
-  design: "clean" | "planning" | "feedback" | "resource";
+  design: NoteDesignPresetId;
+};
+
+type UploadResponse = {
+  data: {
+    publicUrl: string;
+    assetType: string;
+    scanStatus: string;
+  } | null;
+  error: { message: string } | null;
 };
 
 const emptyPersonalDraft: PersonalDraft = {
@@ -63,12 +78,7 @@ const emptyPersonalDraft: PersonalDraft = {
   design: "clean",
 };
 
-const designOptions: Array<{ id: PersonalDraft["design"]; label: string; className: string }> = [
-  { id: "clean", label: "Clean", className: "border-edsync-border bg-edsync-card" },
-  { id: "planning", label: "Planning", className: "border-edsync-blue/30 bg-edsync-blue/10" },
-  { id: "feedback", label: "Feedback", className: "border-edsync-amber/30 bg-edsync-amber/10" },
-  { id: "resource", label: "Resource", className: "border-edsync-emerald/30 bg-edsync-emerald/10" },
-];
+const designOptions = NOTE_DESIGN_PRESETS.filter((option) => ["clean", "planning", "feedback", "resource"].includes(option.id));
 
 function visibilityIcon(value: string) {
   return value === "teacher" ? LockKeyhole : Eye;
@@ -80,8 +90,7 @@ function getPersonalMediaUrl(item: StudioServerItem) {
 }
 
 function getPersonalDesign(item: StudioServerItem): PersonalDraft["design"] {
-  const design = String(item.metadata.design ?? "clean");
-  return designOptions.some((option) => option.id === design) ? (design as PersonalDraft["design"]) : "clean";
+  return noteDesignPresetById(item.metadata.design, "clean").id;
 }
 
 function personalNoteText(item: StudioServerItem) {
@@ -102,6 +111,7 @@ export default function TeacherNotesPage() {
   const [personalDraft, setPersonalDraft] = useState<PersonalDraft>(emptyPersonalDraft);
   const [editingPersonalId, setEditingPersonalId] = useState<string | null>(null);
   const [savingPersonal, setSavingPersonal] = useState(false);
+  const [uploadingPersonal, setUploadingPersonal] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     studentId: "",
@@ -249,6 +259,32 @@ export default function TeacherNotesPage() {
     }
   };
 
+  const uploadPersonalMedia = async (file: File | null) => {
+    if (!file) return;
+    setUploadingPersonal(true);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("bucket", "teacher-notes");
+      formData.set("path", `${Date.now()}-${file.name}`);
+      const response = await fetch("/api/storage/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const payload = (await response.json().catch(() => null)) as UploadResponse | null;
+      if (!response.ok || payload?.error || !payload?.data?.publicUrl) {
+        throw new Error(payload?.error?.message || "Upload failed.");
+      }
+      setPersonalDraft((current) => ({ ...current, mediaUrl: payload.data?.publicUrl ?? current.mediaUrl }));
+      toast.success(`${payload.data.assetType} uploaded and scanned.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setUploadingPersonal(false);
+    }
+  };
+
   const editPersonal = (note: StudioServerItem) => {
     setPersonalDraft({
       title: note.title,
@@ -362,6 +398,26 @@ export default function TeacherNotesPage() {
                 onChange={(event) => setPersonalDraft({ ...personalDraft, mediaUrl: event.target.value })}
                 placeholder="Optional HTTPS image, video, YouTube, Vimeo, or reference link"
               />
+              <label className="flex flex-col gap-2 rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  <span className="font-semibold text-edsync-text">Upload teaching media</span>
+                  <span className="block text-xs">Attach safe references, examples, videos, PDFs, or source docs.</span>
+                </span>
+                <span className="btn-secondary w-fit px-3 py-2 text-sm">
+                  <UploadCloud className="h-4 w-4" />
+                  {uploadingPersonal ? "Uploading..." : "Choose file"}
+                </span>
+                <input
+                  type="file"
+                  className="sr-only"
+                  disabled={uploadingPersonal}
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md,.csv"
+                  onChange={(event) => {
+                    void uploadPersonalMedia(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
             </div>
             <aside className={`rounded-2xl border p-4 ${selectedPersonalDesign.className}`}>
               <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Design</p>
@@ -376,6 +432,7 @@ export default function TeacherNotesPage() {
                         ? "border-edsync-amber bg-edsync-amber text-white"
                         : "border-edsync-border bg-edsync-surface text-edsync-subtle"
                     }`}
+                    title={option.description}
                   >
                     {option.label}
                   </button>
