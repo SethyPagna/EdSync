@@ -640,6 +640,10 @@
   - Teachers can provide feedback for assignments, projects, quizzes, practice attempts, grades, and discussions.
   - Students can see feedback by work item and decide whether grades, feedback, deadlines, notifications, and new-content widgets appear on their dashboard.
   - Replace XP with real time-spent/activity signals that exclude idle/offline time.
+  - Work items distinguish possible score, earned score, and gradebook contribution.
+  - A work item can be points-based, weighted into the course grade by a fixed percent, completion-only, or participation-based.
+  - Completion and participation work can still collect submissions, feedback, and audit evidence without changing the averaged grade.
+  - Weighted work shows both score percent and contribution to the whole course grade, for example 80/100 on a 5% item contributes 4% course credit.
 - Student portal:
   - Rename announcements to notifications.
   - Add dashboard toggles for notifications, assignments, deadlines, new content, grades, practice, and feedback.
@@ -663,6 +667,8 @@
   - Use a Canva-style visual section editor: compact mini-sidebar/tools, content blocks, safe media insert, practice blocks, callouts, slide/deck blocks, and clear block previews.
   - AI-generated lesson responses should insert into designed blocks and templates rather than dumping markup into textareas.
   - Lesson player may use a mini-sidebar or a dedicated lesson page shell with a back button, but it must preserve portal navigation context.
+  - The lesson creation and edit surfaces should follow the preferred Canva references: left vertical tool rail, contextual side panel, center page canvas, compact floating toolbar, page title rows, bottom thumbnails, zoom/page controls, animation/position/effects panels, and download/share/export menus.
+  - The standalone Studio route remains only as compatibility/history tooling; teacher-facing creation happens through Lessons and Create Lesson.
 - Practice and AI:
   - Remove the standalone Studio page from primary navigation.
   - Merge Practice with AI Tutor into a single learning support loop: generate, attempt, explain missed, retry, review, and recommend.
@@ -682,6 +688,8 @@
 - 24.6 Add dashboard visibility preferences and Profile & Settings section ordering.
 - 24.7 Add Canva-style lesson editor panels, template controls, slide thumbnails, and safe insert menus.
 - 24.8 Add Kahoot-style activity presentation and join/play polish for class practice.
+- 24.9 Add explicit work scoring semantics: points possible, earned score, grade weight percent, completion-only evidence, participation criteria, release controls, and student-facing labels.
+- 24.10 Continue replacing old Studio-first wording in user-facing creation paths with Lessons, Notes, Practice + AI Tutor, and Canva-style lesson creation language while preserving route compatibility.
 
 **Verification:**
 - Run `npm.cmd run typecheck`, `npm.cmd run lint`, focused tests, and `npm.cmd run build`.
