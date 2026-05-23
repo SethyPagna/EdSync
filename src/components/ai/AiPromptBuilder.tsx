@@ -275,10 +275,10 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={insertIntoStudio} disabled={!state.output} className="btn-secondary px-3 py-2 text-sm disabled:opacity-50">
                 {state.inserted ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                {state.inserted ? "Inserted" : "Save to Studio"}
+                {state.inserted ? "Inserted" : "Save draft"}
               </button>
               <Link href="/studio" className="btn-secondary px-3 py-2 text-sm">
-                Open Studio <ArrowRight className="h-4 w-4" />
+                Open drafts <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
