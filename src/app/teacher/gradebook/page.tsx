@@ -11,7 +11,7 @@ type GradeRow = {
   name: string;
   email: string;
   overall: number | null;
-  scores: Array<{ title: string; percent: number | null; status: string }>;
+  scores: Array<{ title: string; percent: number | null; status: string; feedback?: string | null }>;
 };
 
 function gradeText(value: number | null) {
@@ -23,7 +23,14 @@ export default function TeacherGradebookPage() {
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [classId, setClassId] = useState("");
   const [rows, setRows] = useState<GradeRow[]>([]);
-  const [form, setForm] = useState({ studentId: "", title: "", earned: "", possible: "100" });
+  const [form, setForm] = useState({
+    studentId: "",
+    title: "",
+    earned: "",
+    possible: "100",
+    feedback: "",
+    releaseToStudent: true,
+  });
   const [loading, setLoading] = useState(true);
 
   const filteredStudents = useMemo(
@@ -78,6 +85,8 @@ export default function TeacherGradebookPage() {
         title: form.title,
         pointsEarned: Number(form.earned),
         pointsPossible: Number(form.possible),
+        feedback: form.feedback,
+        status: form.releaseToStudent ? "graded" : "draft",
       }),
     });
     if (!response.ok) {
@@ -85,7 +94,7 @@ export default function TeacherGradebookPage() {
       return;
     }
     toast.success("Score saved.");
-    setForm({ studentId: "", title: "", earned: "", possible: "100" });
+    setForm({ studentId: "", title: "", earned: "", possible: "100", feedback: "", releaseToStudent: true });
     await loadGrades();
   };
 
@@ -174,6 +183,42 @@ export default function TeacherGradebookPage() {
           <button className="btn-primary justify-center" type="submit">
             Save
           </button>
+          <div className="md:col-span-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
+            <div className="rounded-xl border border-edsync-border bg-edsync-surface p-3">
+              <div className="mb-2 flex flex-wrap gap-2">
+                {["Strong evidence:", "Next step:", "Review:", "Great progress:"].map((snippet) => (
+                  <button
+                    key={snippet}
+                    type="button"
+                    onClick={() => setForm((current) => ({ ...current, feedback: `${current.feedback}${current.feedback ? "\n" : ""}${snippet} ` }))}
+                    className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1.5 text-xs font-semibold text-edsync-subtle hover:border-edsync-blue/40 hover:text-edsync-blue"
+                  >
+                    {snippet}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="edsync-input min-h-24"
+                value={form.feedback}
+                onChange={(event) => setForm({ ...form, feedback: event.target.value })}
+                placeholder="Optional rich feedback summary, next step, or rubric note..."
+              />
+            </div>
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-edsync-border bg-edsync-surface p-4">
+              <span>
+                <span className="block text-sm font-semibold text-edsync-text">Visible to student</span>
+                <span className="mt-1 block text-xs text-edsync-subtle">
+                  Turn off to save as draft until review is ready.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={form.releaseToStudent}
+                onChange={(event) => setForm({ ...form, releaseToStudent: event.target.checked })}
+                className="h-5 w-5 accent-edsync-blue"
+              />
+            </label>
+          </div>
         </div>
       </form>
 
@@ -194,8 +239,11 @@ export default function TeacherGradebookPage() {
                   <p className="mt-1 truncate text-xs text-edsync-subtle">{row.email}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {row.scores.slice(0, 3).map((score) => (
-                      <span key={`${row.studentId}-${score.title}`} className="badge bg-edsync-surface text-edsync-subtle">
-                        {score.title}: {gradeText(score.percent)}
+                      <span
+                        key={`${row.studentId}-${score.title}`}
+                        className={`badge ${score.status === "draft" ? "bg-edsync-amber/10 text-edsync-amber" : "bg-edsync-surface text-edsync-subtle"}`}
+                      >
+                        {score.title}: {score.status === "draft" ? "draft" : gradeText(score.percent)}
                       </span>
                     ))}
                     {row.scores.length === 0 && (
