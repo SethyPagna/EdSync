@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   Archive,
@@ -299,8 +298,8 @@ export default function StudentNotesPage() {
               <h2 className="font-display text-xl font-bold">Quick note builder</h2>
               <p className="text-sm text-edsync-subtle">
                 {editingId
-                  ? "Update this personal Studio draft without losing its workspace history."
-                  : "Personal notes are saved as Studio drafts so you can expand them later."}
+                  ? "Update this personal note without losing its history."
+                  : "Personal notes can include designs, links, images, videos, and study ideas."}
               </p>
             </div>
             <Palette className="h-5 w-5 text-edsync-blue" />
@@ -389,7 +388,7 @@ export default function StudentNotesPage() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Personal notes</h2>
-              <p className="text-sm text-edsync-subtle">{personalNotes.length} Studio note drafts</p>
+              <p className="text-sm text-edsync-subtle">{personalNotes.length} personal note drafts</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
@@ -413,9 +412,9 @@ export default function StudentNotesPage() {
                   );
                 })}
               </div>
-              <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
-                Open Studio
-              </Link>
+              <button type="button" onClick={() => setComposerOpen(true)} className="btn-secondary px-3 py-2 text-sm">
+                New note
+              </button>
             </div>
           </div>
           {personalNotes.length === 0 ? (
