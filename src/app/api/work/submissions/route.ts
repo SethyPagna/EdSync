@@ -8,6 +8,7 @@ import {
   tenantObjectParams,
   tenantObjectPredicate,
 } from "@/lib/tenancy/object-scope";
+import { normalizeWorkGradingSettings, workGradeContribution } from "@/lib/work/grading";
 import { validateEarnedWorkPoints, validateWorkPoints, validateWorkResponse } from "@/lib/work/validation";
 
 const WORK_ITEM_TABLE = "learning_work_items";
@@ -172,9 +173,10 @@ export async function PATCH(request: Request) {
     teacher_id: string;
     category_id: string | null;
     points_possible: number;
+    settings: unknown;
   }>(
     `SELECT ls.id, ls.work_item_id, ls.student_id, ls.class_id,
-            wi.title, wi.work_type, wi.teacher_id, wi.category_id, wi.points_possible
+            wi.title, wi.work_type, wi.teacher_id, wi.category_id, wi.points_possible, wi.settings
       FROM learning_submissions ls
       JOIN learning_work_items wi ON wi.id = ls.work_item_id
       ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
@@ -200,6 +202,8 @@ export async function PATCH(request: Request) {
     );
   }
   const scorePercent = percent(pointsEarned, pointsPossible);
+  const grading = normalizeWorkGradingSettings(submission.settings);
+  const weightedContribution = workGradeContribution({ pointsEarned, pointsPossible, settings: grading });
 
   await d1Query(
     `UPDATE learning_submissions
@@ -208,6 +212,27 @@ export async function PATCH(request: Request) {
       WHERE id = ?`,
     [pointsEarned, pointsPossible, scorePercent, body.feedback ?? null, body.submissionId],
   );
+
+  if (!grading.countsTowardGrade) {
+    const eventId = await appendLearningEvent({
+      tenantId: context.tenant.id,
+      actorId: user.id,
+      studentId: submission.student_id,
+      classId: submission.class_id,
+      sourceType: submission.work_type,
+      sourceId: submission.work_item_id,
+      eventType: `work.${grading.mode}.feedback_recorded`,
+      payload: {
+        submissionId: submission.id,
+        pointsEarned,
+        pointsPossible,
+        percent: scorePercent,
+        feedback: body.feedback ?? null,
+        grading,
+      },
+    });
+    return NextResponse.json({ data: { graded: true, percent: scorePercent, eventId, grading }, error: null });
+  }
 
   const result = await recordGradeEvent({
     tenantId: context.tenant.id,
@@ -222,8 +247,13 @@ export async function PATCH(request: Request) {
     pointsEarned,
     pointsPossible,
     feedback: body.feedback ?? null,
-    payload: { submissionId: submission.id, categoryId: submission.category_id },
+    payload: {
+      submissionId: submission.id,
+      categoryId: submission.category_id,
+      grading,
+      weightedContribution,
+    },
   });
 
-  return NextResponse.json({ data: { graded: true, percent: scorePercent, eventId: result.eventId }, error: null });
+  return NextResponse.json({ data: { graded: true, percent: scorePercent, eventId: result.eventId, grading, weightedContribution }, error: null });
 }
