@@ -383,7 +383,7 @@ export default function TeacherNotesPage() {
                 {editingPersonalId ? "Edit teaching note" : "New teaching note"}
               </h2>
               <p className="text-sm text-edsync-subtle">
-                Save lesson ideas, references, media, links, and planning notes as Studio drafts.
+                Save lesson ideas, references, media, links, and planning notes as editable drafts.
               </p>
             </div>
             <Palette className="h-5 w-5 text-edsync-amber" />
@@ -538,7 +538,7 @@ export default function TeacherNotesPage() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Teaching notes</h2>
-              <p className="text-sm text-edsync-subtle">Personal planning notes saved in Studio.</p>
+              <p className="text-sm text-edsync-subtle">Personal planning notes with designs, links, images, and video cues.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
@@ -562,9 +562,9 @@ export default function TeacherNotesPage() {
                   );
                 })}
               </div>
-              <Link href="/studio?tab=notes" className="btn-secondary px-3 py-2 text-sm">
-                Open Studio
-              </Link>
+              <button type="button" onClick={() => setPersonalOpen(true)} className="btn-secondary px-3 py-2 text-sm">
+                New note
+              </button>
             </div>
           </div>
           {personalNotes.length === 0 ? (
