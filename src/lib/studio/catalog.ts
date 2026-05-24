@@ -173,7 +173,7 @@ export const AI_PROMPT_CONTRACTS: AiPromptContract[] = [
   {
     id: "generate-practice",
     title: "Generate Practice",
-    description: "Create quiz, flashcards, matching, or sprint practice from Studio content.",
+    description: "Create quiz, flashcards, matching, or sprint practice from saved materials.",
     feature: "quiz",
     fields: [
       { id: "source", label: "Source", type: "textarea", required: true },
