@@ -92,11 +92,11 @@ export default function LanguageMenu({
           </p>
         </div>
         <div className="grid gap-1">
-          {EDSYNC_LANGUAGES.map((item) => {
+          {EDSYNC_LANGUAGES.map((item, index) => {
             const selected = item.name === language;
             return (
               <button
-                key={item.name}
+                key={`language-${index}-${item.name}`}
                 type="button"
                 onClick={() => chooseLanguage(item.name)}
                 className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
