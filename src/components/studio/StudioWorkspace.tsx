@@ -116,8 +116,8 @@ type StudioDraftValue = {
 };
 
 const defaultDraft: StudioDraftValue = {
-  html: "<h2>New Studio item</h2><p>Start writing, paste content, or use AI to create a draft.</p>",
-  plainText: "New Studio item",
+  html: "<h2>New workspace item</h2><p>Start writing, paste content, or use AI to create a draft.</p>",
+  plainText: "New workspace item",
   sheet: [
     ["Criteria", "Developing", "Proficient", "Advanced"],
     ["Evidence", "Needs support", "Clear examples", "Detailed reasoning"],
@@ -186,7 +186,7 @@ function titleForKind(kind: StudioItemKind) {
   if (kind === "sheet") return "Sheets";
   if (kind === "slide") return "Slides";
   if (kind === "practice") return "Practice Builder";
-  return "Studio";
+  return "Workspace";
 }
 
 function downloadTextFile(filename: string, text: string, mimeType: string) {
@@ -289,7 +289,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
         if (!cancelled) setServerItems(items);
       })
       .catch((error) => {
-        if (!cancelled) setStatusMessage(error instanceof Error ? error.message : "Could not load Studio items");
+        if (!cancelled) setStatusMessage(error instanceof Error ? error.message : "Could not load saved items");
       });
 
     return () => {
@@ -687,8 +687,8 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Layers3 className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-lg font-bold">EdSync Studio</p>
-              <p className="text-xs text-edsync-subtle">Create, design, practice</p>
+              <p className="font-display text-lg font-bold">EdSync Workspace</p>
+              <p className="text-xs text-edsync-subtle">Notes, design, practice</p>
             </div>
           </Link>
           <nav className="grid gap-1">
@@ -741,7 +741,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
               {serverItems.length === 0 && (
                 <p className="rounded-lg border border-dashed border-edsync-border p-3 text-xs leading-5 text-edsync-subtle">
-                  Server-saved Studio items will appear here.
+                  Saved workspace items will appear here.
                 </p>
               )}
               {serverItems.map((item) => (
@@ -812,7 +812,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     setItemTitle(event.target.value);
                     setDraftStatus("saving");
                   }}
-                  aria-label="Studio item title"
+                  aria-label="Workspace item title"
                 />
               </div>
               <div className="flex max-w-full gap-2 overflow-x-auto pb-1 xl:justify-end">
@@ -844,7 +844,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   <RotateCcw className="h-4 w-4" />
                   Reset
                 </button>
-                <Link href="/ai" className="btn-primary flex-none px-3 py-2 text-sm">
+                <Link href="/practice?ai=1&task=clean-notes" className="btn-primary flex-none px-3 py-2 text-sm">
                   <Sparkles className="h-4 w-4" />
                   Ask AI
                 </Link>
