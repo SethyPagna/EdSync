@@ -43,7 +43,7 @@ const starterItems: PracticeItem[] = [
     id: "item-1",
     prompt: "What is the first step in an effective learning loop?",
     answer: "import",
-    explanation: "Start by importing or writing source content so Studio can organize it.",
+    explanation: "Start by importing or writing source content so EdSync can turn it into lesson, practice, and review material.",
     points: 2,
   },
   {
@@ -55,7 +55,7 @@ const starterItems: PracticeItem[] = [
   },
   {
     id: "item-3",
-    prompt: "Name one Studio source that can generate practice.",
+    prompt: "Name one EdSync source that can generate practice.",
     answer: "notes",
     explanation: "Notes, docs, sheets, slides, and lesson sections can all feed generated practice.",
     points: 2,
@@ -172,7 +172,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               <p className="text-sm font-semibold text-edsync-blue">Practice, quizzes, and games</p>
               <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <h1 className="font-display text-4xl font-bold">Practice Studio</h1>
+                  <h1 className="font-display text-4xl font-bold">Practice + AI Tutor</h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
                     Timed practice with explanations, retry missed, saved mistakes, and review recommendations.
                   </p>
