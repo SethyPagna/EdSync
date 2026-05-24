@@ -152,12 +152,6 @@ export default async function CatalogLaunchHero({
           </span>
         </Link>
         <div className="edsync-launch-actions-inline">
-          <a href="#workflow-start" className="edsync-launch-mini-link">
-            {copy.workflowLabel}
-          </a>
-          <a href="#catalog-search-panel" className="edsync-launch-mini-link">
-            {copy.catalogLabel}
-          </a>
           <ThemeToggle compact className="edsync-launch-icon" />
           <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
           <Link href={signedIn ? workspaceHref : loginHref} prefetch={false} className="edsync-launch-signin">
