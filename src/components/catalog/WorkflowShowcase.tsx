@@ -87,7 +87,7 @@ type WorkflowSlide = {
 function labelsForLanguage(language?: string | null): WorkflowLabels {
   const publicLanguage = normalizePublicLanguage(language);
   const copy = getPublicCopy(publicLanguage);
-  const [, studio = "Studio", ai = "AI", practice = "Practice", fallbackGrades = "Progress"] = copy.heroTags;
+  const [, studio = "Lessons", ai = "AI", practice = "Practice", fallbackGrades = "Progress"] = copy.heroTags;
   const progressLabels: Record<string, string> = {
     Chinese: "进度",
     English: "Progress",
