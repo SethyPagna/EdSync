@@ -119,15 +119,6 @@ async function embedRelations(table: TableName, columns: string | undefined, row
 export async function executeDataRequest(request: DataRequest): Promise<D1Result> {
   try {
     if (request.action === "rpc") {
-      if (request.rpc?.name === "increment_xp") {
-        const userId = request.rpc.args.user_id;
-        const amount = Number(request.rpc.args.xp_amount ?? 0);
-        await d1Query("UPDATE profiles SET total_xp = COALESCE(total_xp, 0) + ?, updated_at = datetime('now') WHERE id = ?", [
-          amount,
-          userId,
-        ]);
-        return { data: null, error: null };
-      }
       throw new Error(`Unsupported RPC: ${request.rpc?.name}`);
     }
 
