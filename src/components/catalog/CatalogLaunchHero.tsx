@@ -64,7 +64,7 @@ function buildLaunchPreviewSlides({
       label: studio,
       eyebrow: studio,
       title: studio,
-      route: "/studio",
+      route: "/teacher/lessons/create",
       nav: [studio, courses, catalog, start],
       metrics: [["5", studio], ["12", practice], [start, courses]],
       blocks: [[studio, `${studio}, ${practice}, ${courses}`], [courses, `${studio} -> ${courses}`]],
@@ -113,7 +113,7 @@ export default async function CatalogLaunchHero({
   const copy = getPublicCopy(publicLanguage);
   const loginHref = publicLanguageHref("/auth/login", publicLanguage);
   const signupHref = publicLanguageHref("/auth/signup", publicLanguage);
-  const [, studioLabel = "Studio", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
+  const [, studioLabel = "Lessons", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const previewSlides = buildLaunchPreviewSlides({
     catalog: copy.catalogLabel,
     studio: studioLabel,
