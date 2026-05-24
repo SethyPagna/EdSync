@@ -621,12 +621,12 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
       triggerStep(startY > endY ? 1 : -1);
     };
 
-    section.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("wheel", handleWheel, { passive: false, capture: true });
     section.addEventListener("touchstart", handleTouchStart, { passive: true });
     section.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
-      section.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("wheel", handleWheel, { capture: true });
       section.removeEventListener("touchstart", handleTouchStart);
       section.removeEventListener("touchend", handleTouchEnd);
     };
