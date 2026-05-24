@@ -846,7 +846,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 </button>
                 <Link href="/practice?ai=1&task=clean-notes" className="btn-primary flex-none px-3 py-2 text-sm">
                   <Sparkles className="h-4 w-4" />
-                  Ask AI
+                  Practice + AI
                 </Link>
               </div>
             </div>
