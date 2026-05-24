@@ -30,9 +30,9 @@ type StudioApiResponse<T> = {
 async function parseStudioResponse<T>(response: Response) {
   const payload = (await response.json().catch(() => null)) as StudioApiResponse<T> | null;
   if (!response.ok || payload?.error) {
-    throw new Error(payload?.error || `Studio request failed (${response.status})`);
+    throw new Error(payload?.error || `Workspace request failed (${response.status})`);
   }
-  if (!payload?.data) throw new Error("Studio response was empty.");
+  if (!payload?.data) throw new Error("Workspace response was empty.");
   return payload.data;
 }
 
