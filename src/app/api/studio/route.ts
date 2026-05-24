@@ -201,7 +201,7 @@ export async function POST(request: Request) {
     content = validateStudioJsonObject(body.content);
     status = validateStudioStatus(body.status, { allowArchived: false }) as "draft" | "published";
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Invalid Studio item.", 400);
+    return errorResponse(error instanceof Error ? error.message : "Invalid workspace item.", 400);
   }
   if (status === "published" && !(await canPublish(user, context))) {
     return errorResponse("Publishing permission is required.", 403);
