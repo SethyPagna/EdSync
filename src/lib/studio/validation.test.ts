@@ -24,8 +24,8 @@ describe("Studio validation", () => {
     expect(validateStudioStatus(undefined)).toBe("draft");
     expect(validateStudioStatus("published")).toBe("published");
     expect(validateStudioStatus("archived")).toBe("archived");
-    expect(() => validateStudioStatus("archived", { allowArchived: false })).toThrow("supported Studio status");
-    expect(() => validateStudioStatus("deleted")).toThrow("supported Studio status");
+    expect(() => validateStudioStatus("archived", { allowArchived: false })).toThrow("supported workspace status");
+    expect(() => validateStudioStatus("deleted")).toThrow("supported workspace status");
   });
 
   it("accepts plain objects and rejects oversized content", () => {
