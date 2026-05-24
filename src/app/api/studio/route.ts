@@ -95,9 +95,9 @@ async function assertOwnerOrAdmin(documentId: string, tenantId: string, userId: 
     "SELECT id, tenant_id, owner_id FROM studio_documents WHERE id = ? LIMIT 1",
     [documentId],
   );
-  if (!row) throw new Error("Studio item not found.");
-  if (row.tenant_id !== tenantId) throw new Error("Studio item belongs to another tenant.");
-  if (!isAdmin && row.owner_id !== userId) throw new Error("You cannot modify this Studio item.");
+  if (!row) throw new Error("Workspace item not found.");
+  if (row.tenant_id !== tenantId) throw new Error("Workspace item belongs to another tenant.");
+  if (!isAdmin && row.owner_id !== userId) throw new Error("You cannot modify this workspace item.");
 }
 
 async function recordStudioEvent(input: {
@@ -216,9 +216,9 @@ export async function POST(request: Request) {
     );
     if (existing[0]) {
       existed = true;
-      if (existing[0].tenant_id !== context.tenant.id) return errorResponse("Studio item belongs to another tenant.", 403);
+      if (existing[0].tenant_id !== context.tenant.id) return errorResponse("Workspace item belongs to another tenant.", 403);
       if (user.user_metadata.role !== "admin" && existing[0].owner_id !== user.id) {
-        return errorResponse("You cannot modify this Studio item.", 403);
+        return errorResponse("You cannot modify this workspace item.", 403);
       }
     }
   }
@@ -284,7 +284,7 @@ export async function PATCH(request: Request) {
     status?: "draft" | "published" | "archived";
     metadata?: Record<string, unknown>;
   };
-  if (!body.id) return errorResponse("Studio item id is required.", 400);
+  if (!body.id) return errorResponse("Workspace item id is required.", 400);
   await assertOwnerOrAdmin(body.id, context.tenant.id, user.id, user.user_metadata.role === "admin");
   let status: "draft" | "published" | "archived" | null = null;
   if (body.status !== undefined) {
@@ -362,7 +362,7 @@ export async function DELETE(request: Request) {
   const params = new URL(request.url).searchParams;
   const id = params.get("id");
   const hard = params.get("hard") === "true";
-  if (!id) return errorResponse("Studio item id is required.", 400);
+  if (!id) return errorResponse("Workspace item id is required.", 400);
 
   await assertOwnerOrAdmin(id, context.tenant.id, user.id, user.user_metadata.role === "admin");
   if (hard) {
