@@ -201,13 +201,13 @@ export default async function CatalogPage({
               {audiencePaths.map((path, index) => {
                 const Icon = path.icon;
                 return (
-                  <div key={`audience-${index}-${path.label}`} className="edsync-catalog-audience-card">
+                  <article key={`audience-${index}-${path.label}`} className="edsync-catalog-audience-card">
                     <Icon className="h-4 w-4" />
                     <span>
                       <strong>{path.label}</strong>
                       <small>{path.detail}</small>
                     </span>
-                  </div>
+                  </article>
                 );
               })}
             </div>
