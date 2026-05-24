@@ -430,6 +430,29 @@ export default function CreateLesson() {
           <button type="button" onClick={() => addDraftSection()} className="btn-primary w-full justify-center py-2 text-sm">
             Blank section
           </button>
+          <div className="rounded-2xl border border-edsync-border bg-edsync-card p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Section types</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {CONTENT_TYPE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    addDraftSection({
+                      ...SECTION_TEMPLATES[0],
+                      id: `blank-${option.value}`,
+                      label: option.label,
+                      title: option.label,
+                      contentType: option.value,
+                    })
+                  }
+                  className="rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-left text-xs font-bold text-edsync-text transition hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid gap-2">
             {SECTION_TEMPLATES.map((template) => (
               <button
@@ -662,6 +685,67 @@ export default function CreateLesson() {
       </div>
     );
   };
+
+  const renderCanvasToolbar = () => (
+    <div className="flex flex-wrap items-center justify-center gap-1 rounded-2xl border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
+      <button type="button" onClick={() => setStudioPanel("blocks")} className="btn-secondary h-9 px-3 text-xs">
+        <AlignLeft className="h-4 w-4" />
+      </button>
+      <select
+        value={selectedTemplateOption?.label ?? "Inter"}
+        onChange={(event) => {
+          const selected = lessonTemplateOptions.find((template) => template.label === event.target.value);
+          if (selected) setDesignTemplateId(selected.id);
+        }}
+        className="h-9 min-w-32 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-semibold text-edsync-text"
+        aria-label="Lesson template"
+      >
+        {lessonTemplateOptions.map((template) => (
+          <option key={template.id} value={template.label}>
+            {template.label}
+          </option>
+        ))}
+      </select>
+      <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className="btn-secondary h-9 px-3 text-xs">
+        -
+      </button>
+      <span className="flex h-9 min-w-14 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-bold text-edsync-text">
+        {draft.estimated_duration || 0}m
+      </span>
+      <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className="btn-secondary h-9 px-3 text-xs">
+        +
+      </button>
+      {[
+        { label: "Bold", icon: Bold, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "concept-brief") ?? SECTION_TEMPLATES[0]) },
+        { label: "Italic", icon: Italic, action: () => setActiveTab("sections") },
+        { label: "Underline", icon: Underline, action: () => setActiveTab("sections") },
+        { label: "List", icon: List, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "guided-notes") ?? SECTION_TEMPLATES[0]) },
+      ].map((item) => {
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.label}
+            type="button"
+            onClick={item.action}
+            title={item.label}
+            className="btn-secondary h-9 px-3 text-xs"
+          >
+            <Icon className="h-4 w-4" />
+          </button>
+        );
+      })}
+      <button type="button" onClick={() => setStudioPanel("animate")} className="btn-secondary h-9 px-3 text-xs">
+        Animate
+      </button>
+      <button type="button" onClick={() => setStudioPanel("brand")} className="btn-secondary h-9 px-3 text-xs">
+        Brand
+      </button>
+      <button type="button" onClick={() => setStudioPanel("ai")} className="btn-primary h-9 px-3 text-xs">
+        <Sparkles className="h-4 w-4" />
+        AI
+      </button>
+    </div>
+  );
 
   const clearSavedDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -1389,67 +1473,8 @@ export default function CreateLesson() {
       {/* ── STEP: EDIT ── */}
       {step === "edit" && (
         <div className="animate-slide-up space-y-4">
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-1 rounded-2xl border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
-            <button type="button" onClick={() => setActiveTab("sections")} className="btn-secondary h-9 px-3 text-xs">
-              <AlignLeft className="h-4 w-4" />
-            </button>
-            <select
-              value={selectedTemplateOption?.label ?? "Inter"}
-              onChange={(event) => {
-                const selected = lessonTemplateOptions.find((template) => template.label === event.target.value);
-                if (selected) setDesignTemplateId(selected.id);
-              }}
-              className="h-9 min-w-32 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-semibold text-edsync-text"
-              aria-label="Lesson template"
-            >
-              {lessonTemplateOptions.map((template) => (
-                <option key={template.id} value={template.label}>
-                  {template.label}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className="btn-secondary h-9 px-3 text-xs">
-              -
-            </button>
-            <span className="flex h-9 min-w-14 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-bold text-edsync-text">
-              {draft.estimated_duration || 0}m
-            </span>
-            <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className="btn-secondary h-9 px-3 text-xs">
-              +
-            </button>
-            {[
-              { label: "Bold", icon: Bold, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "concept-brief") ?? SECTION_TEMPLATES[0]) },
-              { label: "Italic", icon: Italic, action: () => setActiveTab("sections") },
-              { label: "Underline", icon: Underline, action: () => setActiveTab("sections") },
-              { label: "List", icon: List, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "guided-notes") ?? SECTION_TEMPLATES[0]) },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={item.action}
-                  title={item.label}
-                  className="btn-secondary h-9 px-3 text-xs"
-                >
-                  <Icon className="h-4 w-4" />
-                </button>
-              );
-            })}
-            <button type="button" onClick={() => setStudioPanel("animate")} className="btn-secondary h-9 px-3 text-xs">
-              Animate
-            </button>
-            <button type="button" onClick={() => setStudioPanel("brand")} className="btn-secondary h-9 px-3 text-xs">
-              Brand
-            </button>
-            <button type="button" onClick={() => setStudioPanel("ai")} className="btn-primary h-9 px-3 text-xs">
-              <Sparkles className="h-4 w-4" />
-              AI
-            </button>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[76px_300px_minmax(0,1fr)]">
-            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:sticky lg:top-6 lg:h-[calc(100dvh-8rem)] lg:flex-col lg:overflow-y-auto">
+          <div className="grid gap-4 lg:grid-cols-[76px_300px_minmax(0,1fr)] lg:items-start">
+            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:sticky lg:top-3 lg:h-[calc(100dvh-1.5rem)] lg:flex-col lg:overflow-y-auto">
               {STUDIO_TOOL_RAIL.map((tool) => {
                 const Icon = tool.icon;
                 return (
@@ -1469,11 +1494,14 @@ export default function CreateLesson() {
                 );
               })}
             </aside>
-            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto">
+            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:sticky lg:top-3 lg:max-h-[calc(100dvh-1.5rem)] lg:overflow-y-auto">
               {renderStudioPanel()}
             </aside>
             <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-edsync-surface p-3 shadow-inner lg:order-3">
               <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg p-3 sm:p-5">
+          <div className="sticky top-3 z-10 mx-auto max-w-4xl">
+            {renderCanvasToolbar()}
+          </div>
           {variants.length > 1 && (
             <div className="edsync-card">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -1767,37 +1795,6 @@ export default function CreateLesson() {
           {/* SECTIONS */}
           {activeTab === "sections" && (
             <div className="space-y-5">
-              <div className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
-                <div className="flex flex-col gap-3 border-b border-edsync-border bg-edsync-surface/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-sm font-bold text-edsync-text">Lesson blocks</h2>
-                    <p className="text-xs text-edsync-subtle">
-                      Choose a template, then edit it directly on the canvas.
-                    </p>
-                  </div>
-                  <button onClick={() => addDraftSection()} className="btn-primary px-4 py-2 text-sm">
-                    Blank section
-                  </button>
-                </div>
-                <div className="flex gap-3 overflow-x-auto p-4">
-                  {SECTION_TEMPLATES.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => addDraftSection(template)}
-                      className="min-w-[15rem] rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
-                        <span className="rounded-md border border-edsync-border px-2 py-0.5 text-[11px] uppercase tracking-wide text-edsync-subtle">
-                          {template.contentType}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs leading-5 text-edsync-subtle">{template.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {draft.sections.map((sec, i) => (
                 <div key={i} className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
                   <div className="flex flex-wrap items-center gap-3 border-b border-edsync-border bg-edsync-surface p-3">
