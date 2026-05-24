@@ -272,7 +272,7 @@ function createTextBlock(input: {
 
 export function studioDocumentToLearningObject(row: LegacyStudioDocument): LearningObject {
   const metadata = cleanRecord(row.metadata);
-  const title = cleanText(row.title) || "Untitled Studio item";
+  const title = cleanText(row.title) || "Untitled workspace item";
   const plainText = cleanText(row.plainText);
   const blocks = plainText
     ? [
