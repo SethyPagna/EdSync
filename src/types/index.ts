@@ -961,6 +961,7 @@ export type PracticeMode =
   | "mistake_retry"
   | "fill_blank"
   | "true_false"
+  | "generated_from_materials"
   | "generated_from_studio";
 
 export interface PracticeAttemptSummary {
