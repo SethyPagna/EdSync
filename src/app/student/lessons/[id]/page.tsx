@@ -924,32 +924,18 @@ export default function StudentLesson() {
         body: JSON.stringify({ lessonId: lesson.id, score }),
       }).catch(() => null);
     }
-    const xp = Math.max(10, Math.round(score / 10));
-    const { error } = await edsync.rpc("increment_xp", {
-      user_id: user.id,
-      xp,
-    });
-    if (error) {
-      const { data: prof } = await edsync
-        .from("profiles")
-        .select("total_xp, streak_days")
-        .eq("id", user.id)
-        .single();
-      if (prof)
-        await edsync
-          .from("profiles")
-          .update({
-            total_xp: (prof.total_xp || 0) + xp,
-            streak_days: Math.max(1, prof.streak_days || 0),
-            last_active_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-    } else {
-      await edsync
-        .from("profiles")
-        .update({ last_active_at: new Date().toISOString() })
-        .eq("id", user.id);
-    }
+    const { data: prof } = await edsync
+      .from("profiles")
+      .select("streak_days")
+      .eq("id", user.id)
+      .single();
+    await edsync
+      .from("profiles")
+      .update({
+        streak_days: Math.max(1, prof?.streak_days || 0),
+        last_active_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
     setProgress((p) =>
       p ? { ...p, status: "completed", final_quiz_score: score, score } : p,
     );
