@@ -169,12 +169,12 @@ export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "My Courses", icon: BookOpenCheck },
   { href: "/teacher/lessons/create", label: "Create Lesson", icon: Plus },
-  { href: "/practice", label: "Practice + AI Tutor", icon: Brain },
   { href: "/teacher/work", label: "Assignments", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Gradebook & Feedback", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
   { href: "/teacher/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
+  { href: "/practice", label: "Practice + AI Tutor", icon: Brain },
   { href: "/teacher/students", label: "Students", icon: UsersRound },
   { href: "/teacher/analytics", label: "Analytics & Reports", icon: BarChart3 },
   { href: "/teacher/profile", label: "Profile & Settings", icon: UserRound },
@@ -184,10 +184,10 @@ export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student/lessons", label: "Lessons", icon: BookOpenCheck },
   { href: "/student/work", label: "My Work", icon: FileCheck2 },
-  { href: "/practice", label: "Practice + AI Tutor", icon: Brain },
-  { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
+  { href: "/practice", label: "Practice + AI Tutor", icon: Brain },
+  { href: "/student/grades", label: "Grades", icon: ClipboardList },
   { href: "/student/notifications", label: "Notifications", icon: Bell },
   { href: "/student/profile", label: "Profile & Settings", icon: UserRound },
 ];
@@ -239,8 +239,8 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
 
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
-    { label: "Learning", items: pick(["/student/lessons", "/student/work"]) },
-    { label: "Support", items: pick(["/practice", "/student/grades", "/student/notes", "/student/discussions"]) },
+    { label: "Learning", items: pick(["/student/lessons", "/student/work", "/student/notes", "/student/discussions"]) },
+    { label: "Support", items: pick(["/practice", "/student/grades"]) },
     { label: "Account", items: pick(["/student/notifications", "/student/profile"]) },
   ];
 }
