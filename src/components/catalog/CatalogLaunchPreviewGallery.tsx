@@ -145,7 +145,7 @@ export default function CatalogLaunchPreviewGallery(props: CatalogLaunchPreviewG
 
           <div className="edsync-launch-app-path" aria-label={`${activeSlide.label} route preview`}>
             {activeSlide.nav.map((item, index) => (
-              <span key={`${activeSlide.id}-${item}`} className={index === 0 ? "is-active" : ""}>
+              <span key={`${activeSlide.id}-nav-${index}-${item}`} className={index === 0 ? "is-active" : ""}>
                 {item}
               </span>
             ))}
@@ -165,8 +165,8 @@ export default function CatalogLaunchPreviewGallery(props: CatalogLaunchPreviewG
           </div>
 
           <div className="edsync-launch-proof-row" aria-label={`${activeSlide.label} metrics`}>
-            {activeSlide.metrics.map(([value, label]) => (
-              <span key={`${activeSlide.id}-${label}`}>
+            {activeSlide.metrics.map(([value, label], index) => (
+              <span key={`${activeSlide.id}-metric-${index}-${label}`}>
                 <strong>{value}</strong>
                 <small>{label}</small>
               </span>
@@ -174,8 +174,8 @@ export default function CatalogLaunchPreviewGallery(props: CatalogLaunchPreviewG
           </div>
 
           <div className="edsync-launch-loop-strip" aria-label={`${activeSlide.label} follow up`}>
-            {activeSlide.blocks.map(([title, detail]) => (
-              <span key={`${activeSlide.id}-${title}`}>
+            {activeSlide.blocks.map(([title, detail], index) => (
+              <span key={`${activeSlide.id}-block-${index}-${title}`}>
                 <GraduationCap className="h-4 w-4" />
                 <span>
                   <strong>{title}</strong>
