@@ -585,13 +585,14 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
     const section = sectionRef.current;
     if (!section || !window.matchMedia("(min-width: 901px)").matches) return;
 
-    const isMostlyInWorkflow = () => {
+    const isInWorkflowViewport = (event?: WheelEvent) => {
       const rect = section.getBoundingClientRect();
+      if (event && event.clientY >= rect.top && event.clientY <= rect.bottom) return true;
       return rect.top < window.innerHeight * 0.38 && rect.bottom > window.innerHeight * 0.62;
     };
 
     const triggerStep = (direction: 1 | -1, event?: WheelEvent) => {
-      if (!isMostlyInWorkflow()) return false;
+      if (!isInWorkflowViewport(event)) return false;
       const nextIndex = activeIndexRef.current + direction;
       if (nextIndex < 0 || nextIndex >= slides.length) {
         const now = Date.now();
