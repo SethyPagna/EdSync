@@ -234,7 +234,7 @@ export default function TeacherProfile() {
         storageKey="edsync-teacher-profile-section-order"
         sections={[
           "Dashboard",
-          "Studio",
+          "Create Lesson",
           "Lessons",
           "Work",
           "Gradebook",
