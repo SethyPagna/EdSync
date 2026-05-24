@@ -110,41 +110,32 @@ export default async function CatalogPage({
 
         <section id="catalog-search-panel" className="edsync-catalog-availability scroll-mt-20 py-10">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
-            <div className="flex flex-col gap-3 pb-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="edsync-catalog-search-head">
               <div className="min-w-0">
-                <h2 className="font-display text-3xl font-bold sm:text-4xl">{copy.searchHeading}</h2>
-                <p className="mt-2 max-w-2xl text-sm text-edsync-subtle">{copy.searchCopy}</p>
+                <span className="edsync-catalog-search-kicker">{copy.catalogLabel}</span>
+                <h2 className="font-display text-3xl font-bold sm:text-4xl">
+                  {copy.searchHeading === "Search" ? "Find your learning path" : copy.searchHeading}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-edsync-subtle">
+                  {copy.searchCopy === "Use filters after you search."
+                    ? "Search public courses, organization academies, free programs, and paid learning products in one place."
+                    : copy.searchCopy}
+                </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-edsync-subtle">
-                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
-                  {items.length} {copy.courses.toLowerCase()}
+              <div className="edsync-catalog-availability-strip" aria-label="Catalog availability">
+                <span>
+                  <strong>{items.length}</strong>
+                  <small>{copy.courses}</small>
                 </span>
-                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
-                  {freeCount} {copy.free.toLowerCase()}
+                <span>
+                  <strong>{freeCount}</strong>
+                  <small>{copy.free}</small>
                 </span>
-                <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
-                  {paidCount} {copy.paid.toLowerCase()}
+                <span>
+                  <strong>{paidCount}</strong>
+                  <small>{copy.paid}</small>
                 </span>
               </div>
-              {hasFilters && (
-                <Link href={catalogHref()} className="text-sm font-semibold text-edsync-blue hover:underline">
-                  {copy.clearFilters}
-                </Link>
-              )}
-            </div>
-            <div className="mb-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {audiencePaths.map((path, index) => {
-                const Icon = path.icon;
-                return (
-                  <div key={`audience-${index}-${path.label}`} className="edsync-catalog-audience-card">
-                    <Icon className="h-4 w-4" />
-                    <span>
-                      <strong>{path.label}</strong>
-                      <small>{path.detail}</small>
-                    </span>
-                  </div>
-                );
-              })}
             </div>
             <form>
               <label className="sr-only" htmlFor="catalog-search">
@@ -206,16 +197,31 @@ export default async function CatalogPage({
                 </button>
               </div>
             </form>
-            <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-edsync-subtle">
+            <div className="edsync-catalog-path-row">
+              {audiencePaths.map((path, index) => {
+                const Icon = path.icon;
+                return (
+                  <div key={`audience-${index}-${path.label}`} className="edsync-catalog-audience-card">
+                    <Icon className="h-4 w-4" />
+                    <span>
+                      <strong>{path.label}</strong>
+                      <small>{path.detail}</small>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="edsync-catalog-quick-row">
               {quickSearches.map((sample, index) => (
-                <Link
-                  key={`quick-search-${index}-${sample}`}
-                  href={catalogHref({ q: sample })}
-                  className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
-                >
+                <Link key={`quick-search-${index}-${sample}`} href={catalogHref({ q: sample })}>
                   {sample}
                 </Link>
               ))}
+              {hasFilters && (
+                <Link href={catalogHref()} className="is-clear">
+                  {copy.clearFilters}
+                </Link>
+              )}
             </div>
 
             <div id="catalog-results" className="mt-6 border-t border-edsync-border pt-5">
