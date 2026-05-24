@@ -104,7 +104,7 @@ export default function TeacherPlannerPage() {
       return;
     }
     if (form.mode === "announcement" && !form.body.trim()) {
-      toast.error("Add an announcement message.");
+      toast.error("Add a notification message.");
       return;
     }
     if (form.mode === "deadline" && !form.dueAt) {
@@ -146,7 +146,7 @@ export default function TeacherPlannerPage() {
 
       toast.success(
         form.mode === "announcement"
-          ? `Announcement sent to ${payload.data?.notified ?? 0} students.`
+          ? `Notification sent to ${payload.data?.notified ?? 0} students.`
           : "Schedule updated.",
       );
       setForm((current) => ({ ...emptyForm, classId: current.classId }));
@@ -168,7 +168,7 @@ export default function TeacherPlannerPage() {
       toast.error(payload?.error?.message || payload?.error || "Planner item was not deleted.");
       return;
     }
-    toast.success(type === "announcement" ? "Announcement deleted." : "Schedule item deleted.");
+    toast.success(type === "announcement" ? "Notification deleted." : "Schedule item deleted.");
     await loadPlanner();
   };
 
@@ -178,7 +178,7 @@ export default function TeacherPlannerPage() {
         <div>
           <p className="text-sm font-semibold text-edsync-blue">Class planner</p>
           <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text">
-            Announcements, deadlines, and schedule
+            Notifications, deadlines, and schedule
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-edsync-subtle">
             Keep students aligned with class updates, visible work deadlines, and events.
@@ -199,7 +199,7 @@ export default function TeacherPlannerPage() {
         <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
           <div className="mb-4 grid grid-cols-3 gap-2">
             {[
-              { mode: "announcement" as const, label: "Announce", icon: Megaphone },
+              { mode: "announcement" as const, label: "Notify", icon: Megaphone },
               { mode: "deadline" as const, label: "Deadline", icon: TimerReset },
               { mode: "event" as const, label: "Event", icon: CalendarClock },
             ].map((item) => {
@@ -400,13 +400,13 @@ export default function TeacherPlannerPage() {
 
           <div className="rounded-xl border border-edsync-border bg-edsync-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-xl font-bold text-edsync-text">Recent announcements</h2>
+              <h2 className="font-display text-xl font-bold text-edsync-text">Recent notifications</h2>
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
             <div className="space-y-3">
               {planner.announcements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Announcements you send will appear here.
+                  Class notifications you send will appear here.
                 </p>
               ) : (
                 planner.announcements.slice(0, 6).map((item) => (
