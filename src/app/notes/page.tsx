@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
   title: "Notes",
-  description: "Create and organize EdSync notes in Studio.",
+  description: "Create and organize personal EdSync notes, drafts, and learning materials.",
 };
 
 export default async function NotesPage() {
