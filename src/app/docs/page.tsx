@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
   title: "Docs",
-  description: "Write Word-style EdSync documents in Studio.",
+  description: "Write Word-style EdSync documents with reusable learning blocks.",
 };
 
 export default async function DocsPage() {
