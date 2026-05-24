@@ -1,6 +1,6 @@
 # EdSync Improvement Progress
 
-**Last Updated:** 2026-05-21
+**Last Updated:** 2026-05-24
 
 **Current Track:** Comprehensive workflow, design, architecture, AI, templates, lessons, slides, discussions, quizzes, activities, and tracking improvements.
 
@@ -37,14 +37,14 @@
 | 18 | Analytics And Continuous Improvement | Not started | Usage and assessment data improve learning content. |
 | 19 | Quality Gates, Testing, And Deployment Workflow | Not started | Tests and deployment checks protect the platform. |
 | 20 | Launch Readiness And Operating Rhythm | Not started | Delivery rhythm, docs, and smoke tests are stable. |
-| 21 | Public Intro, Workflow Slides, Search, And Launch Motion Redesign | Planned | Intro/workflow/search polish is tracked as the next public launch refinement. |
+| 21 | Public Intro, Workflow Slides, Search, And Launch Motion Redesign | Complete | LEARN-style intro, role clarity, workflow slide motion, search/catalog follow-up, and Cloudflare deploy cache refresh are live. |
 | 22 | Deep Data Architecture, Schema, And Learning Flow Audit | Complete | Actual D1 schema, code access paths, relationships, risks, and improvement proposal are documented. |
 
 ---
 
 ## Current Focus
 
-**Next Target:** Phase 3, Core Learning Object Architecture.
+**Next Target:** Sidebar and lesson-authoring consolidation, including removing legacy Studio navigation, merging Practice and AI Tutor, and moving lesson creation toward the Canva-style editor pattern.
 
 **Immediate Tasks:**
 - [x] Inventory routes by role and feature.
@@ -64,6 +64,16 @@
 - [x] Add teacher lesson package summary integration using `lessonRowsToLearningObject`.
 - [x] Audit D1 schema, serializers, service code, API routes, and legacy client data access.
 - [x] Document detailed relationships, JSON/document fields, current flow strengths, weak spots, and schema improvement order.
+- [x] Rebuild public intro as a LEARN-style no-topbar launch surface with compact role chips and app-relevant preview panels.
+- [x] Fix workflow slide scrolling so wheel/touch advances slides in place before the page proceeds to catalog/search.
+- [x] Stabilize public list keys across launch preview, workflow preview, catalog cards, and language menu.
+- [x] Refresh the service-worker cache and use network-first behavior for navigations and Next assets to prevent stale intro pages.
+- [x] Deploy production Cloudflare Worker `edsync` at `https://edsync.learn-app.workers.dev`.
+- [x] Delete the old `edsync-dev` Worker and update default app deployment script to target production `edsync`.
+- [ ] Remove legacy Studio from protected sidebars and merge Practice with AI Tutor in admin/teacher/student navigation.
+- [ ] Convert lesson creation sections from textarea-style editing into the Canva-style lesson creation canvas, mini-sidebar, and toolbar flow.
+- [ ] Complete student dashboard cleanup: remove academy banner, replace XP with active time spent, compact Join Class, and make Notifications toggleable.
+- [ ] Verify admin view-as mode keeps the platform sidebar on all student/teacher/support routes.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
@@ -78,6 +88,9 @@
 | Date | Decision | Reason |
 | --- | --- | --- |
 | 2026-05-16 | Use `plan.md` for the comprehensive roadmap and `progress.md` for execution tracking. | The user requested simple root-level tracking files for better continuity. |
+| 2026-05-24 | Use production Worker `edsync` for default Cloudflare app deploys. | The old `edsync-dev` Worker was removed and future deploy scripts should not recreate it. |
+| 2026-05-24 | Keep Pages cleanup blocked until Cloudflare token can list Pages projects. | `wrangler pages project list` returned Cloudflare auth code `10000`; production Worker deployment remains available. |
+| 2026-05-24 | Treat public workflow as discrete slide motion instead of scroll-scrub animation. | Live QA confirmed a wheel action changed the workflow slide while `window.scrollY` stayed fixed. |
 | 2026-05-16 | Treat generated and manual lessons as the same editable learning package model. | This avoids separate workflows that drift apart and makes templates reusable. |
 | 2026-05-16 | Protect teacher-authored content when templates are reapplied. | Template changes should improve design without destroying classroom edits. |
 | 2026-05-16 | Require schema validation and selective import for AI output. | AI content should be useful drafts, not unchecked writes into lessons. |
