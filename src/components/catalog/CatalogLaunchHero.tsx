@@ -28,12 +28,12 @@ function buildLaunchPreviewSlides({
   signIn,
   start,
   free,
+  paid,
   anyDuration,
   difficulty,
   courses,
   search,
   filters,
-  featured,
 }: {
   catalog: string;
   studio: string;
@@ -43,12 +43,12 @@ function buildLaunchPreviewSlides({
   signIn: string;
   start: string;
   free: string;
+  paid: string;
   anyDuration: string;
   difficulty: string;
   courses: string;
   search: string;
   filters: string;
-  featured: string;
 }): Record<"catalog" | "studio" | "ai" | "practice" | "proof", LaunchPreviewSlideCopy> {
   return {
     catalog: {
@@ -56,45 +56,45 @@ function buildLaunchPreviewSlides({
       eyebrow: catalog,
       title: courses,
       route: "/catalog",
-      nav: [catalog, courses, featured, start],
-      metrics: [[free, start], ["35m", anyDuration], ["8", difficulty]],
-      blocks: [[courses, `${search}, ${filters}, ${start}`], [signIn, `${signIn} -> ${start}`]],
+      nav: [catalog, courses, free, paid],
+      metrics: [[free, start], ["35m", anyDuration], [difficulty, filters]],
+      blocks: [[courses, `${search} courses, preview media, then enroll.`], [signIn, `${signIn} before free access or checkout.`]],
     },
     studio: {
       label: studio,
       eyebrow: studio,
       title: studio,
       route: "/teacher/lessons/create",
-      nav: [studio, courses, catalog, start],
-      metrics: [["5", studio], ["12", practice], [start, courses]],
-      blocks: [[studio, `${studio}, ${practice}, ${courses}`], [courses, `${studio} -> ${courses}`]],
+      nav: [studio, "Templates", "Media", ai],
+      metrics: [["Slides", studio], ["Quiz", practice], ["Draft", courses]],
+      blocks: [[studio, "Canva-style lesson canvas with templates."], [courses, "Slides, media, questions, and due dates stay together."]],
     },
     ai: {
       label: ai,
       eyebrow: ai,
       title: ai,
       route: "/ai",
-      nav: [ai, studio, practice, start],
-      metrics: [["Groq", ai], ["Google", ai], [start, studio]],
-      blocks: [[ai, `${studio}, ${practice}, ${proof}`], [studio, `${ai} -> ${studio}`]],
+      nav: [ai, "Outline", "Slides", practice],
+      metrics: [["Groq", ai], ["Google", ai], ["Review", studio]],
+      blocks: [[ai, "Generate a draft, then edit before publish."], [studio, "Insert lessons, quizzes, rubrics, and notes."]],
     },
     practice: {
       label: practice,
       eyebrow: practice,
       title: practice,
       route: "/practice",
-      nav: [practice, courses, proof, start],
+      nav: [practice, "Sprint", "Retry", proof],
       metrics: [["08:42", anyDuration], ["4/12", practice], ["2", proof]],
-      blocks: [[practice, `${practice}, ${anyDuration}, ${proof}`], [proof, `${practice} -> ${proof}`]],
+      blocks: [[practice, "Quiz, flashcards, sprint, and retry missed."], [proof, "Mistakes become review cards and feedback."]],
     },
     proof: {
       label: proof,
       eyebrow: proof,
       title: proof,
       route: "/admin/dashboard",
-      nav: [proof, ai, catalog, start],
+      nav: [proof, "Feedback", "Reports", "Admin"],
       metrics: [["24", proof], [ai, proof], [start, practice]],
-      blocks: [[proof, `${proof}, ${practice}, ${courses}`], [ai, `${ai}, ${catalog}, ${proof}`]],
+      blocks: [[proof, "Grade events, feedback, and progress evidence."], [ai, "Provider health, audit logs, and safe media checks."]],
     },
   };
 }
@@ -123,12 +123,12 @@ export default async function CatalogLaunchHero({
     signIn: copy.signIn,
     start: copy.start,
     free: copy.free,
+    paid: copy.paid,
     anyDuration: copy.anyDuration,
     difficulty: copy.difficulty,
     courses: copy.courses,
     search: copy.searchButton,
     filters: copy.filters,
-    featured: copy.featured,
   });
   const workspaceHref =
     role === "admin"
@@ -184,8 +184,13 @@ export default async function CatalogLaunchHero({
             </Link>
           </div>
           <div className="edsync-launch-mode-row" aria-label="EdSync public paths">
-            {copy.heroTags.map((tag) => (
-              <span key={tag}>{tag}</span>
+            {[
+              ["Individual", "Buy, learn, take notes"],
+              ["Organization", "Portals, SSO, teams"],
+              ["Teacher", "Create, assign, feedback"],
+              ["Student", "Lessons, practice, grades"],
+            ].map(([label, detail]) => (
+              <span key={label} title={detail}>{label}</span>
             ))}
           </div>
         </div>
