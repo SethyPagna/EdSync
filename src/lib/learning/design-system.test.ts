@@ -34,7 +34,7 @@ describe("lesson design system", () => {
     expect(context.allowedTransitions).toContain("slide_left");
     expect(context.allowedAnimations).toContain("scale");
     expect(context.requiredOutput.practice).toContain("retry-missed");
-    expect(context.requiredOutput.format).toContain("Studio");
+    expect(context.requiredOutput.format).toContain("docs");
     expect(context.reusableBlocks.some((block) => block.id === "media-safety-check")).toBe(true);
     expect(context.toolGroups.some((group) => group.id === "motion")).toBe(true);
   });
