@@ -570,6 +570,7 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
   const activeIndexRef = useRef(0);
   const manualControlUntilRef = useRef(0);
   const scrollControlUntilRef = useRef(0);
+  const boundaryReleaseRef = useRef<{ direction: 1 | -1; until: number } | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const activeSlide = slides[activeIndex] ?? slides[0];
 
@@ -592,12 +593,23 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
     const triggerStep = (direction: 1 | -1, event?: WheelEvent) => {
       if (!isMostlyInWorkflow()) return false;
       const nextIndex = activeIndexRef.current + direction;
-      if (nextIndex < 0 || nextIndex >= slides.length) return false;
+      if (nextIndex < 0 || nextIndex >= slides.length) {
+        const now = Date.now();
+        const release = boundaryReleaseRef.current;
+        if (event && (!release || release.direction !== direction || release.until < now)) {
+          event.preventDefault();
+          boundaryReleaseRef.current = { direction, until: now + 900 };
+          manualControlUntilRef.current = now + 1200;
+          return true;
+        }
+        return false;
+      }
       if (Date.now() < scrollControlUntilRef.current) {
         event?.preventDefault();
         return true;
       }
       event?.preventDefault();
+      boundaryReleaseRef.current = null;
       scrollControlUntilRef.current = Date.now() + 620;
       manualControlUntilRef.current = Date.now() + 1200;
       setActiveSlide(nextIndex);
