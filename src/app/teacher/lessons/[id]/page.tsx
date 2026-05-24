@@ -304,6 +304,7 @@ function RichTextEditor({
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SectionTemplateLibrary({
   onAdd,
 }: {
@@ -1984,26 +1985,9 @@ export default function TeacherLessonDetail() {
       {/* ── SECTIONS ── */}
       {tab === "sections" && (
         <div className="animate-fade-in space-y-5">
-          <div className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
-            <div className="flex flex-col gap-3 border-b border-edsync-border bg-edsync-surface/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-edsync-text">Lesson blocks</h2>
-                <p className="text-xs text-edsync-subtle">
-                  Choose a template, then edit it directly on the canvas.
-                </p>
-              </div>
-              <button onClick={() => addSection()} className="btn-primary px-4 py-2 text-sm">
-                Blank section
-              </button>
-            </div>
-            <div className="p-4">
-              <SectionTemplateLibrary onAdd={addSection} />
-            </div>
-          </div>
-
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-edsync-subtle">
-              Reorder, duplicate, and edit blocks from the lesson outline.
+              Reorder, duplicate, and edit lesson blocks directly on the canvas.
             </p>
             <button onClick={() => addSection()} className="btn-secondary px-4 py-2 text-sm">
               Add block
