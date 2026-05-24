@@ -3,8 +3,8 @@ import { normalizeAiPromptContractId, type AiPromptSearchParams } from "@/lib/st
 import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
-  title: "AI Tutor",
-  description: "Guided AI prompt builder for Studio content, lessons, slides, and practice.",
+  title: "Practice + AI Tutor",
+  description: "Guided AI prompt builder for lessons, notes, slides, and practice.",
 };
 
 type AiPageProps = {
