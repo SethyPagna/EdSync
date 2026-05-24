@@ -304,33 +304,6 @@ function RichTextEditor({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function SectionTemplateLibrary({
-  onAdd,
-}: {
-  onAdd: (template: SectionTemplate) => void;
-}) {
-  return (
-    <div className="flex gap-3 overflow-x-auto">
-      {SECTION_TEMPLATES.map((template) => (
-        <button
-          key={template.id}
-          onClick={() => onAdd(template)}
-          className="group min-w-[15rem] rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
-            <span className="rounded-md border border-edsync-border px-2 py-0.5 text-[11px] uppercase tracking-wide text-edsync-subtle">
-              {template.contentType}
-            </span>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-edsync-subtle">{template.description}</p>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────
 // QUESTION BUILDER (one question row)
 // ─────────────────────────────────────────
