@@ -185,6 +185,7 @@ export const studentNavItems: ShellNavItem[] = [
   { href: "/student/lessons", label: "Lessons", icon: BookOpenCheck },
   { href: "/student/classes", label: "Teachers & Classes", icon: UsersRound },
   { href: "/student/work", label: "My Work", icon: FileCheck2 },
+  { href: "/student/planner", label: "Planner", icon: CalendarClock },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
   { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/practice", label: "Practice + AI Tutor", icon: Brain },
@@ -240,7 +241,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
 
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
-    { label: "Learning", items: pick(["/student/lessons", "/student/classes", "/student/work", "/student/notes", "/student/discussions"]) },
+    { label: "Learning", items: pick(["/student/lessons", "/student/classes", "/student/work", "/student/planner", "/student/notes", "/student/discussions"]) },
     { label: "Support", items: pick(["/practice", "/student/grades"]) },
     { label: "Account", items: pick(["/student/notifications", "/student/profile"]) },
   ];
