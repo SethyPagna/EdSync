@@ -6,15 +6,21 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   ArrowRight,
+  AlignLeft,
+  Bold,
   Blocks,
   Download,
   Film,
   Image as ImageIcon,
+  Italic,
   Languages,
   LayoutTemplate,
+  List,
   Palette,
   Play,
+  Sparkles,
   Type,
+  Underline,
   Wand2,
 } from "lucide-react";
 import {
@@ -41,7 +47,7 @@ type ImportMode = "objectives" | "text" | "url" | "file";
 type Step = "choose" | "import" | "generating" | "edit";
 type GenerationDepth = "quick" | "standard" | "zero_to_expert";
 type LanguageStyle = "student_friendly" | "professional" | "speaking" | "simple";
-type StudioPanel = "templates" | "blocks" | "media" | "text" | "brand" | "animate" | "export";
+type StudioPanel = "templates" | "blocks" | "media" | "text" | "brand" | "animate" | "ai" | "export";
 
 type DraftSection = {
   title: string;
@@ -160,11 +166,12 @@ const lessonTemplateOptions = listLessonTemplateOptions();
 
 const STUDIO_TOOL_RAIL = [
   { id: "templates", label: "Templates", icon: LayoutTemplate },
-  { id: "blocks", label: "Blocks", icon: Blocks },
-  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "blocks", label: "Elements", icon: Blocks },
   { id: "text", label: "Text", icon: Type },
+  { id: "media", label: "Uploads", icon: ImageIcon },
   { id: "brand", label: "Brand", icon: Palette },
   { id: "animate", label: "Animate", icon: Wand2 },
+  { id: "ai", label: "AI", icon: Sparkles },
   { id: "export", label: "Export", icon: Download },
 ] as const;
 
@@ -408,7 +415,7 @@ export default function CreateLesson() {
       return (
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Blocks</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Elements</p>
             <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Add learning blocks</h2>
           </div>
           <button type="button" onClick={() => addDraftSection()} className="btn-primary w-full justify-center py-2 text-sm">
@@ -462,7 +469,7 @@ export default function CreateLesson() {
       return (
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Media</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Uploads</p>
             <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Safe image and video inserts</h2>
           </div>
           <button type="button" onClick={() => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "media-analysis") ?? SECTION_TEMPLATES[0])} className="btn-primary w-full justify-center py-2 text-sm">
@@ -561,6 +568,60 @@ export default function CreateLesson() {
               {preset}
             </button>
           ))}
+        </div>
+      );
+    }
+
+    if (studioPanel === "ai") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">AI co-creator</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Generate into this design</h2>
+          </div>
+          <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+            <p className="text-sm font-semibold text-edsync-text">Current design</p>
+            <p className="mt-1 text-xs leading-5 text-edsync-subtle">
+              {selectedTemplateOption?.label} with {generationDepth.replaceAll("_", " ")} depth, {languageStyle.replaceAll("_", " ")} tone, and {audienceLanguage} output.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStep("import")}
+            className="btn-secondary w-full justify-center py-2 text-sm"
+          >
+            <Sparkles className="h-4 w-4" />
+            Edit AI prompt
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!inputText.trim() && !uploadedFile}
+            className="btn-primary w-full justify-center py-2 text-sm disabled:opacity-40"
+          >
+            <Wand2 className="h-4 w-4" />
+            Regenerate lesson
+          </button>
+          <div className="grid gap-2">
+            {[
+              "Create a shorter student-friendly version",
+              "Add a Kahoot-style sprint block",
+              "Convert the outline into slide pages",
+              "Add rubric and feedback prompts",
+            ].map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => {
+                  setInputText((current) => `${current.trim()}\n\n${action}`.trim());
+                  toast.success("Added to AI prompt.");
+                }}
+                className="rounded-xl border border-edsync-border bg-edsync-card p-3 text-left text-sm font-semibold text-edsync-text transition hover:border-edsync-blue/40"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
         </div>
       );
     }
@@ -900,17 +961,39 @@ export default function CreateLesson() {
               {pill.label}
             </span>
           ))}
-        </div>
+          </div>
       )}
 
       {/* ── STEP: CHOOSE MODE ── */}
       {step === "choose" && (
-        <div className="animate-slide-up space-y-3">
+        <div className="animate-slide-up rounded-[2rem] border border-edsync-border bg-edsync-card p-3 shadow-card">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-edsync-surface px-4 py-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-edsync-blue">
+                Lesson Creation Studio
+              </p>
+              <h2 className="font-display text-xl font-bold text-edsync-text">
+                Start with AI, a draft, or a blank canvas.
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
+              <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
+                Templates
+              </span>
+              <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
+                Sections
+              </span>
+              <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
+                Practice
+              </span>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
           {[
             {
               mode: "ai_collab" as const,
               title: "AI draft",
-              desc: "Generate, review, refine.",
+              desc: "Generate a designed outline, then choose what to keep.",
               badge: "Recommended",
               badgeColor:
                 "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20",
@@ -918,7 +1001,7 @@ export default function CreateLesson() {
             {
               mode: "ai_full" as const,
               title: "Full AI",
-              desc: "Complete draft, then approve.",
+              desc: "Build slides, quiz blocks, rubric, and review prompts.",
               badge: "Fastest",
               badgeColor:
                 "bg-edsync-purple/10 text-edsync-purple border-edsync-purple/20",
@@ -926,7 +1009,7 @@ export default function CreateLesson() {
             {
               mode: "manual" as const,
               title: "Blank lesson",
-              desc: "Start from scratch.",
+              desc: "Open the Canva-style section canvas with no generated content.",
               badge: "Control",
               badgeColor:
                 "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20",
@@ -941,7 +1024,7 @@ export default function CreateLesson() {
                   setStep("edit");
                 } else setStep("import");
               }}
-              className={`group w-full rounded-xl border-2 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-card-hover ${
+              className={`group min-h-44 w-full rounded-[1.5rem] border-2 bg-edsync-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-card-hover ${
                 creationMode === opt.mode
                   ? "border-edsync-blue bg-edsync-blue/5"
                   : "border-edsync-border bg-edsync-card hover:border-edsync-muted"
@@ -957,7 +1040,7 @@ export default function CreateLesson() {
                       {opt.badge}
                     </span>
                   </div>
-                  <p className="max-h-0 text-sm text-edsync-subtle opacity-0 transition-all group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100">
+                  <p className="mt-2 text-sm leading-6 text-edsync-subtle">
                     {opt.desc}
                   </p>
                 </div>
@@ -965,6 +1048,7 @@ export default function CreateLesson() {
               </div>
             </button>
           ))}
+          </div>
         </div>
       )}
 
@@ -1295,9 +1379,68 @@ export default function CreateLesson() {
 
       {/* ── STEP: EDIT ── */}
       {step === "edit" && (
-        <div className="animate-slide-up space-y-5">
-          <div className="grid gap-4 lg:grid-cols-[72px_280px_minmax(0,1fr)]">
-            <aside className="order-2 flex gap-2 overflow-x-auto rounded-3xl border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:sticky lg:top-6 lg:h-[calc(100dvh-8rem)] lg:flex-col lg:overflow-y-auto">
+        <div className="animate-slide-up space-y-4">
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-1 rounded-2xl border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
+            <button type="button" onClick={() => setActiveTab("sections")} className="btn-secondary h-9 px-3 text-xs">
+              <AlignLeft className="h-4 w-4" />
+            </button>
+            <select
+              value={selectedTemplateOption?.label ?? "Inter"}
+              onChange={(event) => {
+                const selected = lessonTemplateOptions.find((template) => template.label === event.target.value);
+                if (selected) setDesignTemplateId(selected.id);
+              }}
+              className="h-9 min-w-32 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-semibold text-edsync-text"
+              aria-label="Lesson template"
+            >
+              {lessonTemplateOptions.map((template) => (
+                <option key={template.id} value={template.label}>
+                  {template.label}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className="btn-secondary h-9 px-3 text-xs">
+              -
+            </button>
+            <span className="flex h-9 min-w-14 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-bold text-edsync-text">
+              {draft.estimated_duration || 0}m
+            </span>
+            <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className="btn-secondary h-9 px-3 text-xs">
+              +
+            </button>
+            {[
+              { label: "Bold", icon: Bold, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "concept-brief") ?? SECTION_TEMPLATES[0]) },
+              { label: "Italic", icon: Italic, action: () => setActiveTab("sections") },
+              { label: "Underline", icon: Underline, action: () => setActiveTab("sections") },
+              { label: "List", icon: List, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "guided-notes") ?? SECTION_TEMPLATES[0]) },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.action}
+                  title={item.label}
+                  className="btn-secondary h-9 px-3 text-xs"
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              );
+            })}
+            <button type="button" onClick={() => setStudioPanel("animate")} className="btn-secondary h-9 px-3 text-xs">
+              Animate
+            </button>
+            <button type="button" onClick={() => setStudioPanel("brand")} className="btn-secondary h-9 px-3 text-xs">
+              Brand
+            </button>
+            <button type="button" onClick={() => setStudioPanel("ai")} className="btn-primary h-9 px-3 text-xs">
+              <Sparkles className="h-4 w-4" />
+              AI
+            </button>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[76px_300px_minmax(0,1fr)]">
+            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:sticky lg:top-6 lg:h-[calc(100dvh-8rem)] lg:flex-col lg:overflow-y-auto">
               {STUDIO_TOOL_RAIL.map((tool) => {
                 const Icon = tool.icon;
                 return (
@@ -1317,10 +1460,11 @@ export default function CreateLesson() {
                 );
               })}
             </aside>
-            <aside className="order-3 rounded-3xl border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto">
+            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto">
               {renderStudioPanel()}
             </aside>
-            <div className="order-1 min-w-0 space-y-6 lg:order-3">
+            <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-edsync-surface p-3 shadow-inner lg:order-3">
+              <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg p-3 sm:p-5">
           {variants.length > 1 && (
             <div className="edsync-card">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -2152,6 +2296,7 @@ export default function CreateLesson() {
           </div>
             </div>
           </div>
+        </div>
         </div>
       )}
     </div>
