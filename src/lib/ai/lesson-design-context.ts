@@ -34,7 +34,7 @@ export function buildCreateLessonDesignInstruction({
       `- Design notes: ${designContext.template.designNotes.join(" ")}`,
       `- Practice modes: ${designContext.template.practiceModes.join(", ")}`,
       `- Review signals: ${designContext.template.reviewSignals.join(", ")}`,
-      "- Each lesson section should include editable Studio-friendly HTML, media/link safety notes when relevant, transition/animation suggestions in plain text, and a quick practice/review action.",
+      "- Each lesson section should include editable EdSync learning blocks, media/link safety notes when relevant, transition/animation suggestions in plain text, and a quick practice/review action.",
       "- Keep motion reduced-motion-safe and never require animation to understand the content.",
     ].join("\n"),
   };
