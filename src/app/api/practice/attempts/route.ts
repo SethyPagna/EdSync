@@ -12,7 +12,7 @@ import {
   buildPracticeItemContext,
   buildPracticeReviewContext,
 } from "@/lib/practice/attempt-context";
-import { isPracticeMode } from "@/lib/practice/modes";
+import { isPracticeMode, normalizePracticeMode } from "@/lib/practice/modes";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
 import {
   tenantObjectJoin,
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   const context = await resolveTenantContext(user);
-  const mode: PracticeMode = body.mode;
+  const mode: PracticeMode = normalizePracticeMode(body.mode);
   const attemptId = crypto.randomUUID();
   const sourceType = body.sourceType || "studio";
   const sourceId = body.sourceId || null;
