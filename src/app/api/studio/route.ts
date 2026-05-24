@@ -291,7 +291,7 @@ export async function PATCH(request: Request) {
     try {
       status = validateStudioStatus(body.status);
     } catch (error) {
-      return errorResponse(error instanceof Error ? error.message : "Invalid Studio status.", 400);
+      return errorResponse(error instanceof Error ? error.message : "Invalid workspace status.", 400);
     }
     if (status === "published" && !(await canPublish(user, context))) {
       return errorResponse("Publishing permission is required.", 403);
@@ -313,7 +313,7 @@ export async function PATCH(request: Request) {
     try {
       values.push(JSON.stringify(validateStudioJsonObject(body.content)));
     } catch (error) {
-      return errorResponse(error instanceof Error ? error.message : "Invalid Studio content.", 400);
+      return errorResponse(error instanceof Error ? error.message : "Invalid workspace content.", 400);
     }
   }
   if (typeof body.plainText === "string") {
