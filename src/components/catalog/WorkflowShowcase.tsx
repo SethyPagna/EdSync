@@ -566,7 +566,7 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
   const labels = useMemo(() => labelsForLanguage(language), [language]);
   const slides = useMemo(() => buildWorkflowSlides(labels), [labels]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const activeIndexRef = useRef(0);
   const manualControlUntilRef = useRef(0);
   const scrollControlUntilRef = useRef(0);
@@ -581,50 +581,32 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
   }, [slides.length]);
 
   useEffect(() => {
-    if (!window.matchMedia("(min-width: 901px)").matches) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let bestIndex = -1;
-        let bestRatio = 0;
-        for (const entry of entries) {
-          if (!entry.isIntersecting || entry.intersectionRatio <= bestRatio) continue;
-          bestRatio = entry.intersectionRatio;
-          bestIndex = Number(entry.target.getAttribute("data-step-index"));
-        }
-        if (Date.now() > manualControlUntilRef.current && Number.isFinite(bestIndex) && bestIndex >= 0) {
-          setActiveSlide(bestIndex);
-        }
-      },
-      { rootMargin: "-36% 0px -44% 0px", threshold: 0.5 },
-    );
-
-    stepRefs.current.forEach((node) => {
-      if (node) observer.observe(node);
-    });
-
-    return () => observer.disconnect();
-  }, [setActiveSlide]);
-
-  useEffect(() => {
-    const section = document.getElementById("showcase");
+    const section = sectionRef.current;
     if (!section || !window.matchMedia("(min-width: 901px)").matches) return;
 
     const isMostlyInWorkflow = () => {
       const rect = section.getBoundingClientRect();
-      return rect.top < window.innerHeight * 0.25 && rect.bottom > window.innerHeight * 0.74;
+      return rect.top < window.innerHeight * 0.38 && rect.bottom > window.innerHeight * 0.62;
     };
 
-    const triggerStep = (direction: 1 | -1) => {
-      if (!isMostlyInWorkflow() || Date.now() < scrollControlUntilRef.current) return;
+    const triggerStep = (direction: 1 | -1, event?: WheelEvent) => {
+      if (!isMostlyInWorkflow()) return false;
+      const nextIndex = activeIndexRef.current + direction;
+      if (nextIndex < 0 || nextIndex >= slides.length) return false;
+      if (Date.now() < scrollControlUntilRef.current) {
+        event?.preventDefault();
+        return true;
+      }
+      event?.preventDefault();
       scrollControlUntilRef.current = Date.now() + 620;
       manualControlUntilRef.current = Date.now() + 1200;
-      setActiveSlide(activeIndexRef.current + direction);
+      setActiveSlide(nextIndex);
+      return true;
     };
 
     const handleWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) < 28) return;
-      triggerStep(event.deltaY > 0 ? 1 : -1);
+      triggerStep(event.deltaY > 0 ? 1 : -1, event);
     };
 
     const handleTouchStart = (event: TouchEvent) => {
@@ -639,16 +621,16 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
       triggerStep(startY > endY ? 1 : -1);
     };
 
-    window.addEventListener("wheel", handleWheel, { passive: true });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    section.addEventListener("wheel", handleWheel, { passive: false });
+    section.addEventListener("touchstart", handleTouchStart, { passive: true });
+    section.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchend", handleTouchEnd);
+      section.removeEventListener("wheel", handleWheel);
+      section.removeEventListener("touchstart", handleTouchStart);
+      section.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [setActiveSlide]);
+  }, [setActiveSlide, slides.length]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -670,7 +652,7 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
 
   return (
     <>
-      <section id="showcase" className="edsync-workflow-showcase scroll-mt-24">
+      <section id="showcase" ref={sectionRef} className="edsync-workflow-showcase scroll-mt-24">
         <div className="edsync-workflow-sticky">
           <div className="edsync-workflow-heading">
             <div>
@@ -723,18 +705,6 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
           </div>
         </div>
 
-        <div className="edsync-workflow-scroll-steps" aria-hidden="true">
-          {slides.map((slide, index) => (
-            <div
-              key={slide.id}
-              ref={(node) => {
-                stepRefs.current[index] = node;
-              }}
-              data-step-index={index}
-              className="edsync-workflow-step"
-            />
-          ))}
-        </div>
       </section>
     </>
   );
