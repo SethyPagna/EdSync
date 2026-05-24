@@ -119,7 +119,7 @@ Dirty badges should be numeric when multiple unsaved items exist in a section, f
 | `/teacher/dashboard` | Continue the next teaching task. | Create lesson, review submissions, open planner. |
 | `/teacher/lessons` | Open or create a lesson package. | Filter by status, duplicate, archive, assign. |
 | `/teacher/lessons/create` | Start a package from source or template. | Import file/text, AI outline, blank lesson. |
-| `/studio` | Save/edit the current workspace item. | Ask AI, generate practice, create slides, export. |
+| `/studio` | Compatibility redirect into role-aware workspace tools. | Practice + AI, generate practice, create slides, export. |
 | `/practice` | Start selected practice mode. | Retry missed, save review cards, adjust duration. |
 | `/student/dashboard` | Continue next assigned work. | Practice review, check deadlines, open grades. |
 | `/student/lessons/[id]` | Continue lesson. | Practice, discuss, ask tutor, view resources. |
