@@ -749,6 +749,8 @@
   - Uses Canva-style editor: left tool rail, templates/assets/uploads/text/brand/tools panels, center canvas, top compact toolbar, bottom slide/page strip, preview, export/share menus, and property panels for font, color, spacing, animation, position, and media.
   - Start modes are AI draft, Full AI, and Blank lesson; all three converge into the same editor instead of separate disconnected flows.
   - AI draft, Full AI, and Blank lesson must all open the same Canva-style section canvas with block templates, visual type pills, duration controls, media-safe blocks, AI actions, and no raw HTML-style section editing.
+  - Section templates and section types live in the locked editor mini-sidebar under Templates/Elements, not as a large scrolling Section Library inside the canvas.
+  - The compact formatting/template toolbar belongs inside the page canvas area so it follows the editable page, while the mini-sidebar stays sticky and independently scrollable.
   - Blocks include text, image, video, quiz, poll, embed, shape, table, flashcard, audio, callout, practice card, discussion prompt, and exit ticket.
   - AI prompt bar can generate full lessons by topic, grade level, slide count, language, quiz inclusion, style, and template.
   - AI output appears as selectable slides/blocks with placeholders for media and quizzes; Apply Template reflows content without losing it.
