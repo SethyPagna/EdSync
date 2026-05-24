@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   if (query) params.push(`%${query}%`, `%${query}%`);
 
   const users = await d1Query(
-    `SELECT p.id, p.email, p.full_name, p.role, p.school, p.grade_level, p.total_xp,
+    `SELECT p.id, p.email, p.full_name, p.role, p.school, p.grade_level,
             p.streak_days, p.last_active_at, p.created_at,
             CASE WHEN au.user_id IS NULL THEN 0 ELSE 1 END AS is_admin
        FROM profiles p
