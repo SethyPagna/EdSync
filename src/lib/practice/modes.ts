@@ -9,6 +9,7 @@ export const PRACTICE_MODE_VALUES = [
   "mistake_retry",
   "fill_blank",
   "true_false",
+  "generated_from_materials",
   "generated_from_studio",
 ] as const satisfies readonly PracticeMode[];
 
@@ -23,5 +24,6 @@ export function isPracticeMode(value: unknown): value is PracticeMode {
 }
 
 export function normalizePracticeMode(value: unknown, fallback: PracticeMode = "quiz"): PracticeMode {
+  if (value === "generated_from_studio") return "generated_from_materials";
   return isPracticeMode(value) ? value : fallback;
 }
