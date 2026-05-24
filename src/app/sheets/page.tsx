@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
   title: "Sheets",
-  description: "Build structured sheets, rubrics, and question banks in EdSync Studio.",
+  description: "Build structured sheets, rubrics, and question banks in EdSync.",
 };
 
 export default async function SheetsPage() {
