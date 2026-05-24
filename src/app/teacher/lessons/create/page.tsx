@@ -82,6 +82,15 @@ const languageOptions = [
   "Arabic",
 ];
 
+const CONTENT_TYPE_OPTIONS: Array<{ value: ContentType; label: string; short: string }> = [
+  { value: "text", label: "Text", short: "Text" },
+  { value: "image", label: "Image", short: "Media" },
+  { value: "video", label: "Video", short: "Video" },
+  { value: "quiz", label: "Quiz", short: "Quiz" },
+  { value: "activity", label: "Activity", short: "Act" },
+  { value: "discussion", label: "Discussion", short: "Talk" },
+];
+
 type Draft = {
   title: string;
   description: string;
@@ -1757,25 +1766,25 @@ export default function CreateLesson() {
 
           {/* SECTIONS */}
           {activeTab === "sections" && (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-edsync-border bg-edsync-card p-3">
-                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-5">
+              <div className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
+                <div className="flex flex-col gap-3 border-b border-edsync-border bg-edsync-surface/80 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-sm font-semibold text-edsync-text">Section Library</h2>
+                    <h2 className="text-sm font-bold text-edsync-text">Lesson blocks</h2>
                     <p className="text-xs text-edsync-subtle">
-                      Start from slide, notes, media, activity, discussion, or quiz blocks.
+                      Choose a template, then edit it directly on the canvas.
                     </p>
                   </div>
-                  <button onClick={() => addDraftSection()} className="btn-primary px-3 py-2 text-sm">
+                  <button onClick={() => addDraftSection()} className="btn-primary px-4 py-2 text-sm">
                     Blank section
                   </button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="flex gap-3 overflow-x-auto p-4">
                   {SECTION_TEMPLATES.map((template) => (
                     <button
                       key={template.id}
                       onClick={() => addDraftSection(template)}
-                      className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
+                      className="min-w-[15rem] rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
@@ -1790,9 +1799,9 @@ export default function CreateLesson() {
               </div>
 
               {draft.sections.map((sec, i) => (
-                <div key={i} className="edsync-card">
-                  <div className="flex flex-wrap items-center gap-3 mb-3">
-                    <span className="w-7 h-7 rounded-lg bg-edsync-blue/20 text-edsync-blue text-xs font-bold flex items-center justify-center flex-shrink-0">
+                <div key={i} className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
+                  <div className="flex flex-wrap items-center gap-3 border-b border-edsync-border bg-edsync-surface p-3">
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue/15 text-sm font-bold text-edsync-blue">
                       {i + 1}
                     </span>
                     <input
@@ -1802,61 +1811,74 @@ export default function CreateLesson() {
                         ss[i] = { ...ss[i], title: e.target.value };
                         setDraft({ ...draft, sections: ss });
                       }}
-                      className="edsync-input py-2 flex-1 min-w-[12rem] font-semibold"
+                      className="min-w-[12rem] flex-1 rounded-2xl border border-edsync-border bg-edsync-card px-4 py-3 font-display text-base font-bold text-edsync-text outline-none transition focus:border-edsync-blue focus:ring-2 focus:ring-edsync-blue/20"
                       placeholder="Section title..."
                     />
-                    <select
-                      value={sec.content_type}
-                      onChange={(e) => {
-                        const ss = [...draft.sections];
-                        ss[i] = {
-                          ...ss[i],
-                          content_type: e.target.value as ContentType,
-                        };
-                        setDraft({ ...draft, sections: ss });
-                      }}
-                      className="edsync-input py-2 w-full sm:w-36 text-sm sm:flex-shrink-0"
-                    >
-                      <option value="text">Text</option>
-                      <option value="image">Image</option>
-                      <option value="video">Video</option>
-                      <option value="quiz">Quiz</option>
-                      <option value="activity">Activity</option>
-                      <option value="discussion">Discussion</option>
-                    </select>
-                    <input
-                      type="number"
-                      value={sec.duration_minutes}
-                      min={1}
-                      onChange={(e) => {
-                        const ss = [...draft.sections];
-                        ss[i] = {
-                          ...ss[i],
-                          duration_minutes: Number(e.target.value),
-                        };
-                        setDraft({ ...draft, sections: ss });
-                      }}
-                      className="edsync-input py-2 w-full sm:w-24 text-sm sm:flex-shrink-0"
-                      placeholder="min"
-                      title="Duration (minutes)"
-                    />
+                    <div className="flex rounded-2xl border border-edsync-border bg-edsync-card p-1">
+                      {CONTENT_TYPE_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            const ss = [...draft.sections];
+                            ss[i] = { ...ss[i], content_type: option.value };
+                            setDraft({ ...draft, sections: ss });
+                          }}
+                          title={option.label}
+                          className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+                            sec.content_type === option.value
+                              ? "bg-edsync-blue text-white shadow-sm"
+                              : "text-edsync-subtle hover:bg-edsync-blue/10 hover:text-edsync-blue"
+                          }`}
+                        >
+                          {option.short}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center rounded-2xl border border-edsync-border bg-edsync-card p-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ss = [...draft.sections];
+                          ss[i] = { ...ss[i], duration_minutes: Math.max(1, sec.duration_minutes - 1) };
+                          setDraft({ ...draft, sections: ss });
+                        }}
+                        className="rounded-xl px-3 py-2 text-sm font-bold text-edsync-subtle hover:bg-edsync-blue/10 hover:text-edsync-blue"
+                        aria-label="Decrease duration"
+                      >
+                        -
+                      </button>
+                      <span className="min-w-14 px-2 text-center text-sm font-bold text-edsync-text">{sec.duration_minutes}m</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ss = [...draft.sections];
+                          ss[i] = { ...ss[i], duration_minutes: sec.duration_minutes + 1 };
+                          setDraft({ ...draft, sections: ss });
+                        }}
+                        className="rounded-xl px-3 py-2 text-sm font-bold text-edsync-subtle hover:bg-edsync-blue/10 hover:text-edsync-blue"
+                        aria-label="Increase duration"
+                      >
+                        +
+                      </button>
+                    </div>
                     <button
                       onClick={() => moveDraftSection(i, -1)}
                       disabled={i === 0}
-                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      className="btn-secondary px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Up
                     </button>
                     <button
                       onClick={() => moveDraftSection(i, 1)}
                       disabled={i === draft.sections.length - 1}
-                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      className="btn-secondary px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Down
                     </button>
                     <button
                       onClick={() => duplicateDraftSection(i)}
-                      className="btn-ghost px-2 py-1 text-xs"
+                      className="btn-secondary px-3 py-2 text-xs"
                     >
                       Duplicate
                     </button>
@@ -1867,7 +1889,8 @@ export default function CreateLesson() {
                           sections: draft.sections.filter((_, j) => j !== i),
                         })
                       }
-                      className="text-edsync-subtle hover:text-edsync-red text-sm sm:text-lg sm:flex-shrink-0 sm:ml-auto"
+                      className="rounded-xl px-3 py-2 text-sm font-bold text-edsync-subtle hover:bg-edsync-red/10 hover:text-edsync-red sm:ml-auto sm:flex-shrink-0"
+                      aria-label="Delete section"
                     >
                       ×
                     </button>
@@ -1880,7 +1903,7 @@ export default function CreateLesson() {
                       );
                       const imagePreview = safeImageUrl(imgUrl);
                       return (
-                        <div className="space-y-2">
+                        <div className="space-y-3 p-3">
                           <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-blue">
                             <strong>Image Section</strong> — Paste an image URL,
                             or upload an approved image in the editor.
@@ -1940,7 +1963,7 @@ export default function CreateLesson() {
                       );
                       const media = classifySafeMediaUrl(vidUrl);
                       return (
-                        <div className="space-y-2">
+                        <div className="space-y-3 p-3">
                           <div className="p-3 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl text-xs text-edsync-purple">
                             <strong>Video Section</strong> — Paste a
                             YouTube, Vimeo, or direct HTTPS video URL.
@@ -2029,9 +2052,9 @@ export default function CreateLesson() {
               ))}
               <button
                 onClick={() => addDraftSection()}
-                className="w-full py-4 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
+                className="w-full rounded-[2rem] border-2 border-dashed border-edsync-border bg-edsync-card/60 py-5 text-sm font-bold text-edsync-subtle transition-all hover:border-edsync-blue hover:bg-edsync-blue/5 hover:text-edsync-blue"
               >
-                Add Section
+                Add lesson block
               </button>
             </div>
           )}
