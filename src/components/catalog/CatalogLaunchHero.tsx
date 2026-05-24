@@ -115,10 +115,30 @@ export default async function CatalogLaunchHero({
   const signupHref = publicLanguageHref("/auth/signup", publicLanguage);
   const [, studioLabel = "Lessons", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const rolePaths = [
-    ["Individual", "Browse, buy, learn, take personal notes"],
-    ["Organization", "Portals, teams, managers, SSO-ready routing"],
-    ["Teacher", "Build lessons, assign work, review feedback"],
-    ["Student", "Open lessons, practice, submit, see grades"],
+    {
+      label: "Individual",
+      tag: "Self-paced buyer",
+      detail: "Browse paid/free courses, learn alone, keep personal notes.",
+      href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "individual" }),
+    },
+    {
+      label: "Organization",
+      tag: "School or team",
+      detail: "Use portals, members, managers, SSO-ready academy routing.",
+      href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "organization" }),
+    },
+    {
+      label: "Teacher",
+      tag: "Create and assign",
+      detail: "Build lessons, generate practice, review work, publish feedback.",
+      href: publicLanguageHref("/auth/signup", publicLanguage, { role: "teacher" }),
+    },
+    {
+      label: "Student",
+      tag: "Learn and submit",
+      detail: "Open lessons, practice with AI, submit work, view grades.",
+      href: publicLanguageHref("/auth/signup", publicLanguage, { role: "student" }),
+    },
   ];
   const previewSlides = buildLaunchPreviewSlides({
     catalog: copy.catalogLabel,
@@ -184,11 +204,12 @@ export default async function CatalogLaunchHero({
             </Link>
           </div>
           <div className="edsync-launch-mode-row" aria-label="EdSync public paths">
-            {rolePaths.map(([label, detail], index) => (
-              <span key={`launch-mode-${index}-${label}`} title={detail}>
-                <strong>{label}</strong>
-                <small>{detail}</small>
-              </span>
+            {rolePaths.map((path, index) => (
+              <Link key={`launch-mode-${index}-${path.label}`} href={path.href} prefetch={false} title={path.detail}>
+                <span>{path.tag}</span>
+                <strong>{path.label}</strong>
+                <small>{path.detail}</small>
+              </Link>
             ))}
           </div>
         </div>
