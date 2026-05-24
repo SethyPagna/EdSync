@@ -663,8 +663,13 @@
   - Admin view-as teacher/student must keep the proper app sidebar and a visible return path.
   - Profile becomes Profile & Settings, with reorderable dashboard/section preferences for admin, teacher, student, and individual modes.
 - Lesson editor:
+  - The first creation screen must expose three clear start modes: AI draft, Full AI, and Blank lesson.
+  - AI draft generates a designed outline that teachers can selectively review and refine before publishing.
+  - Full AI generates the complete lesson package: slide sections, quiz/practice blocks, rubric, feedback prompts, review cards, language/tone variants, and teacher-review metadata.
+  - Blank lesson opens the visual editor immediately with no generated content, ready for manual section/block creation.
   - Remove raw HTML-style section editing from teacher lesson creation/editing.
   - Use a Canva-style visual section editor: compact mini-sidebar/tools, content blocks, safe media insert, practice blocks, callouts, slide/deck blocks, and clear block previews.
+  - Lesson sections should feel like editable design blocks, not forms: each section has visible layout/type controls, block insert chips, template styling, safe media/link inserts, AI refine/insert actions, and page-thumbnail navigation.
   - AI-generated lesson responses should insert into designed blocks and templates rather than dumping markup into textareas.
   - Lesson player may use a mini-sidebar or a dedicated lesson page shell with a back button, but it must preserve portal navigation context.
   - The lesson creation and edit surfaces should follow the preferred Canva references: left vertical tool rail, contextual side panel, center page canvas, compact floating toolbar, page title rows, bottom thumbnails, zoom/page controls, animation/position/effects panels, and download/share/export menus.
@@ -690,6 +695,7 @@
 - 24.8 Add Kahoot-style activity presentation and join/play polish for class practice.
 - 24.9 Add explicit work scoring semantics: points possible, earned score, grade weight percent, completion-only evidence, participation criteria, release controls, and student-facing labels.
 - 24.10 Continue replacing old Studio-first wording in user-facing creation paths with Lessons, Notes, Practice + AI Tutor, and Canva-style lesson creation language while preserving route compatibility.
+- 24.11 Harden the Create Lesson start flow so AI draft, Full AI, and Blank lesson each land in the same Canva-style editor with consistent templates, section controls, and AI insert-back behavior.
 
 **Verification:**
 - Run `npm.cmd run typecheck`, `npm.cmd run lint`, focused tests, and `npm.cmd run build`.
@@ -741,6 +747,7 @@
 - Lesson Creation Studio:
   - Replaces old standalone Studio as the primary teacher creation path.
   - Uses Canva-style editor: left tool rail, templates/assets/uploads/text/brand/tools panels, center canvas, top compact toolbar, bottom slide/page strip, preview, export/share menus, and property panels for font, color, spacing, animation, position, and media.
+  - Start modes are AI draft, Full AI, and Blank lesson; all three converge into the same editor instead of separate disconnected flows.
   - Blocks include text, image, video, quiz, poll, embed, shape, table, flashcard, audio, callout, practice card, discussion prompt, and exit ticket.
   - AI prompt bar can generate full lessons by topic, grade level, slide count, language, quiz inclusion, style, and template.
   - AI output appears as selectable slides/blocks with placeholders for media and quizzes; Apply Template reflows content without losing it.
