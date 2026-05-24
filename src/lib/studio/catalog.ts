@@ -16,7 +16,6 @@ import {
 import type { AiPromptContract, PracticeMode } from "@/types";
 
 export const STUDIO_TABS = [
-  { href: "/studio", kind: "lesson", label: "Studio" },
   { href: "/notes", kind: "note", label: "Notes" },
   { href: "/docs", kind: "doc", label: "Docs" },
   { href: "/sheets", kind: "sheet", label: "Sheets" },
@@ -107,10 +106,10 @@ export const PRACTICE_MODES: Array<{
   },
   {
     mode: "generated_from_studio",
-    label: "Generated from Studio",
+    label: "Generated from materials",
     description: "Create practice from notes, docs, sheets, or slides.",
     targetMinutes: 12,
-    loop: ["select Studio item", "AI generate", "attempt"],
+    loop: ["select EdSync item", "AI generate", "attempt"],
     bestFor: "Turning notes, documents, sheets, slides, or lesson sections into practice.",
     output: "Generated quiz, flashcards, explanations, and saved review cards.",
   },
@@ -133,7 +132,7 @@ export const AI_PROMPT_CONTRACTS: AiPromptContract[] = [
   {
     id: "clean-notes",
     title: "Clean Notes",
-    description: "Turn rough notes into a clear Studio document.",
+    description: "Turn rough notes into a clear editable document.",
     feature: "clean_notes",
     fields: [
       { id: "source", label: "Source text", type: "textarea", required: true, placeholder: "Paste rough notes..." },
