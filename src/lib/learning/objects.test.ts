@@ -29,7 +29,7 @@ describe("learning object adapters", () => {
     expect(normalizeLearningTags(Array.from({ length: 20 }, (_, index) => `tag-${index}`))).toHaveLength(12);
   });
 
-  it("converts Studio documents into learning objects", () => {
+  it("converts workspace documents into learning objects", () => {
     const object = studioDocumentToLearningObject({
       id: "studio-1",
       kind: "slide",
