@@ -183,8 +183,8 @@ export default async function CatalogLaunchHero({
               ["Organization", "Portals, SSO, teams"],
               ["Teacher", "Create, assign, feedback"],
               ["Student", "Lessons, practice, grades"],
-            ].map(([label, detail]) => (
-              <span key={label} title={detail}>{label}</span>
+            ].map(([label, detail], index) => (
+              <span key={`launch-mode-${index}-${label}`} title={detail}>{label}</span>
             ))}
           </div>
         </div>
