@@ -4,8 +4,10 @@ import {
   ArrowRight,
   BookOpenCheck,
   Building2,
+  GraduationCap,
   Search,
   SlidersHorizontal,
+  UserRound,
 } from "lucide-react";
 import CatalogLaunchHero from "@/components/catalog/CatalogLaunchHero";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
@@ -55,6 +57,28 @@ export default async function CatalogPage({
     `${practiceLabel} ${copy.workflowLabel}`,
     `${copy.academies} ${copy.catalogLabel}`,
     `${proofLabel} ${copy.courses}`,
+  ];
+  const audiencePaths = [
+    {
+      label: "Individual",
+      detail: "Buy courses, take notes, practice at your own pace.",
+      icon: UserRound,
+    },
+    {
+      label: "Organization",
+      detail: "Use portals, teams, managers, and SSO-ready access.",
+      icon: Building2,
+    },
+    {
+      label: "Teacher",
+      detail: "Create lessons, assign work, and give feedback.",
+      icon: BookOpenCheck,
+    },
+    {
+      label: "Student",
+      detail: "Open lessons, practice, submit work, and see grades.",
+      icon: GraduationCap,
+    },
   ];
   const catalogHref = (params: Record<string, string> = {}) => {
     const query = new URLSearchParams();
@@ -107,6 +131,20 @@ export default async function CatalogPage({
                   {copy.clearFilters}
                 </Link>
               )}
+            </div>
+            <div className="mb-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {audiencePaths.map((path) => {
+                const Icon = path.icon;
+                return (
+                  <div key={path.label} className="edsync-catalog-audience-card">
+                    <Icon className="h-4 w-4" />
+                    <span>
+                      <strong>{path.label}</strong>
+                      <small>{path.detail}</small>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
             <form>
               <label className="sr-only" htmlFor="catalog-search">
