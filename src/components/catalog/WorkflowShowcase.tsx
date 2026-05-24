@@ -190,7 +190,7 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     shortTitle: labels.studio,
     headline: `${labels.studio} -> ${labels.courses}.`,
     subtitle: `${labels.studio}: ${labels.courses}, ${labels.ai}, ${labels.practice}, ${labels.grades}.`,
-    route: "/studio?tab=slides",
+    route: "/teacher/lessons/create",
     icon: Presentation,
     accent: "text-edsync-blue",
     tabs: [labels.studio, labels.courses, labels.ai, labels.start],
