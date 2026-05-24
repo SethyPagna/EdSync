@@ -29,6 +29,13 @@ describe("practice attempt context", () => {
     expect(context.output).toContain("retry");
   });
 
+  it("maps legacy generated practice links to the materials mode", () => {
+    const context = getPracticeModeContext("generated_from_studio");
+
+    expect(context.mode).toBe("generated_from_materials");
+    expect(context.label).toBe("Generated from materials");
+  });
+
   it("builds attempt context with source and recommendation metadata", () => {
     const context = buildPracticeAttemptContext({
       mode: "sprint",
