@@ -140,7 +140,7 @@ function readSectionOrder(storageKey: string) {
 
 function navOrderLabel(item: ShellNavItem) {
   if (item.label === "Portals") return "Organizations";
-  if (item.label === "AI") return "AI providers";
+  if (item.label === "AI Providers") return "AI providers";
   return item.label;
 }
 
@@ -200,7 +200,7 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/portals", label: "Portals", icon: GraduationCap, permission: "portals.manage", plan: "team" },
   { href: "/admin/permissions", label: "Permissions", icon: ShieldCheck, permission: "users.manage", plan: "enterprise" },
   { href: "/admin/governance", label: "Governance", icon: ShieldCheck },
-  { href: "/admin/ai", label: "AI", icon: Brain },
+  { href: "/admin/ai", label: "AI Providers", icon: Brain },
   { href: "/admin/standards", label: "Standards", icon: FileCheck2, permission: "courses.author", plan: "team" },
   { href: "/admin/certifications", label: "Certifications", icon: ClipboardList, permission: "courses.publish", plan: "team" },
   { href: "/admin/automation", label: "Automation", icon: Sparkles, permission: "courses.publish", plan: "team" },
