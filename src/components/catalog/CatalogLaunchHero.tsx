@@ -54,47 +54,47 @@ function buildLaunchPreviewSlides({
     catalog: {
       label: catalog,
       eyebrow: catalog,
-      title: courses,
+      title: "Course marketplace",
       route: "/catalog",
       nav: [catalog, courses, free, paid],
       metrics: [[free, start], ["35m", anyDuration], [difficulty, filters]],
-      blocks: [[courses, `${search} courses, preview media, then enroll.`], [signIn, `${signIn} before free access or checkout.`]],
+      blocks: [[courses, `${search}, preview, enroll.`], [signIn, `Account before checkout.`]],
     },
     studio: {
       label: studio,
       eyebrow: studio,
-      title: studio,
+      title: "Lesson builder",
       route: "/teacher/lessons/create",
       nav: [studio, "Templates", "Media", ai],
       metrics: [["Slides", studio], ["Quiz", practice], ["Draft", courses]],
-      blocks: [[studio, "Canva-style lesson canvas with templates."], [courses, "Slides, media, questions, and due dates stay together."]],
+      blocks: [[studio, "Slides, media, quizzes."], [courses, "Assignments stay attached."]],
     },
     ai: {
       label: ai,
       eyebrow: ai,
-      title: ai,
+      title: "AI co-creator",
       route: "/ai",
       nav: [ai, "Outline", "Slides", practice],
       metrics: [["Groq", ai], ["Google", ai], ["Review", studio]],
-      blocks: [[ai, "Generate a draft, then edit before publish."], [studio, "Insert lessons, quizzes, rubrics, and notes."]],
+      blocks: [[ai, "Draft, format, review."], [studio, "Insert into lessons."]],
     },
     practice: {
       label: practice,
       eyebrow: practice,
-      title: practice,
+      title: "Practice sprint",
       route: "/practice",
       nav: [practice, "Sprint", "Retry", proof],
       metrics: [["08:42", anyDuration], ["4/12", practice], ["2", proof]],
-      blocks: [[practice, "Quiz, flashcards, sprint, and retry missed."], [proof, "Mistakes become review cards and feedback."]],
+      blocks: [[practice, "Quiz, sprint, retry."], [proof, "Misses become review."]],
     },
     proof: {
       label: proof,
       eyebrow: proof,
-      title: proof,
+      title: "Grade evidence",
       route: "/admin/dashboard",
       nav: [proof, "Feedback", "Reports", "Admin"],
       metrics: [["24", proof], [ai, proof], [start, practice]],
-      blocks: [[proof, "Grade events, feedback, and progress evidence."], [ai, "Provider health, audit logs, and safe media checks."]],
+      blocks: [[proof, "Scores and feedback."], [ai, "Audit and safety checks."]],
     },
   };
 }
@@ -114,6 +114,12 @@ export default async function CatalogLaunchHero({
   const loginHref = publicLanguageHref("/auth/login", publicLanguage);
   const signupHref = publicLanguageHref("/auth/signup", publicLanguage);
   const [, studioLabel = "Lessons", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
+  const rolePaths = [
+    ["Individual", "Browse, buy, learn, take personal notes"],
+    ["Organization", "Portals, teams, managers, SSO-ready routing"],
+    ["Teacher", "Build lessons, assign work, review feedback"],
+    ["Student", "Open lessons, practice, submit, see grades"],
+  ];
   const previewSlides = buildLaunchPreviewSlides({
     catalog: copy.catalogLabel,
     studio: studioLabel,
@@ -178,13 +184,11 @@ export default async function CatalogLaunchHero({
             </Link>
           </div>
           <div className="edsync-launch-mode-row" aria-label="EdSync public paths">
-            {[
-              ["Individual", "Buy, learn, take notes"],
-              ["Organization", "Portals, SSO, teams"],
-              ["Teacher", "Create, assign, feedback"],
-              ["Student", "Lessons, practice, grades"],
-            ].map(([label, detail], index) => (
-              <span key={`launch-mode-${index}-${label}`} title={detail}>{label}</span>
+            {rolePaths.map(([label, detail], index) => (
+              <span key={`launch-mode-${index}-${label}`} title={detail}>
+                <strong>{label}</strong>
+                <small>{detail}</small>
+              </span>
             ))}
           </div>
         </div>
