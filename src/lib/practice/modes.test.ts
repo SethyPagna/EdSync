@@ -5,6 +5,7 @@ import { PRACTICE_MODES } from "@/lib/studio/catalog";
 describe("practice modes", () => {
   it("accepts supported modes", () => {
     expect(isPracticeMode("quiz")).toBe(true);
+    expect(isPracticeMode("generated_from_materials")).toBe(true);
     expect(isPracticeMode("generated_from_studio")).toBe(true);
   });
 
@@ -16,6 +17,7 @@ describe("practice modes", () => {
 
   it("normalizes unsafe values to a stable fallback", () => {
     expect(normalizePracticeMode("exam")).toBe("exam");
+    expect(normalizePracticeMode("generated_from_studio")).toBe("generated_from_materials");
     expect(normalizePracticeMode("bad-mode")).toBe("quiz");
     expect(normalizePracticeMode(undefined, "flashcards")).toBe("flashcards");
   });
@@ -23,6 +25,6 @@ describe("practice modes", () => {
   it("keeps every visible practice mode connected to loop guidance", () => {
     expect(PRACTICE_MODES.every((mode) => mode.loop.length >= 3)).toBe(true);
     expect(PRACTICE_MODES.every((mode) => mode.bestFor.length > 10)).toBe(true);
-    expect(PRACTICE_MODES.find((mode) => mode.mode === "generated_from_studio")?.output).toContain("Generated");
+    expect(PRACTICE_MODES.find((mode) => mode.mode === "generated_from_materials")?.output).toContain("Generated");
   });
 });
