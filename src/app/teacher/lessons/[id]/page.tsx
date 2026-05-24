@@ -310,12 +310,12 @@ function SectionTemplateLibrary({
   onAdd: (template: SectionTemplate) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="flex gap-3 overflow-x-auto">
       {SECTION_TEMPLATES.map((template) => (
         <button
           key={template.id}
           onClick={() => onAdd(template)}
-          className="group rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
+          className="group min-w-[15rem] rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:bg-edsync-blue/5"
         >
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-edsync-text">{template.label}</span>
@@ -1983,28 +1983,30 @@ export default function TeacherLessonDetail() {
 
       {/* ── SECTIONS ── */}
       {tab === "sections" && (
-        <div className="animate-fade-in space-y-3">
-          <div className="rounded-lg border border-edsync-border bg-edsync-card p-3">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="animate-fade-in space-y-5">
+          <div className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
+            <div className="flex flex-col gap-3 border-b border-edsync-border bg-edsync-surface/80 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-edsync-text">Section Library</h2>
+                <h2 className="text-sm font-bold text-edsync-text">Lesson blocks</h2>
                 <p className="text-xs text-edsync-subtle">
-                  Add teaching, slide, activity, media, discussion, or quiz blocks.
+                  Choose a template, then edit it directly on the canvas.
                 </p>
               </div>
-              <button onClick={() => addSection()} className="btn-primary text-sm py-2">
+              <button onClick={() => addSection()} className="btn-primary px-4 py-2 text-sm">
                 Blank section
               </button>
             </div>
-            <SectionTemplateLibrary onAdd={addSection} />
+            <div className="p-4">
+              <SectionTemplateLibrary onAdd={addSection} />
+            </div>
           </div>
 
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-sm text-edsync-subtle">
-              Reorder, duplicate, and edit sections from this outline.
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-edsync-subtle">
+              Reorder, duplicate, and edit blocks from the lesson outline.
             </p>
-            <button onClick={() => addSection()} className="btn-primary text-sm py-2">
-              Add Section
+            <button onClick={() => addSection()} className="btn-secondary px-4 py-2 text-sm">
+              Add block
             </button>
           </div>
 
@@ -2034,20 +2036,20 @@ export default function TeacherLessonDetail() {
             ) : (
               <div
                 key={sec.id}
-                className="edsync-card border border-edsync-border hover:border-edsync-blue/30 transition-colors"
+                className="rounded-[2rem] border border-edsync-border bg-edsync-card p-4 shadow-card transition-colors hover:border-edsync-blue/30"
               >
-                <div className="flex items-center gap-3">
-                  <span className="w-7 h-7 rounded-lg bg-edsync-muted/30 text-edsync-subtle text-xs font-bold flex items-center justify-center flex-shrink-0">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-muted/30 text-xs font-bold text-edsync-subtle">
                     {i + 1}
                   </span>
-                  <span className="text-lg flex-shrink-0">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-edsync-border bg-edsync-surface text-sm font-bold text-edsync-blue">
                     {TYPE_INFO[sec.content_type]?.icon || ""}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-edsync-text text-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-base font-bold text-edsync-text">
                       {sec.title}
                     </p>
-                    <p className="text-xs text-edsync-subtle mt-0.5">
+                    <p className="mt-1 text-xs text-edsync-subtle">
                       <span
                         className={`badge bg-edsync-${TYPE_INFO[sec.content_type]?.color || "blue"}/10 text-edsync-${TYPE_INFO[sec.content_type]?.color || "blue"} border-edsync-${TYPE_INFO[sec.content_type]?.color || "blue"}/20 mr-2`}
                       >
@@ -2061,14 +2063,14 @@ export default function TeacherLessonDetail() {
                         : "Empty — click Edit"}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
-                    <span className="text-xs text-edsync-subtle">
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <span className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-bold text-edsync-subtle">
                       {sec.duration_minutes}m
                     </span>
                     <button
                       onClick={() => moveSection(sec.id, -1)}
                       disabled={i === 0}
-                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      className="btn-secondary px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                       title="Move up"
                     >
                       Up
@@ -2076,20 +2078,20 @@ export default function TeacherLessonDetail() {
                     <button
                       onClick={() => moveSection(sec.id, 1)}
                       disabled={i === sections.length - 1}
-                      className="btn-ghost px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      className="btn-secondary px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                       title="Move down"
                     >
                       Down
                     </button>
                     <button
                       onClick={() => duplicateSection(sec)}
-                      className="btn-ghost px-2 py-1 text-xs"
+                      className="btn-secondary px-3 py-2 text-xs"
                     >
                       Duplicate
                     </button>
                     <button
                       onClick={() => setEditingSectionId(sec.id)}
-                      className="btn-ghost text-xs py-1 px-3"
+                      className="btn-primary px-3 py-2 text-xs"
                     >
                       Edit
                     </button>
@@ -2102,9 +2104,9 @@ export default function TeacherLessonDetail() {
           {sections.length > 0 && editingSectionId === null && (
             <button
               onClick={() => addSection()}
-              className="w-full py-4 border-2 border-dashed border-edsync-border rounded-2xl text-edsync-subtle hover:border-edsync-blue hover:text-edsync-blue transition-all text-sm"
+              className="w-full rounded-[2rem] border-2 border-dashed border-edsync-border bg-edsync-card/60 py-5 text-sm font-bold text-edsync-subtle transition-all hover:border-edsync-blue hover:bg-edsync-blue/5 hover:text-edsync-blue"
             >
-              Add Section
+              Add lesson block
             </button>
           )}
         </div>
