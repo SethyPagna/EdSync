@@ -1,4 +1,5 @@
 import { PRACTICE_MODES } from "@/lib/studio/catalog";
+import { normalizePracticeMode } from "@/lib/practice/modes";
 import type { PracticeAttemptSummary, PracticeMode } from "@/types";
 import type { PracticeItem } from "./engine";
 
@@ -22,7 +23,8 @@ export type PracticeAttemptContext = {
 };
 
 export function getPracticeModeContext(mode: PracticeMode): PracticeModeContext {
-  const modeConfig = PRACTICE_MODES.find((entry) => entry.mode === mode) ?? PRACTICE_MODES[0];
+  const normalizedMode = normalizePracticeMode(mode);
+  const modeConfig = PRACTICE_MODES.find((entry) => entry.mode === normalizedMode) ?? PRACTICE_MODES[0];
 
   return {
     mode: modeConfig.mode,
