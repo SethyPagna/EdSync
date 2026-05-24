@@ -8,13 +8,24 @@ export const metadata = {
 };
 
 type AiPageProps = {
-  searchParams?: AiPromptSearchParams;
+  searchParams?: AiPromptSearchParams & {
+    adminView?: string;
+  };
 };
 
 export default async function AiPage({ searchParams }: AiPageProps) {
-  const user = await getSessionUser().catch(() => null);
-  if (!user) redirect("/auth/login?next=/ai");
-
   const task = normalizeAiPromptContractId(searchParams?.task);
-  redirect(`/practice?ai=1${task ? `&task=${encodeURIComponent(task)}` : ""}`);
+  const adminView = searchParams?.adminView === "teacher" || searchParams?.adminView === "student" ? searchParams.adminView : null;
+  const nextParams = new URLSearchParams();
+  if (task) nextParams.set("task", task);
+  if (adminView) nextParams.set("adminView", adminView);
+  const nextPath = `/ai${nextParams.size ? `?${nextParams.toString()}` : ""}`;
+
+  const user = await getSessionUser().catch(() => null);
+  if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
+
+  const practiceParams = new URLSearchParams({ ai: "1" });
+  if (task) practiceParams.set("task", task);
+  if (adminView) practiceParams.set("adminView", adminView);
+  redirect(`/practice?${practiceParams.toString()}`);
 }
