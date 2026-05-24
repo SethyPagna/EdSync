@@ -3,7 +3,12 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
-import { SECTION_TEMPLATES, type SectionTemplate } from "@/lib/content/section-library";
+import {
+  SECTION_INSERT_TOOLS,
+  SECTION_TEMPLATES,
+  type SectionTemplate,
+} from "@/lib/content/section-library";
+import LessonBlockEditor from "@/components/lesson/LessonBlockEditor";
 import { lessonRowsToLearningObject, summarizeLearningObject } from "@/lib/learning/lesson-package";
 import { getLearningStateLabel } from "@/lib/learning/objects";
 import { sanitizeHtml } from "@/lib/security/html";
@@ -37,6 +42,8 @@ type QType =
 // ─────────────────────────────────────────
 // RICH TEXT EDITOR
 // ─────────────────────────────────────────
+// Kept as a compatibility fallback while the visual block editor is rolled through every legacy section path.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RichTextEditor({
   value,
   onChange,
@@ -983,9 +990,11 @@ function ActivitySectionEditor({
   const [content, setContent] = useState(section.content || "");
   return (
     <div className="space-y-4">
-      <RichTextEditor
+      <LessonBlockEditor
         value={content}
         onChange={setContent}
+        insertTools={SECTION_INSERT_TOOLS}
+        contentTypeLabel={type === "activity" ? "Activity" : "Discussion"}
         placeholder={
           type === "activity"
             ? "Describe the activity steps, materials, and instructions..."
@@ -1049,30 +1058,30 @@ function SectionEditor({
   };
 
   const TYPE_ICONS: Record<ContentType, string> = {
-    text: "",
-    video: "",
-    image: "",
-    quiz: "",
-    activity: "",
-    discussion: "",
+    text: "T",
+    video: "Video",
+    image: "Image",
+    quiz: "Quiz",
+    activity: "Act",
+    discussion: "Talk",
   };
 
   return (
-    <div className="border-2 border-edsync-blue/40 rounded-2xl overflow-hidden">
+    <div className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card p-3 shadow-card">
       {/* Section header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-edsync-blue/5 border-b border-edsync-blue/20">
-        <span className="w-7 h-7 rounded-lg bg-edsync-blue text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+      <div className="mb-3 flex flex-col gap-3 rounded-[1.5rem] border border-edsync-border bg-edsync-surface p-3 xl:flex-row xl:items-center">
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue text-xs font-bold text-white shadow-sm">
           {index + 1}
         </span>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="edsync-input py-1.5 font-semibold flex-1 text-sm"
+          className="edsync-input min-w-0 flex-1 py-2 font-display text-base font-bold"
           placeholder="Section title..."
         />
 
         {/* Type selector */}
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex flex-shrink-0 gap-1 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card p-1">
           {(
             [
               "text",
@@ -1087,7 +1096,7 @@ function SectionEditor({
               key={t}
               onClick={() => handleTypeChange(t)}
               title={t}
-              className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${contentType === t ? "bg-edsync-blue text-white" : "bg-edsync-card text-edsync-subtle hover:text-edsync-text border border-edsync-border"}`}
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${contentType === t ? "bg-edsync-blue text-white shadow-sm" : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"}`}
             >
               {TYPE_ICONS[t]}
             </button>
@@ -1095,30 +1104,43 @@ function SectionEditor({
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          <input
-            type="number"
-            min={1}
-            max={120}
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="edsync-input py-1.5 w-14 text-xs text-center"
-            title="Duration (minutes)"
-          />
-          <span className="text-xs text-edsync-subtle">min</span>
+          <button
+            type="button"
+            onClick={() => setDuration(Math.max(1, duration - 1))}
+            className="btn-secondary h-9 px-3 text-xs"
+          >
+            -
+          </button>
+          <span className="flex h-9 min-w-16 items-center justify-center rounded-xl border border-edsync-border bg-edsync-card px-3 text-xs font-bold text-edsync-text">
+            {duration}m
+          </span>
+          <button
+            type="button"
+            onClick={() => setDuration(duration + 1)}
+            className="btn-secondary h-9 px-3 text-xs"
+          >
+            +
+          </button>
         </div>
         <button
           onClick={onCancel}
-          className="btn-ghost text-xs py-1 px-3 flex-shrink-0"
+          className="btn-ghost flex-shrink-0 px-3 py-2 text-xs"
         >
           Close
         </button>
       </div>
 
       {/* Content area based on type */}
-      <div className="p-4">
+      <div className="rounded-[1.5rem] bg-edsync-bg p-3">
         {(contentType === "text" || contentType === undefined) && (
           <div className="space-y-3">
-            <RichTextEditor value={content} onChange={setContent} />
+            <LessonBlockEditor
+              value={content}
+              onChange={setContent}
+              insertTools={SECTION_INSERT_TOOLS}
+              contentTypeLabel="Lesson"
+              placeholder="Click the canvas or insert a block..."
+            />
             <div className="flex gap-2">
               <button
                 onClick={handleSaveText}
