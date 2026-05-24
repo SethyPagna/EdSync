@@ -30,6 +30,19 @@ const LANGUAGE_LABELS: Record<PublicLanguageName, string> = {
   Thai: "ภาษา",
 };
 
+const READABLE_LANGUAGE_LABELS: Record<PublicLanguageName, string> = {
+  ...LANGUAGE_LABELS,
+  English: "Language",
+  Korean: "언어",
+  Khmer: "ភាសា",
+  Chinese: "语言",
+  Japanese: "言語",
+  Spanish: "Idioma",
+  French: "Langue",
+  Vietnamese: "Ngôn ngữ",
+  Thai: "ภาษา",
+};
+
 export function languageCodeFor(name: string) {
   return EDSYNC_LANGUAGES.find((language) => language.name === name)?.code ?? "en";
 }
@@ -72,5 +85,5 @@ export function publicLanguageHref(
 }
 
 export function languageLabelFor(value?: string | null) {
-  return LANGUAGE_LABELS[normalizePublicLanguage(value)];
+  return READABLE_LANGUAGE_LABELS[normalizePublicLanguage(value)];
 }
