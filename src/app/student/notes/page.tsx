@@ -218,7 +218,7 @@ export default function StudentNotesPage() {
   };
 
   const archivePersonalNote = async (note: StudioServerItem) => {
-    const confirmed = window.confirm(`Archive "${note.title}"? You can still restore it from Studio history later.`);
+    const confirmed = window.confirm(`Archive "${note.title}"? You can still restore it from draft history later.`);
     if (!confirmed) return;
     try {
       await archiveStudioItem(note.id);
