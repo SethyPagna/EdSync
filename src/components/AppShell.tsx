@@ -372,11 +372,15 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const visibleNavGroups = useMemo(() => {
     const grantedPermissions = new Set(permissions);
+    const hiddenLegacyNavLabels = new Set(["Studio", "Practice", "AI Tutor"]);
 
     const groups = navGroupsForRole(role, navItems)
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
+          if (item.href === "/studio" || item.href === "/ai" || hiddenLegacyNavLabels.has(item.label)) {
+            return false;
+          }
           if (role === "admin") return true;
           if (item.permission && !grantedPermissions.has(item.permission)) return false;
           if (item.plan === "team" && planTier === "solo") return false;
@@ -408,19 +412,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
         {!collapsed && (
-          <>
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.marker && (
-              <span className="rounded-full border border-edsync-border bg-edsync-card px-1.5 py-0.5 text-[10px] font-bold leading-none text-edsync-subtle group-hover:text-edsync-text">
-                {item.marker}
-              </span>
-            )}
-          </>
-        )}
-        {collapsed && item.marker && (
-          <span className="absolute right-1 top-1 rounded-full bg-edsync-blue px-1 text-[9px] font-bold leading-4 text-white">
-            {item.marker}
-          </span>
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
         )}
       </Link>
     );
