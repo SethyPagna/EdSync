@@ -169,7 +169,7 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
     }
   };
 
-  const insertIntoStudio = () => {
+  const insertIntoDraft = () => {
     const output = summarizeOutput(state.output);
     const plainText = JSON.stringify(output, null, 2);
     writeStudioDraft({
@@ -273,11 +273,11 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={insertIntoStudio} disabled={!state.output} className="btn-secondary px-3 py-2 text-sm disabled:opacity-50">
+              <button type="button" onClick={insertIntoDraft} disabled={!state.output} className="btn-secondary px-3 py-2 text-sm disabled:opacity-50">
                 {state.inserted ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
                 {state.inserted ? "Inserted" : "Save draft"}
               </button>
-              <Link href="/studio" className="btn-secondary px-3 py-2 text-sm">
+              <Link href="/notes" className="btn-secondary px-3 py-2 text-sm">
                 Open drafts <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
