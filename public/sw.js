@@ -1,4 +1,4 @@
-const CACHE_NAME = "edsync-core-v1";
+const CACHE_NAME = "edsync-core-2026-05-24";
 const CORE_URLS = [
   "/",
   "/auth/login",
@@ -29,6 +29,10 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/_next/") || request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(() => caches.match(request).then((cached) => cached || caches.match("/"))));
+    return;
+  }
 
   event.respondWith(
     fetch(request)
