@@ -33,7 +33,7 @@ export function validateStudioStatus(
 
   const status = String(value);
   if (!STUDIO_STATUSES.has(status) || (!allowArchived && status === "archived")) {
-    throw new Error("Choose a supported Studio status.");
+    throw new Error("Choose a supported workspace status.");
   }
   return status as StudioDocumentStatus;
 }
@@ -44,7 +44,7 @@ export function validateStudioJsonObject(value: unknown) {
   const json = JSON.stringify(value);
   const byteLength = new TextEncoder().encode(json).length;
   if (byteLength > STUDIO_CONTENT_MAX_BYTES) {
-    throw new Error("Studio content is too large. Split it into smaller items before saving.");
+    throw new Error("Workspace content is too large. Split it into smaller items before saving.");
   }
 
   return value as Record<string, unknown>;
