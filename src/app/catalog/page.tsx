@@ -133,10 +133,10 @@ export default async function CatalogPage({
               )}
             </div>
             <div className="mb-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {audiencePaths.map((path) => {
+              {audiencePaths.map((path, index) => {
                 const Icon = path.icon;
                 return (
-                  <div key={path.label} className="edsync-catalog-audience-card">
+                  <div key={`audience-${index}-${path.label}`} className="edsync-catalog-audience-card">
                     <Icon className="h-4 w-4" />
                     <span>
                       <strong>{path.label}</strong>
@@ -207,9 +207,9 @@ export default async function CatalogPage({
               </div>
             </form>
             <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-edsync-subtle">
-              {quickSearches.map((sample) => (
+              {quickSearches.map((sample, index) => (
                 <Link
-                  key={sample}
+                  key={`quick-search-${index}-${sample}`}
                   href={catalogHref({ q: sample })}
                   className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
                 >
@@ -254,9 +254,9 @@ export default async function CatalogPage({
             <h2 className="sr-only">{copy.categories}</h2>
             <div className="premium-surface rounded-2xl p-4">
               <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
+                {categories.map((category, index) => (
                   <Link
-                    key={category}
+                    key={`category-${index}-${category}`}
                     href={catalogHref({ category })}
                     className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
                   >
