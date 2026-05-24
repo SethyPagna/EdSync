@@ -105,7 +105,7 @@ export const PRACTICE_MODES: Array<{
     output: "Misconception list and short corrections.",
   },
   {
-    mode: "generated_from_studio",
+    mode: "generated_from_materials",
     label: "Generated from materials",
     description: "Create practice from notes, docs, sheets, or slides.",
     targetMinutes: 12,
