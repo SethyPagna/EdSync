@@ -8,7 +8,6 @@ type ProfileRow = {
   subjects: string | null;
   interests: string | null;
   preferences: string | null;
-  total_xp?: number | null;
   streak_days?: number | null;
 };
 
@@ -45,7 +44,7 @@ function parsePreferences(value: string | null) {
 
 export async function loadAiUserContext(userId: string) {
   const [profile] = await d1Query<ProfileRow>(
-    `SELECT id, role, full_name, grade_level, subjects, interests, preferences, total_xp, streak_days
+    `SELECT id, role, full_name, grade_level, subjects, interests, preferences, streak_days
        FROM profiles
       WHERE id = ?
       LIMIT 1`,
@@ -73,7 +72,7 @@ export async function loadAiUserContext(userId: string) {
     `- Interests: ${interests.length ? interests.join(", ") : "not provided"}`,
     `- Preferred text size/detail: ${textSize}`,
     profile.role === "student"
-      ? `- Student progress signal: ${profile.total_xp ?? 0} XP, ${profile.streak_days ?? 0} day streak`
+      ? `- Student engagement signal: ${profile.streak_days ?? 0} day streak; personalize with current class, interests, recent submitted work, and active learning time when available.`
       : "- Teacher goal: produce classroom-ready, editable materials.",
   ].join("\n");
 
