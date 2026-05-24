@@ -859,7 +859,7 @@ export default function CreateLesson() {
             <Link href="/teacher/lessons" className="btn-secondary px-3 py-1.5 text-xs">
               My Courses
             </Link>
-            <Link href="/practice?mode=generated_from_studio" className="btn-secondary px-3 py-1.5 text-xs">
+            <Link href="/practice?mode=quiz&ai=1&task=generate-practice" className="btn-secondary px-3 py-1.5 text-xs">
               Generate practice
             </Link>
             <button type="button" onClick={clearSavedDraft} className="btn-secondary px-3 py-1.5 text-xs">
