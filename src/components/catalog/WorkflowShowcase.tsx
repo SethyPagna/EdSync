@@ -319,7 +319,7 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
             [labels.practice, `${labels.duration}, ${labels.retry}, ${labels.review}`],
             [labels.grades, `${labels.events}, ${labels.review}, ${labels.proof}`],
           ].map(([label, detail], index) => (
-            <span key={label} className={index === 0 ? "is-active" : ""}>
+            <span key={`overview-step-${index}-${label}`} className={index === 0 ? "is-active" : ""}>
               <strong>{label}</strong>
               <small>{detail}</small>
             </span>
@@ -357,8 +357,8 @@ function WorkflowMockup({ labels, slide }: { labels: WorkflowLabels; slide: Work
     return (
       <div className="edsync-workflow-app-mock">
         <div className="edsync-workflow-editor-ribbon">
-          {[labels.studio, labels.text, labels.insert, labels.media, labels.ai, labels.start].map((item) => (
-            <span key={item}>{item}</span>
+          {[labels.studio, labels.text, labels.insert, labels.media, labels.ai, labels.start].map((item, index) => (
+            <span key={`studio-toolbar-${index}-${item}`}>{item}</span>
           ))}
         </div>
         <div className="edsync-workflow-slide-editor">
@@ -506,8 +506,8 @@ const WorkflowScreen = memo(function WorkflowScreen({
         <h3>{slide.headline}</h3>
         <p>{slide.subtitle}</p>
         <div className="edsync-workflow-checklist">
-          {slide.sideRows.slice(0, 3).map((row) => (
-            <span key={row}>
+          {slide.sideRows.slice(0, 3).map((row, index) => (
+            <span key={`${slide.id}-side-${index}-${row}`}>
               <CheckCircle2 className="h-4 w-4" />
               {row}
             </span>
@@ -532,7 +532,7 @@ const WorkflowScreen = memo(function WorkflowScreen({
         <div className="edsync-workflow-product">
           <aside className="edsync-workflow-sidepanel">
             {slide.tabs.map((tab, tabIndex) => (
-              <span key={tab} className={tabIndex === 0 ? "is-active" : ""}>
+              <span key={`${slide.id}-tab-${tabIndex}-${tab}`} className={tabIndex === 0 ? "is-active" : ""}>
                 {tab}
               </span>
             ))}
@@ -548,8 +548,8 @@ const WorkflowScreen = memo(function WorkflowScreen({
             </div>
             <WorkflowMockup labels={labels} slide={slide} />
             <div className="edsync-workflow-preview-metrics">
-              {slide.metrics.map((metric) => (
-                <span key={metric.label}>
+              {slide.metrics.map((metric, metricIndex) => (
+                <span key={`${slide.id}-metric-${metricIndex}-${metric.label}`}>
                   <strong>{metric.value}</strong>
                   <small>{metric.label}</small>
                 </span>
