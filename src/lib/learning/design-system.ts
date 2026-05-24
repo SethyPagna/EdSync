@@ -254,7 +254,7 @@ export const LESSON_TEMPLATE_PRESETS = [
   },
   {
     id: "creator-studio",
-    label: "Creator Studio",
+    label: "Creator Workspace",
     themeId: "clear-classroom",
     description: "Office-style lesson creation with documents, slides, media, and export-ready structure.",
     bestFor: ["manual authoring", "slide design", "rich documents", "teacher-created lessons"],
@@ -266,7 +266,7 @@ export const LESSON_TEMPLATE_PRESETS = [
     slidePlan: ["title", "content", "two_column", "activity", "quiz", "reflection"],
     transition: "fade",
     animation: "rise",
-    practiceModes: ["quiz", "flashcards", "generated-from-Studio"],
+    practiceModes: ["quiz", "flashcards", "generated-from-materials"],
     reviewSignals: ["draft persistence", "layout clarity", "teacher editability"],
   },
   {
@@ -522,7 +522,7 @@ export function buildLessonDesignPromptContext(templateId: unknown, outputLength
       design: "theme id, palette, typography, slide layout plan, transition, animation, reduced motion fallback",
       lesson: `editable sections with duration, media notes, teacher review flags, and ${lengthPlan.sectionDepth}`,
       practice: `${lengthPlan.practiceCount}; include retry-missed, explanations, points, target time, and save-to-review`,
-      format: "return structured JSON that can be inserted into Studio docs, slides, practice sets, and lesson sections",
+      format: "return structured JSON that can be inserted into docs, slides, practice sets, and lesson sections",
       aiInstruction: lengthPlan.aiInstruction,
     },
   };
