@@ -110,8 +110,8 @@ function labelsForLanguage(language?: string | null): WorkflowLabels {
     Thai: { media: "สื่อ", provider: "ผู้ให้บริการ", review: "ตรวจทาน", security: "ความปลอดภัย", healthy: "พร้อม", route: "เส้นทาง", events: "เหตุการณ์", audit: "ตรวจสอบ", slides: "สไลด์", quiz: "ควิซ", rubric: "รูบริก", retry: "ลองใหม่", proof: "หลักฐาน", text: "ข้อความ", insert: "แทรก", image: "รูปภาพ", questions: "ข้อ", points: "คะแนน", submissions: "งานส่ง", attempt: "ครั้ง", checks: "ตรวจ", fallback: "สำรอง", exam: "สอบ", flashcards: "บัตรคำ", sprint: "สปรินต์", admin: "แอดมิน" },
     Vietnamese: { media: "Phương tiện", provider: "Nhà cung cấp", review: "Duyệt", security: "Bảo mật", healthy: "Ổn định", route: "Tuyến", events: "Sự kiện", audit: "Kiểm toán", slides: "slide", quiz: "quiz", rubric: "rubric", retry: "làm lại", proof: "bằng chứng", text: "Văn bản", insert: "Chèn", image: "Ảnh", questions: "câu hỏi", points: "điểm", submissions: "bài nộp", attempt: "Lượt làm", checks: "kiểm tra", fallback: "Dự phòng", exam: "bài thi", flashcards: "thẻ nhớ", sprint: "sprint", admin: "Quản trị" },
   };
-  const grades = progressLabels[publicLanguage] ?? fallbackGrades;
-  const utility = utilityLabels[publicLanguage] ?? utilityLabels.English;
+  const grades = fallbackGrades || progressLabels.English;
+  const utility = utilityLabels.English;
 
   return {
     catalog: copy.catalogLabel,
@@ -597,13 +597,19 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
       if (nextIndex < 0 || nextIndex >= slides.length) {
         const now = Date.now();
         const release = boundaryReleaseRef.current;
-        if (event && (!release || release.direction !== direction || release.until < now)) {
-          event.preventDefault();
-          boundaryReleaseRef.current = { direction, until: now + 900 };
-          manualControlUntilRef.current = now + 1200;
-          return true;
+        event?.preventDefault();
+        if (!release || release.direction !== direction || release.until < now) {
+          boundaryReleaseRef.current = { direction, until: now + 1100 };
+          manualControlUntilRef.current = now + 1400;
+          window.setTimeout(() => {
+            if (direction > 0) {
+              document.getElementById("catalog-search-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }, 80);
         }
-        return false;
+        return true;
       }
       if (Date.now() < scrollControlUntilRef.current) {
         event?.preventDefault();
