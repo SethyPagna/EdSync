@@ -3,8 +3,11 @@ import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { homeForRole } from "@/lib/auth/redirects";
 import { normalizeUserRole } from "@/lib/auth/roles";
 
+const ADMIN_VIEW_MODE_COOKIE = "edsync-admin-view-mode";
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestedAdminViewMode = normalizeAdminViewMode(request.nextUrl.searchParams.get("adminView"));
   const isProtected =
     pathname.startsWith("/admin") ||
     pathname.startsWith("/teacher") ||
@@ -52,7 +55,9 @@ export function middleware(request: NextRequest) {
   }
 
   if (hasSession && role === "admin" && (pathname.startsWith("/teacher") || pathname.startsWith("/student"))) {
-    return withSecurityHeaders(NextResponse.next());
+    const response = NextResponse.next();
+    syncAdminViewModeCookie(response, pathname, requestedAdminViewMode);
+    return withSecurityHeaders(response);
   }
 
   if (hasSession && role === "teacher" && pathname.startsWith("/student")) {
@@ -67,7 +72,29 @@ export function middleware(request: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  return withSecurityHeaders(NextResponse.next());
+  const response = NextResponse.next();
+  if (hasSession && role === "admin") {
+    syncAdminViewModeCookie(response, pathname, requestedAdminViewMode);
+  }
+  return withSecurityHeaders(response);
+}
+
+function normalizeAdminViewMode(value: string | null) {
+  return value === "teacher" || value === "student" ? value : null;
+}
+
+function syncAdminViewModeCookie(response: NextResponse, pathname: string, mode: "teacher" | "student" | null) {
+  const inferredMode = mode ?? (pathname.startsWith("/teacher") ? "teacher" : pathname.startsWith("/student") ? "student" : null);
+  if (pathname.startsWith("/admin")) {
+    response.cookies.delete(ADMIN_VIEW_MODE_COOKIE);
+    return;
+  }
+  if (!inferredMode) return;
+  response.cookies.set(ADMIN_VIEW_MODE_COOKIE, inferredMode, {
+    maxAge: 60 * 60,
+    path: "/",
+    sameSite: "lax",
+  });
 }
 
 function withSecurityHeaders(response: NextResponse) {
