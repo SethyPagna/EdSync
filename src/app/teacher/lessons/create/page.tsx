@@ -428,10 +428,10 @@ export default function CreateLesson() {
             <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Add learning blocks</h2>
           </div>
           <button type="button" onClick={() => addDraftSection()} className="btn-primary w-full justify-center py-2 text-sm">
-            Blank section
+            Blank block
           </button>
           <div className="rounded-2xl border border-edsync-border bg-edsync-card p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Section types</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Block types</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {CONTENT_TYPE_OPTIONS.map((option) => (
                 <button
@@ -1024,7 +1024,7 @@ export default function CreateLesson() {
       </div>
 
       {/* Step pill tracker */}
-      {step !== "choose" && (
+      {step !== "choose" && step !== "edit" && (
         <div className="flex flex-wrap items-center gap-2 mb-6 text-xs">
           {[
             {
@@ -1045,7 +1045,6 @@ export default function CreateLesson() {
               key={pill.key}
               className={`px-3 py-1 rounded-full font-medium ${
                 (step === "import" && i <= 1) ||
-                (step === "edit" && i <= 2) ||
                 (step === "generating" && i === 1)
                   ? "bg-edsync-blue text-white"
                   : "bg-edsync-card text-edsync-subtle border border-edsync-border"
