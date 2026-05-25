@@ -9,7 +9,6 @@ import {
   type TeacherPracticeReviewSignal,
 } from "@/lib/practice/teacher-review-signals";
 import { MetricTile } from "@/components/WorkspacePrimitives";
-import OrganizationContextBanner from "@/components/OrganizationContextBanner";
 import type { Class, Lesson, Profile, TeacherAlert } from "@/types";
 import { formatRelativeTime, getAlertColor, getStatusBadge } from "@/lib/utils";
 import {
@@ -162,7 +161,6 @@ export default function TeacherDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-      <OrganizationContextBanner />
       <header className="premium-panel rounded-2xl p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
