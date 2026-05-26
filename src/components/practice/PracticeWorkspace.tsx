@@ -172,7 +172,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               <p className="text-sm font-semibold text-edsync-blue">Practice, quizzes, and games</p>
               <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <h1 className="font-display text-4xl font-bold">Practice & AI</h1>
+                  <h1 className="font-display text-4xl font-bold">Practice & AI Tutor</h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
                     Timed practice with explanations, retry missed, saved mistakes, and review recommendations.
                   </p>
@@ -202,7 +202,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               <section className="rounded-xl border border-edsync-blue/25 bg-edsync-card p-4 shadow-sm">
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Practice + AI</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Practice & AI Tutor</p>
                     <h2 className="mt-1 font-display text-2xl font-bold">Generate, explain, and insert learning support</h2>
                     <p className="mt-1 max-w-3xl text-sm leading-6 text-edsync-subtle">
                       Use AI to clean source notes, generate practice, create review cards, and send the result back into the learning loop.
