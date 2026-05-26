@@ -55,7 +55,26 @@ type PublicCopy = {
 };
 
 export function getPublicCopy(language?: string | null): PublicCopy {
-  return publicCopy[normalizePublicLanguage(language)];
+  const normalizedLanguage = normalizePublicLanguage(language);
+  return normalizedLanguage === DEFAULT_PUBLIC_LANGUAGE
+    ? publicCopy.English
+    : sanitizePublicCopy(publicCopy[normalizedLanguage], publicCopy.English);
+}
+
+const CORRUPTED_PUBLIC_COPY_PATTERN = /(?:Ã|Â|ì|í|ë|ê|áž|à¸|ç|ã|æ|å)/;
+
+function hasCorruptedPublicText(value: unknown): boolean {
+  if (typeof value === "string") return CORRUPTED_PUBLIC_COPY_PATTERN.test(value);
+  if (Array.isArray(value)) return value.some(hasCorruptedPublicText);
+  return false;
+}
+
+function sanitizePublicCopy(copy: PublicCopy, fallback: PublicCopy): PublicCopy {
+  const entries = Object.entries(copy).map(([key, value]) => {
+    const fallbackValue = fallback[key as keyof PublicCopy];
+    return [key, hasCorruptedPublicText(value) ? fallbackValue : value];
+  });
+  return Object.fromEntries(entries) as PublicCopy;
 }
 
 export const publicCopy: Record<PublicLanguageName, PublicCopy> = {
