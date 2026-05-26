@@ -1,6 +1,6 @@
 # EdSync Improvement Progress
 
-**Last Updated:** 2026-05-24
+**Last Updated:** 2026-05-26
 
 **Current Track:** Comprehensive workflow, design, architecture, AI, templates, lessons, slides, discussions, quizzes, activities, and tracking improvements.
 
@@ -44,7 +44,7 @@
 
 ## Current Focus
 
-**Next Target:** Sidebar and lesson-authoring consolidation, including removing legacy Studio navigation, merging Practice and AI Tutor, and moving lesson creation toward the Canva-style editor pattern.
+**Next Target:** Continue lesson/workflow maturity: class-scoped assignments, discussions, planner, grade weighting, and the Canva-style lesson canvas controls.
 
 **Immediate Tasks:**
 - [x] Inventory routes by role and feature.
@@ -70,10 +70,12 @@
 - [x] Refresh the service-worker cache and use network-first behavior for navigations and Next assets to prevent stale intro pages.
 - [x] Deploy production Cloudflare Worker `edsync` at `https://edsync.learn-app.workers.dev`.
 - [x] Delete the old `edsync-dev` Worker and update default app deployment script to target production `edsync`.
-- [ ] Remove legacy Studio from protected sidebars and merge Practice with AI Tutor in admin/teacher/student navigation.
-- [ ] Convert lesson creation sections from textarea-style editing into the Canva-style lesson creation canvas, mini-sidebar, and toolbar flow.
-- [ ] Complete student dashboard cleanup: remove academy banner, replace XP with active time spent, compact Join Class, and make Notifications toggleable.
-- [ ] Verify admin view-as mode keeps the platform sidebar on all student/teacher/support routes.
+- [x] Remove legacy Studio from protected sidebars and merge Practice with AI Tutor in admin/teacher/student navigation.
+- [x] Convert lesson creation sections from textarea-style editing into the Canva-style lesson creation canvas, mini-sidebar, and toolbar flow.
+- [x] Complete student dashboard cleanup: remove academy banner, replace XP with active time spent, compact Join Class, and make Notifications toggleable.
+- [x] Verify admin view-as mode keeps the platform sidebar on student/teacher/support compatibility routes.
+- [ ] Deepen class-scoped assignment/discussion/planner integration inside each course while preserving global pages.
+- [ ] Expand lesson canvas interactions toward Canva-style movable blocks, template application, AI drafts, and activity/game insertion.
 
 **Known Starting Context:**
 - Studio already contains lessons, notes, docs, sheets, slides, practice, content blocks, local drafts, server save/publish/archive/delete, simple templates, transitions, animations, and AI entry points.
@@ -538,6 +540,8 @@
 - Verification for this Practice route pass: `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run test` passed with 229 tests. Local smoke for `/practice?mode=sprint&ai=1&task=generate-practice&adminView=student` returned 307 to `/auth/login` with the encoded Practice query preserved in `next`.
 - Continued shared workspace compatibility cleanup on 2026-05-26: routed `/notes` into the correct role-specific notes surface, wrapped `/docs`, `/sheets`, and `/slides` in the role-aware `AppShell`, and preserved requested admin view-as mode through signed-out login returns without granting it to non-admin sessions. This keeps old productivity links stable while preventing those routes from opening without the student/teacher/admin sidebar.
 - Verification for this compatibility shell pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` passed with 229 tests. Local signed-out smoke checks returned 307 redirects preserving `next` for `/notes?adminView=student`, `/docs?adminView=teacher`, `/sheets?adminView=student`, and `/slides?adminView=teacher`.
+- Continued visible-label alignment on 2026-05-26: renamed the teacher new-lesson visible header from "Lesson Creation Studio" to "Lesson Creation Canvas" and aligned student dashboard shortcuts with the shared "Practice & AI" navigation label.
+- Verification for this visible-label pass: `npm.cmd run typecheck` and `npm.cmd run lint` passed with no warnings.
 
 ## Update Protocol
 
