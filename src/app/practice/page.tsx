@@ -1,26 +1,43 @@
 import { redirect } from "next/navigation";
+import AppShell, { adminNavItems, studentNavItems, teacherNavItems } from "@/components/AppShell";
 import PracticeWorkspace from "@/components/practice/PracticeWorkspace";
 import { getSessionUser } from "@/lib/auth/session";
 import { normalizePracticeMode, type PracticeSearchParams } from "@/lib/practice/modes";
 import { normalizeAiPromptContractId } from "@/lib/studio/catalog";
 
 export const metadata = {
-  title: "Practice",
-  description: "Practice quizzes, exams, flashcards, matching, sprints, games, and review loops.",
+  title: "Practice & AI",
+  description: "Merged AI tutoring, practice quizzes, games, review loops, and explanations.",
+};
+
+type PracticePageSearchParams = PracticeSearchParams & {
+  adminView?: string;
 };
 
 export default async function PracticePage({
   searchParams,
 }: {
-  searchParams?: PracticeSearchParams;
+  searchParams?: PracticePageSearchParams;
 }) {
   const user = await getSessionUser().catch(() => null);
   if (!user) redirect("/auth/login?next=/practice");
+
+  const requestedAdminView =
+    user.user_metadata.role === "admin" &&
+    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+      ? searchParams.adminView
+      : null;
+  const shellRole = requestedAdminView ?? user.user_metadata.role;
+  const shellNavItems =
+    shellRole === "admin" ? adminNavItems : shellRole === "teacher" ? teacherNavItems : studentNavItems;
+
   return (
-    <PracticeWorkspace
-      initialAiOpen={searchParams?.ai === "1"}
-      initialAiTask={normalizeAiPromptContractId(searchParams?.task)}
-      initialMode={normalizePracticeMode(searchParams?.mode)}
-    />
+    <AppShell role={shellRole} navItems={shellNavItems}>
+      <PracticeWorkspace
+        initialAiOpen={searchParams?.ai === "1"}
+        initialAiTask={normalizeAiPromptContractId(searchParams?.task)}
+        initialMode={normalizePracticeMode(searchParams?.mode)}
+      />
+    </AppShell>
   );
 }
