@@ -609,7 +609,7 @@ function QuestionBuilder({
 // SECTION EDITORS
 // ─────────────────────────────────────────
 
-// Image section
+// Image block
 function ImageSectionEditor({
   section,
   onSave,
@@ -701,7 +701,7 @@ function ImageSectionEditor({
         <div className="rounded-xl overflow-hidden border border-edsync-border">
           <Image
             src={previewUrl}
-            alt={caption || "Section image"}
+            alt={caption || "Lesson image"}
             width={1200}
             height={675}
             sizes="(max-width: 768px) 100vw, 960px"
@@ -726,13 +726,13 @@ function ImageSectionEditor({
         />
       </div>
       <button onClick={save} className="btn-primary text-sm py-2">
-        ✓ Save Image Section
+        Save image block
       </button>
     </div>
   );
 }
 
-// Video section
+// Video block
 function VideoSectionEditor({
   section,
   onSave,
@@ -814,13 +814,13 @@ function VideoSectionEditor({
         />
       </div>
       <button onClick={save} className="btn-primary text-sm py-2">
-        ✓ Save Video Section
+        Save video block
       </button>
     </div>
   );
 }
 
-// Quiz section (inline questions for this section)
+// Quiz block (inline questions for this page)
 function QuizSectionEditor({
   section,
   lessonId,
@@ -834,7 +834,7 @@ function QuizSectionEditor({
 }) {
   const [questions, setQuestions] = useState<QDraft[]>([]);
   const [saving, setSaving] = useState(false);
-  const [title, setTitle] = useState(section.content || "Section Quiz");
+  const [title, setTitle] = useState(section.content || "Block Quiz");
 
   useEffect(() => {
     edsync
@@ -855,7 +855,7 @@ function QuizSectionEditor({
       const validQuestions = questions.filter((q) => q.question_text.trim());
       if (validQuestions.length === 0) {
         toast.error(
-          "Add at least one question before saving this quiz section.",
+          "Add at least one question before saving this quiz block.",
         );
         return;
       }
@@ -868,7 +868,7 @@ function QuizSectionEditor({
         .eq("lesson_id", lessonId)
         .eq("section_id", section.id);
       if (deleteError) {
-        toast.error("Could not clear previous section questions.");
+        toast.error("Could not clear previous block questions.");
         return;
       }
 
@@ -901,7 +901,7 @@ function QuizSectionEditor({
         return;
       }
 
-      toast.success("Quiz section saved!");
+      toast.success("Quiz block saved!");
     } finally {
       setSaving(false);
     }
@@ -944,14 +944,14 @@ function QuizSectionEditor({
           disabled={saving}
           className="btn-primary text-sm py-2"
         >
-          {saving ? " Saving..." : "✓ Save Quiz Section"}
+          {saving ? " Saving..." : "Save quiz block"}
         </button>
       </div>
     </div>
   );
 }
 
-// Activity / Discussion section editor
+// Activity / Discussion block editor
 function ActivitySectionEditor({
   section,
   onSave,
@@ -985,7 +985,7 @@ function ActivitySectionEditor({
   );
 }
 
-// Full section editor wrapper
+// Full lesson block editor wrapper
 function SectionEditor({
   section,
   index,
@@ -1042,7 +1042,7 @@ function SectionEditor({
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card p-3 shadow-card">
-      {/* Section header */}
+      {/* Block header */}
       <div className="mb-3 flex flex-col gap-3 rounded-[1.5rem] border border-edsync-border bg-edsync-surface p-3 xl:flex-row xl:items-center">
         <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue text-xs font-bold text-white shadow-sm">
           {index + 1}
@@ -1051,7 +1051,7 @@ function SectionEditor({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="edsync-input min-w-0 flex-1 py-2 font-display text-base font-bold"
-          placeholder="Section title..."
+          placeholder="Page title..."
         />
 
         {/* Type selector */}
@@ -1121,11 +1121,11 @@ function SectionEditor({
                 disabled={saving}
                 className="btn-primary text-sm py-2"
               >
-                {saving ? " Saving..." : "✓ Save Section"}
+                {saving ? " Saving..." : "Save block"}
               </button>
               <button
                 onClick={() => {
-                  if (confirm("Delete this section?")) onDelete(section.id);
+                  if (confirm("Delete this block?")) onDelete(section.id);
                 }}
                 className="btn-ghost text-sm py-2 text-edsync-red"
               >
@@ -1195,11 +1195,11 @@ function SectionEditor({
           <div className="mt-3 pt-3 border-t border-edsync-border">
             <button
               onClick={() => {
-                if (confirm("Delete this section?")) onDelete(section.id);
+                if (confirm("Delete this block?")) onDelete(section.id);
               }}
               className="btn-ghost text-sm py-2 text-edsync-red"
             >
-              Delete Section
+              Delete block
             </button>
           </div>
         )}
@@ -1319,7 +1319,7 @@ export default function TeacherLessonDetail() {
     setSections(sectionsRes.data || []);
     const qs: QuizQuestion[] = questionsRes.data || [];
     setQuestions(qs);
-    // Only load non-section questions into the question bank drafts
+    // Only load page-independent questions into the question bank drafts
     setQDrafts(
       qs
         .filter((q) => !q.section_id || q.section_id === null)
@@ -1395,7 +1395,7 @@ export default function TeacherLessonDetail() {
       s.map((sec) => (sec.id === sectionId ? { ...sec, ...updates } : sec)),
     );
     setEditingSectionId(null);
-    toast.success("Section saved!");
+    toast.success("Block saved!");
   };
 
   const persistSectionOrder = async (nextSections: LessonSection[]) => {
@@ -1424,7 +1424,7 @@ export default function TeacherLessonDetail() {
       .select()
       .single();
     if (error) {
-      toast.error("Could not add section");
+      toast.error("Could not add block");
       return;
     }
     setSections((s) => [...s, data]);
@@ -1444,7 +1444,7 @@ export default function TeacherLessonDetail() {
     const ordered = nextSections.map((section, index) => ({ ...section, order_index: index }));
     setSections(ordered);
     await persistSectionOrder(ordered);
-    toast.success("Section moved");
+    toast.success("Block moved");
   };
 
   const duplicateSection = async (section: LessonSection) => {
@@ -1464,7 +1464,7 @@ export default function TeacherLessonDetail() {
       .single();
 
     if (error) {
-      toast.error("Could not duplicate section");
+      toast.error("Could not duplicate block");
       return;
     }
 
@@ -1477,7 +1477,7 @@ export default function TeacherLessonDetail() {
     setSections(nextSections);
     await persistSectionOrder(nextSections);
     setEditingSectionId(data.id);
-    toast.success("Section duplicated");
+    toast.success("Block duplicated");
   };
 
   const deleteSection = async (id: string) => {
@@ -1488,7 +1488,7 @@ export default function TeacherLessonDetail() {
     setSections(nextSections);
     await persistSectionOrder(nextSections);
     setEditingSectionId(null);
-    toast.success("Section deleted");
+    toast.success("Block deleted");
   };
 
   // Glossary ops
@@ -1531,7 +1531,7 @@ export default function TeacherLessonDetail() {
   // Questions save
   const saveQuestions = async () => {
     setSavingQ(true);
-    // Delete non-section questions, re-insert
+    // Delete page-independent questions, re-insert
     await edsync
       .from("quiz_questions")
       .delete()
@@ -1696,7 +1696,7 @@ export default function TeacherLessonDetail() {
             </h1>
             <p className="text-edsync-subtle text-xs mt-0.5">
               Updated {formatRelativeTime(lesson.updated_at)} ·{" "}
-              {sections.length} sections ·{" "}
+              {sections.length} pages ·{" "}
               {questions.filter((q) => !q.section_id).length} questions
             </p>
             {lessonPackage && packageSummary && (
@@ -1738,7 +1738,7 @@ export default function TeacherLessonDetail() {
       <div className="flex border-b border-edsync-border mb-6 overflow-x-auto">
         {[
           { key: "overview" as Tab, label: "Overview" },
-          { key: "sections" as Tab, label: `Sections (${sections.length})` },
+          { key: "sections" as Tab, label: `Canvas (${sections.length})` },
           {
             key: "questions" as Tab,
             label: `Questions (${qDrafts.length})`,
@@ -1970,10 +1970,10 @@ export default function TeacherLessonDetail() {
           {sections.length === 0 && (
             <div className="edsync-card text-center py-12">
               <p className="text-edsync-text font-medium mb-4">
-                No sections yet
+                No blocks yet
               </p>
               <button onClick={() => addSection()} className="btn-primary">
-                Add First Section
+                Add first block
               </button>
             </div>
           )}
@@ -2104,8 +2104,8 @@ export default function TeacherLessonDetail() {
           <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-subtle">
             <strong className="text-edsync-text">How it works:</strong> Pre-check
             questions appear before the lesson starts. Micro-check questions
-            appear after a specific section. Final quiz questions appear at the
-            end. Quiz sections (created in Sections tab) appear inline during
+            appear after a specific page. Final quiz questions appear at the
+            end. Quiz blocks (created in the Canvas tab) appear inline during
             the lesson.
           </div>
 
