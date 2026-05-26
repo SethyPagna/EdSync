@@ -164,10 +164,11 @@ type DraftStorageContent = {
   designTemplateId: string;
   creationMode: CreationMode;
   importMode: ImportMode;
-  activeTab: "overview" | "sections" | "questions" | "glossary";
+  activeTab: "overview" | "canvas" | "questions" | "glossary";
 };
 
-type DraftStoragePayload = Partial<DraftStorageContent> & {
+type DraftStoragePayload = Omit<Partial<DraftStorageContent>, "activeTab"> & {
+  activeTab?: DraftStorageContent["activeTab"] | "sections";
   savedAt?: string;
 };
 
@@ -217,7 +218,7 @@ export default function CreateLesson() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedKind, setUploadedKind] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "sections" | "questions" | "glossary"
+    "overview" | "canvas" | "questions" | "glossary"
   >("overview");
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
@@ -246,7 +247,9 @@ export default function CreateLesson() {
         if (parsed.designTemplateId) setDesignTemplateId(parsed.designTemplateId);
         if (parsed.creationMode) setCreationMode(parsed.creationMode);
         if (parsed.importMode) setImportMode(parsed.importMode);
-        if (parsed.activeTab) setActiveTab(parsed.activeTab);
+        if (parsed.activeTab) {
+          setActiveTab(parsed.activeTab === "sections" ? "canvas" : parsed.activeTab);
+        }
         if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
         const savedContent = { ...parsed };
         delete savedContent.savedAt;
@@ -717,8 +720,8 @@ export default function CreateLesson() {
       </button>
       {[
         { label: "Bold", icon: Bold, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "concept-brief") ?? SECTION_TEMPLATES[0]) },
-        { label: "Italic", icon: Italic, action: () => setActiveTab("sections") },
-        { label: "Underline", icon: Underline, action: () => setActiveTab("sections") },
+        { label: "Italic", icon: Italic, action: () => setActiveTab("canvas") },
+        { label: "Underline", icon: Underline, action: () => setActiveTab("canvas") },
         { label: "List", icon: List, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "guided-notes") ?? SECTION_TEMPLATES[0]) },
       ].map((item) => {
         const Icon = item.icon;
@@ -1471,9 +1474,9 @@ export default function CreateLesson() {
 
       {/* ── STEP: EDIT ── */}
       {step === "edit" && (
-        <div className="animate-slide-up space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[76px_300px_minmax(0,1fr)] lg:items-start">
-            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:sticky lg:top-3 lg:h-[calc(100dvh-1.5rem)] lg:flex-col lg:overflow-y-auto">
+        <div className="animate-slide-up space-y-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[720px]">
+          <div className="grid gap-4 lg:h-full lg:grid-cols-[76px_300px_minmax(0,1fr)] lg:items-stretch">
+            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:h-full lg:flex-col lg:overflow-y-auto">
               {STUDIO_TOOL_RAIL.map((tool) => {
                 const Icon = tool.icon;
                 return (
@@ -1493,12 +1496,12 @@ export default function CreateLesson() {
                 );
               })}
             </aside>
-            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:sticky lg:top-3 lg:max-h-[calc(100dvh-1.5rem)] lg:overflow-y-auto">
+            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:h-full lg:overflow-y-auto">
               {renderStudioPanel()}
             </aside>
-            <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-edsync-surface p-3 shadow-inner lg:order-3">
-              <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg p-3 sm:p-5">
-          <div className="sticky top-3 z-10 mx-auto max-w-4xl">
+            <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-edsync-surface p-3 shadow-inner lg:order-3 lg:h-full lg:overflow-hidden">
+              <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg p-3 sm:p-5 lg:h-full lg:overflow-y-auto">
+          <div className="sticky top-0 z-10 mx-auto max-w-4xl pb-2">
             {renderCanvasToolbar()}
           </div>
           {variants.length > 1 && (
@@ -1577,16 +1580,16 @@ export default function CreateLesson() {
             {[
               { key: "overview" as const, label: "Overview" },
               {
-                key: "sections" as const,
-                label: `Canvas (${draft.sections.length})`,
+                key: "canvas" as const,
+                label: `Pages (${draft.sections.length})`,
               },
               {
                 key: "questions" as const,
-                label: `Questions (${draft.quiz_questions.length})`,
+                label: `Quiz & Practice (${draft.quiz_questions.length})`,
               },
               {
                 key: "glossary" as const,
-                label: `Glossary (${draft.glossary_terms.length})`,
+                label: `Terms (${draft.glossary_terms.length})`,
               },
             ].map((t) => (
               <button
@@ -1791,8 +1794,8 @@ export default function CreateLesson() {
             </div>
           )}
 
-          {/* SECTIONS */}
-          {activeTab === "sections" && (
+          {/* PAGES */}
+          {activeTab === "canvas" && (
             <div className="space-y-5">
               {draft.sections.map((sec, i) => (
                 <div key={i} className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
@@ -2282,7 +2285,7 @@ export default function CreateLesson() {
                 <button
                   key={`${section.title}-${index}`}
                   type="button"
-                  onClick={() => setActiveTab("sections")}
+                  onClick={() => setActiveTab("canvas")}
                   className="min-w-36 rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/40 hover:bg-edsync-card"
                 >
                   <span className="text-xs font-bold text-edsync-blue">{index + 1}</span>
