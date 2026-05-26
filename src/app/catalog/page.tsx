@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BookOpenCheck,
   Building2,
-  GraduationCap,
   Search,
   SlidersHorizontal,
   UserRound,
@@ -14,6 +13,7 @@ import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog-filters";
+import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
@@ -30,6 +30,7 @@ export default async function CatalogPage({
 }) {
   const filters = normalizeCatalogFilters(searchParams);
   const copy = getPublicCopy(filters.language);
+  const authCopy = getPublicAuthCopy(filters.language);
   const hasFilters = hasCatalogFilters(filters);
   const [items, portals] = await Promise.all([
     listPublicCatalog({
@@ -60,24 +61,14 @@ export default async function CatalogPage({
   ];
   const audiencePaths = [
     {
-      label: "Individual",
-      detail: "Buy courses, take notes, practice at your own pace.",
+      label: authCopy.individual,
+      detail: authCopy.individualCopy,
       icon: UserRound,
     },
     {
-      label: "Organization",
-      detail: "Use portals, teams, managers, and SSO-ready access.",
+      label: authCopy.organization,
+      detail: `${authCopy.teacher} / ${authCopy.student}. ${authCopy.organizationCopy}`,
       icon: Building2,
-    },
-    {
-      label: "Teacher",
-      detail: "Create lessons, assign work, and give feedback.",
-      icon: BookOpenCheck,
-    },
-    {
-      label: "Student",
-      detail: "Open lessons, practice, submit work, and see grades.",
-      icon: GraduationCap,
     },
   ];
   const catalogHref = (params: Record<string, string> = {}) => {
