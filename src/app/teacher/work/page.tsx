@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Archive, CalendarClock, ClipboardList, Edit3, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound, X } from "lucide-react";
 import {
@@ -67,10 +67,14 @@ function dueLabel(value: string | null) {
   });
 }
 
+function classScopeFromLocation() {
+  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
+  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+}
+
 export default function TeacherWorkPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedClassId = classScopeFromSearchParams(searchParams);
+  const [requestedClassId, setRequestedClassId] = useState(classScopeFromLocation);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [items, setItems] = useState<WorkItem[]>([]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
@@ -157,6 +161,7 @@ export default function TeacherWorkPage() {
   }, [classes, requestedClassId]);
 
   const chooseClassScope = (classId: string) => {
+    setRequestedClassId(classId);
     setSelectedClassId(classId);
     if (classId !== ALL_CLASSES_SCOPE) {
       setForm((current) => ({ ...current, classId }));
