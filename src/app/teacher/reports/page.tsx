@@ -111,7 +111,7 @@ export default function TeacherReports() {
     const lessonTitle =
       lessons.find((l) => l.id === selectedLesson)?.title || "Report";
     const rows = [
-      "Student,Email,Status,Final Score,Diagnostic,Time (min),Sections Done,Knowledge Gaps",
+      "Student,Email,Status,Final Score,Diagnostic,Time (min),Pages Done,Knowledge Gaps",
       ...reports.map(
         (r) =>
           `"${r.name}","${r.email}","${r.status}","${r.score !== null ? r.score + "%" : "N/A"}","${r.diagnosticScore !== null ? r.diagnosticScore + "%" : "N/A"}","${Math.round(r.timeSpent / 60)}","${r.sectionsCompleted}","${r.knowledgeGaps.join("; ")}"`,
@@ -284,7 +284,7 @@ export default function TeacherReports() {
                       "Final Score",
                       "Diagnostic",
                       "Time (min)",
-                      "Sections",
+                      "Pages",
                       "Knowledge Gaps",
                     ].map((h) => (
                       <th
