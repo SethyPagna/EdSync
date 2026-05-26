@@ -16,12 +16,13 @@ type DocsPageProps = {
 
 export default async function DocsPage({ searchParams }: DocsPageProps) {
   const user = await getSessionUser().catch(() => null);
-  const adminView =
-    user?.user_metadata.role === "admin" &&
-    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+  const requestedAdminView =
+    searchParams?.adminView === "teacher" || searchParams?.adminView === "student"
       ? searchParams.adminView
       : null;
-  const nextPath = `/docs${adminView ? `?adminView=${adminView}` : ""}`;
+  const adminView =
+    user?.user_metadata.role === "admin" ? requestedAdminView : null;
+  const nextPath = `/docs${requestedAdminView ? `?adminView=${requestedAdminView}` : ""}`;
 
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
 
