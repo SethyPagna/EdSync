@@ -3778,6 +3778,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   flex: 0 0 auto;
   align-items: center;
   gap: 0.45rem;
+  min-width: 0;
 }
 
 .edsync-launch-mini-link {
@@ -3798,6 +3799,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .edsync-launch-mini-link:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--launch-blue) 45%, var(--launch-line));
+}
+
+.edsync-launch-mini-link.is-primary {
+  background: var(--launch-ink);
+  color: var(--launch-bg);
 }
 
 .edsync-public-launch .edsync-launch-hero-inner {
@@ -3933,6 +3939,128 @@ input[type="range"]::-webkit-slider-thumb:hover {
   filter: blur(34px);
 }
 
+.edsync-launch-mini-screen {
+  display: grid;
+  width: 100%;
+  min-height: 9.8rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgba(36, 88, 220, 0.1), transparent 45%),
+    #eef5ff;
+  padding: 0.72rem;
+}
+
+.edsync-launch-mini-search {
+  height: 1.9rem;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #d6e2f2;
+}
+
+.edsync-launch-mini-course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.48rem;
+  align-items: end;
+}
+
+.edsync-launch-mini-course-grid span,
+.edsync-launch-mini-screen-ai span,
+.edsync-launch-mini-screen-proof span {
+  min-height: 4.7rem;
+  border-radius: 0.86rem;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #d6e2f2;
+}
+
+.edsync-launch-mini-screen-studio {
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.edsync-launch-mini-rail,
+.edsync-launch-mini-canvas {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.edsync-launch-mini-rail span {
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--launch-blue) 26%, #ffffff);
+}
+
+.edsync-launch-mini-canvas {
+  grid-template-rows: 0.8fr 1fr 0.7fr;
+}
+
+.edsync-launch-mini-canvas i,
+.edsync-launch-mini-canvas b,
+.edsync-launch-mini-canvas em {
+  display: block;
+  border-radius: 0.82rem;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #d6e2f2;
+}
+
+.edsync-launch-mini-canvas b {
+  background: linear-gradient(90deg, rgba(20, 184, 166, 0.22), rgba(36, 88, 220, 0.18));
+}
+
+.edsync-launch-mini-screen-ai,
+.edsync-launch-mini-screen-proof {
+  grid-template-columns: 1fr;
+  gap: 0.48rem;
+}
+
+.edsync-launch-mini-screen-ai span {
+  min-height: 2.3rem;
+  background: linear-gradient(90deg, #ffffff 0 72%, rgba(36, 88, 220, 0.16) 72%);
+}
+
+.edsync-launch-mini-screen-practice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.edsync-launch-mini-screen-practice span {
+  min-height: 4.2rem;
+  border-radius: 0.95rem;
+}
+
+.edsync-launch-mini-screen-practice span:nth-child(1) {
+  background: #2557d6;
+}
+
+.edsync-launch-mini-screen-practice span:nth-child(2) {
+  background: #10b981;
+}
+
+.edsync-launch-mini-screen-practice span:nth-child(3) {
+  background: #f59e0b;
+}
+
+.edsync-launch-mini-screen-practice span:nth-child(4) {
+  background: #ef4444;
+}
+
+.edsync-launch-mini-screen-proof {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+
+.edsync-launch-mini-screen-proof span:nth-child(1) {
+  min-height: 3.2rem;
+}
+
+.edsync-launch-mini-screen-proof span:nth-child(2) {
+  min-height: 5.3rem;
+}
+
+.edsync-launch-mini-screen-proof span:nth-child(3) {
+  min-height: 7.2rem;
+}
+
 .edsync-public-launch .edsync-launch-preview-grid {
   display: grid;
   grid-template-columns: minmax(9rem, 0.28fr) minmax(0, 1fr);
@@ -4038,13 +4166,14 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-public-launch .edsync-workflow-showcase {
-  min-height: 100svh;
+  min-height: 118svh;
   margin-inline: -1rem;
-  margin-top: clamp(-1rem, -1.2vw, -0.35rem);
+  margin-top: 0;
   padding-inline: 1rem;
   background: transparent;
   color: var(--launch-ink);
   scroll-margin-top: 0;
+  scroll-snap-align: start;
 }
 
 .edsync-public-launch .edsync-workflow-anchor {
@@ -4054,7 +4183,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-public-launch .edsync-workflow-showcase .edsync-workflow-sticky {
-  position: relative;
+  position: sticky;
   top: 0;
   min-height: 100vh;
   padding-block: clamp(0.85rem, 1.8vh, 1.35rem) 4.7rem;
@@ -4132,7 +4261,8 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-public-launch .edsync-catalog-availability {
-  margin-top: clamp(-2rem, -2.4vw, -0.7rem);
+  margin-top: clamp(0.8rem, 2.4vw, 2.4rem);
+  scroll-margin-top: 1rem;
 }
 
 .edsync-public-launch .edsync-catalog-availability .premium-panel {
@@ -4196,7 +4326,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-catalog-path-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
   margin-top: 1rem;
 }
@@ -4345,12 +4475,13 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-public-launch .edsync-launch-icon > summary.premium-icon-button,
   .edsync-public-launch .edsync-launch-signin {
     min-height: 2.35rem;
-    width: 2.35rem;
-    padding-inline: 0;
+    width: auto;
+    padding-inline: 0.65rem;
   }
 
   .edsync-public-launch .edsync-launch-signin span {
-    display: none;
+    display: inline;
+    white-space: nowrap;
   }
 
   .edsync-launch-mini-link {
@@ -4431,7 +4562,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-launch-brand-inline {
     flex: 0 1 auto;
-    max-width: calc(100% - 7.7rem);
+    max-width: calc(100% - 10.8rem);
     gap: 0.52rem;
   }
 
@@ -4444,7 +4575,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     width: auto;
     margin-left: 0;
     margin-right: clamp(0rem, calc(30rem - 100vw), 5rem);
-    min-width: 7.2rem;
+    min-width: 10rem;
     flex-wrap: nowrap;
     gap: 0.24rem;
     justify-content: flex-end;
@@ -4455,13 +4586,14 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-public-launch .edsync-launch-icon > summary.premium-icon-button,
   .edsync-public-launch .edsync-launch-signin {
     min-height: 2.25rem;
-    width: 2.25rem;
+    width: auto;
     border-radius: 0.72rem;
-    padding-inline: 0;
+    padding-inline: 0.58rem;
   }
 
   .edsync-public-launch .edsync-launch-signin span {
-    display: none;
+    display: inline;
+    white-space: nowrap;
   }
 
   .edsync-public-launch .edsync-launch-mode-row {
@@ -4520,6 +4652,15 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-public-launch .edsync-launch-focus-media svg {
     min-height: 2.8rem;
     padding: 0.62rem;
+  }
+
+  .edsync-public-launch .edsync-launch-mini-screen span,
+  .edsync-public-launch .edsync-launch-mini-screen i,
+  .edsync-public-launch .edsync-launch-mini-screen b,
+  .edsync-public-launch .edsync-launch-mini-screen em {
+    display: block;
+    min-height: 0;
+    padding: 0;
   }
 
   .edsync-public-launch .edsync-launch-focus-copy strong {
