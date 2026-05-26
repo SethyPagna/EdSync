@@ -4614,3 +4614,807 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     font-size: 0.9rem;
   }
 }
+
+.edsync-emil-intro {
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(35, 209, 139, 0.14), transparent 28rem),
+    radial-gradient(circle at 88% 72%, rgba(79, 134, 247, 0.16), transparent 30rem),
+    linear-gradient(135deg, #06111f 0%, #071c1d 54%, #07110f 100%);
+  color: #f8fafc;
+}
+
+.dark .edsync-emil-intro {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(35, 209, 139, 0.14), transparent 28rem),
+    radial-gradient(circle at 88% 72%, rgba(79, 134, 247, 0.16), transparent 30rem),
+    linear-gradient(135deg, #06111f 0%, #071c1d 54%, #07110f 100%);
+  color: #f8fafc;
+}
+
+:root:not(.dark) .edsync-emil-intro {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(35, 209, 139, 0.14), transparent 28rem),
+    radial-gradient(circle at 88% 72%, rgba(79, 134, 247, 0.12), transparent 30rem),
+    linear-gradient(135deg, #eaf4ff 0%, #effbf5 56%, #f7fbff 100%);
+  color: #081322;
+}
+
+.edsync-emil-hero {
+  min-height: 100svh;
+  padding: clamp(1rem, 2vw, 2rem);
+}
+
+.edsync-emil-floating,
+.edsync-emil-hero-grid,
+.edsync-emil-workflow,
+.edsync-emil-catalog {
+  width: min(86rem, calc(100vw - 2rem));
+  margin-inline: auto;
+}
+
+.edsync-emil-floating {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: clamp(0.5rem, 2.4vh, 2.5rem);
+}
+
+.edsync-emil-brand,
+.edsync-emil-actions,
+.edsync-emil-cta-row,
+.edsync-emil-roles,
+.edsync-emil-device-top,
+.edsync-emil-toolbar,
+.edsync-emil-dots,
+.edsync-emil-workflow-tabs,
+.edsync-emil-search form,
+.edsync-emil-search > div:last-child {
+  display: flex;
+  align-items: center;
+}
+
+.edsync-emil-brand {
+  gap: 0.7rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.edsync-emil-brand > span {
+  display: grid;
+  width: 2.55rem;
+  height: 2.55rem;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: #07111f;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.22);
+}
+
+:root:not(.dark) .edsync-emil-brand > span {
+  background: #07111f;
+  color: #f8fafc;
+}
+
+.edsync-emil-brand strong {
+  display: block;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.edsync-emil-brand small {
+  display: block;
+  margin-top: 0.1rem;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  font-size: 0.78rem;
+}
+
+.edsync-emil-actions {
+  gap: 0.55rem;
+}
+
+.edsync-emil-icon,
+.edsync-emil-signin,
+.edsync-emil-primary,
+.edsync-emil-secondary,
+.edsync-emil-jump,
+.edsync-emil-roles a,
+.edsync-emil-workflow-tabs button,
+.edsync-emil-search a,
+.edsync-emil-search button {
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.edsync-emil-icon:active,
+.edsync-emil-signin:active,
+.edsync-emil-primary:active,
+.edsync-emil-secondary:active,
+.edsync-emil-jump:active,
+.edsync-emil-roles a:active,
+.edsync-emil-workflow-tabs button:active,
+.edsync-emil-search a:active,
+.edsync-emil-search button:active {
+  transform: scale(0.97);
+}
+
+.edsync-emil-signin,
+.edsync-emil-secondary,
+.edsync-emil-jump {
+  gap: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  padding: 0.72rem 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  backdrop-filter: blur(16px);
+}
+
+:root:not(.dark) .edsync-emil-signin,
+:root:not(.dark) .edsync-emil-secondary,
+:root:not(.dark) .edsync-emil-jump {
+  border-color: rgba(8, 19, 34, 0.12);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.08);
+}
+
+.edsync-emil-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(26rem, 1.18fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  min-height: calc(100svh - 5.5rem);
+  padding-block: clamp(2rem, 6vh, 6rem);
+}
+
+.edsync-emil-copy {
+  max-width: 42rem;
+}
+
+.edsync-emil-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(35, 209, 139, 0.3);
+  border-radius: 999px;
+  background: rgba(35, 209, 139, 0.13);
+  color: #b7f7d9;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+:root:not(.dark) .edsync-emil-kicker {
+  color: #047857;
+}
+
+.edsync-emil-copy h1 {
+  margin-top: 1.4rem;
+  max-width: 12ch;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(3.5rem, 8vw, 7.7rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+}
+
+.edsync-emil-copy p {
+  margin-top: 1.4rem;
+  max-width: 34rem;
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: clamp(1rem, 1.6vw, 1.22rem);
+  line-height: 1.75;
+}
+
+.edsync-emil-cta-row {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.9rem;
+}
+
+.edsync-emil-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  color: #07111f;
+  padding: 0.9rem 1.05rem;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.18);
+}
+
+:root:not(.dark) .edsync-emil-primary {
+  background: #07111f;
+  color: #f8fafc;
+}
+
+.edsync-emil-roles {
+  flex-wrap: wrap;
+  gap: 0.62rem;
+  margin-top: 1.6rem;
+}
+
+.edsync-emil-roles a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+:root:not(.dark) .edsync-emil-roles a {
+  border-color: rgba(8, 19, 34, 0.13);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.edsync-emil-device {
+  position: relative;
+  min-height: 34rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2rem;
+  background: rgba(10, 20, 32, 0.78);
+  padding: 0.8rem;
+  box-shadow: 0 2.5rem 5rem rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(20px);
+  animation: emilFloatIn 620ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+:root:not(.dark) .edsync-emil-device {
+  border-color: rgba(8, 19, 34, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2.5rem 5rem rgba(15, 23, 42, 0.14);
+}
+
+.edsync-emil-device-top {
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 1.3rem 1.3rem 0 0;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.8rem 1rem;
+  color: color-mix(in srgb, currentColor 74%, transparent);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+:root:not(.dark) .edsync-emil-device-top {
+  background: rgba(8, 19, 34, 0.04);
+}
+
+.edsync-emil-device-top a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.edsync-emil-device-body {
+  display: grid;
+  grid-template-columns: 6.6rem minmax(0, 1fr) 13rem;
+  gap: 0.85rem;
+  min-height: 27rem;
+  padding-top: 0.85rem;
+}
+
+.edsync-emil-toolrail,
+.edsync-emil-sidecard,
+.edsync-emil-canvas {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.3rem;
+}
+
+:root:not(.dark) .edsync-emil-toolrail,
+:root:not(.dark) .edsync-emil-sidecard,
+:root:not(.dark) .edsync-emil-canvas {
+  border-color: rgba(8, 19, 34, 0.1);
+}
+
+.edsync-emil-toolrail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.7rem;
+}
+
+:root:not(.dark) .edsync-emil-toolrail {
+  background: rgba(8, 19, 34, 0.04);
+}
+
+.edsync-emil-toolrail span,
+.edsync-emil-sidecard span,
+.edsync-emil-toolbar span,
+.edsync-emil-workflow-copy small,
+.edsync-emil-workflow-window p,
+.edsync-emil-search a {
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.6rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+:root:not(.dark) .edsync-emil-toolrail span,
+:root:not(.dark) .edsync-emil-sidecard span,
+:root:not(.dark) .edsync-emil-toolbar span,
+:root:not(.dark) .edsync-emil-workflow-copy small,
+:root:not(.dark) .edsync-emil-workflow-window p,
+:root:not(.dark) .edsync-emil-search a {
+  background: rgba(8, 19, 34, 0.06);
+}
+
+.edsync-emil-canvas {
+  display: flex;
+  flex-direction: column;
+  background: #eaf2fb;
+  color: #081322;
+  padding: 1rem;
+}
+
+.edsync-emil-toolbar {
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.edsync-emil-canvas article {
+  flex: 1;
+  border-radius: 1.2rem;
+  background: #ffffff;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  box-shadow: inset 0 0 0 1px rgba(8, 19, 34, 0.08);
+}
+
+.edsync-emil-canvas small {
+  color: #2563eb;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.edsync-emil-canvas h2 {
+  margin-top: 0.55rem;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.edsync-emil-canvas p {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.edsync-emil-canvas.is-practice article {
+  background: linear-gradient(135deg, #fef3c7, #dcfce7);
+}
+
+.edsync-emil-canvas.is-catalog article {
+  background: linear-gradient(135deg, #dbeafe, #f8fafc);
+}
+
+.edsync-emil-canvas.is-admin article {
+  background: linear-gradient(135deg, #ede9fe, #f8fafc);
+}
+
+.edsync-emil-sidecard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 0.85rem;
+}
+
+:root:not(.dark) .edsync-emil-sidecard {
+  background: rgba(8, 19, 34, 0.04);
+}
+
+.edsync-emil-sidecard strong {
+  font-size: 0.95rem;
+}
+
+.edsync-emil-dots {
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.95rem 0 0.2rem;
+}
+
+.edsync-emil-dots button {
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+:root:not(.dark) .edsync-emil-dots button {
+  background: rgba(8, 19, 34, 0.22);
+}
+
+.edsync-emil-dots button[aria-current="true"] {
+  width: 1.8rem;
+  background: #23d18b;
+}
+
+.edsync-emil-workflow {
+  min-height: 100svh;
+  padding-block: clamp(3rem, 8vh, 6rem);
+}
+
+.edsync-emil-workflow-card {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(28rem, 1.28fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+  min-height: 68svh;
+}
+
+.edsync-emil-workflow-copy span {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  color: color-mix(in srgb, currentColor 76%, transparent);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.edsync-emil-workflow-copy h2 {
+  margin-top: 1rem;
+  max-width: 12ch;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2.6rem, 6vw, 5.8rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.edsync-emil-workflow-copy p {
+  margin-top: 1rem;
+  max-width: 32rem;
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.edsync-emil-workflow-copy div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.2rem;
+}
+
+.edsync-emil-workflow-screen {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 1rem;
+  box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.26);
+}
+
+:root:not(.dark) .edsync-emil-workflow-screen {
+  border-color: rgba(8, 19, 34, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 2rem 4rem rgba(15, 23, 42, 0.12);
+}
+
+.edsync-emil-workflow-window {
+  min-height: 24rem;
+  border-radius: 1.4rem;
+  background: #f8fafc;
+  color: #081322;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.edsync-emil-workflow-window strong,
+.edsync-emil-workflow-window span {
+  display: block;
+}
+
+.edsync-emil-workflow-window strong {
+  margin-top: 1rem;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3.5rem);
+  font-weight: 900;
+  line-height: 0.98;
+}
+
+.edsync-emil-workflow-window > span {
+  margin-top: 0.9rem;
+  max-width: 32rem;
+  color: #475569;
+  font-weight: 650;
+  line-height: 1.65;
+}
+
+.edsync-emil-workflow-window div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: 1.4rem;
+}
+
+.edsync-emil-workflow-window p {
+  background: #eaf2fb;
+  color: #172033;
+}
+
+.edsync-emil-workflow-tabs {
+  gap: 0.55rem;
+  border-top: 2px solid #23d18b;
+  padding-top: 0.8rem;
+  overflow-x: auto;
+}
+
+.edsync-emil-workflow-tabs button {
+  display: inline-flex;
+  min-width: 12rem;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.07);
+  color: inherit;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.edsync-emil-workflow-tabs button[aria-current="true"] {
+  background: #f8fafc;
+  color: #07111f;
+}
+
+:root:not(.dark) .edsync-emil-workflow-tabs button {
+  border-color: rgba(8, 19, 34, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:root:not(.dark) .edsync-emil-workflow-tabs button[aria-current="true"] {
+  background: #07111f;
+  color: #f8fafc;
+}
+
+.edsync-emil-catalog {
+  padding-block: clamp(2rem, 5vh, 4rem) clamp(4rem, 8vh, 7rem);
+}
+
+.edsync-emil-search {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.22);
+}
+
+:root:not(.dark) .edsync-emil-search {
+  border-color: rgba(8, 19, 34, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 1.5rem 4rem rgba(15, 23, 42, 0.12);
+}
+
+.edsync-emil-search > div:first-child span {
+  color: #23d18b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.edsync-emil-search h2 {
+  margin-top: 0.25rem;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.edsync-emil-search form {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.65rem;
+}
+
+:root:not(.dark) .edsync-emil-search form {
+  border-color: rgba(8, 19, 34, 0.12);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.edsync-emil-search input,
+.edsync-emil-search select {
+  min-height: 2.8rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  outline: none;
+}
+
+.edsync-emil-search input {
+  flex: 1 1 22rem;
+}
+
+.edsync-emil-search select {
+  flex: 0 1 12rem;
+}
+
+.edsync-emil-search button {
+  border: 0;
+  border-radius: 0.8rem;
+  background: #23d18b;
+  color: #07111f;
+  padding: 0.8rem 1.1rem;
+  font-weight: 900;
+}
+
+.edsync-emil-search > div:last-child {
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.edsync-emil-search a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@keyframes emilFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edsync-emil-device {
+    animation: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .edsync-emil-hero-grid,
+  .edsync-emil-workflow-card {
+    grid-template-columns: 1fr;
+  }
+
+  .edsync-emil-hero-grid {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .edsync-emil-hero {
+    padding: 0.8rem;
+  }
+
+  .edsync-emil-floating {
+    align-items: flex-start;
+  }
+
+  .edsync-emil-actions {
+    justify-content: flex-end;
+  }
+
+  .edsync-emil-brand small,
+  .edsync-emil-signin span,
+  .edsync-emil-kicker,
+  .edsync-emil-copy p,
+  .edsync-emil-jump,
+  .edsync-emil-sidecard {
+    display: none;
+  }
+
+  .edsync-emil-copy h1 {
+    max-width: 8ch;
+    font-size: clamp(3rem, 17vw, 4.8rem);
+  }
+
+  .edsync-emil-roles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edsync-emil-roles a {
+    justify-content: center;
+  }
+
+  .edsync-emil-device {
+    min-height: auto;
+    border-radius: 1.4rem;
+  }
+
+  .edsync-emil-device-body {
+    grid-template-columns: 4.6rem minmax(0, 1fr);
+    min-height: 22rem;
+  }
+
+  .edsync-emil-toolrail span {
+    padding: 0.48rem;
+    font-size: 0.66rem;
+  }
+
+  .edsync-emil-toolbar span:nth-child(n+3),
+  .edsync-emil-canvas p:nth-of-type(n+3) {
+    display: none;
+  }
+
+  .edsync-emil-workflow {
+    min-height: auto;
+  }
+
+  .edsync-emil-workflow-window div {
+    grid-template-columns: 1fr;
+  }
+
+  .edsync-emil-workflow-tabs button {
+    min-width: 10rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .edsync-emil-floating,
+  .edsync-emil-cta-row {
+    gap: 0.45rem;
+  }
+
+  .edsync-emil-brand > span {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .edsync-emil-brand strong {
+    font-size: 0.82rem;
+  }
+
+  .edsync-emil-signin,
+  .edsync-emil-secondary,
+  .edsync-emil-primary {
+    padding: 0.68rem 0.72rem;
+    font-size: 0.82rem;
+  }
+
+  .edsync-emil-device-body {
+    grid-template-columns: 1fr;
+  }
+
+  .edsync-emil-toolrail {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .edsync-emil-search form {
+    align-items: stretch;
+  }
+
+  .edsync-emil-search input,
+  .edsync-emil-search select,
+  .edsync-emil-search button {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
