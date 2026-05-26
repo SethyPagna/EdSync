@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +13,7 @@ import {
   TimerReset,
   Trash2,
 } from "lucide-react";
+import { ALL_CLASSES_SCOPE, classScopeFromSearchParams, scopedClassHref } from "@/lib/classes/class-scope";
 import type { Announcement, ScheduleEvent } from "@/types";
 
 type StudentPlannerData = {
@@ -51,6 +52,11 @@ const VIEW_OPTIONS: Array<{ key: PlannerView; label: string }> = [
   { key: "notifications", label: "Notifications" },
   { key: "study", label: "My study" },
 ];
+
+function classScopeFromLocation() {
+  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
+  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+}
 
 function dateTimeLabel(value: string | null) {
   if (!value) return "No time set";
@@ -95,11 +101,13 @@ export default function StudentPlannerPage() {
   const [view, setView] = useState<PlannerView>("upcoming");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [requestedClassId] = useState(classScopeFromLocation);
 
-  const loadPlanner = async () => {
+  const loadPlanner = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/planner", { cache: "no-store", credentials: "include" });
+      const query = requestedClassId === ALL_CLASSES_SCOPE ? "" : `?classId=${encodeURIComponent(requestedClassId)}`;
+      const response = await fetch(`/api/planner${query}`, { cache: "no-store", credentials: "include" });
       const payload = (await response.json()) as PlannerResponse;
       if (!response.ok || payload.error) {
         toast.error(payload.error?.message || "Could not load planner.");
@@ -109,11 +117,11 @@ export default function StudentPlannerPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestedClassId]);
 
   useEffect(() => {
     loadPlanner();
-  }, []);
+  }, [loadPlanner]);
 
   const filteredEvents = useMemo(() => {
     if (view === "deadlines") {
@@ -191,9 +199,16 @@ export default function StudentPlannerPage() {
               See class notifications, due dates, live sessions, and your own study plan in one place.
             </p>
           </div>
-          <Link href="/student/work" className="btn-secondary w-fit px-3 py-2 text-sm">
+          <div className="flex flex-wrap gap-2">
+          {requestedClassId !== ALL_CLASSES_SCOPE && (
+            <Link href="/student/planner" className="btn-secondary w-fit px-3 py-2 text-sm">
+              All planner
+            </Link>
+          )}
+          <Link href={scopedClassHref("/student/work", requestedClassId)} className="btn-secondary w-fit px-3 py-2 text-sm">
             My work <ArrowRight className="h-4 w-4" />
           </Link>
+          </div>
         </div>
       </header>
 
