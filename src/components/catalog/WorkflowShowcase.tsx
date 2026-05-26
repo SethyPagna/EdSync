@@ -110,8 +110,8 @@ function labelsForLanguage(language?: string | null): WorkflowLabels {
     Thai: { media: "สื่อ", provider: "ผู้ให้บริการ", review: "ตรวจทาน", security: "ความปลอดภัย", healthy: "พร้อม", route: "เส้นทาง", events: "เหตุการณ์", audit: "ตรวจสอบ", slides: "สไลด์", quiz: "ควิซ", rubric: "รูบริก", retry: "ลองใหม่", proof: "หลักฐาน", text: "ข้อความ", insert: "แทรก", image: "รูปภาพ", questions: "ข้อ", points: "คะแนน", submissions: "งานส่ง", attempt: "ครั้ง", checks: "ตรวจ", fallback: "สำรอง", exam: "สอบ", flashcards: "บัตรคำ", sprint: "สปรินต์", admin: "แอดมิน" },
     Vietnamese: { media: "Phương tiện", provider: "Nhà cung cấp", review: "Duyệt", security: "Bảo mật", healthy: "Ổn định", route: "Tuyến", events: "Sự kiện", audit: "Kiểm toán", slides: "slide", quiz: "quiz", rubric: "rubric", retry: "làm lại", proof: "bằng chứng", text: "Văn bản", insert: "Chèn", image: "Ảnh", questions: "câu hỏi", points: "điểm", submissions: "bài nộp", attempt: "Lượt làm", checks: "kiểm tra", fallback: "Dự phòng", exam: "bài thi", flashcards: "thẻ nhớ", sprint: "sprint", admin: "Quản trị" },
   };
-  const grades = fallbackGrades || progressLabels.English;
-  const utility = utilityLabels.English;
+  const grades = fallbackGrades || progressLabels[publicLanguage] || progressLabels.English;
+  const utility = utilityLabels[publicLanguage] || utilityLabels.English;
 
   return {
     catalog: copy.catalogLabel,
@@ -138,10 +138,10 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
   return [
   {
     id: "overview",
-    title: `${labels.start} + ${labels.workflow}`,
+    title: labels.workflow,
     shortTitle: labels.start,
-    headline: `${labels.courses}. ${labels.studio}. ${labels.practice}.`,
-    subtitle: `${labels.catalog}, ${labels.studio}, ${labels.ai}, ${labels.practice}, ${labels.grades}.`,
+    headline: "One lesson loop.",
+    subtitle: "Catalog, organization access, lesson canvas, AI, practice, and evidence stay connected.",
     route: "/catalog#catalog-search-panel",
     icon: Wand2,
     accent: "text-edsync-emerald",
@@ -152,9 +152,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.grades, value: labels.practice },
     ],
     rows: [
-      { title: labels.catalog, detail: `${labels.search}, ${labels.filters}, ${labels.signIn}`, status: labels.search },
-      { title: labels.studio, detail: `${labels.courses}, ${labels.ai}, ${labels.practice}`, status: labels.start },
-      { title: labels.practice, detail: `${labels.practice}, ${labels.grades}, ${labels.workflow}`, status: labels.grades },
+      { title: labels.catalog, detail: "Public course or private organization portal.", status: labels.search },
+      { title: labels.studio, detail: "Teacher creates a page-based lesson canvas.", status: labels.start },
+      { title: labels.practice, detail: "Student plays, retries, and sends grade evidence.", status: labels.grades },
     ],
     sideTitle: "EdSync",
     sideRows: [labels.catalog, labels.studio, labels.ai, labels.practice],
@@ -164,8 +164,8 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     id: "catalog",
     title: labels.catalog,
     shortTitle: labels.catalog,
-    headline: `${labels.search} ${labels.courses.toLowerCase()}.`,
-    subtitle: `${labels.catalog}: ${labels.free}, ${labels.paid}, ${labels.duration}, ${labels.difficulty}.`,
+    headline: "Browse first. Sign in when ready.",
+    subtitle: "Individuals buy or start courses. Organizations route teachers and students through their portal.",
     route: "/catalog",
     icon: Search,
     accent: "text-edsync-cyan",
@@ -176,9 +176,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.signIn, value: labels.start },
     ],
     rows: [
-      { title: labels.search, detail: `${labels.filters}: ${labels.free}, ${labels.paid}, ${labels.duration}`, status: labels.search },
-      { title: labels.featured, detail: `${labels.catalog} -> ${labels.courses}`, status: labels.catalog },
-      { title: labels.signIn, detail: `${labels.signIn} -> ${labels.start}`, status: labels.start },
+      { title: labels.search, detail: "Search by topic, price, duration, language, and portal.", status: labels.search },
+      { title: labels.featured, detail: "Course cards show preview, price, and availability.", status: labels.catalog },
+      { title: labels.signIn, detail: "Login returns to the selected course or academy.", status: labels.start },
     ],
     sideTitle: labels.catalog,
     sideRows: [labels.search, labels.filters, labels.signIn, labels.start],
@@ -188,8 +188,8 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     id: "studio",
     title: labels.studio,
     shortTitle: labels.studio,
-    headline: `${labels.studio} -> ${labels.courses}.`,
-    subtitle: `${labels.studio}: ${labels.courses}, ${labels.ai}, ${labels.practice}, ${labels.grades}.`,
+    headline: "Create like a slide canvas.",
+    subtitle: "Templates, elements, media, text, quizzes, games, and AI sit in one lesson editor.",
     route: "/teacher/lessons/create",
     icon: Presentation,
     accent: "text-edsync-blue",
@@ -200,9 +200,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.start, value: "D1" },
     ],
     rows: [
-      { title: labels.studio, detail: `${labels.courses}, ${labels.ai}, ${labels.practice}`, status: labels.start },
-      { title: labels.courses, detail: `${labels.studio} -> ${labels.courses}`, status: labels.courses },
-      { title: labels.practice, detail: `${labels.practice} -> ${labels.grades}`, status: labels.grades },
+      { title: labels.studio, detail: "Canva-style blocks, slide thumbnails, and page tools.", status: labels.start },
+      { title: labels.courses, detail: "Publish as class lesson or catalog course.", status: labels.courses },
+      { title: labels.practice, detail: "Insert quizzes, sprint rounds, and review cards.", status: labels.grades },
     ],
     sideTitle: labels.studio,
     sideRows: [labels.studio, labels.courses, labels.ai, labels.practice],
@@ -212,8 +212,8 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     id: "ai",
     title: labels.ai,
     shortTitle: "AI",
-    headline: `${labels.ai} -> ${labels.studio}.`,
-    subtitle: `${labels.ai}: ${labels.courses}, ${labels.practice}, ${labels.grades}.`,
+    headline: "AI drafts into editable designs.",
+    subtitle: "Prompts create outlines, slides, quizzes, rubrics, and variants without auto-publishing.",
     route: "/ai",
     icon: Wand2,
     accent: "text-edsync-emerald",
@@ -224,9 +224,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.studio, value: labels.start },
     ],
     rows: [
-      { title: labels.ai, detail: `${labels.duration}, ${labels.difficulty}, ${labels.courses}`, status: labels.start },
-      { title: labels.practice, detail: `${labels.ai} -> ${labels.practice}`, status: labels.practice },
-      { title: labels.studio, detail: `${labels.ai} -> ${labels.studio}`, status: labels.studio },
+      { title: labels.ai, detail: "Choose topic, level, tone, length, and activity type.", status: labels.start },
+      { title: labels.practice, detail: "Convert lesson content into quiz, sprint, or flashcards.", status: labels.practice },
+      { title: labels.studio, detail: "Teacher reviews and restyles before assigning.", status: labels.studio },
     ],
     sideTitle: labels.ai,
     sideRows: [labels.ai, labels.studio, labels.practice, labels.grades],
@@ -236,8 +236,8 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     id: "teacher",
     title: labels.grades,
     shortTitle: labels.grades,
-    headline: `${labels.practice} -> ${labels.grades}.`,
-    subtitle: `${labels.grades}: ${labels.practice}, ${labels.courses}, ${labels.start}.`,
+    headline: "Assign once. Track the class.",
+    subtitle: "Work, discussions, planner events, deadlines, and feedback stay scoped to the class.",
     route: "/teacher/dashboard",
     icon: CalendarCheck,
     accent: "text-edsync-blue",
@@ -248,9 +248,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.practice, value: labels.courses },
     ],
     rows: [
-      { title: labels.studio, detail: `${labels.studio} -> ${labels.practice}`, status: labels.start },
-      { title: labels.duration, detail: `${labels.duration}, ${labels.grades}`, status: labels.practice },
-      { title: labels.grades, detail: `${labels.grades} -> ${labels.practice}`, status: labels.grades },
+      { title: labels.studio, detail: "Lesson connects to work, planner, and discussions.", status: labels.start },
+      { title: labels.duration, detail: "Deadlines and expected time are visible to students.", status: labels.practice },
+      { title: labels.grades, detail: "Feedback can be draft, released, weighted, or completion-only.", status: labels.grades },
     ],
     sideTitle: labels.grades,
     sideRows: [labels.studio, labels.duration, labels.grades, labels.practice],
@@ -260,8 +260,8 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     id: "practice",
     title: labels.practice,
     shortTitle: labels.practice,
-    headline: `${labels.practice}. ${labels.grades}.`,
-    subtitle: `${labels.practice}: ${labels.quiz}, ${labels.sprint}, ${labels.flashcards}, ${labels.retry}, ${labels.review}.`,
+    headline: "Practice feels like play.",
+    subtitle: "Quiz, exam, flashcards, matching, sprint, retry missed, and explanations run together.",
     route: "/practice",
     icon: Trophy,
     accent: "text-edsync-amber",
@@ -272,9 +272,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.route, value: "/practice" },
     ],
     rows: [
-      { title: labels.practice, detail: `${labels.quiz}, ${labels.exam}, ${labels.flashcards}, ${labels.sprint}`, status: labels.start },
-      { title: labels.duration, detail: `${labels.duration}, ${labels.grades}`, status: labels.practice },
-      { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: labels.grades },
+      { title: labels.practice, detail: "Color feedback, speed, accuracy, points, and streaks.", status: labels.start },
+      { title: labels.duration, detail: "Timed modes pause, restart, and summarize attempts.", status: labels.practice },
+      { title: labels.grades, detail: "Missed concepts become review recommendations.", status: labels.grades },
     ],
     sideTitle: labels.practice,
     sideRows: [labels.practice, labels.duration, labels.grades, labels.start],
@@ -284,8 +284,8 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     id: "admin",
     title: `${labels.grades} + ${labels.admin}`,
     shortTitle: labels.grades,
-    headline: `${labels.grades} -> ${labels.admin}.`,
-    subtitle: `${labels.grades}, ${labels.ai}, ${labels.catalog}, ${labels.practice}.`,
+    headline: "Evidence becomes control.",
+    subtitle: "Admins see portals, AI routing, security events, feature flags, and audit trails.",
     route: "/admin/dashboard",
     icon: BarChart3,
     accent: "text-edsync-purple",
@@ -296,9 +296,9 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
       { label: labels.catalog, value: labels.audit },
     ],
     rows: [
-      { title: labels.grades, detail: `${labels.practice} -> ${labels.grades}`, status: labels.audit },
-      { title: labels.practice, detail: `${labels.practice} -> ${labels.start}`, status: labels.practice },
-      { title: labels.ai, detail: `${labels.ai}, ${labels.catalog}, ${labels.grades}`, status: labels.ai },
+      { title: labels.grades, detail: "Grade events are auditable and tenant-scoped.", status: labels.audit },
+      { title: labels.practice, detail: "Progress reports show where to intervene.", status: labels.practice },
+      { title: labels.ai, detail: "Provider keys, health, fallback, and limits stay managed.", status: labels.ai },
     ],
     sideTitle: labels.grades,
     sideRows: [labels.practice, labels.grades, labels.ai, labels.catalog],
@@ -593,11 +593,11 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
 
     const triggerStep = (direction: 1 | -1, event?: WheelEvent) => {
       if (!isInWorkflowViewport(event)) return false;
+      event?.preventDefault();
       const nextIndex = activeIndexRef.current + direction;
       if (nextIndex < 0 || nextIndex >= slides.length) {
         const now = Date.now();
         const release = boundaryReleaseRef.current;
-        event?.preventDefault();
         if (!release || release.direction !== direction || release.until < now) {
           boundaryReleaseRef.current = { direction, until: now + 1100 };
           manualControlUntilRef.current = now + 1400;
@@ -612,10 +612,8 @@ export default function WorkflowShowcase({ language }: WorkflowShowcaseProps) {
         return true;
       }
       if (Date.now() < scrollControlUntilRef.current) {
-        event?.preventDefault();
         return true;
       }
-      event?.preventDefault();
       boundaryReleaseRef.current = null;
       scrollControlUntilRef.current = Date.now() + 620;
       manualControlUntilRef.current = Date.now() + 1200;
