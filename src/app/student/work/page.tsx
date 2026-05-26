@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { BookOpenCheck, CalendarClock, CheckCircle2, Send, TimerReset } from "lucide-react";
+import { ALL_CLASSES_SCOPE, classScopeFromSearchParams } from "@/lib/classes/class-scope";
 import { normalizeWorkGradingSettings, workGradingLabel } from "@/lib/work/grading";
 
 type WorkItem = {
@@ -27,6 +29,11 @@ const FILTERS: Array<{ key: WorkFilter; label: string }> = [
   { key: "submitted", label: "Submitted" },
   { key: "all", label: "All" },
 ];
+
+function classScopeFromLocation() {
+  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
+  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+}
 
 function dueLabel(value: string | null) {
   if (!value) return "No due date";
@@ -58,18 +65,20 @@ export default function StudentWorkPage() {
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<WorkFilter>("open");
   const [loading, setLoading] = useState(true);
+  const [requestedClassId] = useState(classScopeFromLocation);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    fetch("/api/work", { cache: "no-store" })
+    const query = requestedClassId === ALL_CLASSES_SCOPE ? "" : `?classId=${encodeURIComponent(requestedClassId)}`;
+    fetch(`/api/work${query}`, { cache: "no-store" })
       .then((response) => response.json())
       .then((payload) => setItems(payload.data ?? []))
       .finally(() => setLoading(false));
-  };
+  }, [requestedClassId]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const submit = async (workItemId: string) => {
     const responseText = responses[workItemId] || "";
@@ -117,9 +126,10 @@ export default function StudentWorkPage() {
             <h1 className="mt-1 font-display text-3xl font-bold">My work</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
               {openCount} to do, {submittedCount} submitted
+              {requestedClassId !== ALL_CLASSES_SCOPE ? " in this class" : ""}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
             {FILTERS.map((item) => (
               <button
                 key={item.key}
@@ -134,6 +144,11 @@ export default function StudentWorkPage() {
                 {item.label}
               </button>
             ))}
+            {requestedClassId !== ALL_CLASSES_SCOPE && (
+              <Link href="/student/work" className="btn-secondary col-span-2 justify-center px-3 py-2 text-sm sm:col-span-4 lg:col-span-1">
+                All work
+              </Link>
+            )}
           </div>
         </div>
       </section>
