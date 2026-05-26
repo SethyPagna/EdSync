@@ -28,6 +28,7 @@ export default function TeacherDiscussionsPage() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ title: "", prompt: "", classId: "" });
+  const [selectedClassId, setSelectedClassId] = useState("all");
 
   const load = () => {
     fetch("/api/teacher/roster", { cache: "no-store" })
@@ -46,6 +47,14 @@ export default function TeacherDiscussionsPage() {
     () => threads.reduce((sum, thread) => sum + Number(thread.post_count ?? 0), 0),
     [threads],
   );
+  const selectedClass = useMemo(
+    () => classes.find((classRow) => classRow.id === selectedClassId) ?? null,
+    [classes, selectedClassId],
+  );
+  const filteredThreads = useMemo(() => {
+    if (!selectedClass) return threads;
+    return threads.filter((thread) => thread.class_name === selectedClass.name);
+  }, [selectedClass, threads]);
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -77,10 +86,55 @@ export default function TeacherDiscussionsPage() {
               {threads.length} thread{threads.length !== 1 ? "s" : ""}, {postCount} posts
             </p>
           </div>
-          <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-primary justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedClass) setForm((current) => ({ ...current, classId: selectedClass.id }));
+              setFormOpen((value) => !value);
+            }}
+            className="btn-primary justify-center"
+          >
             <Plus className="h-4 w-4" />
             {formOpen ? "Close" : "New discussion"}
           </button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
+            <p className="mt-1 text-sm text-edsync-subtle">
+              View every discussion, or focus on the threads attached to one class.
+            </p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
+            <button
+              type="button"
+              onClick={() => setSelectedClassId("all")}
+              className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                selectedClassId === "all"
+                  ? "border-edsync-blue bg-edsync-blue text-white"
+                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+              }`}
+            >
+              All classes
+            </button>
+            {classes.map((classRow) => (
+              <button
+                key={classRow.id}
+                type="button"
+                onClick={() => setSelectedClassId(classRow.id)}
+                className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                  selectedClassId === classRow.id
+                    ? "border-edsync-blue bg-edsync-blue text-white"
+                    : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                }`}
+              >
+                {classRow.name}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -122,10 +176,10 @@ export default function TeacherDiscussionsPage() {
 
       <section className="rounded-xl border border-edsync-border bg-edsync-card">
         <div className="divide-y divide-edsync-border">
-          {threads.length === 0 ? (
+          {filteredThreads.length === 0 ? (
             <p className="p-5 text-sm text-edsync-subtle">No discussions yet.</p>
           ) : (
-            threads.map((thread) => (
+            filteredThreads.map((thread) => (
               <article key={thread.id} className="grid gap-3 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-center">
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap gap-2">
