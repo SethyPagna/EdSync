@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
 import {
@@ -23,6 +24,7 @@ import type {
   ContentType,
 } from "@/types";
 import { getStatusBadge, formatRelativeTime } from "@/lib/utils";
+import { scopedClassHref } from "@/lib/classes/class-scope";
 import toast from "react-hot-toast";
 
 type Tab = "overview" | "sections" | "questions" | "glossary" | "assign";
@@ -2331,14 +2333,34 @@ export default function TeacherLessonDetail() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        if (confirm("Remove?")) unassign(a.class_id);
-                      }}
-                      className="text-edsync-subtle hover:text-edsync-red text-xs"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <Link
+                        href={scopedClassHref("/teacher/work", a.class_id)}
+                        className="btn-secondary px-2.5 py-1.5 text-xs"
+                      >
+                        Work
+                      </Link>
+                      <Link
+                        href={scopedClassHref("/teacher/discussions", a.class_id)}
+                        className="btn-secondary px-2.5 py-1.5 text-xs"
+                      >
+                        Discuss
+                      </Link>
+                      <Link
+                        href={scopedClassHref("/teacher/planner", a.class_id)}
+                        className="btn-secondary px-2.5 py-1.5 text-xs"
+                      >
+                        Plan
+                      </Link>
+                      <button
+                        onClick={() => {
+                          if (confirm("Remove?")) unassign(a.class_id);
+                        }}
+                        className="text-edsync-subtle hover:text-edsync-red text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
