@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { CalendarClock, Megaphone, Plus, Send, TimerReset, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
@@ -50,10 +50,14 @@ function formatWhen(event: ScheduleEvent) {
   });
 }
 
+function classScopeFromLocation() {
+  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
+  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+}
+
 export default function TeacherPlannerPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedClassId = classScopeFromSearchParams(searchParams);
+  const [requestedClassId, setRequestedClassId] = useState(classScopeFromLocation);
   const edsync = useMemo(() => createClient(), []);
   const [classes, setClasses] = useState<Class[]>([]);
   const [planner, setPlanner] = useState<PlannerData>({ announcements: [], events: [] });
@@ -109,6 +113,7 @@ export default function TeacherPlannerPage() {
   }, [classes, requestedClassId]);
 
   const chooseClassScope = (classId: string) => {
+    setRequestedClassId(classId);
     setSelectedClassId(classId);
     if (classId !== ALL_CLASSES_SCOPE) {
       setForm((current) => ({ ...current, classId }));
