@@ -192,7 +192,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
                   </button>
                   <button type="button" onClick={() => setAiOpen((value) => !value)} className="btn-secondary px-3 py-2 text-sm">
                     <Sparkles className="h-4 w-4" />
-                    {aiOpen ? "Hide AI" : "AI Tutor"}
+                    {aiOpen ? "Hide AI" : "AI Copilot"}
                   </button>
                 </div>
               </div>
