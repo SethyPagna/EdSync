@@ -586,7 +586,7 @@ export default function StudentDashboard() {
             </div>
             {visibility.practice && (
               <Link href="/practice" className="btn-secondary justify-center text-sm">
-                Practice + AI
+                Practice & AI
               </Link>
             )}
           </div>
@@ -782,7 +782,7 @@ export default function StudentDashboard() {
               <div className="mt-4 grid gap-2">
                 {visibility.practice && (
                   <Link href="/practice" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Practice + AI <ArrowRight className="h-4 w-4" />
+                    Practice & AI <ArrowRight className="h-4 w-4" />
                   </Link>
                 )}
                 {visibility.grades && (
