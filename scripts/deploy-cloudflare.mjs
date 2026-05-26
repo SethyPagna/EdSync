@@ -88,23 +88,28 @@ if (!accountId || !hasCloudflareAuth) {
 const environment = process.argv.includes("--preview") ? "preview" : "production";
 const pagesProject = process.env.CLOUDFLARE_PAGES_PROJECT || "edsync";
 const envArgs = environment === "production" ? ["--env", "production"] : ["--env", "preview"];
+const skipSecretSync = process.env.CLOUDFLARE_SKIP_SECRET_SYNC === "1";
 
 await ensurePagesProject(pagesProject);
 
-for (const key of [
-  "APP_ENCRYPTION_KEY",
-  "CLOUDFLARE_ACCOUNT_ID",
-  "CLOUDFLARE_API_TOKEN",
-  "CLOUDFLARE_AI_GATEWAY_URL",
-  "R2_ACCESS_KEY_ID",
-  "R2_SECRET_ACCESS_KEY",
-  "SESSION_SECRET",
-  "STRIPE_SECRET_KEY",
-  "STRIPE_WEBHOOK_SECRET",
-  "TURNSTILE_SECRET_KEY",
-  "TURNSTILE_SITE_KEY",
-]) {
-  putWorkerSecret(key, "wrangler.app.jsonc", environment);
+if (!skipSecretSync) {
+  for (const key of [
+    "APP_ENCRYPTION_KEY",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_AI_GATEWAY_URL",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "SESSION_SECRET",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "TURNSTILE_SECRET_KEY",
+    "TURNSTILE_SITE_KEY",
+  ]) {
+    putWorkerSecret(key, "wrangler.app.jsonc", environment);
+  }
+} else {
+  console.log("Skipping Worker secret sync because CLOUDFLARE_SKIP_SECRET_SYNC=1.");
 }
 
 run("npx", ["opennextjs-cloudflare", "build", "--config", "wrangler.app.jsonc", ...envArgs]);
