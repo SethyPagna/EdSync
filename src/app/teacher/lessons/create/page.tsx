@@ -1034,15 +1034,15 @@ export default function CreateLesson() {
               key: "mode",
               label:
                 creationMode === "manual"
-                  ? "1 Manual"
+                  ? "1 Blank lesson"
                   : creationMode === "ai_full"
                     ? "1 Full AI"
-                    : "1 AI Collab",
+                    : "1 AI draft",
             },
             ...(creationMode !== "manual"
-              ? [{ key: "import", label: "2 Import" }]
+              ? [{ key: "import", label: "2 Source" }]
               : []),
-            { key: "edit", label: creationMode === "manual" ? "2 Edit" : "3 Edit" },
+            { key: "edit", label: creationMode === "manual" ? "2 Canvas" : "3 Canvas" },
           ].map((pill, i) => (
             <span
               key={pill.key}
