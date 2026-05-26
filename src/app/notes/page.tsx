@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import StudioWorkspace from "@/components/studio/StudioWorkspace";
 import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
@@ -7,8 +6,27 @@ export const metadata = {
   description: "Create and organize personal EdSync notes, drafts, and learning materials.",
 };
 
-export default async function NotesPage() {
+type NotesPageProps = {
+  searchParams?: {
+    adminView?: string;
+  };
+};
+
+export default async function NotesPage({ searchParams }: NotesPageProps) {
   const user = await getSessionUser().catch(() => null);
-  if (!user) redirect("/auth/login?next=/notes");
-  return <StudioWorkspace initialKind="note" />;
+  const adminView =
+    user?.user_metadata.role === "admin" &&
+    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+      ? searchParams.adminView
+      : null;
+  const nextPath = `/notes${adminView ? `?adminView=${adminView}` : ""}`;
+
+  if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
+  if (adminView === "teacher" || user.user_metadata.role === "teacher") {
+    redirect(`/teacher/notes${adminView ? `?adminView=${adminView}` : ""}`);
+  }
+  if (adminView === "student" || user.user_metadata.role === "student") {
+    redirect(`/student/notes${adminView ? `?adminView=${adminView}` : ""}`);
+  }
+  redirect("/admin/dashboard");
 }
