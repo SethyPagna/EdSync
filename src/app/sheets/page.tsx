@@ -16,12 +16,13 @@ type SheetsPageProps = {
 
 export default async function SheetsPage({ searchParams }: SheetsPageProps) {
   const user = await getSessionUser().catch(() => null);
-  const adminView =
-    user?.user_metadata.role === "admin" &&
-    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+  const requestedAdminView =
+    searchParams?.adminView === "teacher" || searchParams?.adminView === "student"
       ? searchParams.adminView
       : null;
-  const nextPath = `/sheets${adminView ? `?adminView=${adminView}` : ""}`;
+  const adminView =
+    user?.user_metadata.role === "admin" ? requestedAdminView : null;
+  const nextPath = `/sheets${requestedAdminView ? `?adminView=${requestedAdminView}` : ""}`;
 
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
 
