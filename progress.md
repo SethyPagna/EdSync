@@ -542,6 +542,8 @@
 - Verification for this compatibility shell pass: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` passed with 229 tests. Local signed-out smoke checks returned 307 redirects preserving `next` for `/notes?adminView=student`, `/docs?adminView=teacher`, `/sheets?adminView=student`, and `/slides?adminView=teacher`.
 - Continued visible-label alignment on 2026-05-26: renamed the teacher new-lesson visible header from "Lesson Creation Studio" to "Lesson Creation Canvas" and aligned student dashboard shortcuts with the shared "Practice & AI" navigation label.
 - Verification for this visible-label pass: `npm.cmd run typecheck` and `npm.cmd run lint` passed with no warnings.
+- Continued class-scoped workflow integration on 2026-05-26: added shared class-scope route helpers, wired Teacher Work, Discussions, and Planner to honor and maintain `?classId=...`, and added scoped Work/Discuss/Plan jumps from assigned lesson cards. This keeps global pages available while allowing each class/course to open its connected work, discussion, and schedule context directly.
+- Verification for this class-scope pass: focused helper tests passed, then `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build` passed with 232 tests. Local signed-out smoke checks confirmed `/teacher/work?classId=class-123`, `/teacher/discussions?classId=class-123`, and `/teacher/planner?classId=class-123` redirect to login with the scoped `next` target preserved. The first build attempt caught `useSearchParams()` CSR bailout errors on the three teacher pages; those were fixed by using a lazy client-side location read instead.
 
 ## Update Protocol
 
