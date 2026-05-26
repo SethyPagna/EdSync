@@ -195,10 +195,11 @@ async function notifyClassStudents({
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return jsonError("Authentication required.", 401);
   const context = await resolveTenantContext(user);
+  const classId = new URL(request.url).searchParams.get("classId");
 
   const role = user.user_metadata.role;
   if (role === "teacher") {
@@ -210,9 +211,10 @@ export async function GET() {
            ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
           WHERE ${tenantObjectPredicate({ linkAlias: "class_link" })}
             AND a.teacher_id = ?
+            ${classId ? "AND a.class_id = ?" : ""}
           ORDER BY datetime(a.publish_at) DESC, datetime(a.created_at) DESC
           LIMIT 20`,
-        [...classScopeParams(context.tenant.id), user.id],
+        classId ? [...classScopeParams(context.tenant.id), user.id, classId] : [...classScopeParams(context.tenant.id), user.id],
       ),
       d1Query(
         `SELECT e.*, c.name AS class_name, l.title AS lesson_title
@@ -220,18 +222,30 @@ export async function GET() {
            LEFT JOIN classes c ON c.id = e.class_id
            LEFT JOIN lessons l ON l.id = e.lesson_id
            ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
-          WHERE (e.owner_id = ? AND e.class_id IS NULL)
-             OR (${tenantObjectPredicate({ linkAlias: "class_link" })}
-                AND (e.owner_id = ? OR c.teacher_id = ?))
+          WHERE (
+              (e.owner_id = ? AND e.class_id IS NULL)
+              OR (${tenantObjectPredicate({ linkAlias: "class_link" })}
+                 AND (e.owner_id = ? OR c.teacher_id = ?))
+            )
+            ${classId ? "AND e.class_id = ?" : ""}
           ORDER BY COALESCE(e.due_at, e.starts_at, e.created_at) ASC
           LIMIT 30`,
-        [
-          classScopeParams(context.tenant.id)[0],
-          user.id,
-          ...classPredicateParams(context.tenant.id),
-          user.id,
-          user.id,
-        ],
+        classId
+          ? [
+              classScopeParams(context.tenant.id)[0],
+              user.id,
+              ...classPredicateParams(context.tenant.id),
+              user.id,
+              user.id,
+              classId,
+            ]
+          : [
+              classScopeParams(context.tenant.id)[0],
+              user.id,
+              ...classPredicateParams(context.tenant.id),
+              user.id,
+              user.id,
+            ],
       ),
     ]);
 
@@ -245,9 +259,12 @@ export async function GET() {
        ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "class_link" })}
       WHERE ce.student_id = ?
         AND ${tenantObjectPredicate({ linkAlias: "class_link" })}
+        ${classId ? "AND c.id = ?" : ""}
         AND ce.is_active = 1
         AND c.is_active = 1`,
-    [classScopeParams(context.tenant.id)[0], user.id, ...classPredicateParams(context.tenant.id)],
+    classId
+      ? [classScopeParams(context.tenant.id)[0], user.id, ...classPredicateParams(context.tenant.id), classId]
+      : [classScopeParams(context.tenant.id)[0], user.id, ...classPredicateParams(context.tenant.id)],
   );
   const classIds = classRows.map((row) => row.id);
   if (classIds.length === 0) {
@@ -255,6 +272,12 @@ export async function GET() {
   }
 
   const classPlaceholders = sqlInPlaceholders(classIds);
+  const eventWhere = classId
+    ? `e.class_id IN (${classPlaceholders}) AND e.visibility IN ('class', 'student')`
+    : `(e.class_id IN (${classPlaceholders}) AND e.visibility IN ('class', 'student'))
+           OR (e.owner_id = ? AND e.visibility = 'student')`;
+  const eventParams = classId ? classIds : [...classIds, user.id];
+
   const [announcements, events] = await Promise.all([
     d1Query(
       `SELECT a.*, c.name AS class_name
@@ -272,11 +295,10 @@ export async function GET() {
          FROM schedule_events e
          LEFT JOIN classes c ON c.id = e.class_id
          LEFT JOIN lessons l ON l.id = e.lesson_id
-        WHERE (e.class_id IN (${classPlaceholders}) AND e.visibility IN ('class', 'student'))
-           OR (e.owner_id = ? AND e.visibility = 'student')
+        WHERE ${eventWhere}
         ORDER BY COALESCE(e.due_at, e.starts_at, e.created_at) ASC
         LIMIT 30`,
-      [...classIds, user.id],
+      eventParams,
     ),
   ]);
 
