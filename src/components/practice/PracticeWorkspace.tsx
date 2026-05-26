@@ -57,7 +57,7 @@ const starterItems: PracticeItem[] = [
     id: "item-3",
     prompt: "Name one EdSync source that can generate practice.",
     answer: "notes",
-    explanation: "Notes, docs, sheets, slides, and lesson sections can all feed generated practice.",
+    explanation: "Notes, docs, sheets, slides, and lesson pages can all feed generated practice.",
     points: 2,
   },
 ];
