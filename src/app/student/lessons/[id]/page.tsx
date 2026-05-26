@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
+import { scopedClassHref } from "@/lib/classes/class-scope";
 import { sanitizeHtml } from "@/lib/security/html";
 import { classifySafeMediaUrl, safeImageUrl } from "@/lib/security/media";
 import type {
@@ -1334,6 +1336,17 @@ export default function StudentLesson() {
   };
 
   const currentSection = sections[sectionIdx];
+  const scopedStudentHref = (path: string) =>
+    lesson?.class_id ? scopedClassHref(path, lesson.class_id) : path;
+  const lessonContextLinks = [
+    { label: "Lesson content", href: "#lesson-content", active: true },
+    { label: "My work", href: scopedStudentHref("/student/work") },
+    { label: "Discussions", href: scopedStudentHref("/student/discussions") },
+    { label: "Planner", href: scopedStudentHref("/student/planner") },
+    { label: "Grades", href: scopedStudentHref("/student/grades") },
+    { label: "Personal notes", href: "/student/notes" },
+    { label: "Practice & AI", href: "/practice?mode=generated_from_materials&ai=1" },
+  ];
 
   // Progress calculation
   const totalSteps =
@@ -1476,9 +1489,50 @@ export default function StudentLesson() {
           </div>
         )}
 
-      <div className="max-w-5xl mx-auto px-4 py-8 flex gap-6">
+      <div className="mx-auto grid max-w-6xl gap-5 px-4 py-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside className="order-2 rounded-2xl border border-edsync-border bg-edsync-surface p-3 shadow-sm lg:sticky lg:top-24 lg:order-1 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => router.push("/student/lessons")}
+            className="mb-3 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 py-2 text-left text-xs font-bold text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue"
+          >
+            Back to lessons
+          </button>
+          <div className="rounded-2xl bg-edsync-card p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Lesson workspace</p>
+            <p className="mt-1 line-clamp-2 text-sm font-semibold text-edsync-text">{lesson?.title || "Current lesson"}</p>
+            <p className="mt-2 text-xs leading-5 text-edsync-subtle">
+              {lesson?.class_id ? "Class tools stay connected to this lesson." : "Personal tools for this lesson."}
+            </p>
+          </div>
+          <nav className="mt-3 grid gap-1" aria-label="Lesson workspace tools">
+            {lessonContextLinks.map((item) =>
+              item.href.startsWith("#") ? (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                    item.active
+                      ? "bg-edsync-blue text-white shadow-sm"
+                      : "text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+                  }`}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="rounded-xl px-3 py-2 text-sm font-semibold text-edsync-subtle transition hover:bg-edsync-card hover:text-edsync-text"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
+          </nav>
+        </aside>
         {/* ── MAIN CONTENT ── */}
-        <div className="flex-1 min-w-0 animate-fade-in">
+        <div id="lesson-content" className="order-1 min-w-0 animate-fade-in lg:order-2">
           {/* DIAGNOSTIC */}
           {phase === "diagnostic" &&
             (() => {
