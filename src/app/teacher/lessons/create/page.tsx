@@ -1062,7 +1062,7 @@ export default function CreateLesson() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-edsync-surface px-4 py-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-edsync-blue">
-                Lesson Creation Studio
+                Lesson Creation Canvas
               </p>
               <h2 className="font-display text-xl font-bold text-edsync-text">
                 Start with AI, a draft, or a blank canvas.
