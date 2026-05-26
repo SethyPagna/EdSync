@@ -53,6 +53,7 @@ export default function TeacherPlannerPage() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [planner, setPlanner] = useState<PlannerData>({ announcements: [], events: [] });
   const [form, setForm] = useState<PlannerForm>(emptyForm);
+  const [selectedClassId, setSelectedClassId] = useState("all");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -93,6 +94,19 @@ export default function TeacherPlannerPage() {
   useEffect(() => {
     loadPlanner();
   }, [loadPlanner]);
+
+  const selectedClass = useMemo(
+    () => classes.find((classRow) => classRow.id === selectedClassId) ?? null,
+    [classes, selectedClassId],
+  );
+  const visibleEvents = useMemo(() => {
+    if (!selectedClass) return planner.events;
+    return planner.events.filter((event) => event.class_name === selectedClass.name);
+  }, [planner.events, selectedClass]);
+  const visibleAnnouncements = useMemo(() => {
+    if (!selectedClass) return planner.announcements;
+    return planner.announcements.filter((announcement) => announcement.class_name === selectedClass.name);
+  }, [planner.announcements, selectedClass]);
 
   const submitPlannerItem = async () => {
     if (!form.classId) {
@@ -194,6 +208,47 @@ export default function TeacherPlannerPage() {
           {saving ? "Saving..." : form.mode === "announcement" ? "Send" : "Add"}
         </button>
       </header>
+
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
+            <p className="mt-1 text-sm text-edsync-subtle">
+              Use Planner across all classes, or focus notifications, deadlines, and events for one course.
+            </p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
+            <button
+              type="button"
+              onClick={() => setSelectedClassId("all")}
+              className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                selectedClassId === "all"
+                  ? "border-edsync-blue bg-edsync-blue text-white"
+                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+              }`}
+            >
+              All classes
+            </button>
+            {classes.map((classRow) => (
+              <button
+                key={classRow.id}
+                type="button"
+                onClick={() => {
+                  setSelectedClassId(classRow.id);
+                  setForm((current) => ({ ...current, classId: classRow.id }));
+                }}
+                className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                  selectedClassId === classRow.id
+                    ? "border-edsync-blue bg-edsync-blue text-white"
+                    : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                }`}
+              >
+                {classRow.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
         <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
@@ -358,12 +413,12 @@ export default function TeacherPlannerPage() {
                 [...Array(4)].map((_, index) => (
                   <div key={index} className="h-20 animate-pulse rounded-lg bg-edsync-surface" />
                 ))
-              ) : planner.events.length === 0 ? (
+              ) : visibleEvents.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   No schedule items yet.
                 </p>
               ) : (
-                planner.events.slice(0, 8).map((event) => (
+                visibleEvents.slice(0, 8).map((event) => (
                   <div
                     key={event.id}
                     className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
@@ -404,12 +459,12 @@ export default function TeacherPlannerPage() {
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
             <div className="space-y-3">
-              {planner.announcements.length === 0 ? (
+              {visibleAnnouncements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
                   Class notifications you send will appear here.
                 </p>
               ) : (
-                planner.announcements.slice(0, 6).map((item) => (
+                visibleAnnouncements.slice(0, 6).map((item) => (
                   <div
                     key={item.id}
                     className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
