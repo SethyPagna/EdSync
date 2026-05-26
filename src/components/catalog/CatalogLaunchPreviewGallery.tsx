@@ -54,13 +54,73 @@ function buildSlides(slides: LaunchPreviewSlideMap): PreviewSlide[] {
   ];
 }
 
+function PreviewMock({ slide }: { slide: PreviewSlide }) {
+  if (slide.id === "catalog") {
+    return (
+      <div className="edsync-launch-mini-screen edsync-launch-mini-screen-catalog">
+        <div className="edsync-launch-mini-search" />
+        <div className="edsync-launch-mini-course-grid">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    );
+  }
+
+  if (slide.id === "studio") {
+    return (
+      <div className="edsync-launch-mini-screen edsync-launch-mini-screen-studio">
+        <div className="edsync-launch-mini-rail">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="edsync-launch-mini-canvas">
+          <i />
+          <b />
+          <em />
+        </div>
+      </div>
+    );
+  }
+
+  if (slide.id === "ai") {
+    return (
+      <div className="edsync-launch-mini-screen edsync-launch-mini-screen-ai">
+        <span />
+        <span />
+        <span />
+      </div>
+    );
+  }
+
+  if (slide.id === "practice") {
+    return (
+      <div className="edsync-launch-mini-screen edsync-launch-mini-screen-practice">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+    );
+  }
+
+  return (
+    <div className="edsync-launch-mini-screen edsync-launch-mini-screen-proof">
+      <span />
+      <span />
+      <span />
+    </div>
+  );
+}
+
 export default function CatalogLaunchPreviewGallery(props: CatalogLaunchPreviewGalleryProps) {
   const slides = useMemo(() => buildSlides(props.slides), [props.slides]);
   const [activeIndex, setActiveIndex] = useState(0);
   const pauseUntilRef = useRef(0);
   const touchStartXRef = useRef<number | null>(null);
   const activeSlide = slides[activeIndex] ?? slides[0];
-  const ActiveIcon = activeSlide.icon;
 
   const showSlide = useCallback((index: number, pause = true) => {
     if (pause) {
@@ -153,9 +213,7 @@ export default function CatalogLaunchPreviewGallery(props: CatalogLaunchPreviewG
 
           <div className="edsync-launch-focus-card">
             <div className="edsync-launch-focus-media">
-              <ActiveIcon className="h-7 w-7" />
-              <span />
-              <span />
+              <PreviewMock slide={activeSlide} />
             </div>
             <div className="edsync-launch-focus-copy">
               <small>{activeSlide.route}</small>
