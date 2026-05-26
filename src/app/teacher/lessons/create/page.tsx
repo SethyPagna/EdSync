@@ -141,8 +141,8 @@ const emptyDraft = (): Draft => ({
 const GENERATION_STEPS = [
   "Extracting key concepts from your content...",
   "Identifying learning objectives...",
-  "Designing lesson framework and section types...",
-  "Writing section content (text, video, image)...",
+  "Designing lesson framework and block types...",
+  "Writing page content (text, video, image)...",
   "Generating quiz questions (diagnostic, micro-checks, final)...",
   "Building glossary from key terms...",
   "Organizing and finalizing lesson...",
@@ -366,7 +366,7 @@ export default function CreateLesson() {
 
   const draftSummaryItems = useMemo(
     () => [
-      { label: "Sections", value: draft.sections.length, hint: "Teaching blocks" },
+      { label: "Pages", value: draft.sections.length, hint: "Designed lesson blocks" },
       { label: "Questions", value: draft.quiz_questions.length, hint: "Assessment items" },
       { label: "Glossary", value: draft.glossary_terms.length, hint: "Vocabulary terms" },
       { label: "Duration", value: `${draft.estimated_duration || 0}m`, hint: "Expected time" },
@@ -531,7 +531,7 @@ export default function CreateLesson() {
         <div className="space-y-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Text</p>
-            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Readable section tools</h2>
+            <h2 className="mt-1 font-display text-xl font-bold text-edsync-text">Readable page tools</h2>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {CREATOR_TEXT_STYLES.map((tool) => (
@@ -1073,7 +1073,7 @@ export default function CreateLesson() {
                 Templates
               </span>
               <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
-                Sections
+                Pages
               </span>
               <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
                 Practice
@@ -1101,7 +1101,7 @@ export default function CreateLesson() {
             {
               mode: "manual" as const,
               title: "Blank lesson",
-              desc: "Open the Canva-style section canvas with no generated content.",
+              desc: "Open the Canva-style lesson canvas with no generated content.",
               badge: "Control",
               badgeColor:
                 "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20",
@@ -1460,7 +1460,7 @@ export default function CreateLesson() {
               <div className="mt-5 pt-4 border-t border-edsync-border">
                 <p className="text-xs text-edsync-subtle">
                   {genStep < 4
-                    ? "Phase 1: Content analysis complete, generating sections..."
+                    ? "Phase 1: Content analysis complete, generating lesson pages..."
                     : "Phase 2: Writing quiz questions and glossary..."}
                 </p>
               </div>
@@ -1578,7 +1578,7 @@ export default function CreateLesson() {
               { key: "overview" as const, label: "Overview" },
               {
                 key: "sections" as const,
-                label: `Sections (${draft.sections.length})`,
+                label: `Canvas (${draft.sections.length})`,
               },
               {
                 key: "questions" as const,
@@ -1808,7 +1808,7 @@ export default function CreateLesson() {
                         setDraft({ ...draft, sections: ss });
                       }}
                       className="min-w-[12rem] flex-1 rounded-2xl border border-edsync-border bg-edsync-card px-4 py-3 font-display text-base font-bold text-edsync-text outline-none transition focus:border-edsync-blue focus:ring-2 focus:ring-edsync-blue/20"
-                      placeholder="Section title..."
+                      placeholder="Page title..."
                     />
                     <div className="flex rounded-2xl border border-edsync-border bg-edsync-card p-1">
                       {CONTENT_TYPE_OPTIONS.map((option) => (
@@ -1886,7 +1886,7 @@ export default function CreateLesson() {
                         })
                       }
                       className="rounded-xl px-3 py-2 text-sm font-bold text-edsync-subtle hover:bg-edsync-red/10 hover:text-edsync-red sm:ml-auto sm:flex-shrink-0"
-                      aria-label="Delete section"
+                      aria-label="Delete lesson block"
                     >
                       ×
                     </button>
@@ -1901,7 +1901,7 @@ export default function CreateLesson() {
                       return (
                         <div className="space-y-3 p-3">
                           <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-blue">
-                            <strong>Image Section</strong> — Paste an image URL,
+                            <strong>Image block</strong> — Paste an image URL,
                             or upload an approved image in the editor.
                           </div>
                           <input
@@ -1961,7 +1961,7 @@ export default function CreateLesson() {
                       return (
                         <div className="space-y-3 p-3">
                           <div className="p-3 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl text-xs text-edsync-purple">
-                            <strong>Video Section</strong> — Paste a
+                            <strong>Video block</strong> — Paste a
                             YouTube, Vimeo, or direct HTTPS video URL.
                           </div>
                           <input
@@ -2040,7 +2040,7 @@ export default function CreateLesson() {
                               ? "Step-by-step activity instructions..."
                               : sec.content_type === "discussion"
                                 ? "Discussion prompt or open-ended question..."
-                                : "Write your section content here..."
+                                : "Write your lesson content here..."
                         }
                     />
                   )}
