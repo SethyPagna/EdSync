@@ -20,7 +20,14 @@ export default async function PracticePage({
   searchParams?: PracticePageSearchParams;
 }) {
   const user = await getSessionUser().catch(() => null);
-  if (!user) redirect("/auth/login?next=/practice");
+  const currentParams = new URLSearchParams();
+  if (searchParams?.mode) currentParams.set("mode", searchParams.mode);
+  if (searchParams?.ai) currentParams.set("ai", searchParams.ai);
+  if (searchParams?.task) currentParams.set("task", searchParams.task);
+  if (searchParams?.adminView) currentParams.set("adminView", searchParams.adminView);
+  const currentPath = `/practice${currentParams.size ? `?${currentParams.toString()}` : ""}`;
+
+  if (!user) redirect(`/auth/login?next=${encodeURIComponent(currentPath)}`);
 
   const requestedAdminView =
     user.user_metadata.role === "admin" &&
