@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpenCheck,
-  Building2,
-  Search,
-  SlidersHorizontal,
-  UserRound,
-} from "lucide-react";
-import CatalogLaunchHero from "@/components/catalog/CatalogLaunchHero";
+import { ArrowRight, BookOpenCheck, Building2 } from "lucide-react";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
-import WorkflowShowcase from "@/components/catalog/WorkflowShowcase";
+import EmilIntroShowcase from "@/components/catalog/EmilIntroShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
 import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog-filters";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
@@ -44,7 +36,6 @@ export default async function CatalogPage({
   const categories = Array.from(
     new Set(items.map((item) => item.metadata.category).filter(Boolean) as string[]),
   ).slice(0, 6);
-  const [, , aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const cardLabels = {
     featured: copy.featured,
     free: copy.free,
@@ -53,24 +44,6 @@ export default async function CatalogPage({
     view: copy.courses,
     minutes: "min",
   };
-  const quickSearches = [
-    `${aiLabel} ${copy.courses}`,
-    `${practiceLabel} ${copy.workflowLabel}`,
-    `${copy.academies} ${copy.catalogLabel}`,
-    `${proofLabel} ${copy.courses}`,
-  ];
-  const audiencePaths = [
-    {
-      label: authCopy.individual,
-      detail: authCopy.individualCopy,
-      icon: UserRound,
-    },
-    {
-      label: authCopy.organization,
-      detail: `${authCopy.teacher} / ${authCopy.student}. ${authCopy.organizationCopy}`,
-      icon: Building2,
-    },
-  ];
   const catalogHref = (params: Record<string, string> = {}) => {
     const query = new URLSearchParams();
     const publicLanguage = publicLanguageQueryValue(filters.language);
@@ -86,32 +59,40 @@ export default async function CatalogPage({
   };
 
   return (
-    <main id="top" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
-      <CatalogLaunchHero
-        title={copy.heroTitle}
-        description={copy.heroCopy}
-        primaryLabel={copy.begin}
-        secondaryLabel={copy.start}
-        language={filters.language}
+    <>
+      <EmilIntroShowcase
+        labels={{
+          signIn: copy.signIn,
+          start: copy.start,
+          catalog: copy.catalogLabel,
+          workflow: copy.workflowLabel,
+          brandSubhead: copy.brandSubhead,
+          search: copy.searchButton,
+          courses: copy.courses,
+          free: copy.free,
+          paid: copy.paid,
+          filters: copy.filters,
+          individual: authCopy.individual,
+          organization: authCopy.organization,
+          teacher: authCopy.teacher,
+          student: authCopy.student,
+        }}
       />
 
-      <section className="mx-auto max-w-[90rem] px-4">
-        <div id="workflow-start" className="edsync-workflow-anchor" aria-hidden="true" />
-        <WorkflowShowcase language={filters.language} />
-
-        <section id="catalog-search-panel" className="edsync-catalog-availability py-6">
+      <main id="catalog-results" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
+        <section className="mx-auto max-w-[90rem] px-4 py-10">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
-            <div className="edsync-catalog-search-head">
-              <div className="min-w-0">
-                <span className="edsync-catalog-search-kicker">{copy.catalogLabel}</span>
-                <h2 className="font-display text-3xl font-bold sm:text-4xl">
-                  {copy.searchHeading === "Search" ? "Find your learning path" : copy.searchHeading}
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm text-edsync-subtle">
-                  {copy.searchCopy === "Use filters after you search."
-                    ? "Search public courses, organization academies, free programs, and paid learning products in one place."
-                    : copy.searchCopy}
-                </p>
+            <div className="mb-5 flex flex-col gap-3 border-b border-edsync-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
+                  <p className="text-sm text-edsync-subtle">{copy.coursesSubhead}</p>
+                </div>
+                {hasFilters && (
+                  <Link href={catalogHref()} className="text-sm font-semibold text-edsync-blue hover:underline">
+                    {copy.clearFilters}
+                  </Link>
+                )}
               </div>
               <div className="edsync-catalog-availability-strip" aria-label="Catalog availability">
                 <span>
@@ -128,126 +109,26 @@ export default async function CatalogPage({
                 </span>
               </div>
             </div>
-            <form>
-              <label className="sr-only" htmlFor="catalog-search">
-                Search catalog
-              </label>
-              {publicLanguageQueryValue(filters.language) && (
-                <input type="hidden" name="language" value={publicLanguageQueryValue(filters.language) ?? ""} />
-              )}
-              {filters.portalSlug && <input type="hidden" name="portal" value={filters.portalSlug} />}
-              {filters.tenantSlug && <input type="hidden" name="tenant" value={filters.tenantSlug} />}
-              <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_9rem_9rem_auto_auto] [&>*]:min-w-0">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
-                  <input
-                    id="catalog-search"
-                    name="q"
-                    defaultValue={filters.query}
-                    className="edsync-input pl-9"
-                    placeholder={copy.searchPlaceholder}
-                  />
-                </div>
-                <select name="price" defaultValue={filters.price} className="edsync-input min-w-0">
-                  <option value="all">{copy.allPrices}</option>
-                  <option value="free">{copy.free}</option>
-                  <option value="paid">{copy.paid}</option>
-                </select>
-                <select name="duration" defaultValue={filters.maxDuration ?? ""} className="edsync-input min-w-0">
-                  <option value="">{copy.anyDuration}</option>
-                  <option value="15">15 min</option>
-                  <option value="30">30 min</option>
-                  <option value="60">60 min</option>
-                  <option value="120">2 hours</option>
-                </select>
-                <details className="group relative">
-                  <summary className="btn-secondary h-full min-h-11 cursor-pointer justify-center px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
-                    <SlidersHorizontal className="h-4 w-4" />
-                    {copy.filters}
-                  </summary>
-                  <div className="premium-overlay animate-overlay-in absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl p-3">
-                    <div className="grid gap-2">
-                      <input
-                        name="difficulty"
-                        defaultValue={filters.difficulty}
-                        className="edsync-input min-w-0"
-                        placeholder={copy.difficulty}
-                      />
-                      <input
-                        name="courseLanguage"
-                        defaultValue={filters.courseLanguage}
-                        className="edsync-input min-w-0"
-                        placeholder={copy.language}
-                      />
-                    </div>
-                  </div>
-                </details>
-                <button className="btn-primary justify-center" type="submit">
-                  <Search className="h-4 w-4" />
-                  {copy.searchButton}
-                </button>
-              </div>
-            </form>
-            <div className="edsync-catalog-path-row">
-              {audiencePaths.map((path, index) => {
-                const Icon = path.icon;
-                return (
-                  <article key={`audience-${index}-${path.label}`} className="edsync-catalog-audience-card">
-                    <Icon className="h-4 w-4" />
-                    <span>
-                      <strong>{path.label}</strong>
-                      <small>{path.detail}</small>
-                    </span>
-                  </article>
-                );
-              })}
-            </div>
-            <div className="edsync-catalog-quick-row">
-              {quickSearches.map((sample, index) => (
-                <Link key={`quick-search-${index}-${sample}`} href={catalogHref({ q: sample })}>
-                  {sample}
-                </Link>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {items.map((item) => (
+                <CatalogCourseCard key={item.id} item={item} labels={cardLabels} language={filters.language} />
               ))}
-              {hasFilters && (
-                <Link href={catalogHref()} className="is-clear">
-                  {copy.clearFilters}
+            </div>
+            {items.length === 0 && (
+              <div className="premium-surface rounded-2xl border-dashed p-8 text-center sm:p-10">
+                <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
+                <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
+                <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
+                <Link href={publicLanguageHref("/auth/signup", filters.language)} className="btn-primary mx-auto mt-5 w-fit">
+                  {copy.createWorkspace}
                 </Link>
-              )}
-            </div>
-
-            <div id="catalog-results" className="mt-6 border-t border-edsync-border pt-5">
-              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
-                  <p className="text-sm text-edsync-subtle">{copy.coursesSubhead}</p>
-                </div>
-                {hasFilters && (
-                  <Link href={catalogHref()} className="text-sm font-semibold text-edsync-blue hover:underline">
-                    {copy.clearFilters}
-                  </Link>
-                )}
               </div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {items.map((item) => (
-                  <CatalogCourseCard key={item.id} item={item} labels={cardLabels} language={filters.language} />
-                ))}
-              </div>
-              {items.length === 0 && (
-                <div className="premium-surface rounded-2xl border-dashed p-8 text-center sm:p-10">
-                  <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
-                  <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
-                  <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
-                  <Link href={publicLanguageHref("/auth/signup", filters.language)} className="btn-primary mx-auto mt-5 w-fit">
-                    {copy.createWorkspace}
-                  </Link>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </section>
 
         {categories.length > 0 && (
-          <section className="mt-5">
+          <section className="mx-auto mt-5 max-w-[90rem] px-4">
             <h2 className="sr-only">{copy.categories}</h2>
             <div className="premium-surface rounded-2xl p-4">
               <div className="flex flex-wrap gap-2">
@@ -266,7 +147,7 @@ export default async function CatalogPage({
         )}
 
         {featured.length > 0 && (
-          <section className="mt-8">
+          <section className="mx-auto mt-8 max-w-[90rem] px-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="font-display text-2xl font-bold">{copy.featured}</h2>
               <span className="text-sm text-edsync-subtle">{copy.featuredSubhead}</span>
@@ -280,7 +161,7 @@ export default async function CatalogPage({
         )}
 
         {portals.length > 0 && (
-          <section id="organizations" className="mt-10 pb-12">
+          <section id="organizations" className="mx-auto mt-10 max-w-[90rem] px-4 pb-12">
             <div className="mb-3">
               <h2 className="font-display text-2xl font-bold">{copy.academies}</h2>
               <p className="text-sm text-edsync-subtle">{copy.academiesSubhead}</p>
@@ -312,7 +193,7 @@ export default async function CatalogPage({
             </div>
           </section>
         )}
-      </section>
-    </main>
+      </main>
+    </>
   );
 }
