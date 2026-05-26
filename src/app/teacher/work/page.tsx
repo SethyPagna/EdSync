@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Archive, CalendarClock, ClipboardList, Edit3, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound, X } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
   workGradingLabel,
   type WorkGradingMode,
 } from "@/lib/work/grading";
+import { ALL_CLASSES_SCOPE, classScopeFromSearchParams, hasClassScope, scopedClassHref } from "@/lib/classes/class-scope";
 
 type ClassRow = { id: string; name: string };
 type WorkItem = {
@@ -66,6 +68,9 @@ function dueLabel(value: string | null) {
 }
 
 export default function TeacherWorkPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedClassId = classScopeFromSearchParams(searchParams);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [items, setItems] = useState<WorkItem[]>([]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
@@ -142,6 +147,22 @@ export default function TeacherWorkPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!hasClassScope(classes, requestedClassId)) return;
+    setSelectedClassId(requestedClassId);
+    if (requestedClassId !== ALL_CLASSES_SCOPE) {
+      setForm((current) => ({ ...current, classId: current.classId || requestedClassId }));
+    }
+  }, [classes, requestedClassId]);
+
+  const chooseClassScope = (classId: string) => {
+    setSelectedClassId(classId);
+    if (classId !== ALL_CLASSES_SCOPE) {
+      setForm((current) => ({ ...current, classId }));
+    }
+    router.replace(scopedClassHref("/teacher/work", classId), { scroll: false });
+  };
 
   const saveWork = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -304,7 +325,7 @@ export default function TeacherWorkPage() {
           <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
             <button
               type="button"
-              onClick={() => setSelectedClassId("all")}
+              onClick={() => chooseClassScope(ALL_CLASSES_SCOPE)}
               className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                 selectedClassId === "all"
                   ? "border-edsync-blue bg-edsync-blue text-white"
@@ -317,7 +338,7 @@ export default function TeacherWorkPage() {
               <button
                 key={classRow.id}
                 type="button"
-                onClick={() => setSelectedClassId(classRow.id)}
+                onClick={() => chooseClassScope(classRow.id)}
                 className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                   selectedClassId === classRow.id
                     ? "border-edsync-blue bg-edsync-blue text-white"
