@@ -330,7 +330,7 @@ function QuestionItem({
           <span
             className={`text-lg flex-shrink-0 ${correct ? "text-edsync-emerald" : wrong ? "text-edsync-red" : "text-edsync-amber"}`}
           >
-            {correct ? "✓" : wrong ? "✗" : ""}
+            {correct ? "Correct" : wrong ? "Incorrect" : ""}
           </span>
         )}
       </div>
@@ -373,7 +373,7 @@ function QuestionItem({
                     }`}
                   >
                     {showCorrect
-                      ? "✓"
+                      ? "Correct"
                       : showWrong
                         ? "✗"
                         : selected
@@ -399,7 +399,7 @@ function QuestionItem({
           />
           {submitted && q.correct_answer && (
             <p className="text-xs text-edsync-emerald mt-1">
-              ✓ Answer: <span className="font-medium">{q.correct_answer}</span>
+              Answer: <span className="font-medium">{q.correct_answer}</span>
             </p>
           )}
         </div>
@@ -528,7 +528,7 @@ function QuizSection({
           disabled={!allAnswered}
           className="btn-primary w-full justify-center py-3.5 disabled:opacity-40"
         >
-          Submit Answers →
+          Submit Answers -&gt;
         </button>
       ) : (
         <div className="edsync-card text-center py-6">
@@ -556,7 +556,7 @@ function QuizSection({
             onClick={() => onComplete(score || 0)}
             className="btn-primary"
           >
-            Continue →
+            Continue -&gt;
           </button>
         </div>
       )}
@@ -1373,7 +1373,7 @@ export default function StudentLesson() {
             onClick={() => router.push("/student/dashboard")}
             className="btn-ghost text-sm py-1.5 flex-shrink-0"
           >
-            ← Back
+            &lt;- Back
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-edsync-subtle truncate">
@@ -1421,7 +1421,7 @@ export default function StudentLesson() {
         </div>
       </div>
 
-      {/* ── Section breadcrumb nav (during learning) ── */}
+      {/* Page breadcrumb nav during learning */}
       {(phase === "learning" ||
         phase === "quiz_section" ||
         phase === "micro_check" ||
@@ -1455,7 +1455,7 @@ export default function StudentLesson() {
                     title={
                       canNavigate
                         ? `Go to: ${s.title}`
-                        : "Complete previous sections first"
+                        : "Complete previous pages first"
                     }
                     className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       current
@@ -1467,8 +1467,8 @@ export default function StudentLesson() {
                             : "bg-edsync-card text-edsync-subtle/40 border border-edsync-border/40 cursor-not-allowed"
                     }`}
                   >
-                    {done && !current ? "✓ " : null}
-                    {s.title.length > 18 ? s.title.slice(0, 16) + "…" : s.title}
+                    {done && !current ? "Done: " : null}
+                    {s.title.length > 18 ? `${s.title.slice(0, 16)}...` : s.title}
                   </button>
                 );
               })}
@@ -1505,7 +1505,7 @@ export default function StudentLesson() {
                         onClick={completeDiagnostic}
                         className="btn-primary"
                       >
-                        Begin Lesson →
+                        Begin Lesson -&gt;
                       </button>
                     </div>
                   ) : (
@@ -1526,7 +1526,7 @@ export default function StudentLesson() {
                           disabled={!diagQs.every((q) => diagAnswers[q.id])}
                           className="btn-primary w-full justify-center py-4 disabled:opacity-40"
                         >
-                          Submit Pre-Check →
+                          Submit Pre-Check -&gt;
                         </button>
                       ) : (
                         <div className="edsync-card text-center py-6">
@@ -1537,7 +1537,7 @@ export default function StudentLesson() {
                             onClick={completeDiagnostic}
                             className="btn-primary"
                           >
-                            Start Lesson →
+                            Start Lesson -&gt;
                           </button>
                         </div>
                       )}
@@ -1550,14 +1550,14 @@ export default function StudentLesson() {
           {/* LEARNING */}
           {phase === "learning" && currentSection && (
             <div>
-              {/* Section header */}
+              {/* Page header */}
               <div className="flex items-center gap-3 mb-5 pb-4 border-b border-edsync-border">
                 <span className="w-8 h-8 rounded-xl bg-edsync-blue flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                   {sectionIdx + 1}
                 </span>
                 <div>
                   <p className="text-xs text-edsync-subtle uppercase tracking-wide font-medium">
-                    Section {sectionIdx + 1} of {sections.length}
+                    Page {sectionIdx + 1} of {sections.length}
                   </p>
                   <h2 className="font-display font-bold text-2xl text-edsync-text">
                     {currentSection.title}
@@ -1601,14 +1601,14 @@ export default function StudentLesson() {
                     return qsForSection.length > 0 ? (
                       <QuizSection
                         questions={qsForSection}
-                        title={currentSection.content || "Section Quiz"}
+                        title={currentSection.content || "Page Check"}
                         onComplete={() => {
                           advanceSection();
                         }}
                       />
                     ) : (
                       <p className="text-edsync-subtle text-sm text-center py-8">
-                        No quiz questions for this section yet.
+                        No quiz questions for this page yet.
                       </p>
                     );
                   })()}
@@ -1624,7 +1624,7 @@ export default function StudentLesson() {
                       }}
                       className="btn-secondary py-4 px-6 flex-shrink-0"
                     >
-                      ← Previous
+                      &lt;- Previous
                     </button>
                   )}
                   <button
@@ -1632,17 +1632,17 @@ export default function StudentLesson() {
                     className="btn-primary flex-1 justify-center py-4 text-base"
                   >
                     {sectionIdx < sections.length - 1
-                      ? `Next Section →`
+                      ? `Next Page ->`
                       : finalQs.length > 0
-                        ? "Take Final Quiz →"
-                        : "Complete Lesson →"}
+                        ? "Take Final Quiz ->"
+                        : "Complete Lesson ->"}
                   </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* INLINE QUIZ (section quiz phase) */}
+          {/* Inline page quiz phase */}
           {phase === "quiz_section" && (
             <div>
               <div className="edsync-card mb-6 border-edsync-amber/30 bg-edsync-amber/5">
@@ -1650,7 +1650,7 @@ export default function StudentLesson() {
                   <div className="flex items-center gap-3">
                     <div>
                       <h2 className="font-display font-bold text-xl text-edsync-text">
-                        Section Quiz
+                        Page Check
                       </h2>
                       <p className="text-edsync-subtle text-sm">
                         Answer these questions about what you just learned
@@ -1663,13 +1663,13 @@ export default function StudentLesson() {
                     }}
                     className="btn-ghost text-sm py-1.5 px-3 flex-shrink-0"
                   >
-                    ← Back to Review
+                    &lt;- Back to Review
                   </button>
                 </div>
               </div>
               <QuizSection
                 questions={sectionQs}
-                title="Section Quiz"
+                title="Page Check"
                 onComplete={() => advanceSection()}
               />
             </div>
@@ -1696,7 +1696,7 @@ export default function StudentLesson() {
                     }}
                     className="btn-ghost text-sm py-1.5 px-3 flex-shrink-0"
                   >
-                    ← Back to Review
+                    &lt;- Back to Review
                   </button>
                 </div>
               </div>
@@ -1734,7 +1734,7 @@ export default function StudentLesson() {
                         onClick={() => finishLesson(100)}
                         className="btn-primary"
                       >
-                        Complete Lesson ✓
+                        Complete Lesson
                       </button>
                     </div>
                   ) : (
@@ -1755,7 +1755,7 @@ export default function StudentLesson() {
                           disabled={!finalQs.every((q) => finalAnswers[q.id])}
                           className="btn-primary w-full justify-center py-4 disabled:opacity-40"
                         >
-                          Submit Final Quiz →
+                          Submit Final Quiz -&gt;
                         </button>
                       ) : (
                         <div className="edsync-card text-center py-6">
@@ -1902,7 +1902,7 @@ export default function StudentLesson() {
                     onClick={() => setPhase("choose_path")}
                     className="btn-primary mt-5"
                   >
-                    Continue →
+                    Continue -&gt;
                   </button>
                 </div>
               )}
@@ -1929,7 +1929,7 @@ export default function StudentLesson() {
                   onClick={() => completeLesson(finalScore)}
                   className="btn-secondary py-3 px-6"
                 >
-                  Complete Lesson ✓
+                  Complete Lesson
                 </button>
                 <button
                   onClick={() => {
@@ -1938,7 +1938,7 @@ export default function StudentLesson() {
                   }}
                   className="btn-primary py-3 px-6"
                 >
-                  Extended Learning →
+                  Extended Learning -&gt;
                 </button>
               </div>
               <p className="text-xs text-edsync-subtle mt-4">
@@ -1967,7 +1967,7 @@ export default function StudentLesson() {
                     onClick={() => completeLesson(finalScore || 100)}
                     className="btn-primary text-sm py-2 px-4"
                   >
-                    Complete Lesson ✓
+                    Complete Lesson
                   </button>
                 </div>
               </div>
@@ -2069,7 +2069,7 @@ export default function StudentLesson() {
                                         }`}
                                       >
                                         {showCorrect
-                                          ? "✓"
+                                          ? "Correct"
                                           : showWrong
                                             ? "✗"
                                             : selected
@@ -2094,7 +2094,7 @@ export default function StudentLesson() {
                             }
                             className="btn-primary w-full justify-center py-3.5 disabled:opacity-40"
                           >
-                            Submit Answers →
+                            Submit Answers -&gt;
                           </button>
                         ) : (
                           <div className="edsync-card text-center py-6">
@@ -2159,7 +2159,7 @@ export default function StudentLesson() {
                   onClick={() => router.push("/student/dashboard")}
                   className="btn-secondary"
                 >
-                  ← Dashboard
+                  &lt;- Dashboard
                 </button>
                 <button
                   onClick={() => {
