@@ -7,6 +7,7 @@ import CatalogLaunchPreviewGallery, {
   type LaunchPreviewSlideCopy,
 } from "@/components/catalog/CatalogLaunchPreviewGallery";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
+import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { normalizePublicLanguage, publicLanguageHref } from "@/lib/public/languages";
 
@@ -54,47 +55,47 @@ function buildLaunchPreviewSlides({
     catalog: {
       label: catalog,
       eyebrow: catalog,
-      title: "Course marketplace",
+      title: "Find the right course",
       route: "/catalog",
-      nav: [catalog, courses, free, paid],
-      metrics: [[free, start], ["35m", anyDuration], [difficulty, filters]],
-      blocks: [[courses, `${search}, preview, enroll.`], [signIn, `Account before checkout.`]],
+      nav: [catalog, search, free, paid],
+      metrics: [[free, courses], ["35m", anyDuration], [difficulty, filters]],
+      blocks: [[courses, "Preview, price, enroll."], [signIn, "Account before access."]],
     },
     studio: {
       label: studio,
       eyebrow: studio,
-      title: "Lesson builder",
+      title: "Build the lesson",
       route: "/teacher/lessons/create",
       nav: [studio, "Templates", "Media", ai],
-      metrics: [["Slides", studio], ["Quiz", practice], ["Draft", courses]],
-      blocks: [[studio, "Slides, media, quizzes."], [courses, "Assignments stay attached."]],
+      metrics: [["Slides", studio], ["Quiz", practice], ["Draft", start]],
+      blocks: [[studio, "Canvas blocks, media, quiz."], [courses, "Assign to class or catalog."]],
     },
     ai: {
       label: ai,
       eyebrow: ai,
-      title: "AI co-creator",
+      title: "Format with AI",
       route: "/ai",
       nav: [ai, "Outline", "Slides", practice],
       metrics: [["Groq", ai], ["Google", ai], ["Review", studio]],
-      blocks: [[ai, "Draft, format, review."], [studio, "Insert into lessons."]],
+      blocks: [[ai, "Outline, rewrite, quiz."], [studio, "Insert as editable blocks."]],
     },
     practice: {
       label: practice,
       eyebrow: practice,
-      title: "Practice sprint",
+      title: "Play the practice",
       route: "/practice",
       nav: [practice, "Sprint", "Retry", proof],
       metrics: [["08:42", anyDuration], ["4/12", practice], ["2", proof]],
-      blocks: [[practice, "Quiz, sprint, retry."], [proof, "Misses become review."]],
+      blocks: [[practice, "Quiz, sprint, retry."], [proof, "Misses become review cards."]],
     },
     proof: {
       label: proof,
       eyebrow: proof,
-      title: "Grade evidence",
+      title: "Prove progress",
       route: "/admin/dashboard",
       nav: [proof, "Feedback", "Reports", "Admin"],
-      metrics: [["24", proof], [ai, proof], [start, practice]],
-      blocks: [[proof, "Scores and feedback."], [ai, "Audit and safety checks."]],
+      metrics: [["24", proof], [ai, "Audit"], [start, practice]],
+      blocks: [[proof, "Scores, feedback, weighting."], [ai, "Provider safety checks."]],
     },
   };
 }
@@ -111,33 +112,22 @@ export default async function CatalogLaunchHero({
   const signedIn = Boolean(cookieStore.get(SESSION_COOKIE)?.value);
   const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
   const copy = getPublicCopy(publicLanguage);
+  const authCopy = getPublicAuthCopy(publicLanguage);
   const loginHref = publicLanguageHref("/auth/login", publicLanguage);
   const signupHref = publicLanguageHref("/auth/signup", publicLanguage);
   const [, studioLabel = "Lessons", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
   const rolePaths = [
     {
-      label: "Individual",
-      tag: "Self-paced buyer",
-      detail: "Browse paid/free courses, learn alone, keep personal notes.",
+      label: authCopy.individual,
+      tag: "Personal",
+      detail: authCopy.individualCopy,
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "individual" }),
     },
     {
-      label: "Organization",
-      tag: "School or team",
-      detail: "Use portals, members, managers, SSO-ready academy routing.",
+      label: authCopy.organization,
+      tag: `${authCopy.teacher} + ${authCopy.student}`,
+      detail: `${authCopy.organizationCopy} ${authCopy.teacher} / ${authCopy.student}.`,
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "organization" }),
-    },
-    {
-      label: "Teacher",
-      tag: "Create and assign",
-      detail: "Build lessons, generate practice, review work, publish feedback.",
-      href: publicLanguageHref("/auth/signup", publicLanguage, { role: "teacher" }),
-    },
-    {
-      label: "Student",
-      tag: "Learn and submit",
-      detail: "Open lessons, practice with AI, submit work, view grades.",
-      href: publicLanguageHref("/auth/signup", publicLanguage, { role: "student" }),
     },
   ];
   const previewSlides = buildLaunchPreviewSlides({
@@ -178,6 +168,15 @@ export default async function CatalogLaunchHero({
           </span>
         </Link>
         <div className="edsync-launch-actions-inline">
+          <Link href="#catalog-search-panel" prefetch={false} className="edsync-launch-mini-link">
+            {copy.catalogLabel}
+          </Link>
+          <Link href="#showcase" prefetch={false} className="edsync-launch-mini-link">
+            {copy.workflowLabel}
+          </Link>
+          <Link href={signupHref} prefetch={false} className="edsync-launch-mini-link is-primary">
+            {copy.start}
+          </Link>
           <ThemeToggle compact className="edsync-launch-icon" />
           <LanguageMenu compact syncCatalogFilter className="edsync-launch-icon" />
           <Link href={signedIn ? workspaceHref : loginHref} prefetch={false} className="edsync-launch-signin">
@@ -191,7 +190,7 @@ export default async function CatalogLaunchHero({
         <div className="edsync-launch-copy" data-public-language={publicLanguage}>
           <h1 id="edsync-public-title">{title}</h1>
           <p>{description}</p>
-          <div className="edsync-launch-cta-row">
+          <div className="edsync-launch-cta-row" aria-label="Primary EdSync actions">
             <Link href="#workflow-start" prefetch={false} className="edsync-launch-primary">
               {primaryLabel}
               <ArrowRight className="h-4 w-4" />
