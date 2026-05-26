@@ -72,6 +72,7 @@ export default function TeacherWorkPage() {
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState("all");
   const [form, setForm] = useState({
     title: "",
     workType: "task",
@@ -231,13 +232,26 @@ export default function TeacherWorkPage() {
   };
 
   const publishedCount = useMemo(() => items.filter((item) => item.status === "published").length, [items]);
+  const selectedClass = useMemo(
+    () => classes.find((classRow) => classRow.id === selectedClassId) ?? null,
+    [classes, selectedClassId],
+  );
+  const filteredItems = useMemo(() => {
+    if (!selectedClass) return items;
+    return items.filter((item) => item.class_name === selectedClass.name);
+  }, [items, selectedClass]);
+  const filteredItemIds = useMemo(() => new Set(filteredItems.map((item) => item.id)), [filteredItems]);
+  const filteredSubmissions = useMemo(() => {
+    if (!selectedClass) return submissions;
+    return submissions.filter((submission) => filteredItemIds.has(submission.work_item_id));
+  }, [filteredItemIds, selectedClass, submissions]);
   const submissionCount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.submission_count ?? 0), 0),
     [items],
   );
   const unreviewedCount = useMemo(
-    () => submissions.filter((submission) => submission.status !== "graded").length,
-    [submissions],
+    () => filteredSubmissions.filter((submission) => submission.status !== "graded").length,
+    [filteredSubmissions],
   );
 
   return (
@@ -264,10 +278,55 @@ export default function TeacherWorkPage() {
                 Cancel
               </button>
             )}
-            <button type="button" onClick={() => setFormOpen(true)} className="btn-primary justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedClass) setForm((current) => ({ ...current, classId: selectedClass.id }));
+                setFormOpen(true);
+              }}
+              className="btn-primary justify-center"
+            >
               <Plus className="h-4 w-4" />
               Create work
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
+            <p className="mt-1 text-sm text-edsync-subtle">
+              Manage everything at once, or narrow assignments, projects, quizzes, and feedback to one class.
+            </p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
+            <button
+              type="button"
+              onClick={() => setSelectedClassId("all")}
+              className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                selectedClassId === "all"
+                  ? "border-edsync-blue bg-edsync-blue text-white"
+                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+              }`}
+            >
+              All classes
+            </button>
+            {classes.map((classRow) => (
+              <button
+                key={classRow.id}
+                type="button"
+                onClick={() => setSelectedClassId(classRow.id)}
+                className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                  selectedClassId === classRow.id
+                    ? "border-edsync-blue bg-edsync-blue text-white"
+                    : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                }`}
+              >
+                {classRow.name}
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -407,10 +466,10 @@ export default function TeacherWorkPage() {
           <h2 className="font-display text-xl font-bold">Work list</h2>
         </div>
         <div className="divide-y divide-edsync-border">
-          {items.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <p className="p-5 text-sm text-edsync-subtle">No work items yet.</p>
           ) : (
-            items.map((item) => {
+            filteredItems.map((item) => {
               const grading = normalizeWorkGradingSettings(item.settings);
               return (
                 <article key={item.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
@@ -464,17 +523,17 @@ export default function TeacherWorkPage() {
             <div>
               <h2 className="font-display text-xl font-bold">Review submissions</h2>
               <p className="text-sm text-edsync-subtle">
-                {submissions.length} submitted, {unreviewedCount} waiting for feedback.
+                {filteredSubmissions.length} submitted, {unreviewedCount} waiting for feedback.
               </p>
             </div>
             <MessageSquareText className="h-5 w-5 text-edsync-amber" />
           </div>
         </div>
         <div className="divide-y divide-edsync-border">
-          {submissions.length === 0 ? (
+          {filteredSubmissions.length === 0 ? (
             <p className="p-5 text-sm text-edsync-subtle">Student submissions will appear here for scoring and feedback.</p>
           ) : (
-            submissions.map((submission) => {
+            filteredSubmissions.map((submission) => {
               const grading = normalizeWorkGradingSettings(submission.work_settings);
               const draft = reviewDrafts[submission.id] ?? {
                 pointsEarned: "",
