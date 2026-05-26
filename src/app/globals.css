@@ -5758,7 +5758,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 @media (max-width: 760px) {
   .edsync-emil-hero {
-    padding: 0.8rem;
+    padding: 0.7rem;
   }
 
   .edsync-emil-floating {
@@ -5787,7 +5787,9 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-copy h1 {
     max-width: 8ch;
-    font-size: clamp(2.8rem, 15vw, 4.3rem);
+    margin-top: 0.95rem;
+    font-size: clamp(2.55rem, 13.4vw, 3.75rem);
+    line-height: 0.92;
   }
 
   .edsync-emil-roles {
@@ -5814,7 +5816,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-device-body {
     grid-template-columns: 4.6rem minmax(0, 1fr);
-    min-height: 22rem;
+    min-height: 18.5rem;
   }
 
   .edsync-emil-toolrail span {
@@ -5967,7 +5969,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-emil-signin,
   .edsync-emil-secondary,
   .edsync-emil-primary {
-    padding: 0.68rem 0.72rem;
+    padding: 0.64rem 0.68rem;
     font-size: 0.82rem;
   }
 
@@ -5985,12 +5987,73 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-device-body {
     grid-template-columns: 1fr;
-    min-height: 18rem;
+    min-height: 14.5rem;
+    padding-top: 0.55rem;
   }
 
   .edsync-emil-toolrail {
     flex-direction: row;
     overflow-x: auto;
+    padding: 0.48rem;
+  }
+
+  .edsync-emil-device {
+    padding: 0.55rem;
+  }
+
+  .edsync-emil-device-top {
+    gap: 0.45rem;
+    padding: 0.62rem 0.72rem;
+    font-size: 0.72rem;
+  }
+
+  .edsync-emil-device-top a {
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .edsync-emil-toolbar {
+    margin-bottom: 0.62rem;
+  }
+
+  .edsync-emil-toolbar span {
+    padding: 0.48rem 0.56rem;
+    font-size: 0.68rem;
+  }
+
+  .edsync-emil-canvas {
+    padding: 0.72rem;
+  }
+
+  .edsync-emil-canvas article {
+    padding: 0.9rem;
+  }
+
+  .edsync-emil-canvas h2 {
+    font-size: clamp(1.35rem, 7.4vw, 1.9rem);
+  }
+
+  .edsync-emil-canvas p {
+    margin-top: 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .edsync-emil-dots {
+    padding-top: 0.55rem;
+  }
+
+  .edsync-emil-workflow-copy h2 {
+    font-size: clamp(1.95rem, 9vw, 2.55rem);
+  }
+
+  .edsync-emil-workflow-copy p {
+    font-size: 0.86rem;
+  }
+
+  .edsync-emil-workflow-tabs {
+    padding-top: 0.55rem;
   }
 
   .edsync-emil-search form {
