@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AppShell, { adminNavItems, studentNavItems, teacherNavItems } from "@/components/AppShell";
 import StudioWorkspace from "@/components/studio/StudioWorkspace";
 import { getSessionUser } from "@/lib/auth/session";
 
@@ -7,8 +8,30 @@ export const metadata = {
   description: "Design slide decks, transitions, animations, and presentations in EdSync.",
 };
 
-export default async function SlidesPage() {
+type SlidesPageProps = {
+  searchParams?: {
+    adminView?: string;
+  };
+};
+
+export default async function SlidesPage({ searchParams }: SlidesPageProps) {
   const user = await getSessionUser().catch(() => null);
-  if (!user) redirect("/auth/login?next=/slides");
-  return <StudioWorkspace initialKind="slide" />;
+  const adminView =
+    user?.user_metadata.role === "admin" &&
+    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+      ? searchParams.adminView
+      : null;
+  const nextPath = `/slides${adminView ? `?adminView=${adminView}` : ""}`;
+
+  if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
+
+  const shellRole = adminView ?? user.user_metadata.role;
+  const shellNavItems =
+    shellRole === "admin" ? adminNavItems : shellRole === "teacher" ? teacherNavItems : studentNavItems;
+
+  return (
+    <AppShell role={shellRole} navItems={shellNavItems}>
+      <StudioWorkspace initialKind="slide" />
+    </AppShell>
+  );
 }
