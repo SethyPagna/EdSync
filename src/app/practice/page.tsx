@@ -6,7 +6,7 @@ import { normalizePracticeMode, type PracticeSearchParams } from "@/lib/practice
 import { normalizeAiPromptContractId } from "@/lib/studio/catalog";
 
 export const metadata = {
-  title: "Practice & AI",
+  title: "Practice & AI Tutor",
   description: "Merged AI tutoring, practice quizzes, games, review loops, and explanations.",
 };
 
