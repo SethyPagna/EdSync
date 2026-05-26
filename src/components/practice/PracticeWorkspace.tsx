@@ -172,7 +172,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               <p className="text-sm font-semibold text-edsync-blue">Practice, quizzes, and games</p>
               <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <h1 className="font-display text-4xl font-bold">Practice + AI Tutor</h1>
+                  <h1 className="font-display text-4xl font-bold">Practice & AI</h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
                     Timed practice with explanations, retry missed, saved mistakes, and review recommendations.
                   </p>
