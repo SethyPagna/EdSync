@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AppShell, { adminNavItems, studentNavItems, teacherNavItems } from "@/components/AppShell";
 import StudioWorkspace from "@/components/studio/StudioWorkspace";
 import { getSessionUser } from "@/lib/auth/session";
 
@@ -7,8 +8,30 @@ export const metadata = {
   description: "Write Word-style EdSync documents with reusable learning blocks.",
 };
 
-export default async function DocsPage() {
+type DocsPageProps = {
+  searchParams?: {
+    adminView?: string;
+  };
+};
+
+export default async function DocsPage({ searchParams }: DocsPageProps) {
   const user = await getSessionUser().catch(() => null);
-  if (!user) redirect("/auth/login?next=/docs");
-  return <StudioWorkspace initialKind="doc" />;
+  const adminView =
+    user?.user_metadata.role === "admin" &&
+    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+      ? searchParams.adminView
+      : null;
+  const nextPath = `/docs${adminView ? `?adminView=${adminView}` : ""}`;
+
+  if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
+
+  const shellRole = adminView ?? user.user_metadata.role;
+  const shellNavItems =
+    shellRole === "admin" ? adminNavItems : shellRole === "teacher" ? teacherNavItems : studentNavItems;
+
+  return (
+    <AppShell role={shellRole} navItems={shellNavItems}>
+      <StudioWorkspace initialKind="doc" />
+    </AppShell>
+  );
 }
