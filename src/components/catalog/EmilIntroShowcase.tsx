@@ -49,6 +49,20 @@ type PreviewSlide = {
   sideRows: string[];
 };
 
+type WorkflowSlide = {
+  id: "catalog" | "canvas" | "ai" | "assign" | "practice" | "proof";
+  icon: typeof Search;
+  title: string;
+  detail: string;
+  route: string;
+  rail: string[];
+  panelTitle: string;
+  rows: string[];
+  sideTitle: string;
+  sideRows: string[];
+  pills: string[];
+};
+
 const previewSlides: PreviewSlide[] = [
   {
     id: "teacher",
@@ -100,7 +114,7 @@ const previewSlides: PreviewSlide[] = [
   },
 ];
 
-const workflowSlides = [
+const workflowSlides: WorkflowSlide[] = [
   {
     id: "catalog",
     icon: Search,
@@ -180,6 +194,162 @@ const workflowSlides = [
     pills: ["Gradebook", "Reports", "Admin audit"],
   },
 ];
+
+function WorkflowMockup({ workflow }: { workflow: WorkflowSlide }) {
+  if (workflow.id === "catalog") {
+    return (
+      <div className="edsync-emil-workflow-mock is-catalog">
+        <nav>
+          {workflow.rail.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </nav>
+        <article>
+          <small>{workflow.route}</small>
+          <h3>{workflow.panelTitle}</h3>
+          <div className="edsync-emil-ui-search">
+            <Search className="h-4 w-4" />
+            <span>Search courses, academies, practice</span>
+          </div>
+          <div className="edsync-emil-ui-grid">
+            <span>
+              <b>Individual</b>
+              <small>Buy and learn</small>
+            </span>
+            <span>
+              <b>Organization</b>
+              <small>Teacher + student portal</small>
+            </span>
+          </div>
+        </article>
+        <aside>
+          <b>{workflow.sideTitle}</b>
+          {workflow.sideRows.map((row) => (
+            <span key={row}>{row}</span>
+          ))}
+        </aside>
+      </div>
+    );
+  }
+
+  if (workflow.id === "canvas") {
+    return (
+      <div className="edsync-emil-workflow-mock is-canvas">
+        <nav>
+          {workflow.rail.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </nav>
+        <article>
+          <small>{workflow.route}</small>
+          <div className="edsync-emil-mini-toolbar">
+            <span>Template</span>
+            <span>Text</span>
+            <span>Media</span>
+            <span>AI</span>
+          </div>
+          <h3>Energy Transfer</h3>
+          <div className="edsync-emil-slide-canvas">
+            <span>Heat moves through touch</span>
+            <span>Video check</span>
+            <span>Quick question</span>
+          </div>
+          <div className="edsync-emil-page-strip">
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+          </div>
+        </article>
+        <aside>
+          <b>{workflow.sideTitle}</b>
+          {workflow.sideRows.map((row) => (
+            <span key={row}>{row}</span>
+          ))}
+        </aside>
+      </div>
+    );
+  }
+
+  if (workflow.id === "practice") {
+    return (
+      <div className="edsync-emil-workflow-mock is-practice">
+        <nav>
+          {workflow.rail.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </nav>
+        <article>
+          <small>{workflow.route}</small>
+          <h3>{workflow.panelTitle}</h3>
+          <div className="edsync-emil-kahoot-grid">
+            <button type="button">Conduction</button>
+            <button type="button">Radiation</button>
+            <button type="button">Convection</button>
+            <button type="button">Insulation</button>
+          </div>
+        </article>
+        <aside>
+          <b>{workflow.sideTitle}</b>
+          <span>Timer 05:00</span>
+          <span>Accuracy 82%</span>
+          <span>Points +120</span>
+        </aside>
+      </div>
+    );
+  }
+
+  if (workflow.id === "ai") {
+    return (
+      <div className="edsync-emil-workflow-mock is-ai">
+        <nav>
+          {workflow.rail.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </nav>
+        <article>
+          <small>{workflow.route}</small>
+          <h3>{workflow.panelTitle}</h3>
+          <div className="edsync-emil-ai-box">
+            <b>Generate: Grade 8 energy transfer</b>
+            <span>6 slides, quiz, rubric, kid-friendly template</span>
+          </div>
+          {workflow.rows.map((row) => (
+            <p key={row}>{row}</p>
+          ))}
+        </article>
+        <aside>
+          <b>{workflow.sideTitle}</b>
+          {workflow.sideRows.map((row) => (
+            <span key={row}>{row}</span>
+          ))}
+        </aside>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`edsync-emil-workflow-mock is-${workflow.id}`}>
+      <nav>
+        {workflow.rail.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </nav>
+      <article>
+        <small>{workflow.route}</small>
+        <h3>{workflow.panelTitle}</h3>
+        {workflow.rows.map((row) => (
+          <p key={row}>{row}</p>
+        ))}
+      </article>
+      <aside>
+        <b>{workflow.sideTitle}</b>
+        {workflow.sideRows.map((row) => (
+          <span key={row}>{row}</span>
+        ))}
+      </aside>
+    </div>
+  );
+}
 
 function useAutoIndex(length: number, delayMs: number) {
   const [index, setIndex] = useState(0);
@@ -436,26 +606,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
                   <span>{workflow.route}</span>
                 </div>
               </header>
-              <div className="edsync-emil-workflow-mock">
-                <nav>
-                  {workflow.rail.map((item) => (
-                    <span key={item}>{item}</span>
-                  ))}
-                </nav>
-                <article>
-                  <small>{workflow.title}</small>
-                  <h3>{workflow.panelTitle}</h3>
-                  {workflow.rows.map((row) => (
-                    <p key={row}>{row}</p>
-                  ))}
-                </article>
-                <aside>
-                  <b>{workflow.sideTitle}</b>
-                  {workflow.sideRows.map((row) => (
-                    <span key={row}>{row}</span>
-                  ))}
-                </aside>
-              </div>
+              <WorkflowMockup workflow={workflow} />
             </div>
           </div>
         </div>
@@ -467,7 +618,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
                 key={slide.id}
                 type="button"
                 aria-current={workflowIndex === index}
-                onClick={() => setWorkflowIndex(index)}
+                onClick={() => setWorkflowSlide(index)}
               >
                 <Icon className="h-4 w-4" />
                 <span>{slide.title}</span>
