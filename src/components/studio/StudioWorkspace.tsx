@@ -1245,7 +1245,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 </div>
               </Panel>
 
-              <Panel title="Section Blocks" icon={Columns3}>
+              <Panel title="Lesson Blocks" icon={Columns3}>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">
