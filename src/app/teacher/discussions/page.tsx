@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { MessageSquareText, Plus, Send, UsersRound } from "lucide-react";
 import { ALL_CLASSES_SCOPE, classScopeFromSearchParams, hasClassScope, scopedClassHref } from "@/lib/classes/class-scope";
@@ -25,10 +25,14 @@ function updatedLabel(value: string) {
   });
 }
 
+function classScopeFromLocation() {
+  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
+  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+}
+
 export default function TeacherDiscussionsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedClassId = classScopeFromSearchParams(searchParams);
+  const [requestedClassId, setRequestedClassId] = useState(classScopeFromLocation);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [formOpen, setFormOpen] = useState(false);
@@ -57,6 +61,7 @@ export default function TeacherDiscussionsPage() {
   }, [classes, requestedClassId]);
 
   const chooseClassScope = (classId: string) => {
+    setRequestedClassId(classId);
     setSelectedClassId(classId);
     if (classId !== ALL_CLASSES_SCOPE) {
       setForm((current) => ({ ...current, classId }));
