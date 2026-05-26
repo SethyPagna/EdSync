@@ -4759,6 +4759,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 .edsync-emil-intro {
   min-height: 100vh;
   overflow-x: clip;
+  scroll-snap-type: y mandatory;
   background:
     radial-gradient(circle at 18% 18%, rgba(35, 209, 139, 0.14), transparent 28rem),
     radial-gradient(circle at 88% 72%, rgba(79, 134, 247, 0.16), transparent 30rem),
@@ -4784,14 +4785,16 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-emil-hero {
   min-height: 100svh;
-  padding: clamp(1rem, 2vw, 2rem);
+  padding: clamp(0.85rem, 1.8vw, 2rem);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
 }
 
 .edsync-emil-floating,
 .edsync-emil-hero-grid,
 .edsync-emil-workflow,
 .edsync-emil-catalog {
-  width: min(86rem, calc(100vw - 2rem));
+  width: min(108rem, calc(100vw - clamp(1rem, 5vw, 5rem)));
   margin-inline: auto;
 }
 
@@ -4800,6 +4803,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
   padding-top: clamp(0.5rem, 2.4vh, 2.5rem);
 }
 
@@ -4853,7 +4857,9 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-emil-actions {
+  flex-wrap: nowrap;
   gap: 0.55rem;
+  justify-content: flex-end;
 }
 
 .edsync-emil-icon,
@@ -4896,6 +4902,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   font-weight: 800;
   text-decoration: none;
   backdrop-filter: blur(16px);
+  white-space: nowrap;
 }
 
 :root:not(.dark) .edsync-emil-signin,
@@ -4908,11 +4915,11 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-emil-hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(26rem, 1.18fr);
+  grid-template-columns: minmax(22rem, 0.68fr) minmax(38rem, 1.32fr);
   align-items: center;
-  gap: clamp(2rem, 5vw, 5rem);
+  gap: clamp(2rem, 4.4vw, 5.5rem);
   min-height: calc(100svh - 5.5rem);
-  padding-block: clamp(2rem, 6vh, 6rem);
+  padding-block: clamp(1.6rem, 5vh, 5.5rem);
 }
 
 .edsync-emil-copy {
@@ -4982,12 +4989,16 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   flex-wrap: wrap;
   gap: 0.62rem;
   margin-top: 1.6rem;
+  overflow: visible;
+  padding-bottom: 0.2rem;
 }
 
 .edsync-emil-roles a {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -5000,6 +5011,22 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   text-transform: uppercase;
 }
 
+.edsync-emil-roles strong,
+.edsync-emil-roles small {
+  display: block;
+}
+
+.edsync-emil-roles small {
+  margin-top: 0.18rem;
+  max-width: 24ch;
+  color: color-mix(in srgb, currentColor 64%, transparent);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.28;
+  text-transform: none;
+}
+
 :root:not(.dark) .edsync-emil-roles a {
   border-color: rgba(8, 19, 34, 0.13);
   background: rgba(255, 255, 255, 0.7);
@@ -5007,7 +5034,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-emil-device {
   position: relative;
-  min-height: 34rem;
+  min-height: clamp(34rem, 49vw, 47rem);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 2rem;
   background: rgba(10, 20, 32, 0.78);
@@ -5045,9 +5072,9 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-emil-device-body {
   display: grid;
-  grid-template-columns: 6.6rem minmax(0, 1fr) 13rem;
+  grid-template-columns: clamp(5.4rem, 7vw, 7rem) minmax(0, 1fr) clamp(10rem, 15vw, 15rem);
   gap: 0.85rem;
-  min-height: 27rem;
+  min-height: clamp(24rem, 38vw, 34rem);
   padding-top: 0.85rem;
 }
 
@@ -5198,7 +5225,11 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-emil-workflow {
   min-height: 100svh;
+  display: grid;
+  align-content: center;
   padding-block: clamp(3rem, 8vh, 6rem);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
 }
 
 .edsync-emil-workflow-card {
@@ -5259,44 +5290,304 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-emil-workflow-window {
-  min-height: 24rem;
+  min-height: clamp(25rem, 40vw, 36rem);
   border-radius: 1.4rem;
   background: #f8fafc;
   color: #081322;
   padding: clamp(1rem, 3vw, 2rem);
+  overflow: hidden;
 }
 
-.edsync-emil-workflow-window strong,
-.edsync-emil-workflow-window span {
+.edsync-emil-workflow-window header,
+.edsync-emil-workflow-window header > div,
+.edsync-emil-workflow-mock,
+.edsync-emil-workflow-mock nav,
+.edsync-emil-workflow-mock aside {
+  display: flex;
+}
+
+.edsync-emil-workflow-window header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(8, 19, 34, 0.1);
+  padding-bottom: 1rem;
+}
+
+.edsync-emil-workflow-window header > div {
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.18rem;
+  text-align: right;
+}
+
+.edsync-emil-workflow-window header strong,
+.edsync-emil-workflow-window header span {
   display: block;
 }
 
-.edsync-emil-workflow-window strong {
-  margin-top: 1rem;
+.edsync-emil-workflow-window header strong {
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(1.8rem, 4vw, 3.5rem);
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
   font-weight: 900;
-  line-height: 0.98;
+  line-height: 1;
 }
 
-.edsync-emil-workflow-window > span {
-  margin-top: 0.9rem;
-  max-width: 32rem;
+.edsync-emil-workflow-window header span {
   color: #475569;
-  font-weight: 650;
-  line-height: 1.65;
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.edsync-emil-workflow-window div {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
-  margin-top: 1.4rem;
+.edsync-emil-workflow-mock {
+  min-height: clamp(18rem, 31vw, 27rem);
+  gap: 0.85rem;
+  margin-top: 1rem;
 }
 
-.edsync-emil-workflow-window p {
-  background: #eaf2fb;
+.edsync-emil-workflow-mock.is-catalog,
+.edsync-emil-workflow-mock.is-canvas,
+.edsync-emil-workflow-mock.is-ai,
+.edsync-emil-workflow-mock.is-practice,
+.edsync-emil-workflow-mock.is-assign,
+.edsync-emil-workflow-mock.is-proof {
+  animation: emilMockSwap 340ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.edsync-emil-workflow-mock nav,
+.edsync-emil-workflow-mock aside {
+  width: clamp(7.5rem, 14vw, 12rem);
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-radius: 1rem;
+  background: #eef4fb;
+  padding: 0.75rem;
+}
+
+.edsync-emil-workflow-mock nav span,
+.edsync-emil-workflow-mock aside span,
+.edsync-emil-workflow-mock article p {
+  border-radius: 0.72rem;
+  background: #ffffff;
+  padding: 0.64rem 0.72rem;
   color: #172033;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.edsync-emil-workflow-mock article {
+  min-width: 0;
+  flex: 1;
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.12), transparent 55%),
+    #ffffff;
+  padding: clamp(1rem, 2vw, 1.4rem);
+  box-shadow: inset 0 0 0 1px rgba(8, 19, 34, 0.08);
+}
+
+.edsync-emil-workflow-mock article small {
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.edsync-emil-workflow-mock article h3 {
+  margin-top: 0.6rem;
+  max-width: 10ch;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2rem, 4vw, 4.3rem);
+  font-weight: 950;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+.edsync-emil-workflow-mock article p {
+  margin-top: 0.75rem;
+  max-width: 27rem;
+  background: #eef4fb;
+}
+
+.edsync-emil-ui-search,
+.edsync-emil-ui-grid,
+.edsync-emil-mini-toolbar,
+.edsync-emil-slide-canvas,
+.edsync-emil-page-strip,
+.edsync-emil-kahoot-grid,
+.edsync-emil-ai-box {
+  margin-top: 0.8rem;
+}
+
+.edsync-emil-ui-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(8, 19, 34, 0.1);
+  border-radius: 1rem;
+  background: #f8fafc;
+  padding: 0.78rem;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.edsync-emil-ui-grid,
+.edsync-emil-slide-canvas,
+.edsync-emil-kahoot-grid {
+  display: grid;
+  gap: 0.62rem;
+}
+
+.edsync-emil-ui-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.edsync-emil-ui-grid span,
+.edsync-emil-ai-box,
+.edsync-emil-slide-canvas span,
+.edsync-emil-page-strip span {
+  border: 1px solid rgba(8, 19, 34, 0.09);
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 0.75rem;
+  box-shadow: 0 0.8rem 1.8rem rgba(15, 23, 42, 0.06);
+}
+
+.edsync-emil-ui-grid b,
+.edsync-emil-ui-grid small,
+.edsync-emil-ai-box b,
+.edsync-emil-ai-box span {
+  display: block;
+}
+
+.edsync-emil-ui-grid b,
+.edsync-emil-ai-box b {
+  font-weight: 950;
+}
+
+.edsync-emil-ui-grid small,
+.edsync-emil-ai-box span {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 780;
+}
+
+.edsync-emil-mini-toolbar,
+.edsync-emil-page-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.edsync-emil-mini-toolbar span {
+  border-radius: 999px;
+  background: #eaf2ff;
+  color: #1d4ed8;
+  padding: 0.5rem 0.72rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.edsync-emil-slide-canvas {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.edsync-emil-slide-canvas span {
+  min-height: 4.2rem;
+  align-content: end;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-weight: 900;
+}
+
+.edsync-emil-slide-canvas span:nth-child(2) {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.edsync-emil-slide-canvas span:nth-child(3) {
+  grid-column: 1 / -1;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.edsync-emil-page-strip span {
+  display: inline-grid;
+  width: 2rem;
+  height: 1.45rem;
+  place-items: center;
+  padding: 0;
+  border-radius: 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.edsync-emil-kahoot-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.edsync-emil-kahoot-grid button {
+  min-height: 4.4rem;
+  border: 0;
+  border-radius: 1rem;
+  color: #ffffff;
+  padding: 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 950;
+  text-align: left;
+}
+
+.edsync-emil-kahoot-grid button:nth-child(1) {
+  background: #ef4444;
+}
+
+.edsync-emil-kahoot-grid button:nth-child(2) {
+  background: #2563eb;
+}
+
+.edsync-emil-kahoot-grid button:nth-child(3) {
+  background: #f59e0b;
+}
+
+.edsync-emil-kahoot-grid button:nth-child(4) {
+  background: #10b981;
+}
+
+.edsync-emil-workflow-mock.is-practice article {
+  background:
+    radial-gradient(circle at 90% 15%, rgba(245, 158, 11, 0.2), transparent 10rem),
+    #fff7ed;
+}
+
+.edsync-emil-workflow-mock.is-ai article {
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.16), transparent 60%),
+    #ffffff;
+}
+
+.edsync-emil-workflow-mock.is-assign article {
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.14), transparent 60%),
+    #ffffff;
+}
+
+.edsync-emil-workflow-mock.is-proof article {
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.14), transparent 60%),
+    #ffffff;
+}
+
+.edsync-emil-workflow-mock aside b {
+  font-size: 0.8rem;
+  text-transform: uppercase;
 }
 
 .edsync-emil-workflow-tabs {
@@ -5336,6 +5627,8 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
 .edsync-emil-catalog {
   padding-block: clamp(2rem, 5vh, 4rem) clamp(4rem, 8vh, 7rem);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
 }
 
 .edsync-emil-search {
@@ -5431,6 +5724,17 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 }
 
+@keyframes emilMockSwap {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .edsync-emil-device {
     animation: none;
@@ -5446,6 +5750,10 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-emil-hero-grid {
     min-height: auto;
   }
+
+  .edsync-emil-device {
+    min-height: auto;
+  }
 }
 
 @media (max-width: 760px) {
@@ -5454,34 +5762,49 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-emil-floating {
-    align-items: flex-start;
+    align-items: center;
+    gap: 0.7rem;
   }
 
   .edsync-emil-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
     justify-content: flex-end;
   }
 
   .edsync-emil-brand small,
-  .edsync-emil-signin span,
   .edsync-emil-kicker,
   .edsync-emil-copy p,
-  .edsync-emil-jump,
   .edsync-emil-sidecard {
     display: none;
   }
 
+  .edsync-emil-jump,
+  .edsync-emil-secondary {
+    padding-inline: 0.68rem;
+    font-size: 0.78rem;
+  }
+
   .edsync-emil-copy h1 {
     max-width: 8ch;
-    font-size: clamp(3rem, 17vw, 4.8rem);
+    font-size: clamp(2.8rem, 15vw, 4.3rem);
   }
 
   .edsync-emil-roles {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    overflow: visible;
   }
 
   .edsync-emil-roles a {
+    min-width: 0;
+    flex: 1 1 calc(50% - 0.4rem);
     justify-content: center;
+    padding-inline: 0.85rem;
+  }
+
+  .edsync-emil-roles small {
+    display: none;
   }
 
   .edsync-emil-device {
@@ -5505,15 +5828,124 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-emil-workflow {
+    min-height: 100svh;
+    padding-block: 1rem;
+  }
+
+  .edsync-emil-workflow-card {
+    gap: 0.85rem;
     min-height: auto;
   }
 
-  .edsync-emil-workflow-window div {
+  .edsync-emil-workflow-copy h2 {
+    max-width: 12ch;
+    font-size: clamp(2.15rem, 10vw, 3rem);
+    line-height: 0.96;
+  }
+
+  .edsync-emil-workflow-copy p {
+    margin-top: 0.65rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .edsync-emil-workflow-copy div {
+    gap: 0.42rem;
+    margin-top: 0.75rem;
+  }
+
+  .edsync-emil-workflow-copy small {
+    padding: 0.42rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .edsync-emil-workflow-screen {
+    border-radius: 1.35rem;
+    padding: 0.5rem;
+  }
+
+  .edsync-emil-workflow-window {
+    min-height: auto;
+    border-radius: 1rem;
+    padding: 0.78rem;
+  }
+
+  .edsync-emil-workflow-window header {
+    gap: 0.7rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .edsync-emil-workflow-window header strong {
+    font-size: 1.12rem;
+  }
+
+  .edsync-emil-workflow-window header span {
+    display: none;
+  }
+
+  .edsync-emil-workflow-mock {
+    display: grid;
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 0.55rem;
+    margin-top: 0.55rem;
+  }
+
+  .edsync-emil-workflow-mock nav,
+  .edsync-emil-workflow-mock aside {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .edsync-emil-workflow-mock nav {
+    padding: 0.48rem;
+  }
+
+  .edsync-emil-workflow-mock aside {
+    display: none;
+  }
+
+  .edsync-emil-workflow-mock nav span,
+  .edsync-emil-workflow-mock article p {
+    padding: 0.5rem 0.58rem;
+    font-size: 0.72rem;
+  }
+
+  .edsync-emil-workflow-mock article {
+    padding: 0.8rem;
+  }
+
+  .edsync-emil-workflow-mock article h3 {
+    max-width: 12ch;
+    font-size: clamp(1.55rem, 8vw, 2.25rem);
+  }
+
+  .edsync-emil-slide-canvas,
+  .edsync-emil-kahoot-grid {
     grid-template-columns: 1fr;
   }
 
+  .edsync-emil-ui-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edsync-emil-ui-grid span,
+  .edsync-emil-ai-box,
+  .edsync-emil-slide-canvas span,
+  .edsync-emil-page-strip span {
+    padding: 0.56rem;
+  }
+
+  .edsync-emil-kahoot-grid button {
+    min-height: 3.2rem;
+    font-size: 0.8rem;
+  }
+
   .edsync-emil-workflow-tabs button {
-    min-width: 10rem;
+    min-width: 8.8rem;
+    padding: 0.62rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -5539,8 +5971,21 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     font-size: 0.82rem;
   }
 
+  .edsync-emil-signin svg {
+    display: none;
+  }
+
+  .edsync-emil-jump {
+    display: none;
+  }
+
+  .edsync-emil-brand > strong {
+    display: none;
+  }
+
   .edsync-emil-device-body {
     grid-template-columns: 1fr;
+    min-height: 18rem;
   }
 
   .edsync-emil-toolrail {
@@ -5557,5 +6002,23 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   .edsync-emil-search button {
     width: 100%;
     flex-basis: 100%;
+  }
+}
+
+@media (max-width: 370px) {
+  .edsync-emil-actions {
+    gap: 0.34rem;
+  }
+
+  .edsync-emil-signin,
+  .edsync-emil-secondary {
+    padding-inline: 0.56rem;
+    font-size: 0.76rem;
+  }
+
+  .edsync-emil-brand > span {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.7rem;
   }
 }
