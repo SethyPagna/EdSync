@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { MessageSquareText, Send, UsersRound } from "lucide-react";
+import { ALL_CLASSES_SCOPE, classScopeFromSearchParams } from "@/lib/classes/class-scope";
 
 type Thread = {
   id: string;
@@ -22,19 +24,26 @@ function updatedLabel(value: string) {
   });
 }
 
+function classScopeFromLocation() {
+  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
+  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+}
+
 export default function StudentDiscussionsPage() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [responses, setResponses] = useState<Record<string, string>>({});
+  const [requestedClassId] = useState(classScopeFromLocation);
 
-  const load = () => {
-    fetch("/api/discussions", { cache: "no-store" })
+  const load = useCallback(() => {
+    const query = requestedClassId === ALL_CLASSES_SCOPE ? "" : `?classId=${encodeURIComponent(requestedClassId)}`;
+    fetch(`/api/discussions${query}`, { cache: "no-store" })
       .then((response) => response.json())
       .then((payload) => setThreads(payload.data?.threads ?? []));
-  };
+  }, [requestedClassId]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const postCount = useMemo(
     () => threads.reduce((sum, thread) => sum + Number(thread.post_count ?? 0), 0),
@@ -69,9 +78,17 @@ export default function StudentDiscussionsPage() {
           Class conversations
         </p>
         <h1 className="mt-1 font-display text-3xl font-bold">Discussions</h1>
-        <p className="mt-1 text-sm text-edsync-subtle">
-          {threads.length} thread{threads.length !== 1 ? "s" : ""}, {postCount} posts
-        </p>
+        <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-edsync-subtle">
+            {threads.length} thread{threads.length !== 1 ? "s" : ""}, {postCount} posts
+            {requestedClassId !== ALL_CLASSES_SCOPE ? " in this class" : ""}
+          </p>
+          {requestedClassId !== ALL_CLASSES_SCOPE && (
+            <Link href="/student/discussions" className="btn-secondary w-fit px-3 py-2 text-sm">
+              All discussions
+            </Link>
+          )}
+        </div>
       </section>
 
       <section className="rounded-xl border border-edsync-border bg-edsync-card">
