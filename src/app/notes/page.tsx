@@ -14,12 +14,13 @@ type NotesPageProps = {
 
 export default async function NotesPage({ searchParams }: NotesPageProps) {
   const user = await getSessionUser().catch(() => null);
-  const adminView =
-    user?.user_metadata.role === "admin" &&
-    (searchParams?.adminView === "teacher" || searchParams?.adminView === "student")
+  const requestedAdminView =
+    searchParams?.adminView === "teacher" || searchParams?.adminView === "student"
       ? searchParams.adminView
       : null;
-  const nextPath = `/notes${adminView ? `?adminView=${adminView}` : ""}`;
+  const adminView =
+    user?.user_metadata.role === "admin" ? requestedAdminView : null;
+  const nextPath = `/notes${requestedAdminView ? `?adminView=${requestedAdminView}` : ""}`;
 
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
   if (adminView === "teacher" || user.user_metadata.role === "teacher") {
