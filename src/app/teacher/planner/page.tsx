@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { CalendarClock, Megaphone, Plus, Send, TimerReset, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
+import { ALL_CLASSES_SCOPE, classScopeFromSearchParams, hasClassScope, scopedClassHref } from "@/lib/classes/class-scope";
 import type { Announcement, Class, ScheduleEvent } from "@/types";
 
 type PlannerData = {
@@ -49,6 +51,9 @@ function formatWhen(event: ScheduleEvent) {
 }
 
 export default function TeacherPlannerPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedClassId = classScopeFromSearchParams(searchParams);
   const edsync = useMemo(() => createClient(), []);
   const [classes, setClasses] = useState<Class[]>([]);
   const [planner, setPlanner] = useState<PlannerData>({ announcements: [], events: [] });
@@ -94,6 +99,22 @@ export default function TeacherPlannerPage() {
   useEffect(() => {
     loadPlanner();
   }, [loadPlanner]);
+
+  useEffect(() => {
+    if (!hasClassScope(classes, requestedClassId)) return;
+    setSelectedClassId(requestedClassId);
+    if (requestedClassId !== ALL_CLASSES_SCOPE) {
+      setForm((current) => ({ ...current, classId: current.classId || requestedClassId }));
+    }
+  }, [classes, requestedClassId]);
+
+  const chooseClassScope = (classId: string) => {
+    setSelectedClassId(classId);
+    if (classId !== ALL_CLASSES_SCOPE) {
+      setForm((current) => ({ ...current, classId }));
+    }
+    router.replace(scopedClassHref("/teacher/planner", classId), { scroll: false });
+  };
 
   const selectedClass = useMemo(
     () => classes.find((classRow) => classRow.id === selectedClassId) ?? null,
@@ -220,7 +241,7 @@ export default function TeacherPlannerPage() {
           <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
             <button
               type="button"
-              onClick={() => setSelectedClassId("all")}
+              onClick={() => chooseClassScope(ALL_CLASSES_SCOPE)}
               className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                 selectedClassId === "all"
                   ? "border-edsync-blue bg-edsync-blue text-white"
@@ -233,10 +254,7 @@ export default function TeacherPlannerPage() {
               <button
                 key={classRow.id}
                 type="button"
-                onClick={() => {
-                  setSelectedClassId(classRow.id);
-                  setForm((current) => ({ ...current, classId: classRow.id }));
-                }}
+                onClick={() => chooseClassScope(classRow.id)}
                 className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                   selectedClassId === classRow.id
                     ? "border-edsync-blue bg-edsync-blue text-white"
