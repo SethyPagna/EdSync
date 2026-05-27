@@ -1451,13 +1451,13 @@ h6 {
 }
 
 .premium-shell[data-shell-role="teacher"] {
-  --shell-accent: var(--amber);
-  --shell-accent-rgb: var(--amber-rgb);
+  --shell-accent: var(--blue);
+  --shell-accent-rgb: var(--blue-rgb);
 }
 
 .premium-shell[data-shell-role="student"] {
-  --shell-accent: var(--emerald);
-  --shell-accent-rgb: var(--emerald-rgb);
+  --shell-accent: var(--blue);
+  --shell-accent-rgb: var(--blue-rgb);
 }
 
 .premium-surface {
@@ -6377,5 +6377,182 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-workflow-tabs {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.edsync-emil-section-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.72) 48%, transparent 100%),
+    linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(4, 120, 87, 0.12));
+  transform: scaleX(0.04);
+  transform-origin: left center;
+  transition:
+    opacity 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 620ms cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.edsync-emil-intro[data-section-transition="to-workflow"] .edsync-emil-section-transition,
+.edsync-emil-intro[data-section-transition="to-catalog"] .edsync-emil-section-transition,
+.edsync-emil-intro[data-section-transition="to-hero"] .edsync-emil-section-transition {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.edsync-emil-shot-body {
+  display: block;
+  min-height: auto;
+  padding-top: 0.85rem;
+}
+
+.edsync-emil-shot-frame,
+.edsync-emil-workflow-visual {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(8, 19, 34, 0.12);
+  background: #edf6ff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.64);
+}
+
+.edsync-emil-shot-frame {
+  min-height: clamp(22rem, 37vw, 42rem);
+  border-radius: 1.35rem;
+}
+
+.edsync-emil-workflow-visual {
+  aspect-ratio: 16 / 9;
+  border-radius: 1.1rem;
+}
+
+.edsync-emil-shot-frame img,
+.edsync-emil-workflow-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left top;
+  filter: saturate(0.95) contrast(1.02);
+}
+
+.edsync-emil-shot-frame::after,
+.edsync-emil-workflow-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 42%, rgba(6, 17, 31, 0.7) 100%),
+    linear-gradient(90deg, rgba(6, 17, 31, 0.08), transparent 36%);
+}
+
+.edsync-emil-shot-frame figcaption,
+.edsync-emil-workflow-visual figcaption {
+  position: absolute;
+  z-index: 1;
+  right: clamp(0.8rem, 2vw, 1.25rem);
+  bottom: clamp(0.8rem, 2vw, 1.25rem);
+  left: clamp(0.8rem, 2vw, 1.25rem);
+  display: grid;
+  gap: 0.45rem;
+  max-width: 34rem;
+  color: #ffffff;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.38);
+}
+
+.edsync-emil-shot-frame figcaption small,
+.edsync-emil-workflow-visual figcaption small {
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.edsync-emil-shot-frame figcaption strong,
+.edsync-emil-workflow-visual figcaption strong {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.65rem, 3vw, 2.85rem);
+  font-weight: 900;
+  line-height: 0.95;
+}
+
+.edsync-emil-shot-frame figcaption p {
+  max-width: 30rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(0.88rem, 1.3vw, 1rem);
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+.edsync-emil-shot-frame figcaption span,
+.edsync-emil-workflow-visual figcaption span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.edsync-emil-shot-frame figcaption em,
+.edsync-emil-workflow-visual figcaption em {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 0.34rem 0.55rem;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
+}
+
+.edsync-emil-workflow-window {
+  min-height: auto;
+}
+
+.edsync-emil-workflow-window header {
+  margin-bottom: 1rem;
+}
+
+.edsync-emil-workflow-card {
+  transition:
+    opacity 260ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 260ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) {
+  min-height: min(72svh, 48rem);
+}
+
+@media (min-width: 1200px) {
+  .edsync-emil-workflow-card {
+    grid-template-columns: minmax(18rem, 0.52fr) minmax(36rem, 1.48fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .edsync-emil-shot-frame {
+    min-height: 17.5rem;
+  }
+
+  .edsync-emil-shot-frame figcaption p,
+  .edsync-emil-workflow-visual figcaption span {
+    display: none;
+  }
+
+  .edsync-emil-workflow-visual {
+    aspect-ratio: 4 / 3;
+  }
+
+  .edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) {
+    min-height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edsync-emil-section-transition,
+  .edsync-emil-workflow-card {
+    transition: opacity 160ms ease;
+    transform: none !important;
   }
 }
