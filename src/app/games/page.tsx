@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { normalizeAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
   title: "Games",
@@ -13,8 +14,9 @@ type GamesPageProps = {
 
 export default function GamesPage({ searchParams }: GamesPageProps) {
   const params = new URLSearchParams({ mode: "sprint" });
-  if (searchParams?.adminView === "teacher" || searchParams?.adminView === "student") {
-    params.set("adminView", searchParams.adminView);
+  const adminView = normalizeAdminViewMode(searchParams?.adminView);
+  if (adminView) {
+    params.set("adminView", adminView);
   }
   redirect(`/practice?${params.toString()}`);
 }
