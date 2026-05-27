@@ -29,7 +29,7 @@
 - [x] Add custom auth API routes for signup, login, logout, and session lookup.
 - [x] Add D1 REST-backed data API used by the browser client.
 - [x] Add R2 upload route and storage metadata rows.
-- [x] Add Cloudflare worker/queue scaffold and `wrangler.toml`.
+- [x] Add Cloudflare worker/queue scaffold and `infra/cloudflare/wrangler.toml`.
 - [x] Update Vercel deployment script and required env keys.
 - [x] Update README and deployment docs for Cloudflare-only data/storage.
 - [x] Switch the visual system to EdSync naming, light default, and dark toggle.
