@@ -44,12 +44,15 @@ function SignupForm() {
   const copy = useMemo(() => getPublicCopy(language), [language]);
   const authCopy = useMemo(() => getPublicAuthCopy(language), [language]);
   const preset = searchParams.get("role");
+  const presetMode = searchParams.get("mode");
   const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const initialRole: Role = preset === "teacher" ? "teacher" : "student";
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
   const [step, setStep] = useState<SignupStep>("space");
-  const [accountType, setAccountType] = useState<AccountType>(presetOrganization ? "organization" : "individual");
+  const [accountType, setAccountType] = useState<AccountType>(
+    presetOrganization || presetMode === "organization" ? "organization" : "individual",
+  );
   const [organizationMode, setOrganizationMode] = useState<OrganizationMode>("join");
   const [organizationName, setOrganizationName] = useState("");
   const [organizationCode, setOrganizationCode] = useState(presetOrganization);
