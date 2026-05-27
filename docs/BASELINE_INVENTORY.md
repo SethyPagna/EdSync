@@ -164,7 +164,7 @@ Known command notes:
 - Use `npm.cmd` and `npx.cmd` on Windows.
 - Use `Get-Content -LiteralPath` for bracketed routes such as `[id]` and `[productId]`.
 - Rebuild OpenNext before deploying Cloudflare: `npm.cmd run build:cloudflare`.
-- Deploy the existing Cloudflare app worker with `npx.cmd opennextjs-cloudflare deploy --config wrangler.app.jsonc -- --env production --keep-vars`.
+- Deploy the existing Cloudflare app worker with `npx.cmd opennextjs-cloudflare deploy --config infra/cloudflare/wrangler.app.jsonc -- --env production --keep-vars`.
 
 ## Phase 1 Gaps To Carry Forward
 
