@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { normalizeAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
   title: "Quizzes",
@@ -13,8 +14,9 @@ type QuizzesPageProps = {
 
 export default function QuizzesPage({ searchParams }: QuizzesPageProps) {
   const params = new URLSearchParams({ mode: "quiz" });
-  if (searchParams?.adminView === "teacher" || searchParams?.adminView === "student") {
-    params.set("adminView", searchParams.adminView);
+  const adminView = normalizeAdminViewMode(searchParams?.adminView);
+  if (adminView) {
+    params.set("adminView", adminView);
   }
   redirect(`/practice?${params.toString()}`);
 }
