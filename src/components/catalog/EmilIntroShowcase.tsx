@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,6 +14,7 @@ import {
   Search,
   Sparkles,
   UserRound,
+  type LucideIcon,
 } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -42,63 +44,64 @@ type PreviewSlide = {
   title: string;
   route: string;
   accent: string;
-  left: string[];
-  canvasTitle: string;
-  canvasRows: string[];
-  sideTitle: string;
-  sideRows: string[];
+  image: string;
+  summary: string;
+  tags: string[];
 };
 
 type WorkflowSlide = {
-  id: "catalog" | "canvas" | "ai" | "assign" | "practice" | "proof";
-  icon: typeof Search;
+  id: "catalog" | "access" | "canvas" | "assign" | "practice" | "proof";
+  icon: LucideIcon;
   title: string;
   detail: string;
   route: string;
-  rail: string[];
+  image: string;
   panelTitle: string;
-  rows: string[];
-  sideTitle: string;
-  sideRows: string[];
   pills: string[];
 };
+
+type SectionTransition = "idle" | "to-workflow" | "to-catalog" | "to-hero";
 
 const previewSlides: PreviewSlide[] = [
   {
     id: "catalog",
     eyebrow: "Public catalog",
-    title: "Catalog",
+    title: "Browse courses",
     route: "/catalog",
     accent: "catalog",
-    left: ["Search", "Featured", "Free", "Paid", "Portal"],
-    canvasTitle: "Course marketplace",
-    canvasRows: ["Search courses and academies", "Preview before sign in", "Return to selected course"],
-    sideTitle: "Access",
-    sideRows: ["Individual courses", "Organization portal", "Free and paid paths"],
+    image: "/showcase/catalog-results.jpg",
+    summary: "A public course and academy entrance before sign-in.",
+    tags: ["Catalog", "Free + paid", "Academies"],
+  },
+  {
+    id: "login",
+    eyebrow: "Organization login",
+    title: "Choose a workspace",
+    route: "/auth/login",
+    accent: "access",
+    image: "/showcase/login-organization.jpg",
+    summary: "Individual learners and organization users enter through the same account flow.",
+    tags: ["Individual", "Organization", "Return path"],
   },
   {
     id: "teacher",
     eyebrow: "Teacher lesson canvas",
-    title: "Create Lesson",
+    title: "Create lessons",
     route: "/teacher/lessons/create",
     accent: "studio",
-    left: ["Templates", "Elements", "Text", "Uploads", "AI"],
-    canvasTitle: "Lesson pages",
-    canvasRows: ["Template applied", "Media checked", "Practice block ready"],
-    sideTitle: "Class work",
-    sideRows: ["Due date synced", "Weighted score optional", "Feedback draft saved"],
+    image: "/showcase/teacher-create.jpg",
+    summary: "Teachers can start with AI, a draft, or a blank canvas.",
+    tags: ["AI draft", "Canvas", "Templates"],
   },
   {
     id: "student",
-    eyebrow: "Student support",
-    title: "Practice & AI Tutor",
-    route: "/practice",
+    eyebrow: "Student learning",
+    title: "Continue learning",
+    route: "/student/dashboard",
     accent: "practice",
-    left: ["Lessons", "My Work", "Planner", "Notes", "Grades"],
-    canvasTitle: "Retry missed questions",
-    canvasRows: ["Misses saved", "AI explains why", "Review card scheduled"],
-    sideTitle: "Active time",
-    sideRows: ["Focused time tracked", "Notifications toggled", "Deadline synced"],
+    image: "/showcase/student-dashboard.jpg",
+    summary: "Learners see progress, catalog courses, practice, and class context in one place.",
+    tags: ["Progress", "Practice", "Catalog"],
   },
   {
     id: "admin",
@@ -106,11 +109,9 @@ const previewSlides: PreviewSlide[] = [
     title: "Admin command",
     route: "/admin/dashboard",
     accent: "admin",
-    left: ["Users", "Portals", "AI Providers", "Security", "Settings"],
-    canvasTitle: "AI provider routing",
-    canvasRows: ["Provider health", "Fallback order", "Encrypted keys"],
-    sideTitle: "Audit",
-    sideRows: ["View-as logged", "Feature flags", "Tenant scoped"],
+    image: "/showcase/admin-dashboard.jpg",
+    summary: "Owners manage portals, permissions, governance, and platform evidence.",
+    tags: ["Admin", "Governance", "Audit"],
   },
 ];
 
@@ -121,12 +122,19 @@ const workflowSlides: WorkflowSlide[] = [
     title: "Choose the right entrance",
     detail: "Individuals start from the course catalog. Organizations keep teacher and student work inside one portal.",
     route: "/catalog",
-    rail: ["Catalog", "Portal", "Sign in"],
+    image: "/showcase/catalog-results.jpg",
     panelTitle: "Public catalog",
-    rows: ["Search by topic, price, duration", "Preview course details", "Return after sign in"],
-    sideTitle: "Organization",
-    sideRows: ["Teachers", "Students", "Manager controls"],
     pills: ["Individual", "Organization", "Teacher + Student"],
+  },
+  {
+    id: "access",
+    icon: UserRound,
+    title: "Sign in with context",
+    detail: "The same login separates individual learning from organization-managed access without changing the product story.",
+    route: "/auth/login",
+    image: "/showcase/login-organization.jpg",
+    panelTitle: "Workspace access",
+    pills: ["Organization code", "Individual workspace", "Return after login"],
   },
   {
     id: "canvas",
@@ -134,25 +142,9 @@ const workflowSlides: WorkflowSlide[] = [
     title: "Create with a lesson canvas",
     detail: "Lessons are pages with templates, elements, text, media, quiz blocks, practice cards, and bottom page navigation.",
     route: "/teacher/lessons/create",
-    rail: ["Templates", "Elements", "Text", "Uploads"],
+    image: "/showcase/teacher-create.jpg",
     panelTitle: "Lesson Creation Studio",
-    rows: ["Apply template", "Add media cue", "Insert quiz block"],
-    sideTitle: "Pages",
-    sideRows: ["1 Title", "2 Activity", "3 Review"],
     pills: ["Templates", "Elements", "Bottom pages"],
-  },
-  {
-    id: "ai",
-    icon: Sparkles,
-    title: "AI drafts into designs",
-    detail: "AI can start from a blank lesson, build a full draft, or format responses into the selected lesson template.",
-    route: "/teacher/lessons/create?mode=ai",
-    rail: ["AI draft", "Full AI", "Blank", "Style"],
-    panelTitle: "AI Co-creator",
-    rows: ["Topic + grade level", "Slides + speaker notes", "Quiz + rubric generated"],
-    sideTitle: "Teacher review",
-    sideRows: ["Editable draft", "Apply template", "No auto-publish"],
-    pills: ["AI draft", "Full AI", "Blank lesson"],
   },
   {
     id: "assign",
@@ -160,25 +152,19 @@ const workflowSlides: WorkflowSlide[] = [
     title: "Assign work with context",
     detail: "Assignments, discussions, planner deadlines, projects, quizzes, and participation criteria stay tied to the class.",
     route: "/teacher/work",
-    rail: ["Work", "Planner", "Discussion", "Grade"],
+    image: "/showcase/teacher-work.jpg",
     panelTitle: "Class work",
-    rows: ["Attach lesson pages", "Set deadline", "Weight 5% or completion only"],
-    sideTitle: "Feedback",
-    sideRows: ["Rich note", "Grade visible", "Revisions open"],
     pills: ["Assignments", "Deadlines", "Weighted score"],
   },
   {
     id: "practice",
     icon: Brain,
-    title: "Practice feels playable",
-    detail: "Practice and AI Tutor live together with quiz, sprint, retry missed, matching, flashcards, timers, and explanations.",
-    route: "/practice",
-    rail: ["Quiz", "Sprint", "Retry", "Explain"],
-    panelTitle: "Practice & AI Tutor",
-    rows: ["Generate from lesson", "Speed + accuracy", "Save misses to review"],
-    sideTitle: "Live run",
-    sideRows: ["Timer 05:00", "Points +120", "Next hint ready"],
-    pills: ["Color feedback", "Timer", "Review queue"],
+    title: "Learning stays personal",
+    detail: "Students keep catalog courses, assigned work, learning time, and practice entry points in their own workspace.",
+    route: "/student/dashboard",
+    image: "/showcase/student-dashboard.jpg",
+    panelTitle: "Student dashboard",
+    pills: ["Catalog courses", "Practice & AI", "Class join"],
   },
   {
     id: "proof",
@@ -186,194 +172,23 @@ const workflowSlides: WorkflowSlide[] = [
     title: "Progress becomes evidence",
     detail: "Student work, feedback, time spent, grade events, reports, and admin audit trails stay connected.",
     route: "/admin/dashboard",
-    rail: ["Grades", "Reports", "AI", "Security"],
+    image: "/showcase/admin-dashboard.jpg",
     panelTitle: "Evidence dashboard",
-    rows: ["Score out of work points", "Weighted toward course grade", "Participation criteria tracked"],
-    sideTitle: "Admin",
-    sideRows: ["Provider health", "View-as audited", "Tenant scoped"],
     pills: ["Gradebook", "Reports", "Admin audit"],
   },
 ];
 
-function WorkflowMockup({ workflow }: { workflow: WorkflowSlide }) {
-  if (workflow.id === "catalog") {
-    return (
-      <div className="edsync-emil-workflow-mock is-catalog">
-        <nav>
-          {workflow.rail.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </nav>
-        <article>
-          <small>{workflow.route}</small>
-          <h3>{workflow.panelTitle}</h3>
-          <div className="edsync-emil-ui-search">
-            <Search className="h-4 w-4" />
-            <span>Search courses, academies, practice</span>
-          </div>
-          <div className="edsync-emil-ui-grid">
-            <span>
-              <b>Individual</b>
-              <small>Buy and learn</small>
-            </span>
-            <span>
-              <b>Organization</b>
-              <small>Teacher + student portal</small>
-            </span>
-          </div>
-        </article>
-        <aside>
-          <b>{workflow.sideTitle}</b>
-          {workflow.sideRows.map((row) => (
-            <span key={row}>{row}</span>
-          ))}
-        </aside>
-      </div>
-    );
-  }
-
-  if (workflow.id === "canvas") {
-    return (
-      <div className="edsync-emil-workflow-mock is-canvas">
-        <nav>
-          {workflow.rail.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </nav>
-        <article>
-          <small>{workflow.route}</small>
-          <div className="edsync-emil-mini-toolbar">
-            <span>Template</span>
-            <span>Text</span>
-            <span>Media</span>
-            <span>AI</span>
-          </div>
-          <h3>Energy Transfer</h3>
-          <div className="edsync-emil-slide-canvas">
-            <span>Heat moves through touch</span>
-            <span>Video check</span>
-            <span>Quick question</span>
-          </div>
-          <div className="edsync-emil-page-strip">
-            <span>1</span>
-            <span>2</span>
-            <span>3</span>
-          </div>
-        </article>
-        <aside>
-          <b>{workflow.sideTitle}</b>
-          {workflow.sideRows.map((row) => (
-            <span key={row}>{row}</span>
-          ))}
-        </aside>
-      </div>
-    );
-  }
-
-  if (workflow.id === "practice") {
-    return (
-      <div className="edsync-emil-workflow-mock is-practice">
-        <nav>
-          {workflow.rail.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </nav>
-        <article>
-          <small>{workflow.route}</small>
-          <h3>{workflow.panelTitle}</h3>
-          <div className="edsync-emil-kahoot-grid">
-            <button type="button">Conduction</button>
-            <button type="button">Radiation</button>
-            <button type="button">Convection</button>
-            <button type="button">Insulation</button>
-          </div>
-        </article>
-        <aside>
-          <b>{workflow.sideTitle}</b>
-          <span>Timer 05:00</span>
-          <span>Accuracy 82%</span>
-          <span>Points +120</span>
-        </aside>
-      </div>
-    );
-  }
-
-  if (workflow.id === "ai") {
-    return (
-      <div className="edsync-emil-workflow-mock is-ai">
-        <nav>
-          {workflow.rail.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </nav>
-        <article>
-          <small>{workflow.route}</small>
-          <h3>{workflow.panelTitle}</h3>
-          <div className="edsync-emil-ai-box">
-            <b>Generate: Grade 8 energy transfer</b>
-            <span>6 slides, quiz, rubric, kid-friendly template</span>
-          </div>
-          {workflow.rows.map((row) => (
-            <p key={row}>{row}</p>
-          ))}
-        </article>
-        <aside>
-          <b>{workflow.sideTitle}</b>
-          {workflow.sideRows.map((row) => (
-            <span key={row}>{row}</span>
-          ))}
-        </aside>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`edsync-emil-workflow-mock is-${workflow.id}`}>
-      <nav>
-        {workflow.rail.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </nav>
-      <article>
-        <small>{workflow.route}</small>
-        <h3>{workflow.panelTitle}</h3>
-        {workflow.rows.map((row) => (
-          <p key={row}>{row}</p>
-        ))}
-      </article>
-      <aside>
-        <b>{workflow.sideTitle}</b>
-        {workflow.sideRows.map((row) => (
-          <span key={row}>{row}</span>
-        ))}
-      </aside>
-    </div>
-  );
-}
-
-function useAutoIndex(length: number, delayMs: number) {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % length);
-    }, delayMs);
-    return () => window.clearInterval(timer);
-  }, [delayMs, length]);
-
-  return [index, setIndex] as const;
-}
-
 export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
-  const [previewIndex, setPreviewIndex] = useAutoIndex(previewSlides.length, 4600);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [workflowIndex, setWorkflowIndex] = useState(0);
   const heroRef = useRef<HTMLElement | null>(null);
   const workflowRef = useRef<HTMLElement | null>(null);
   const catalogRef = useRef<HTMLElement | null>(null);
   const workflowIndexRef = useRef(0);
   const wheelCooldownRef = useRef(0);
+  const sectionTransitionTimerRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const [sectionTransition, setSectionTransition] = useState<SectionTransition>("idle");
   const preview = previewSlides[previewIndex];
   const workflow = workflowSlides[workflowIndex];
   const WorkflowIcon = workflow.icon;
@@ -408,6 +223,27 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
     setWorkflowIndex(safeIndex);
   }, [setWorkflowIndex]);
 
+  const moveToSection = useCallback((target: HTMLElement | null, transition: Exclude<SectionTransition, "idle">) => {
+    if (!target) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (sectionTransitionTimerRef.current) {
+      window.clearTimeout(sectionTransitionTimerRef.current);
+    }
+    if (reduceMotion) {
+      target.scrollIntoView({ behavior: "auto", block: "start" });
+      setSectionTransition("idle");
+      return;
+    }
+    setSectionTransition(transition);
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    sectionTransitionTimerRef.current = window.setTimeout(() => {
+      setSectionTransition("idle");
+      sectionTransitionTimerRef.current = null;
+    }, 760);
+  }, []);
+
   useEffect(() => {
     workflowIndexRef.current = workflowIndex;
   }, [workflowIndex]);
@@ -429,11 +265,11 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       wheelCooldownRef.current = now + 520;
       const nextIndex = workflowIndexRef.current + direction;
       if (nextIndex < 0) {
-        document.querySelector(".edsync-emil-hero")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        moveToSection(heroRef.current, "to-hero");
         return true;
       }
       if (nextIndex >= workflowSlides.length) {
-        document.getElementById("emil-catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        moveToSection(catalogRef.current, "to-catalog");
         return true;
       }
       setWorkflowSlide(nextIndex);
@@ -467,7 +303,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       section.removeEventListener("touchstart", onTouchStart);
       section.removeEventListener("touchend", onTouchEnd);
     };
-  }, [setWorkflowSlide]);
+  }, [moveToSection, setWorkflowSlide]);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -476,10 +312,6 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
     const sectionIsCentered = (section: HTMLElement, topWeight = 0.22, bottomWeight = 0.78) => {
       const rect = section.getBoundingClientRect();
       return rect.top < window.innerHeight * topWeight && rect.bottom > window.innerHeight * bottomWeight;
-    };
-
-    const smoothJump = (target: HTMLElement | null) => {
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
     const onWheel = (event: WheelEvent) => {
@@ -491,7 +323,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       if (event.deltaY > 0 && hero && workflow && sectionIsCentered(hero, 0.34, 0.56)) {
         event.preventDefault();
         wheelCooldownRef.current = Date.now() + 720;
-        smoothJump(workflow);
+        moveToSection(workflow, "to-workflow");
         return;
       }
 
@@ -499,13 +331,21 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
         event.preventDefault();
         wheelCooldownRef.current = Date.now() + 720;
         setWorkflowSlide(workflowSlides.length - 1);
-        smoothJump(workflow);
+        moveToSection(workflow, "to-workflow");
       }
     };
 
     window.addEventListener("wheel", onWheel, { passive: false, capture: true });
     return () => window.removeEventListener("wheel", onWheel, { capture: true });
-  }, [setWorkflowSlide]);
+  }, [moveToSection, setWorkflowSlide]);
+
+  useEffect(() => {
+    return () => {
+      if (sectionTransitionTimerRef.current) {
+        window.clearTimeout(sectionTransitionTimerRef.current);
+      }
+    };
+  }, []);
 
   const searchTags = useMemo(
     () => [
@@ -519,7 +359,8 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   );
 
   return (
-    <main className="edsync-emil-intro">
+    <main className="edsync-emil-intro" data-section-transition={sectionTransition}>
+      <div className="edsync-emil-section-transition" aria-hidden="true" />
       <section ref={heroRef} className="edsync-emil-hero" aria-labelledby="emil-intro-title">
         <div className="edsync-emil-floating">
           <Link href="/" className="edsync-emil-brand" aria-label="EdSync home">
@@ -530,10 +371,24 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
             <small>{brandSubhead}</small>
           </Link>
           <div className="edsync-emil-actions">
-            <a href="#emil-catalog" className="edsync-emil-jump">
+            <a
+              href="#emil-catalog"
+              className="edsync-emil-jump"
+              onClick={(event) => {
+                event.preventDefault();
+                moveToSection(catalogRef.current, "to-catalog");
+              }}
+            >
               {labels.catalog}
             </a>
-            <a href="#emil-workflow" className="edsync-emil-jump">
+            <a
+              href="#emil-workflow"
+              className="edsync-emil-jump"
+              onClick={(event) => {
+                event.preventDefault();
+                moveToSection(workflowRef.current, "to-workflow");
+              }}
+            >
               {workflowLabel}
             </a>
             <Link href="/auth/signup" className="edsync-emil-secondary">
@@ -579,36 +434,26 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
               <span>{preview.eyebrow}</span>
               <Link href={preview.route}>{preview.route}</Link>
             </div>
-            <div className="edsync-emil-device-body">
-              <div className="edsync-emil-toolrail">
-                {preview.left.map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
-              </div>
-              <div className={`edsync-emil-canvas is-${preview.accent}`}>
-                <div className="edsync-emil-toolbar">
-                  <span>Template</span>
-                  <span>Text</span>
-                  <span>Media</span>
-                  <span>AI</span>
-                </div>
-                <article>
-                  <small>{preview.title}</small>
-                  <h2>{preview.canvasTitle}</h2>
-                  {preview.canvasRows.map((row) => (
-                    <p key={row}>
-                      <CheckCircle2 className="h-4 w-4" />
-                      {row}
-                    </p>
-                  ))}
-                </article>
-              </div>
-              <aside className="edsync-emil-sidecard">
-                <strong>{preview.sideTitle}</strong>
-                {preview.sideRows.map((row) => (
-                  <span key={row}>{row}</span>
-                ))}
-              </aside>
+            <div className="edsync-emil-device-body edsync-emil-shot-body">
+              <figure className={`edsync-emil-shot-frame is-${preview.accent}`}>
+                <Image
+                  src={preview.image}
+                  alt={`${preview.title} page preview`}
+                  fill
+                  priority={previewIndex === 0}
+                  sizes="(max-width: 760px) 100vw, 58vw"
+                />
+                <figcaption>
+                  <small>{preview.eyebrow}</small>
+                  <strong>{preview.title}</strong>
+                  <p>{preview.summary}</p>
+                  <span>
+                    {preview.tags.map((tag) => (
+                      <em key={tag}>{tag}</em>
+                    ))}
+                  </span>
+                </figcaption>
+              </figure>
             </div>
             <div className="edsync-emil-dots" aria-label="Preview slides">
               {previewSlides.map((slide, index) => (
@@ -646,7 +491,24 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
                   <span>{workflow.route}</span>
                 </div>
               </header>
-              <WorkflowMockup workflow={workflow} />
+              <figure className={`edsync-emil-workflow-visual is-${workflow.id}`}>
+                <Image
+                  src={workflow.image}
+                  alt={`${workflow.panelTitle} actual EdSync page`}
+                  fill
+                  priority={workflowIndex === 0}
+                  sizes="(max-width: 760px) 100vw, 58vw"
+                />
+                <figcaption>
+                  <small>{workflow.route}</small>
+                  <strong>{workflow.panelTitle}</strong>
+                  <span>
+                    {workflow.pills.map((pill) => (
+                      <em key={pill}>{pill}</em>
+                    ))}
+                  </span>
+                </figcaption>
+              </figure>
             </div>
           </div>
         </div>
