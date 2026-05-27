@@ -4,6 +4,8 @@ import { join, resolve } from "node:path";
 import { loadEnvFile, run } from "./lib/ops";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
+const APP_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.app.jsonc";
+const AUTOMATION_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.toml";
 
 type CloudflareApiPayload<T = unknown> = {
   success?: boolean;
@@ -122,13 +124,13 @@ async function main() {
       "TURNSTILE_SECRET_KEY",
       "TURNSTILE_SITE_KEY",
     ]) {
-      putWorkerSecret(key, "wrangler.app.jsonc", environment);
+      putWorkerSecret(key, APP_WORKER_CONFIG_PATH, environment);
     }
   } else {
     console.log("Skipping Worker secret sync because CLOUDFLARE_SKIP_SECRET_SYNC=1.");
   }
 
-  run("npx", ["opennextjs-cloudflare", "build", "--config", "wrangler.app.jsonc", ...envArgs]);
+  run("npx", ["opennextjs-cloudflare", "build", "--config", APP_WORKER_CONFIG_PATH, ...envArgs]);
   const pagesDeployCwd = mkdtempSync(join(tmpdir(), "edsync-pages-"));
   const pagesIndexPath = resolve(".open-next/assets/index.html");
   const appUrl =
@@ -155,9 +157,9 @@ async function main() {
     environment === "production" ? "main" : "preview",
   ], { cwd: pagesDeployCwd, env: pagesDeployEnv });
   unlinkSync(pagesIndexPath);
-  run("npx", ["opennextjs-cloudflare", "deploy", "--config", "wrangler.app.jsonc", ...envArgs, "--", "--keep-vars"]);
+  run("npx", ["opennextjs-cloudflare", "deploy", "--config", APP_WORKER_CONFIG_PATH, ...envArgs, "--", "--keep-vars"]);
   const automationDeployCwd = mkdtempSync(join(tmpdir(), "edsync-worker-"));
-  run("npx", ["wrangler", "deploy", "--config", resolve("wrangler.toml"), ...envArgs], {
+  run("npx", ["wrangler", "deploy", "--config", resolve(AUTOMATION_WORKER_CONFIG_PATH), ...envArgs], {
     cwd: automationDeployCwd,
   });
 
