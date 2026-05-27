@@ -29,10 +29,13 @@ function LoginForm() {
   const { language, querySuffix } = usePublicLanguagePreference();
   const copy = useMemo(() => getPublicCopy(language), [language]);
   const authCopy = useMemo(() => getPublicAuthCopy(language), [language]);
+  const presetMode = searchParams.get("mode");
   const presetOrganization = normalizeOrganizationCode(searchParams.get("org") || searchParams.get("tenant") || "");
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
-  const [accountType, setAccountType] = useState<AccountType>(presetOrganization ? "organization" : "individual");
+  const [accountType, setAccountType] = useState<AccountType>(
+    presetOrganization || presetMode === "organization" ? "organization" : "individual",
+  );
   const [organizationCode, setOrganizationCode] = useState(presetOrganization);
   const [organizationLookup, setOrganizationLookup] = useState<OrganizationLookup | null>(null);
   const [organizationStatus, setOrganizationStatus] = useState<"idle" | "checking" | "found" | "missing">(
