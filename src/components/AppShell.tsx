@@ -11,9 +11,16 @@ import { SECTION_ORDER_EVENT, type SectionOrderEventDetail } from "@/components/
 import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
+  adminViewModeForWorkspaceRole,
+  adminViewModeLabel,
+  normalizeAdminViewMode,
+  type AdminViewMode,
+} from "@/lib/admin-view";
+import {
   BarChart3,
   Bell,
   BookOpenCheck,
+  Building2,
   CalendarClock,
   Brain,
   ClipboardList,
@@ -83,7 +90,7 @@ function sessionRoleFromCookie() {
   const match = document.cookie
     .split(";")
     .map((value) => value.trim())
-    .find((value) => value.startsWith("edsync-role="));
+    .find((value) => value.startsWith("edsync_role="));
   const role = match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null;
   return role === "admin" || role === "teacher" || role === "student" ? role : null;
 }
@@ -92,7 +99,7 @@ function pathWithoutQuery(href: string) {
   return href.split("?")[0];
 }
 
-function appendAdminViewMode(href: string, mode: "teacher" | "student" | null) {
+function appendAdminViewMode(href: string, mode: AdminViewMode | null) {
   if (!mode || href.includes("adminView=")) return href;
   if (href.startsWith("/teacher") || href.startsWith("/student") || href === "/ai" || href === "/practice") {
     return `${href}${href.includes("?") ? "&" : "?"}adminView=${mode}`;
@@ -114,6 +121,11 @@ function workspaceContextFromStorage(): WorkspaceContext | null {
   } catch {
     return null;
   }
+}
+
+function adminViewModeFromLocation() {
+  if (typeof window === "undefined") return null;
+  return normalizeAdminViewMode(new URLSearchParams(window.location.search).get("adminView"));
 }
 
 function sidebarCollapsedFromStorage() {
@@ -207,8 +219,10 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/email", label: "Email", icon: MessageSquareText },
   { href: "/admin/security", label: "Security", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
-  { href: "/teacher/dashboard?adminView=teacher", label: "View Teacher", icon: GraduationCap },
-  { href: "/student/dashboard?adminView=student", label: "View Student", icon: BookOpenCheck },
+  { href: "/student/dashboard?adminView=individual", label: "Individual Account", icon: UserRound },
+  { href: "/admin/portals", label: "Organizations", icon: Building2 },
+  { href: "/teacher/dashboard?adminView=organization-teacher", label: "Organization Teacher", icon: GraduationCap },
+  { href: "/student/dashboard?adminView=organization-student", label: "Organization Student", icon: BookOpenCheck },
 ];
 
 function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
@@ -223,7 +237,15 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
       { label: "Intelligence", items: pick(["/admin/ai"]) },
       { label: "Governance", items: pick(["/admin/governance", "/admin/standards", "/admin/certifications", "/admin/automation", "/admin/security"]) },
       { label: "System", items: pick(["/admin/billing", "/admin/settings"]) },
-      { label: "View As", items: pick(["/teacher/dashboard?adminView=teacher", "/student/dashboard?adminView=student"]) },
+      {
+        label: "Owner Views",
+        items: pick([
+          "/student/dashboard?adminView=individual",
+          "/admin/portals",
+          "/teacher/dashboard?adminView=organization-teacher",
+          "/student/dashboard?adminView=organization-student",
+        ]),
+      },
     ];
   }
 
@@ -257,9 +279,13 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
   const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(() => workspaceContextFromStorage());
+  const [requestedAdminViewMode, setRequestedAdminViewMode] = useState<AdminViewMode | null>(() => adminViewModeFromLocation());
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => readSectionOrder(sectionOrderStorageKey(role)));
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
+  const adminViewMode = isAdminViewMode
+    ? requestedAdminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student")
+    : null;
 
   useEffect(() => {
     const stored = window.localStorage.getItem("edsync-theme");
@@ -267,6 +293,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     document.documentElement.classList.toggle("dark", useDark);
     setWorkspaceContext(workspaceContextFromStorage());
   }, []);
+
+  useEffect(() => {
+    setRequestedAdminViewMode(adminViewModeFromLocation());
+  }, [pathname]);
 
   useEffect(() => {
     window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
@@ -333,7 +363,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   useEffect(() => {
     if (!isAdminViewMode) return;
 
-    const mode = role === "teacher" ? "teacher" : "student";
+    const mode = adminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student");
     document.cookie = `edsync-admin-view-mode=${mode}; path=/; max-age=3600; SameSite=Lax`;
     const path = `${window.location.pathname}${window.location.search}`;
     const auditKey = `edsync-admin-view-audit:${mode}:${path}`;
@@ -348,7 +378,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     }).catch(() => {
       window.sessionStorage.removeItem(auditKey);
     });
-  }, [isAdminViewMode, pathname, role]);
+  }, [adminViewMode, isAdminViewMode, pathname, role]);
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -395,8 +425,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const Icon = item.icon;
     const itemPath = pathWithoutQuery(item.href);
     const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
-    const viewMode = isAdminViewMode ? (role === "teacher" ? "teacher" : "student") : null;
-    const href = appendAdminViewMode(item.href, viewMode);
+    const href = appendAdminViewMode(item.href, adminViewMode);
     return (
       <Link
         key={item.href}
@@ -609,7 +638,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
                   <div>
                     <p className="font-bold">Admin view mode</p>
                     <p className="text-xs text-edsync-subtle">
-                      You are previewing the {role === "teacher" ? "teacher" : "student"} workspace with admin access.
+                      You are previewing the {adminViewMode ? adminViewModeLabel(adminViewMode) : "workspace"} with admin access.
                     </p>
                   </div>
                 </div>
