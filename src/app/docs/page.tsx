@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import AppShell, { adminNavItems, studentNavItems, teacherNavItems } from "@/components/AppShell";
 import StudioWorkspace from "@/components/studio/StudioWorkspace";
 import { getSessionUser } from "@/lib/auth/session";
+import { normalizeAdminViewMode, workspaceRoleForAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
   title: "Docs",
@@ -16,12 +17,11 @@ type DocsPageProps = {
 
 export default async function DocsPage({ searchParams }: DocsPageProps) {
   const user = await getSessionUser().catch(() => null);
-  const requestedAdminView =
-    searchParams?.adminView === "teacher" || searchParams?.adminView === "student"
-      ? searchParams.adminView
-      : null;
+  const requestedAdminView = normalizeAdminViewMode(searchParams?.adminView);
   const adminView =
-    user?.user_metadata.role === "admin" ? requestedAdminView : null;
+    user?.user_metadata.role === "admin" && requestedAdminView
+      ? workspaceRoleForAdminViewMode(requestedAdminView)
+      : null;
   const nextPath = `/docs${requestedAdminView ? `?adminView=${requestedAdminView}` : ""}`;
 
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
