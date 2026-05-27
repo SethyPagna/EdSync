@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auditAdminAction, requireAdmin } from "@/lib/admin";
+import { normalizeAdminViewMode } from "@/lib/admin-view";
 
 type ViewAuditBody = {
   mode?: unknown;
@@ -23,15 +24,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: "Valid JSON is required." }, { status: 400 });
   }
 
-  if (body.mode !== "teacher" && body.mode !== "student") {
-    return NextResponse.json({ data: null, error: "View mode must be teacher or student." }, { status: 400 });
+  const mode = normalizeAdminViewMode(body.mode);
+  if (!mode) {
+    return NextResponse.json({ data: null, error: "Choose a supported owner view mode." }, { status: 400 });
   }
 
   await auditAdminAction({
     adminId: auth.user.id,
     action: "open_view_mode",
     entityType: "workspace_view",
-    entityId: body.mode,
+    entityId: mode,
     metadata: {
       path: cleanPath(body.path),
     },
