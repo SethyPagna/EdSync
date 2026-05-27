@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import PwaRegister from "@/components/PwaRegister";
@@ -31,6 +31,11 @@ export const metadata: Metadata = {
     "Browse public courses, organization academies, and role-aware EdSync learning workspaces.",
   icons: { icon: "/favicon.svg" },
   manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
