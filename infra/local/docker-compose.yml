@@ -1,0 +1,23 @@
+services:
+  edsync:
+    image: node:20-alpine
+    container_name: edsync
+    working_dir: /app
+    command: sh -c "npm install && npm run build && npm run start"
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      DEPLOYMENT_TARGET: docker
+    volumes:
+      - ./:/app
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: edsync-cloudflared
+    command: tunnel --no-autoupdate run
+    env_file:
+      - .env.local
+    restart: unless-stopped
