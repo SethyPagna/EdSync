@@ -2,8 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { homeForRole } from "@/lib/auth/redirects";
 import { normalizeUserRole } from "@/lib/auth/roles";
-
-const ADMIN_VIEW_MODE_COOKIE = "edsync-admin-view-mode";
+import {
+  ADMIN_VIEW_MODE_COOKIE,
+  adminViewModeForWorkspaceRole,
+  normalizeAdminViewMode,
+  type AdminViewMode,
+} from "@/lib/admin-view";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -79,12 +83,14 @@ export function middleware(request: NextRequest) {
   return withSecurityHeaders(response);
 }
 
-function normalizeAdminViewMode(value: string | null) {
-  return value === "teacher" || value === "student" ? value : null;
-}
-
-function syncAdminViewModeCookie(response: NextResponse, pathname: string, mode: "teacher" | "student" | null) {
-  const inferredMode = mode ?? (pathname.startsWith("/teacher") ? "teacher" : pathname.startsWith("/student") ? "student" : null);
+function syncAdminViewModeCookie(response: NextResponse, pathname: string, mode: AdminViewMode | null) {
+  const inferredMode =
+    mode ??
+    (pathname.startsWith("/teacher")
+      ? adminViewModeForWorkspaceRole("teacher")
+      : pathname.startsWith("/student")
+        ? adminViewModeForWorkspaceRole("student")
+        : null);
   if (pathname.startsWith("/admin")) {
     response.cookies.delete(ADMIN_VIEW_MODE_COOKIE);
     return;
