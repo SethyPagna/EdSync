@@ -6,9 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
+    "lint": "eslint --config config/eslint/eslintrc.json --ext .ts,.tsx src scripts config",
+    "test": "vitest run --config config/test/vitest.config.ts --passWithNoTests",
+    "test:watch": "vitest --config config/test/vitest.config.ts",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm run build",
     "clean:local": "tsx scripts/clean-local.ts",
@@ -16,17 +16,25 @@
     "check:extraction": "tsx scripts/check-extraction-bounds.ts",
     "deploy:vercel": "tsx scripts/deploy-vercel.ts",
     "deploy:cloudflare": "tsx scripts/deploy-cloudflare.ts",
-    "build:cloudflare": "opennextjs-cloudflare build --config wrangler.app.jsonc",
-    "preview:cloudflare": "opennextjs-cloudflare build --config wrangler.app.jsonc && opennextjs-cloudflare preview --config wrangler.app.jsonc",
-    "deploy:cloudflare:app": "opennextjs-cloudflare build --config wrangler.app.jsonc && opennextjs-cloudflare deploy --config wrangler.app.jsonc --env production -- --keep-vars",
-    "deploy:cloudflare:worker": "wrangler deploy --config wrangler.toml",
+    "build:cloudflare": "opennextjs-cloudflare build --config infra/cloudflare/wrangler.app.jsonc",
+    "preview:cloudflare": "opennextjs-cloudflare build --config infra/cloudflare/wrangler.app.jsonc && opennextjs-cloudflare preview --config infra/cloudflare/wrangler.app.jsonc",
+    "deploy:cloudflare:app": "opennextjs-cloudflare build --config infra/cloudflare/wrangler.app.jsonc && opennextjs-cloudflare deploy --config infra/cloudflare/wrangler.app.jsonc --env production -- --keep-vars",
+    "deploy:cloudflare:worker": "wrangler deploy --config infra/cloudflare/wrangler.toml",
     "db:migrate": "tsx scripts/d1-migrate.ts",
     "db:seed": "tsx scripts/d1-migrate.ts --seed",
     "admin:create": "tsx scripts/create-admin.ts",
     "ai:seed": "tsx scripts/seed-ai-providers.ts",
     "security:cloudflare": "tsx scripts/cloudflare-security.ts",
-    "db:local": "docker compose -f docker-compose.local.yml up -d",
-    "db:local:down": "docker compose -f docker-compose.local.yml down"
+    "db:local": "docker compose -f infra/local/docker-compose.yml up -d",
+    "db:local:down": "docker compose -f infra/local/docker-compose.yml down"
+  },
+  "postcss": {
+    "plugins": {
+      "tailwindcss": {
+        "config": "./config/tailwind/tailwind.config.ts"
+      },
+      "autoprefixer": {}
+    }
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",
