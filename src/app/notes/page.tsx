@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
+import { normalizeAdminViewMode, workspaceRoleForAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
   title: "Notes",
@@ -14,12 +15,11 @@ type NotesPageProps = {
 
 export default async function NotesPage({ searchParams }: NotesPageProps) {
   const user = await getSessionUser().catch(() => null);
-  const requestedAdminView =
-    searchParams?.adminView === "teacher" || searchParams?.adminView === "student"
-      ? searchParams.adminView
-      : null;
+  const requestedAdminView = normalizeAdminViewMode(searchParams?.adminView);
   const adminView =
-    user?.user_metadata.role === "admin" ? requestedAdminView : null;
+    user?.user_metadata.role === "admin" && requestedAdminView
+      ? workspaceRoleForAdminViewMode(requestedAdminView)
+      : null;
   const nextPath = `/notes${requestedAdminView ? `?adminView=${requestedAdminView}` : ""}`;
 
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
