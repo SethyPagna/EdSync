@@ -63,18 +63,18 @@ type WorkspaceContext = {
 const roleCopy = {
   teacher: {
     label: "Teaching Workspace",
-    accent: "text-edsync-amber",
-    gradient: "from-edsync-amber to-edsync-blue",
+    accent: "text-edsync-blue",
+    gradient: "from-edsync-blue to-edsync-emerald",
   },
   admin: {
     label: "Platform Admin",
     accent: "text-edsync-blue",
-    gradient: "from-edsync-blue to-edsync-cyan",
+    gradient: "from-edsync-blue to-edsync-emerald",
   },
   student: {
     label: "Student Workspace",
-    accent: "text-edsync-emerald",
-    gradient: "from-edsync-emerald to-edsync-cyan",
+    accent: "text-edsync-blue",
+    gradient: "from-edsync-blue to-edsync-emerald",
   },
 };
 
