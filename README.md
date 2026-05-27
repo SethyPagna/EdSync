@@ -7,7 +7,7 @@ background automation.
 
 ## Platform
 
-- Next.js 14 App Router and TypeScript
+- Next.js 14 App Router and TypeScript 5
 - Custom D1-backed authentication and role-aware routing
 - Cloudflare D1, R2, AI Gateway, Queues, Workers, Vectorize, Turnstile
 - Vercel deployment for the hosted Next.js runtime
@@ -19,8 +19,8 @@ background automation.
    ```powershell
    npm.cmd install
    ```
-2. Copy `.env.example` to `.env.local` and fill in EdSync-specific Cloudflare
-   resources. Do not reuse AllChess or LEARN D1/R2 resources.
+2. Copy `config/env/.env.example` to `.env.local` and fill in EdSync-specific
+   Cloudflare resources. Do not reuse AllChess or LEARN D1/R2 resources.
 3. Run D1 migrations:
    ```powershell
    npm.cmd run db:migrate
@@ -45,12 +45,26 @@ background automation.
 
 ## Verification
 
+GitHub Actions runs the same checks on `main` and pull requests:
+
 ```powershell
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run test
 npm.cmd run build
 ```
+
+## Repository Layout
+
+- `src/` contains the TypeScript application, API routes, shared libraries, and
+  tests.
+- `scripts/` contains TypeScript maintenance, deployment, seed, and cleanup
+  commands run with `tsx`.
+- `config/` contains tool configuration that can be addressed by explicit
+  paths, including ESLint, Tailwind, Vitest, and environment examples.
+- `infra/` contains local and Cloudflare infrastructure configuration.
+- Framework-required root entry points remain at the root so Next.js, npm,
+  Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
 
 ## Local Cleanup
 
