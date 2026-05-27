@@ -128,9 +128,9 @@ only creates the project if it is missing. If creation races or fails because th
 project already exists, it re-lists and deploys to the existing project instead
 of creating a duplicate. It then builds with the OpenNext Cloudflare adapter,
 deploys `.open-next/assets` to Pages, deploys the full app Worker from
-`wrangler.app.jsonc`, deploys Pages from an isolated temporary directory so
+`infra/cloudflare/wrangler.app.jsonc`, deploys Pages from an isolated temporary directory so
 Wrangler does not read the Worker config, and redeploys the queue Worker from
-`wrangler.toml`.
+`infra/cloudflare/wrangler.toml`.
 
 Before the first deployment, make sure `.env.local` contains the production
 values for app secrets. The deployment script writes them to the app Worker as
@@ -163,13 +163,13 @@ Set Cloudflare Pages and Worker variables to match the active target:
 
 ## Cloudflare Worker And Queue
 
-`wrangler.toml` defines the EdSync D1, R2, Queue, and Vectorize bindings. Deploy
+`infra/cloudflare/wrangler.toml` defines the EdSync D1, R2, Queue, and Vectorize bindings. Deploy
 the automation worker with the environment that matches the target:
 
 ```powershell
-npx wrangler deploy --env=""
-npx wrangler deploy --env preview
-npx wrangler deploy --env production
+npx wrangler deploy --config infra/cloudflare/wrangler.toml --env=""
+npx wrangler deploy --config infra/cloudflare/wrangler.toml --env preview
+npx wrangler deploy --config infra/cloudflare/wrangler.toml --env production
 ```
 
 ## Cloudflare Edge Security
