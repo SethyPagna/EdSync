@@ -65,6 +65,18 @@ type WorkflowSlide = {
 
 const previewSlides: PreviewSlide[] = [
   {
+    id: "catalog",
+    eyebrow: "Public catalog",
+    title: "Catalog",
+    route: "/catalog",
+    accent: "catalog",
+    left: ["Search", "Featured", "Free", "Paid", "Portal"],
+    canvasTitle: "Course marketplace",
+    canvasRows: ["Search courses and academies", "Preview before sign in", "Return to selected course"],
+    sideTitle: "Access",
+    sideRows: ["Individual courses", "Organization portal", "Free and paid paths"],
+  },
+  {
     id: "teacher",
     eyebrow: "Teacher lesson canvas",
     title: "Create Lesson",
@@ -87,18 +99,6 @@ const previewSlides: PreviewSlide[] = [
     canvasRows: ["Misses saved", "AI explains why", "Review card scheduled"],
     sideTitle: "Active time",
     sideRows: ["Focused time tracked", "Notifications toggled", "Deadline synced"],
-  },
-  {
-    id: "catalog",
-    eyebrow: "Public catalog",
-    title: "Find a course",
-    route: "/catalog",
-    accent: "catalog",
-    left: ["Individual", "Organization", "Free", "Paid", "Portal"],
-    canvasTitle: "Course marketplace",
-    canvasRows: ["Search public courses", "Enter organization portal", "Sign in before enroll"],
-    sideTitle: "Access",
-    sideRows: ["Preview lesson", "Free enrollment", "Paid checkout"],
   },
   {
     id: "admin",
@@ -367,8 +367,10 @@ function useAutoIndex(length: number, delayMs: number) {
 
 export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   const [previewIndex, setPreviewIndex] = useAutoIndex(previewSlides.length, 4600);
-  const [workflowIndex, setWorkflowIndex] = useAutoIndex(workflowSlides.length, 5200);
+  const [workflowIndex, setWorkflowIndex] = useState(0);
+  const heroRef = useRef<HTMLElement | null>(null);
   const workflowRef = useRef<HTMLElement | null>(null);
+  const catalogRef = useRef<HTMLElement | null>(null);
   const workflowIndexRef = useRef(0);
   const wheelCooldownRef = useRef(0);
   const touchStartYRef = useRef<number | null>(null);
@@ -467,6 +469,44 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
     };
   }, [setWorkflowSlide]);
 
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (prefersReducedMotion.matches) return;
+
+    const sectionIsCentered = (section: HTMLElement, topWeight = 0.22, bottomWeight = 0.78) => {
+      const rect = section.getBoundingClientRect();
+      return rect.top < window.innerHeight * topWeight && rect.bottom > window.innerHeight * bottomWeight;
+    };
+
+    const smoothJump = (target: HTMLElement | null) => {
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) < 28 || Date.now() < wheelCooldownRef.current) return;
+      const hero = heroRef.current;
+      const workflow = workflowRef.current;
+      const catalog = catalogRef.current;
+
+      if (event.deltaY > 0 && hero && workflow && sectionIsCentered(hero, 0.34, 0.56)) {
+        event.preventDefault();
+        wheelCooldownRef.current = Date.now() + 720;
+        smoothJump(workflow);
+        return;
+      }
+
+      if (event.deltaY < 0 && catalog && workflow && sectionIsCentered(catalog, 0.42, 0.72)) {
+        event.preventDefault();
+        wheelCooldownRef.current = Date.now() + 720;
+        setWorkflowSlide(workflowSlides.length - 1);
+        smoothJump(workflow);
+      }
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => window.removeEventListener("wheel", onWheel, { capture: true });
+  }, [setWorkflowSlide]);
+
   const searchTags = useMemo(
     () => [
       `${labels.free} ${labels.courses}`,
@@ -480,7 +520,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
 
   return (
     <main className="edsync-emil-intro">
-      <section className="edsync-emil-hero" aria-labelledby="emil-intro-title">
+      <section ref={heroRef} className="edsync-emil-hero" aria-labelledby="emil-intro-title">
         <div className="edsync-emil-floating">
           <Link href="/" className="edsync-emil-brand" aria-label="EdSync home">
             <span>
@@ -586,7 +626,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       </section>
 
       <section id="emil-workflow" ref={workflowRef} className="edsync-emil-workflow" aria-labelledby="emil-workflow-title">
-        <div className="edsync-emil-workflow-card">
+        <div key={workflow.id} className="edsync-emil-workflow-card">
           <div className="edsync-emil-workflow-copy">
             <span>0{workflowIndex + 1} / 0{workflowSlides.length}</span>
             <h2 id="emil-workflow-title">{workflow.title}</h2>
@@ -628,7 +668,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
         </div>
       </section>
 
-      <section id="emil-catalog" className="edsync-emil-catalog">
+      <section id="emil-catalog" ref={catalogRef} className="edsync-emil-catalog">
         <div className="edsync-emil-search">
           <div>
             <span>{labels.catalog}</span>
