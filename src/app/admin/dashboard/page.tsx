@@ -7,8 +7,10 @@ import {
   ArrowRight,
   Bot,
   BookOpenCheck,
+  Building2,
   Mail,
   ShieldCheck,
+  UserRound,
   UsersRound,
 } from "lucide-react";
 import { InfoPopover, MetricTile } from "@/components/WorkspacePrimitives";
@@ -46,6 +48,33 @@ const priorityActions = [
     title: "Open governance hub",
     detail: "Open hub.",
     href: "/admin/governance",
+  },
+];
+
+const ownerViewActions = [
+  {
+    title: "Individual account",
+    detail: "Preview the solo learner workspace and personal catalog path.",
+    href: "/admin/view/individual",
+    icon: UserRound,
+  },
+  {
+    title: "Organizations",
+    detail: "Open the owner view for organization portals and tenant setup.",
+    href: "/admin/view/organization",
+    icon: Building2,
+  },
+  {
+    title: "Organization teacher",
+    detail: "Preview the teacher workspace inside an organization.",
+    href: "/admin/view/teacher",
+    icon: UsersRound,
+  },
+  {
+    title: "Organization student",
+    detail: "Preview the student workspace inside an organization.",
+    href: "/admin/view/student",
+    icon: BookOpenCheck,
   },
 ];
 
@@ -112,6 +141,27 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-4">
+          <section className="grid gap-3 md:grid-cols-2">
+            {ownerViewActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="premium-card group flex items-start gap-4 rounded-2xl p-4 transition hover:-translate-y-0.5"
+                >
+                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-edsync-text">{action.title}</span>
+                    <span className="mt-1 block text-sm leading-5 text-edsync-subtle">{action.detail}</span>
+                  </span>
+                </Link>
+              );
+            })}
+          </section>
+
           <div className="grid gap-3 md:grid-cols-3">
             {systemMetrics.map(([key, label, Icon, tone, detail]) => (
               <MetricTile
