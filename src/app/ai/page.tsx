@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { normalizeAiPromptContractId, type AiPromptSearchParams } from "@/lib/studio/catalog";
 import { getSessionUser } from "@/lib/auth/session";
+import { normalizeAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
   title: "Practice & AI Tutor",
@@ -15,7 +16,7 @@ type AiPageProps = {
 
 export default async function AiPage({ searchParams }: AiPageProps) {
   const task = normalizeAiPromptContractId(searchParams?.task);
-  const adminView = searchParams?.adminView === "teacher" || searchParams?.adminView === "student" ? searchParams.adminView : null;
+  const adminView = normalizeAdminViewMode(searchParams?.adminView);
   const nextParams = new URLSearchParams();
   if (task) nextParams.set("task", task);
   if (adminView) nextParams.set("adminView", adminView);
