@@ -18,9 +18,9 @@ export const metadata: Metadata = {
 export default async function CatalogPage({
   searchParams,
 }: {
-  searchParams?: CatalogSearchParams;
+  searchParams?: Promise<CatalogSearchParams>;
 }) {
-  const filters = normalizeCatalogFilters(searchParams);
+  const filters = normalizeCatalogFilters(await searchParams);
   const copy = getPublicCopy(filters.language);
   const authCopy = getPublicAuthCopy(filters.language);
   const hasFilters = hasCatalogFilters(filters);
