@@ -25,7 +25,7 @@
 ## Implementation Checklist
 
 - [x] Remove app dependency on Supabase SDKs and Supabase storage/client files.
-- [x] Add D1-compatible schema under `database/migrations`.
+- [x] Add D1-compatible schema under `infra/database/migrations`.
 - [x] Add custom auth API routes for signup, login, logout, and session lookup.
 - [x] Add D1 REST-backed data API used by the browser client.
 - [x] Add R2 upload route and storage metadata rows.
