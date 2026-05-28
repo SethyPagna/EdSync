@@ -54,10 +54,13 @@ export default function TeacherDiscussionsPage() {
 
   useEffect(() => {
     if (!hasClassScope(classes, requestedClassId)) return;
-    setSelectedClassId(requestedClassId);
-    if (requestedClassId !== ALL_CLASSES_SCOPE) {
-      setForm((current) => ({ ...current, classId: current.classId || requestedClassId }));
-    }
+    const scopeTimer = window.setTimeout(() => {
+      setSelectedClassId(requestedClassId);
+      if (requestedClassId !== ALL_CLASSES_SCOPE) {
+        setForm((current) => ({ ...current, classId: current.classId || requestedClassId }));
+      }
+    }, 0);
+    return () => window.clearTimeout(scopeTimer);
   }, [classes, requestedClassId]);
 
   const chooseClassScope = (classId: string) => {
