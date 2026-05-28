@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Bell, BellOff, CalendarClock, CheckCircle2, ClipboardList, GraduationCap, MessageSquareText, Sparkles } from "lucide-react";
 import {
@@ -32,11 +32,7 @@ function readVisibility() {
 }
 
 export default function StudentNotificationsPage() {
-  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(defaultStudentDashboardVisibility);
-
-  useEffect(() => {
-    setVisibility(readVisibility());
-  }, []);
+  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(readVisibility);
 
   const paused = useMemo(() => areStudentNotificationsPaused(visibility), [visibility]);
 
