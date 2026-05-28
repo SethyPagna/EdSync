@@ -75,12 +75,6 @@ function SignupForm() {
     accountType === "organization" && organizationMode === "join" && organizationStatus === "checking";
 
   useEffect(() => {
-    if (preset === "teacher" || preset === "student") {
-      setRole(preset);
-    }
-  }, [preset]);
-
-  useEffect(() => {
     if (accountType !== "organization" || organizationMode !== "join" || !organizationCode.trim()) {
       setOrganizationLookup(null);
       setOrganizationStatus("idle");
