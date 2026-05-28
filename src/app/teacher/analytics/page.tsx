@@ -497,7 +497,7 @@ export default function TeacherAnalytics() {
         </div>
       ) : (
         <>
-          {/* ── OVERVIEW ── */}
+          {/* Overview */}
           {tab === "overview" && (
             <div className="animate-fade-in space-y-6">
               <div className="edsync-card">
@@ -593,7 +593,7 @@ export default function TeacherAnalytics() {
             </div>
           )}
 
-          {/* ── HEAT MAP ── */}
+          {/* Heat map */}
           {tab === "heatmap" && (
             <div className="animate-fade-in space-y-6">
               {/* Class readiness */}
@@ -744,7 +744,7 @@ export default function TeacherAnalytics() {
             </div>
           )}
 
-          {/* ── STUDENTS ── */}
+          {/* Students */}
           {tab === "students" && (
             <div className="animate-fade-in space-y-4">
               <div className="grid grid-cols-3 gap-4 mb-2">
@@ -896,7 +896,7 @@ export default function TeacherAnalytics() {
             </div>
           )}
 
-          {/* ── REFLECTIONS ── */}
+          {/* Reflections */}
           {tab === "reflections" && (
             <div className="animate-fade-in space-y-6">
               <div className="edsync-card">
@@ -983,7 +983,7 @@ export default function TeacherAnalytics() {
             </div>
           )}
 
-          {/* ── INTERVENTIONS ── */}
+          {/* Interventions */}
           {tab === "interventions" && (
             <div className="animate-fade-in space-y-6">
               {reviewSignal.pendingCount > 0 && (
@@ -1116,7 +1116,7 @@ export default function TeacherAnalytics() {
             </div>
           )}
 
-          {/* ── SOCRATIC LOG ── */}
+          {/* Socratic log */}
           {tab === "socratic" && (
             <div className="animate-fade-in edsync-card">
               <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
