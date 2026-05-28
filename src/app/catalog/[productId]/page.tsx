@@ -15,7 +15,7 @@ import {
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getPublicCatalogItem } from "@/lib/catalog";
-import { validateCatalogProductId } from "@/lib/catalog-validation";
+import { validateCatalogProductId } from "@/lib/validation/catalog";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageQuerySuffix, type PublicLanguageSearchParams } from "@/lib/public/languages";
 
