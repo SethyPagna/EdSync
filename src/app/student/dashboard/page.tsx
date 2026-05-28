@@ -119,6 +119,19 @@ function productDescription(product: BillingProductRow) {
   );
 }
 
+function readDashboardVisibility() {
+  if (typeof window === "undefined") return defaultStudentDashboardVisibility;
+  try {
+    return mergeStudentDashboardVisibility(
+      JSON.parse(window.localStorage.getItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY) || "null") as
+        | Partial<StudentDashboardVisibility>
+        | null,
+    );
+  } catch {
+    return defaultStudentDashboardVisibility;
+  }
+}
+
 export default function StudentDashboard() {
   const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -138,7 +151,7 @@ export default function StudentDashboard() {
   const [joiningClass, setJoiningClass] = useState(false);
   const [savingStudy, setSavingStudy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(defaultStudentDashboardVisibility);
+  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(readDashboardVisibility);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -290,16 +303,6 @@ export default function StudentDashboard() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
-
-  useEffect(() => {
-    const raw = window.localStorage.getItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY);
-    if (!raw) return;
-    try {
-      setVisibility(mergeStudentDashboardVisibility(JSON.parse(raw) as Partial<StudentDashboardVisibility>));
-    } catch {
-      setVisibility(defaultStudentDashboardVisibility);
-    }
-  }, []);
 
   const toggleVisibility = (key: keyof StudentDashboardVisibility) => {
     setVisibility((current) => {
