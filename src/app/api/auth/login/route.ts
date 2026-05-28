@@ -5,7 +5,7 @@ import { validateLoginPassword } from "@/lib/auth/password-validation";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeUserRole } from "@/lib/auth/roles";
-import { validateEmailAddress } from "@/lib/email-address";
+import { validateEmailAddress } from "@/lib/validation/email-address";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
