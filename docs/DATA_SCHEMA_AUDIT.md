@@ -8,7 +8,7 @@ This audit maps the actual D1 schema, shared serializers, service helpers, and A
 
 ## Verification Method
 
-- Read all D1 migrations in `database/migrations`.
+- Read all D1 migrations in `infra/database/migrations`.
 - Checked the shared table and JSON serializer registry in `src/lib/db/schema.ts`.
 - Verified key write/read flows in `src/app/api/*`, especially Studio, work, submissions, grades, catalog, billing, tenancy, standards, offline sync, practice, and generic data access.
 - Checked page-level client data access through `edsync.from(...)` to identify legacy surfaces that still read or write broad tables.
@@ -338,4 +338,3 @@ After each schema or data-flow change:
 - Verify tenant scoping for every API that touches content, enrollment, submissions, grades, catalog, media, or billing.
 - Run `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test`, and `npm.cmd run build`.
 - Browser-test the catalog to login to dashboard to Studio to assignment to student attempt to gradebook loop.
-
