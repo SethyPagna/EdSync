@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, auditAdminAction } from "@/lib/admin";
-import { normalizeAdminUserPatch, normalizeAdminUserSearch } from "@/lib/admin-users-validation";
+import { normalizeAdminUserPatch, normalizeAdminUserSearch } from "@/lib/validation/admin-users";
 import { d1Query } from "@/lib/db/d1";
 
 export async function GET(request: Request) {
