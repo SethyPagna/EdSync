@@ -7,7 +7,7 @@ import SectionOrderSettings from "@/components/SectionOrderSettings";
 import { validateDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
-import { validateGradeLevel, validateOptionalProfileLine, validateSubjectAreas } from "@/lib/profile-fields";
+import { validateGradeLevel, validateOptionalProfileLine, validateSubjectAreas } from "@/lib/validation/profile-fields";
 import { generateInitials } from "@/lib/utils";
 import type { Profile, UserPreferences } from "@/types";
 
