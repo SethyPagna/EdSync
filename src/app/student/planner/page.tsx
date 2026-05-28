@@ -120,7 +120,10 @@ export default function StudentPlannerPage() {
   }, [requestedClassId]);
 
   useEffect(() => {
-    loadPlanner();
+    const loadTimer = window.setTimeout(() => {
+      void loadPlanner();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadPlanner]);
 
   const filteredEvents = useMemo(() => {
