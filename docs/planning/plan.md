@@ -539,7 +539,7 @@
 
 **Mini Phases:**
 - 22.1 Full directory and entity sweep:
-  - Inspect `src/app`, `src/components`, `src/lib`, `src/types`, `migrations`, `database`, `scripts`, worker files, and tests.
+  - Inspect `src/app`, `src/components`, `src/lib`, `src/types`, `infra/database/migrations`, `scripts`, worker files, and tests.
   - Inventory educational entities: tenants, portals, users, memberships, roles, courses, catalog products, billing records, modules, lessons, sections, slides, content blocks, Studio documents, media/object links, enrollments, assignments, work items, quizzes, attempts, submissions, grades, discussions, notes, reviews, automation, notifications, AI providers, AI audits, security events, and progress records.
   - Record which files read, write, serialize, validate, or display each entity.
 - 22.2 Build the detailed relational schema:
