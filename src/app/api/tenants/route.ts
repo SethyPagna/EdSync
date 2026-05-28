@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { ensureDefaultTenant, resolveTenantContext } from "@/lib/tenancy";
-import { normalizeTenantInput } from "@/lib/tenant-validation";
+import { normalizeTenantInput } from "@/lib/validation/tenant";
 
 export async function GET() {
   const user = await getSessionUser();
