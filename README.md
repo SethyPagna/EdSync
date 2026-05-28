@@ -62,7 +62,7 @@ npm.cmd run build
   commands run with `tsx`.
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
-- `infra/` contains local and Cloudflare infrastructure configuration.
+- `infra/` contains local, Cloudflare, and D1 database infrastructure files.
 - Framework-required root entry points remain at the root so Next.js, npm,
   Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
 
