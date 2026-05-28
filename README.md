@@ -49,11 +49,11 @@ background automation.
 GitHub Actions runs the same checks on `main` and pull requests:
 
 ```powershell
-npm.cmd run typecheck
-npm.cmd run lint
-npm.cmd run test
-npm.cmd run build
+npm.cmd run verify
 ```
+
+`verify` runs typecheck, ESLint, the Vitest suite, and a production Next.js
+build.
 
 ## Repository Layout
 
