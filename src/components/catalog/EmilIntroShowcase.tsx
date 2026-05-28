@@ -64,24 +64,14 @@ type SectionTransition = "idle" | "to-workflow" | "to-catalog" | "to-hero";
 
 const previewSlides: PreviewSlide[] = [
   {
-    id: "catalog",
-    eyebrow: "Public catalog",
-    title: "Browse courses",
-    route: "/catalog",
-    accent: "catalog",
-    image: "/showcase/catalog-results.jpg",
-    summary: "A public course and academy entrance before sign-in.",
-    tags: ["Catalog", "Free + paid", "Academies"],
-  },
-  {
     id: "login",
-    eyebrow: "Organization login",
-    title: "Choose a workspace",
+    eyebrow: "Workspace entrance",
+    title: "Choose the right path",
     route: "/auth/login",
     accent: "access",
     image: "/showcase/login-organization.jpg",
-    summary: "Individual learners and organization users enter through the same account flow.",
-    tags: ["Individual", "Organization", "Return path"],
+    summary: "Individual learners and organization users enter through one clear account flow.",
+    tags: ["Catalog", "Organization", "Return path"],
   },
   {
     id: "teacher",
@@ -122,8 +112,8 @@ const workflowSlides: WorkflowSlide[] = [
     title: "Choose the right entrance",
     detail: "Individuals start from the course catalog. Organizations keep teacher and student work inside one portal.",
     route: "/catalog",
-    image: "/showcase/catalog-results.jpg",
-    panelTitle: "Public catalog",
+    image: "/showcase/login-organization.jpg",
+    panelTitle: "Catalog and access",
     pills: ["Individual", "Organization", "Teacher + Student"],
   },
   {
