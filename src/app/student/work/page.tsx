@@ -77,7 +77,10 @@ export default function StudentWorkPage() {
   }, [requestedClassId]);
 
   useEffect(() => {
-    load();
+    const loadTimer = window.setTimeout(() => {
+      load();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [load]);
 
   const submit = async (workItemId: string) => {
