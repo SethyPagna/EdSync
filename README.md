@@ -7,7 +7,7 @@ background automation.
 
 ## Platform
 
-- Next.js 14 App Router and TypeScript 5
+- Next.js 16 App Router, React 19, and TypeScript 6
 - Custom D1-backed authentication and role-aware routing
 - Cloudflare D1, R2, AI Gateway, Queues, Workers, Vectorize, Turnstile
 - Vercel deployment for the hosted Next.js runtime
