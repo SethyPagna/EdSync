@@ -53,6 +53,14 @@ export default function TeacherStudents() {
   const [assigning, setAssigning] = useState(false);
 
   const edsync = useMemo(() => createClient(), []);
+  const assignedLessonIds = useMemo(
+    () => new Set(assignments.map((assignment) => assignment.lesson_id)),
+    [assignments],
+  );
+  const activeClass = useMemo(
+    () => classes.find((classItem) => classItem.id === selectedClass),
+    [classes, selectedClass],
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -278,15 +286,6 @@ export default function TeacherStudents() {
     }
     toast.success("Class deleted");
   };
-
-  const assignedLessonIds = useMemo(
-    () => new Set(assignments.map((assignment) => assignment.lesson_id)),
-    [assignments],
-  );
-  const activeClass = useMemo(
-    () => classes.find((classItem) => classItem.id === selectedClass),
-    [classes, selectedClass],
-  );
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
