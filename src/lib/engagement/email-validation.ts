@@ -1,6 +1,6 @@
-import { validateEmailAddress } from "@/lib/email-address";
+import { validateEmailAddress } from "@/lib/validation/email-address";
 
-export { EMAIL_ADDRESS_MAX_LENGTH, validateEmailAddress } from "@/lib/email-address";
+export { EMAIL_ADDRESS_MAX_LENGTH, validateEmailAddress } from "@/lib/validation/email-address";
 
 export const EMAIL_SUBJECT_MAX_LENGTH = 180;
 export const EMAIL_BODY_MAX_LENGTH = 20_000;
