@@ -638,10 +638,13 @@ function ImageSectionEditor({
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Parse existing content: "imgUrl|||caption"
-    const parts = (section.content || "").split("|||");
-    setImgUrl(parts[0] || "");
-    setCaption(parts[1] || "");
+    const restoreTimer = window.setTimeout(() => {
+      // Parse existing content: "imgUrl|||caption"
+      const parts = (section.content || "").split("|||");
+      setImgUrl(parts[0] || "");
+      setCaption(parts[1] || "");
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
   }, [section.content, section.id]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -755,9 +758,12 @@ function VideoSectionEditor({
   const [caption, setCaption] = useState("");
 
   useEffect(() => {
-    const parts = (section.content || "").split("|||");
-    setUrl(parts[0] || "");
-    setCaption(parts[1] || "");
+    const restoreTimer = window.setTimeout(() => {
+      const parts = (section.content || "").split("|||");
+      setUrl(parts[0] || "");
+      setCaption(parts[1] || "");
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
   }, [section.content, section.id]);
 
   const media = classifySafeMediaUrl(url);
@@ -1349,7 +1355,10 @@ export default function TeacherLessonDetail() {
   }, [edsync, lessonId]);
 
   useEffect(() => {
-    loadAll();
+    const loadTimer = window.setTimeout(() => {
+      void loadAll();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadAll]);
 
   const saveOverview = async () => {
