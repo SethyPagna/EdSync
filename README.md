@@ -59,12 +59,11 @@ npm.cmd run build
 
 - `src/` contains the TypeScript application, API routes, shared libraries, and
   tests.
-- `scripts/` contains TypeScript maintenance, deployment, seed, and cleanup
-  commands run with `tsx`.
+- `scripts/` contains TypeScript commands grouped by purpose: maintenance,
+  deployment, database, admin, and shared helpers.
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
 - `infra/` contains local, Cloudflare, and D1 database infrastructure files.
-- `docs/` is grouped into architecture, audits, and deployment notes.
 - Framework-required root entry points remain at the root so Next.js, npm,
   Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
 
