@@ -8,8 +8,9 @@ import { resolveTenantContext } from "@/lib/tenancy";
 export default async function RootPage({
   searchParams,
 }: {
-  searchParams?: CatalogSearchParams;
+  searchParams?: Promise<CatalogSearchParams>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const user = await getSessionUser().catch(() => null);
 
   if (user) {
@@ -27,8 +28,8 @@ export default async function RootPage({
     context?.portal?.slug &&
     ["public", "customer", "partner"].includes(context.portal.audience)
   ) {
-    redirect(publicLanguageHref(`/org/${context.portal.slug}`, searchParams?.language));
+    redirect(publicLanguageHref(`/org/${context.portal.slug}`, resolvedSearchParams?.language));
   }
 
-  return <CatalogPage searchParams={searchParams} />;
+  return <CatalogPage searchParams={Promise.resolve(resolvedSearchParams ?? {})} />;
 }
