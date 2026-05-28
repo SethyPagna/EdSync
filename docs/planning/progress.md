@@ -180,7 +180,7 @@
 - The strongest current pattern is the tenant-scoped API layer for newer features plus `learning_events` as the future replay/audit spine.
 - The main architecture risks are broad legacy `edsync.from(...)` reads/writes, generic allowed-table reads through `/api/data`, implicit default tenant membership creation, REST-only D1 access on Cloudflare runtime, and gradebook materialization that is not fully replay-derived yet.
 - Recommended next order: explicit active tenant context, feature-owned APIs for teacher/student lesson/dashboard flows, tenant enforcement for legacy lesson/progress records, Studio as canonical authoring source, hot-path indexes, grade replay service, Worker-native D1 adapter, and a richer offline queue/replay UX.
-- Added `database/migrations/0008_hot_path_indexes.sql` with additive indexes for lesson dashboards, lesson ordering, quiz ordering, student assignments, progress lookups, work submissions, catalog products, tenant object links, and notification lists.
+- Added `infra/database/migrations/0008_hot_path_indexes.sql` with additive indexes for lesson dashboards, lesson ordering, quiz ordering, student assignments, progress lookups, work submissions, catalog products, tenant object links, and notification lists.
 - Applied the migration set to remote Cloudflare D1 database `edsync-dev-d1`; the final hot-path index migration completed successfully.
 - Added a D1 query adapter boundary so Cloudflare Workers can use the native `EDSYNC_DB` binding while Vercel/local/Docker keep the existing REST fallback.
 - Deployed the existing Cloudflare Worker `edsync-dev`; live URL is `https://edsync-dev.learn-app.workers.dev` and Version ID is `cb7a1cb3-4d42-4c3e-a4fb-f1dc8b75422c`.
