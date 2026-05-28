@@ -9,14 +9,15 @@ export const metadata = {
 };
 
 type AiPageProps = {
-  searchParams?: AiPromptSearchParams & {
+  searchParams?: Promise<AiPromptSearchParams & {
     adminView?: string;
-  };
+  }>;
 };
 
 export default async function AiPage({ searchParams }: AiPageProps) {
-  const task = normalizeAiPromptContractId(searchParams?.task);
-  const adminView = normalizeAdminViewMode(searchParams?.adminView);
+  const resolvedSearchParams = await searchParams;
+  const task = normalizeAiPromptContractId(resolvedSearchParams?.task);
+  const adminView = normalizeAdminViewMode(resolvedSearchParams?.adminView);
   const nextParams = new URLSearchParams();
   if (task) nextParams.set("task", task);
   if (adminView) nextParams.set("adminView", adminView);
