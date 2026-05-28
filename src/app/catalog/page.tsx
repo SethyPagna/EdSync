@@ -4,7 +4,7 @@ import { ArrowRight, BookOpenCheck, Building2 } from "lucide-react";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import EmilIntroShowcase from "@/components/catalog/EmilIntroShowcase";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
-import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog-filters";
+import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog/filters";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
