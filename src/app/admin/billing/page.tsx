@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BookOpenCheck,
@@ -162,7 +162,7 @@ export default function AdminBillingPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     setLoadError("");
     return fetch("/api/billing")
@@ -177,11 +177,14 @@ export default function AdminBillingPage() {
         setPayload(null);
       })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
-    load();
-  }, []);
+    const loadTimer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [load]);
 
   const portalById = useMemo(() => new Map<string, TenantPortal>((payload?.portals ?? []).map((item) => [item.id, item])), [payload]);
   const linksByProduct = useMemo(
