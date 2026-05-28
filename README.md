@@ -52,8 +52,8 @@ GitHub Actions runs the same checks on `main` and pull requests:
 npm.cmd run verify
 ```
 
-`verify` runs typecheck, ESLint, the Vitest suite, and a production Next.js
-build.
+`verify` runs typecheck, ESLint, the Vitest suite, a moderate dependency audit,
+and a production Next.js build.
 
 ## Repository Layout
 
