@@ -6535,6 +6535,13 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     min-height: 17.5rem;
   }
 
+  .edsync-emil-shot-frame img,
+  .edsync-emil-workflow-visual img {
+    background: #eaf4ff;
+    object-fit: contain;
+    object-position: center top;
+  }
+
   .edsync-emil-shot-frame figcaption p,
   .edsync-emil-workflow-visual figcaption span {
     display: none;
