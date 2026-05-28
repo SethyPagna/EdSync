@@ -6,10 +6,11 @@ import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const id = validateCatalogProductId(params.id);
+    const routeParams = await params;
+    const id = validateCatalogProductId(routeParams.id);
     const user = await getSessionUser();
     const item = await getPublicCatalogItem(id);
     const url = new URL(request.url);
