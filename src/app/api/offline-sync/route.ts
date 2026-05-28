@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { applyOfflineSync } from "@/lib/offline-sync";
-import { normalizeOfflineSyncItems } from "@/lib/offline-sync-validation";
+import { normalizeOfflineSyncItems } from "@/lib/validation/offline-sync";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 export async function POST(request: Request) {
