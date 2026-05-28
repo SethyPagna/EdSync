@@ -7,14 +7,15 @@ export const metadata = {
 };
 
 type GamesPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     adminView?: string;
-  };
+  }>;
 };
 
-export default function GamesPage({ searchParams }: GamesPageProps) {
+export default async function GamesPage({ searchParams }: GamesPageProps) {
+  const resolvedSearchParams = await searchParams;
   const params = new URLSearchParams({ mode: "sprint" });
-  const adminView = normalizeAdminViewMode(searchParams?.adminView);
+  const adminView = normalizeAdminViewMode(resolvedSearchParams?.adminView);
   if (adminView) {
     params.set("adminView", adminView);
   }
