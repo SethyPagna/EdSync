@@ -10,7 +10,7 @@
     "test": "vitest run --config config/test/vitest.config.ts --passWithNoTests",
     "test:watch": "vitest --config config/test/vitest.config.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run lint && npm run build",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "clean:local": "tsx scripts/maintenance/clean-local.ts",
     "clean:all": "tsx scripts/maintenance/clean-local.ts --include-node-modules",
     "check:extraction": "tsx scripts/maintenance/check-extraction-bounds.ts",
