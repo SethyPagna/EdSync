@@ -84,7 +84,7 @@ npm.cmd run db:migrate
 npm.cmd run db:seed
 ```
 
-The schema lives in `database/migrations`. It is SQLite/D1-compatible and avoids
+The schema lives in `infra/database/migrations`. It is SQLite/D1-compatible and avoids
 Postgres-only features.
 
 ## Vercel
