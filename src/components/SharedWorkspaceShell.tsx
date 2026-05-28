@@ -12,7 +12,8 @@ export default async function SharedWorkspaceShell({ children }: SharedWorkspace
   if (!user) redirect("/auth/login");
 
   const role = user.user_metadata.role;
-  const adminViewMode = cookies().get("edsync-admin-view-mode")?.value;
+  const cookieStore = await cookies();
+  const adminViewMode = cookieStore.get("edsync-admin-view-mode")?.value;
 
   if (role === "admin" && adminViewMode === "teacher") {
     return (
