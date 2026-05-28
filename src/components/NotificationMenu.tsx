@@ -10,6 +10,8 @@ type NotificationResponse = {
   error: string | null;
 };
 
+const NOTIFICATION_REFRESH_MS = 60_000;
+
 function formatAge(value: string) {
   const date = new Date(value);
   const diff = Date.now() - date.getTime();
@@ -43,9 +45,15 @@ export default function NotificationMenu() {
   }, []);
 
   useEffect(() => {
-    load();
-    const timer = window.setInterval(load, 60_000);
-    return () => window.clearInterval(timer);
+    const refreshNotifications = () => {
+      void load();
+    };
+    const initialTimer = window.setTimeout(refreshNotifications, 0);
+    const refreshTimer = window.setInterval(refreshNotifications, NOTIFICATION_REFRESH_MS);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(refreshTimer);
+    };
   }, [load]);
 
   useEffect(() => {
