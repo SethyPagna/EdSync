@@ -819,7 +819,10 @@ export default function StudentLesson() {
   }, [edsync, lessonId]);
 
   useEffect(() => {
-    loadLesson();
+    const loadTimer = window.setTimeout(() => {
+      void loadLesson();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadLesson]);
 
   const completeDiagnostic = async () => {
