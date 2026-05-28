@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { enrollCatalogItem, getPublicCatalogItem } from "@/lib/catalog";
-import { validateCatalogProductId } from "@/lib/catalog-validation";
+import { validateCatalogProductId } from "@/lib/validation/catalog";
 import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
 export async function POST(
