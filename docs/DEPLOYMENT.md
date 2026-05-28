@@ -163,7 +163,8 @@ Set Cloudflare Pages and Worker variables to match the active target:
 
 ## Cloudflare Worker And Queue
 
-`infra/cloudflare/wrangler.toml` defines the EdSync D1, R2, Queue, and Vectorize bindings. Deploy
+`infra/cloudflare/wrangler.toml` defines the EdSync D1, R2, Queue, Vectorize bindings, and
+the `infra/cloudflare/workers/automation.ts` queue worker entrypoint. Deploy
 the automation worker with the environment that matches the target:
 
 ```powershell
