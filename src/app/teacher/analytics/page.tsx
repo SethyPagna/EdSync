@@ -314,7 +314,10 @@ export default function TeacherAnalytics() {
   }, [edsync]);
 
   useEffect(() => {
-    loadData();
+    const loadTimer = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadData]);
 
   const getInterventions = async () => {
