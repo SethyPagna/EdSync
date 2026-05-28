@@ -13,7 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
-import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Building2, GraduationCap, Info, ShieldCheck, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
 type OrganizationLookup = {
@@ -216,7 +216,8 @@ function LoginForm() {
               key={item.key}
               type="button"
               onClick={() => changeAccountType(item.key)}
-              className={`rounded-2xl border p-4 text-left shadow-sm transition ${
+              aria-label={`${item.label}: ${item.copy}`}
+              className={`edsync-auth-choice rounded-2xl border p-4 text-left shadow-sm transition ${
                 selected
                   ? "premium-active text-edsync-text"
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
@@ -224,7 +225,10 @@ function LoginForm() {
             >
               <Icon className="mb-3 h-5 w-5" />
               <span className="block font-semibold">{item.label}</span>
-              <span className="mt-1 block text-xs leading-5">{item.copy}</span>
+              <span className="edsync-auth-choice-info" aria-hidden="true">
+                <Info className="h-3.5 w-3.5" />
+              </span>
+              <span className="edsync-auth-choice-tooltip">{item.copy}</span>
             </button>
           );
         })}
@@ -360,9 +364,7 @@ function LoginSidePanelCopy() {
       <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
         {copy.workspaceTitle}
       </h1>
-      <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
-        {copy.workspaceCopy}
-      </p>
+      <p className="sr-only">{copy.workspaceCopy}</p>
     </>
   );
 }
