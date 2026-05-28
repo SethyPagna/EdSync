@@ -7,14 +7,15 @@ export const metadata = {
 };
 
 type QuizzesPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     adminView?: string;
-  };
+  }>;
 };
 
-export default function QuizzesPage({ searchParams }: QuizzesPageProps) {
+export default async function QuizzesPage({ searchParams }: QuizzesPageProps) {
+  const resolvedSearchParams = await searchParams;
   const params = new URLSearchParams({ mode: "quiz" });
-  const adminView = normalizeAdminViewMode(searchParams?.adminView);
+  const adminView = normalizeAdminViewMode(resolvedSearchParams?.adminView);
   if (adminView) {
     params.set("adminView", adminView);
   }
