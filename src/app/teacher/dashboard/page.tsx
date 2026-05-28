@@ -146,7 +146,10 @@ export default function TeacherDashboard() {
   }, [edsync]);
 
   useEffect(() => {
-    loadDashboard();
+    const loadTimer = window.setTimeout(() => {
+      void loadDashboard();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadDashboard]);
 
   const dismissAlert = async (alertId: string) => {
