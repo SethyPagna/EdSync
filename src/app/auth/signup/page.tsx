@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
 import { normalizeOrganizationCode, validateOrganizationCode } from "@/lib/auth/organization-code";
-import { validateTenantName } from "@/lib/tenant-validation";
+import { validateTenantName } from "@/lib/validation/tenant";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
