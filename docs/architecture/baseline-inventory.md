@@ -2,7 +2,7 @@
 
 Last updated: 2026-05-16
 
-This inventory implements Phase 1 of `docs/archive/planning/plan.md`. It maps the current routes, data model, capabilities, duplicate concepts, and verification baseline before the next architecture and feature work begins.
+This inventory maps the current routes, data model, capabilities, duplicate concepts, and verification baseline before the next architecture and feature work begins.
 
 ## Route Inventory
 
