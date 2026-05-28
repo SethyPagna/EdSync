@@ -231,34 +231,37 @@ export default function CreateLesson() {
   const autosaveErrorShownRef = useRef(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as DraftStoragePayload;
-        if (parsed.draft) setDraft(normalizeDraftForAuthoring(parsed.draft));
-        if (typeof parsed.inputText === "string") setInputText(parsed.inputText);
-        if (typeof parsed.complexity === "number") setComplexity(parsed.complexity);
-        if (typeof parsed.pacing === "number") setPacing(parsed.pacing);
-        if (typeof parsed.scaffolding === "number") setScaffolding(parsed.scaffolding);
-        if (parsed.generationDepth) setGenerationDepth(parsed.generationDepth);
-        if (parsed.languageStyle) setLanguageStyle(parsed.languageStyle);
-        if (parsed.audienceLanguage) setAudienceLanguage(parsed.audienceLanguage);
-        if (typeof parsed.versionCount === "number") setVersionCount(parsed.versionCount);
-        if (parsed.designTemplateId) setDesignTemplateId(parsed.designTemplateId);
-        if (parsed.creationMode) setCreationMode(parsed.creationMode);
-        if (parsed.importMode) setImportMode(parsed.importMode);
-        if (parsed.activeTab) {
-          setActiveTab(parsed.activeTab === "sections" ? "canvas" : parsed.activeTab);
+    const restoreTimer = window.setTimeout(() => {
+      const stored = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as DraftStoragePayload;
+          if (parsed.draft) setDraft(normalizeDraftForAuthoring(parsed.draft));
+          if (typeof parsed.inputText === "string") setInputText(parsed.inputText);
+          if (typeof parsed.complexity === "number") setComplexity(parsed.complexity);
+          if (typeof parsed.pacing === "number") setPacing(parsed.pacing);
+          if (typeof parsed.scaffolding === "number") setScaffolding(parsed.scaffolding);
+          if (parsed.generationDepth) setGenerationDepth(parsed.generationDepth);
+          if (parsed.languageStyle) setLanguageStyle(parsed.languageStyle);
+          if (parsed.audienceLanguage) setAudienceLanguage(parsed.audienceLanguage);
+          if (typeof parsed.versionCount === "number") setVersionCount(parsed.versionCount);
+          if (parsed.designTemplateId) setDesignTemplateId(parsed.designTemplateId);
+          if (parsed.creationMode) setCreationMode(parsed.creationMode);
+          if (parsed.importMode) setImportMode(parsed.importMode);
+          if (parsed.activeTab) {
+            setActiveTab(parsed.activeTab === "sections" ? "canvas" : parsed.activeTab);
+          }
+          if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
+          const savedContent = { ...parsed };
+          delete savedContent.savedAt;
+          lastSavedDraftContentRef.current = JSON.stringify(savedContent);
+        } catch {
+          window.localStorage.removeItem(DRAFT_STORAGE_KEY);
         }
-        if (parsed.savedAt) setDraftSavedAt(parsed.savedAt);
-        const savedContent = { ...parsed };
-        delete savedContent.savedAt;
-        lastSavedDraftContentRef.current = JSON.stringify(savedContent);
-      } catch {
-        window.localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
-    }
-    setDraftLoaded(true);
+      setDraftLoaded(true);
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
   }, []);
 
   useEffect(() => {
