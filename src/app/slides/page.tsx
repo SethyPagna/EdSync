@@ -10,14 +10,15 @@ export const metadata = {
 };
 
 type SlidesPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     adminView?: string;
-  };
+  }>;
 };
 
 export default async function SlidesPage({ searchParams }: SlidesPageProps) {
+  const resolvedSearchParams = await searchParams;
   const user = await getSessionUser().catch(() => null);
-  const requestedAdminView = normalizeAdminViewMode(searchParams?.adminView);
+  const requestedAdminView = normalizeAdminViewMode(resolvedSearchParams?.adminView);
   const adminView =
     user?.user_metadata.role === "admin" && requestedAdminView
       ? workspaceRoleForAdminViewMode(requestedAdminView)
