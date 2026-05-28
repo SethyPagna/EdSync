@@ -25,6 +25,7 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "ai:seed": "tsx scripts/seed-ai-providers.ts",
     "security:cloudflare": "tsx scripts/cloudflare-security.ts",
+    "db:migrate:dry-run": "tsx scripts/d1-migrate.ts --dry-run",
     "db:local": "docker compose -f infra/local/docker-compose.yml up -d",
     "db:local:down": "docker compose -f infra/local/docker-compose.yml down"
   },
