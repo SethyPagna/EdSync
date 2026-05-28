@@ -301,7 +301,10 @@ export default function StudentDashboard() {
   }, [edsync]);
 
   useEffect(() => {
-    loadDashboard();
+    const loadTimer = window.setTimeout(() => {
+      void loadDashboard();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadDashboard]);
 
   const toggleVisibility = (key: keyof StudentDashboardVisibility) => {
