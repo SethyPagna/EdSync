@@ -3,8 +3,8 @@ import { getSessionUser } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { appendLearningEvent } from "@/lib/learning-events";
-import type { NormalizedLearningEventInput } from "@/lib/learning-events-validation";
-import { normalizeLearningEventInput } from "@/lib/learning-events-validation";
+import type { NormalizedLearningEventInput } from "@/lib/validation/learning-events";
+import { normalizeLearningEventInput } from "@/lib/validation/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext, type TenantContext } from "@/lib/tenancy";
 import {
