@@ -22,11 +22,12 @@ import { publicLanguageQuerySuffix, type PublicLanguageSearchParams } from "@/li
 export async function generateMetadata({
   params,
 }: {
-  params: { productId: string };
+  params: Promise<{ productId: string }>;
 }): Promise<Metadata> {
+  const { productId: rawProductId } = await params;
   let productId: string;
   try {
-    productId = validateCatalogProductId(params.productId);
+    productId = validateCatalogProductId(rawProductId);
   } catch {
     return {
       title: "Course",
@@ -47,19 +48,21 @@ export default async function CatalogDetailPage({
   params,
   searchParams,
 }: {
-  params: { productId: string };
-  searchParams?: PublicLanguageSearchParams & { enrolled?: string; checkout?: string };
+  params: Promise<{ productId: string }>;
+  searchParams?: Promise<PublicLanguageSearchParams & { enrolled?: string; checkout?: string }>;
 }) {
+  const { productId: rawProductId } = await params;
+  const resolvedSearchParams = await searchParams;
   let productId: string;
   try {
-    productId = validateCatalogProductId(params.productId);
+    productId = validateCatalogProductId(rawProductId);
   } catch {
     notFound();
   }
   const item = await getPublicCatalogItem(productId);
   if (!item) notFound();
   const cookieStore = await cookies();
-  const publicLanguage = searchParams?.language ?? cookieStore.get("edsync-language")?.value;
+  const publicLanguage = resolvedSearchParams?.language ?? cookieStore.get("edsync-language")?.value;
   const copy = getPublicCopy(publicLanguage);
   const languageQuery = publicLanguageQuerySuffix(publicLanguage);
   const displayPrice = item.price.isFree ? copy.free : item.price.label;
@@ -156,12 +159,12 @@ export default async function CatalogDetailPage({
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          {searchParams?.enrolled && (
+          {resolvedSearchParams?.enrolled && (
             <div className="rounded-lg border border-edsync-emerald/30 bg-edsync-emerald/10 p-4 text-sm text-edsync-emerald">
               {copy.start}: {copy.courses}.
             </div>
           )}
-          {searchParams?.checkout === "cancelled" && (
+          {resolvedSearchParams?.checkout === "cancelled" && (
             <div className="rounded-lg border border-edsync-amber/30 bg-edsync-amber/10 p-4 text-sm text-edsync-amber">
               {copy.start}.
             </div>
