@@ -6,9 +6,9 @@ import { validateSignupPassword } from "@/lib/auth/password-validation";
 import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUser } from "@/lib/auth/session";
 import { createOrganizationSlug, validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeOrganizationMode, normalizeSignupRole } from "@/lib/auth/roles";
-import { validateEmailAddress } from "@/lib/email-address";
+import { validateEmailAddress } from "@/lib/validation/email-address";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
-import { validateTenantName } from "@/lib/tenant-validation";
+import { validateTenantName } from "@/lib/validation/tenant";
 
 function organizationSlug(name: string) {
   return createOrganizationSlug(name, crypto.randomUUID().slice(0, 8));
