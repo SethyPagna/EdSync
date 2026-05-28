@@ -12,7 +12,7 @@ import {
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import PublicTopbar from "@/components/public/PublicTopbar";
 import { getOrganizationPortal, listPublicCatalog } from "@/lib/catalog";
-import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog-filters";
+import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog/filters";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
