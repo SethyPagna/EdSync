@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Activity,
@@ -340,7 +340,7 @@ export default function AdminAIPage() {
     [providers],
   );
 
-  const loadProviders = async () => {
+  const loadProviders = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/ai/providers", { cache: "no-store" });
@@ -355,11 +355,14 @@ export default function AdminAIPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadProviders();
-  }, []);
+    const loadTimer = window.setTimeout(() => {
+      void loadProviders();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [loadProviders]);
 
   const applyProviderPreset = (provider: string) => {
     const selected = providerMeta[provider] ?? FALLBACK_META[provider] ?? FALLBACK_META.groq;
