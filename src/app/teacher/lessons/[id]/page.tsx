@@ -40,11 +40,7 @@ type QType =
   | "short_answer"
   | "long_answer";
 
-// ─────────────────────────────────────────
-// ─────────────────────────────────────────
-// ─────────────────────────────────────────
-// QUESTION BUILDER (one question row)
-// ─────────────────────────────────────────
+// Question builder
 interface QDraft {
   id?: string;
   question_text: string;
@@ -343,9 +339,7 @@ function QuestionBuilder({
   );
 }
 
-// ─────────────────────────────────────────
-// SECTION EDITORS
-// ─────────────────────────────────────────
+// Section editors
 
 // Image block
 function ImageSectionEditor({
@@ -952,9 +946,7 @@ function SectionEditor({
   );
 }
 
-// ─────────────────────────────────────────
-// MAIN PAGE
-// ─────────────────────────────────────────
+// Main page
 export default function TeacherLessonDetail() {
   const params = useParams();
   const router = useRouter();
@@ -1506,7 +1498,7 @@ export default function TeacherLessonDetail() {
         ))}
       </div>
 
-      {/* ── OVERVIEW ── */}
+      {/* Overview */}
       {tab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
           <div className="lg:col-span-2 space-y-4">
@@ -1702,7 +1694,7 @@ export default function TeacherLessonDetail() {
         </div>
       )}
 
-      {/* ── SECTIONS ── */}
+      {/* Sections */}
       {tab === "sections" && (
         <div className="animate-fade-in space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1816,7 +1808,7 @@ export default function TeacherLessonDetail() {
         </div>
       )}
 
-      {/* ── QUESTIONS ── */}
+      {/* Questions */}
       {tab === "questions" && (
         <div className="animate-fade-in space-y-4">
           <div className="grid grid-cols-3 gap-3 mb-2">
@@ -1912,7 +1904,7 @@ export default function TeacherLessonDetail() {
         </div>
       )}
 
-      {/* ── GLOSSARY ── */}
+      {/* Glossary */}
       {tab === "glossary" && (
         <div className="animate-fade-in space-y-4">
           <div className="flex items-center justify-between">
@@ -2054,7 +2046,7 @@ export default function TeacherLessonDetail() {
         </div>
       )}
 
-      {/* ── ASSIGN ── */}
+      {/* Assign */}
       {tab === "assign" && (
         <div className="animate-fade-in space-y-6">
           {assignments.length > 0 && (
