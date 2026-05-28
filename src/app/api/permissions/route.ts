@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
-import { normalizeRoleProfileInput, validateRoleProfileId } from "@/lib/permission-profile-validation";
+import { normalizeRoleProfileInput, validateRoleProfileId } from "@/lib/validation/permission-profile";
 import { getPermissionSet, PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
 
