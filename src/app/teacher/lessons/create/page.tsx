@@ -768,7 +768,7 @@ export default function CreateLesson() {
     toast.success("Local draft cleared");
   };
 
-  // ── File Upload ──────────────────────────────────────────────
+  // File upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -801,7 +801,7 @@ export default function CreateLesson() {
     }
   };
 
-  // ── AI Generation ────────────────────────────────────────────
+  // AI generation
   const handleGenerate = async () => {
     const content = inputText.trim();
     if (!content) {
@@ -878,7 +878,7 @@ export default function CreateLesson() {
     }
   };
 
-  // ── Save to edsync ─────────────────────────────────────────
+  // Save to EdSync
   const save = async (status: "draft" | "published") => {
     if (!draft.title.trim()) {
       toast.error("Please add a title");
@@ -1062,7 +1062,7 @@ export default function CreateLesson() {
           </div>
       )}
 
-      {/* ── STEP: CHOOSE MODE ── */}
+      {/* Choose mode */}
       {step === "choose" && (
         <div className="animate-slide-up rounded-[2rem] border border-edsync-border bg-edsync-card p-3 shadow-card">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-edsync-surface px-4 py-3">
@@ -1150,7 +1150,7 @@ export default function CreateLesson() {
         </div>
       )}
 
-      {/* ── STEP: IMPORT ── */}
+      {/* Import */}
       {step === "import" && (
         <div className="animate-slide-up space-y-6">
           {/* Source type picker */}
@@ -1430,7 +1430,7 @@ export default function CreateLesson() {
         </div>
       )}
 
-      {/* ── STEP: GENERATING ── */}
+      {/* Generating */}
       {step === "generating" && (
         <div className="flex items-center justify-center min-h-64 animate-fade-in">
           <div className="edsync-card p-6 sm:p-12 text-center max-w-sm w-full">
@@ -1475,7 +1475,7 @@ export default function CreateLesson() {
         </div>
       )}
 
-      {/* ── STEP: EDIT ── */}
+      {/* Edit */}
       {step === "edit" && (
         <div className="animate-slide-up space-y-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[720px]">
           <div className="grid gap-4 lg:h-full lg:grid-cols-[76px_300px_minmax(0,1fr)] lg:items-stretch">
@@ -1609,7 +1609,7 @@ export default function CreateLesson() {
             ))}
           </div>
 
-          {/* OVERVIEW */}
+          {/* Overview */}
           {activeTab === "overview" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2 space-y-4">
@@ -1797,7 +1797,7 @@ export default function CreateLesson() {
             </div>
           )}
 
-          {/* PAGES */}
+          {/* Pages */}
           {activeTab === "canvas" && (
             <div className="space-y-5">
               {draft.sections.map((sec, i) => (
@@ -2061,7 +2061,7 @@ export default function CreateLesson() {
             </div>
           )}
 
-          {/* QUESTIONS */}
+          {/* Questions */}
           {activeTab === "questions" && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -2199,7 +2199,7 @@ export default function CreateLesson() {
             </div>
           )}
 
-          {/* GLOSSARY */}
+          {/* Glossary */}
           {activeTab === "glossary" && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
