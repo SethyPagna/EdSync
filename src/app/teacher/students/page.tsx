@@ -127,7 +127,10 @@ export default function TeacherStudents() {
   }, [edsync]);
 
   useEffect(() => {
-    loadData();
+    const loadTimer = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadData]);
 
   const loadAssignments = useCallback(async (classId: string) => {
