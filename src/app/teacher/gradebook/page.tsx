@@ -66,11 +66,17 @@ export default function TeacherGradebookPage() {
   }, [classId]);
 
   useEffect(() => {
-    loadRoster().catch(() => toast.error("Could not load roster."));
+    const loadTimer = window.setTimeout(() => {
+      void loadRoster().catch(() => toast.error("Could not load roster."));
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadRoster]);
 
   useEffect(() => {
-    loadGrades();
+    const loadTimer = window.setTimeout(() => {
+      void loadGrades();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadGrades]);
 
   const addScore = async (event: React.FormEvent) => {
