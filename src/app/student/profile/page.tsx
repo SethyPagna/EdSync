@@ -238,7 +238,10 @@ export default function StudentProfile() {
   }, [edsync]);
 
   useEffect(() => {
-    loadProfileAndStats();
+    const loadTimer = window.setTimeout(() => {
+      void loadProfileAndStats();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadProfileAndStats]);
 
   const toggleInterest = (interest: string) => {
