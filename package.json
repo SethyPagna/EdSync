@@ -69,7 +69,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "idb": "^8.0.3",
-    "lucide-react": "^0.469.0",
+    "lucide-react": "^1.17.0",
     "next": "^16.2.6",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.6",
