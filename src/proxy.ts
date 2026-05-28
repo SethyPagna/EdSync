@@ -9,7 +9,7 @@ import {
   type AdminViewMode,
 } from "@/lib/admin-view";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestedAdminViewMode = normalizeAdminViewMode(request.nextUrl.searchParams.get("adminView"));
   const isProtected =
