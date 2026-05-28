@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, RotateCcw } from "lucide-react";
 
 type SectionOrderSettingsProps = {
@@ -24,27 +24,26 @@ function normalizeOrder(saved: string[] | null, sections: string[]) {
   return [...ordered, ...missing];
 }
 
+function readStoredOrder(storageKey: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(window.localStorage.getItem(storageKey) || "null") as string[] | null;
+  } catch {
+    return null;
+  }
+}
+
 export default function SectionOrderSettings({
   storageKey,
   sections,
   title = "Section order",
 }: SectionOrderSettingsProps) {
   const defaultOrder = useMemo(() => sections, [sections]);
-  const [order, setOrder] = useState(defaultOrder);
-
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem(storageKey) || "null") as
-        | string[]
-        | null;
-      setOrder(normalizeOrder(saved, sections));
-    } catch {
-      setOrder(sections);
-    }
-  }, [sections, storageKey]);
+  const [storedOrder, setStoredOrder] = useState(() => readStoredOrder(storageKey));
+  const order = useMemo(() => normalizeOrder(storedOrder, sections), [sections, storedOrder]);
 
   const persist = (next: string[]) => {
-    setOrder(next);
+    setStoredOrder(next);
     window.localStorage.setItem(storageKey, JSON.stringify(next));
     window.dispatchEvent(
       new CustomEvent<SectionOrderEventDetail>(SECTION_ORDER_EVENT, {
