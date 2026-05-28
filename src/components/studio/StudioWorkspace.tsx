@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -114,6 +114,23 @@ type StudioDraftValue = {
   sheet: string[][];
   slides: StudioSlideSummary[];
 };
+
+type DraftWriter = {
+  schedule(value: StudioDraftValue): void;
+  flush(value: StudioDraftValue): void;
+  cancel(): void;
+};
+
+type InsertToolId = "text" | "image" | "table" | "shape" | "slides" | "practice";
+
+const INSERT_TOOLS: { id: InsertToolId; label: string; icon: typeof FileText }[] = [
+  { id: "text", label: "Text", icon: FileText },
+  { id: "image", label: "Image", icon: ImageIcon },
+  { id: "table", label: "Table", icon: Table2 },
+  { id: "shape", label: "Shape", icon: Shapes },
+  { id: "slides", label: "Slides", icon: Presentation },
+  { id: "practice", label: "Practice", icon: Timer },
+];
 
 const defaultDraft: StudioDraftValue = {
   html: "<h2>New workspace item</h2><p>Start writing, paste content, or use AI to create a draft.</p>",
@@ -245,17 +262,20 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const csvInputRef = useRef<HTMLInputElement | null>(null);
   const activeKindRef = useRef<StudioItemKind>(initialKind);
   const itemTitleRef = useRef(titleForKind(initialKind));
-  const writerRef = useRef(createDebouncedDraftWriter<StudioDraftValue>((value) => {
-    const currentKind = activeKindRef.current;
-    writeStudioDraft({
-      kind: currentKind,
-      itemId: "workspace",
-      title: itemTitleRef.current,
-      value,
-      status: "local_draft",
+  const writerRef = useRef<DraftWriter | null>(null);
+  const ensureDraftWriter = useCallback(() => {
+    writerRef.current ??= createDebouncedDraftWriter<StudioDraftValue>((value) => {
+      writeStudioDraft({
+        kind: activeKindRef.current,
+        itemId: "workspace",
+        title: itemTitleRef.current,
+        value,
+        status: "local_draft",
+      });
+      setDraftStatus("local_draft");
     });
-    setDraftStatus("local_draft");
-  }));
+    return writerRef.current;
+  }, []);
 
   useEffect(() => {
     setActiveKind(initialKind);
@@ -269,7 +289,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   }, [initialKind]);
 
   const selectKind = (kind: StudioItemKind) => {
-    writerRef.current.flush(draft);
+    ensureDraftWriter().flush(draft);
     activeKindRef.current = kind;
     setActiveKind(kind);
     itemTitleRef.current = titleForKind(kind);
@@ -314,7 +334,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   }, []);
 
   useEffect(() => {
-    const draftWriter = writerRef.current;
+    const draftWriter = ensureDraftWriter();
     const flush = () => {
       draftWriter.flush(draft);
       setStatusMessage("Draft saved locally");
@@ -324,7 +344,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
       window.removeEventListener("beforeunload", flush);
       draftWriter.flush(draft);
     };
-  }, [draft]);
+  }, [draft, ensureDraftWriter]);
 
   const activeSlide = useMemo(
     () => normalizeStudioSlide(draft.slides.find((slide) => slide.id === selectedSlideId) ?? draft.slides[0]),
@@ -360,7 +380,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     setDraft(next);
     setDraftStatus("saving");
     setStatusMessage("Saving local draft...");
-    writerRef.current.schedule(next);
+    ensureDraftWriter().schedule(next);
   };
 
   const loadUniverEngine = () => {
@@ -390,7 +410,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   };
 
   const saveDraft = async () => {
-    writerRef.current.cancel();
+    ensureDraftWriter().cancel();
     writeStudioDraft({
       kind: activeKind,
       itemId: "workspace",
@@ -422,7 +442,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   };
 
   const resetDraft = () => {
-    writerRef.current.cancel();
+    ensureDraftWriter().cancel();
     clearStudioDraft(activeKind, "workspace");
     setDraft(defaultDraft);
     setSelectedSlideId(defaultDraft.slides[0].id);
@@ -658,6 +678,30 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     });
     activeKindRef.current = "doc";
     setActiveKind("doc");
+  };
+
+  const runInsertTool = (toolId: InsertToolId) => {
+    if (toolId === "text") {
+      insertBlock("Text block");
+      return;
+    }
+    if (toolId === "image") {
+      appendImagePrompt();
+      return;
+    }
+    if (toolId === "shape") {
+      insertBlock("Design callout");
+      return;
+    }
+    if (toolId === "table") {
+      selectKind("sheet");
+      return;
+    }
+    if (toolId === "slides") {
+      selectKind("slide");
+      return;
+    }
+    selectKind("practice");
   };
 
   const duplicateSelectedSlide = () => {
@@ -1210,17 +1254,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             <aside className="space-y-4">
               <Panel title="Insert Tools" icon={Plus}>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "Text", icon: FileText, action: () => insertBlock("Text block") },
-                    { label: "Image", icon: ImageIcon, action: appendImagePrompt },
-                    { label: "Table", icon: Table2, action: () => selectKind("sheet") },
-                    { label: "Shape", icon: Shapes, action: () => insertBlock("Design callout") },
-                    { label: "Slides", icon: Presentation, action: () => selectKind("slide") },
-                    { label: "Practice", icon: Timer, action: () => selectKind("practice") },
-                  ].map((tool) => {
+                  {INSERT_TOOLS.map((tool) => {
                     const Icon = tool.icon;
                     return (
-                      <button key={tool.label} type="button" onClick={tool.action} className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold hover:border-edsync-blue/40">
+                      <button key={tool.id} type="button" onClick={() => runInsertTool(tool.id)} className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold hover:border-edsync-blue/40">
                         <Icon className="mb-2 h-4 w-4 text-edsync-blue" />
                         {tool.label}
                       </button>
