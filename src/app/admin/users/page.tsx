@@ -68,7 +68,10 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
+    const loadTimer = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadUsers]);
 
   useEffect(() => {
