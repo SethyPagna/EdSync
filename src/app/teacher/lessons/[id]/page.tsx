@@ -45,6 +45,10 @@ type QType =
 // RICH TEXT EDITOR
 // ─────────────────────────────────────────
 // Kept as a compatibility fallback while the visual block editor is rolled through every legacy section path.
+function countTextCharacters(html: string) {
+  return html.replace(/<[^>]*>/g, "").length;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RichTextEditor({
   value,
@@ -57,6 +61,7 @@ function RichTextEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
+  const [characterCount, setCharacterCount] = useState(() => countTextCharacters(value));
 
   useEffect(() => {
     if (ref.current && !initialized.current) {
@@ -284,7 +289,10 @@ function RichTextEditor({
         suppressContentEditableWarning
         data-placeholder={placeholder}
         className="rich-editor p-4 min-h-[260px] bg-edsync-card focus:outline-none text-sm"
-        onInput={() => onChange(ref.current?.innerHTML || "")}
+        onInput={() => {
+          setCharacterCount(ref.current?.innerText.length || 0);
+          onChange(ref.current?.innerHTML || "");
+        }}
         onPaste={(e) => {
           // Paste as plain HTML but strip scripts
           const html = e.clipboardData.getData("text/html");
@@ -292,6 +300,7 @@ function RichTextEditor({
             e.preventDefault();
             const clean = sanitizeHtml(html);
             document.execCommand("insertHTML", false, clean);
+            setCharacterCount(ref.current?.innerText.length || 0);
             onChange(ref.current?.innerHTML || "");
           }
         }}
@@ -300,7 +309,7 @@ function RichTextEditor({
       {/* Status bar */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-edsync-surface border-t border-edsync-border text-xs text-edsync-subtle">
         <span>Rich text editor - formatting is saved with the lesson</span>
-        <span>{(ref.current?.innerText || "").length} chars</span>
+        <span>{characterCount} chars</span>
       </div>
     </div>
   );
