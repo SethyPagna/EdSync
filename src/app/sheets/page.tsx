@@ -10,14 +10,15 @@ export const metadata = {
 };
 
 type SheetsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     adminView?: string;
-  };
+  }>;
 };
 
 export default async function SheetsPage({ searchParams }: SheetsPageProps) {
+  const resolvedSearchParams = await searchParams;
   const user = await getSessionUser().catch(() => null);
-  const requestedAdminView = normalizeAdminViewMode(searchParams?.adminView);
+  const requestedAdminView = normalizeAdminViewMode(resolvedSearchParams?.adminView);
   const adminView =
     user?.user_metadata.role === "admin" && requestedAdminView
       ? workspaceRoleForAdminViewMode(requestedAdminView)
