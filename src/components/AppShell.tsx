@@ -278,8 +278,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
-  const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(() => workspaceContextFromStorage());
-  const [requestedAdminViewMode, setRequestedAdminViewMode] = useState<AdminViewMode | null>(() => adminViewModeFromLocation());
+  const [workspaceContext] = useState<WorkspaceContext | null>(() => workspaceContextFromStorage());
+  const requestedAdminViewMode = adminViewModeFromLocation();
   const [sectionOrder, setSectionOrder] = useState<string[]>(() => readSectionOrder(sectionOrderStorageKey(role)));
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
@@ -291,12 +291,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const stored = window.localStorage.getItem("edsync-theme");
     const useDark = stored === "dark";
     document.documentElement.classList.toggle("dark", useDark);
-    setWorkspaceContext(workspaceContextFromStorage());
   }, []);
-
-  useEffect(() => {
-    setRequestedAdminViewMode(adminViewModeFromLocation());
-  }, [pathname]);
 
   useEffect(() => {
     window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
@@ -304,7 +299,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   useEffect(() => {
     const storageKey = sectionOrderStorageKey(role);
-    setSectionOrder(readSectionOrder(storageKey));
 
     const handleOrderChange = (event: Event) => {
       const detail = (event as CustomEvent<SectionOrderEventDetail>).detail;
