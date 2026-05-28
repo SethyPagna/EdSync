@@ -9,7 +9,7 @@ import {
   validateStandardsFileName,
   validateStandardsManifestText,
   validateStandardsTitle,
-} from "@/lib/standards-validation";
+} from "@/lib/validation/standards";
 
 type StandardsPayload = {
   packages: ScormPackage[];
