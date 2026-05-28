@@ -620,7 +620,7 @@ export default function StudentLesson() {
   const progressRef = useRef<StudentProgress | null>(null);
   const phaseRef = useRef<Phase>("loading");
   const pendingActiveMinutesRef = useRef(0);
-  const lastInteractionAtRef = useRef(Date.now());
+  const lastInteractionAtRef = useRef(0);
 
   // Section quiz state
   const [sectionQs, setSectionQs] = useState<QuizQuestion[]>([]);
@@ -642,6 +642,8 @@ export default function StudentLesson() {
   }, []);
 
   useEffect(() => {
+    markActiveLearning();
+
     const flushActiveMinutes = async () => {
       const progressRecord = progressRef.current;
       const pendingMinutes = pendingActiveMinutesRef.current;
