@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import "./globals.css";
+import "@/styles/globals.css";
 import { Toaster } from "react-hot-toast";
 import PwaRegister from "@/components/PwaRegister";
 import { DEFAULT_PUBLIC_LANGUAGE, EDSYNC_LANGUAGES } from "@/lib/public/languages";
