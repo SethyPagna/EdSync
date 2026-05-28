@@ -8,7 +8,7 @@ import {
   normalizeProductInput,
   normalizeProductStatus,
   validateBillingId,
-} from "@/lib/billing-validation";
+} from "@/lib/validation/billing";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
