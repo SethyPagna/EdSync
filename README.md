@@ -23,6 +23,7 @@ background automation.
    Cloudflare resources. Do not reuse AllChess or LEARN D1/R2 resources.
 3. Run D1 migrations:
    ```powershell
+   npm.cmd run db:migrate:dry-run
    npm.cmd run db:migrate
    ```
 4. Start the app:
@@ -76,9 +77,10 @@ gets tight:
 npm.cmd run clean:local
 ```
 
-This removes rebuildable folders such as `.next`, `.open-next`, `.wrangler`,
-`coverage`, `dist`, and TypeScript build info while keeping `node_modules` so
-the app can still run. To also remove installed dependencies, use:
+This removes rebuildable folders such as `.next`, `.open-next`,
+`.vercel/output`, `.wrangler`, `coverage`, `dist`, and TypeScript build info
+while keeping `node_modules` so the app can still run. To also remove installed
+dependencies, use:
 
 ```powershell
 npm.cmd run clean:all
