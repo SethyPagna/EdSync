@@ -9,12 +9,13 @@ export const metadata: Metadata = {
   description: "Slide through the EdSync catalog, lesson editor, AI, teacher, student, and admin workflow.",
 };
 
-export default function ShowcasePage({
+export default async function ShowcasePage({
   searchParams,
 }: {
-  searchParams?: PublicLanguageSearchParams;
+  searchParams?: Promise<PublicLanguageSearchParams>;
 }) {
-  const catalogHref = publicLanguageHref("/catalog", searchParams?.language);
+  const resolvedSearchParams = await searchParams;
+  const catalogHref = publicLanguageHref("/catalog", resolvedSearchParams?.language);
 
   return (
     <main className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
@@ -25,7 +26,7 @@ export default function ShowcasePage({
             Intro
           </Link>
         </div>
-        <WorkflowShowcase language={searchParams?.language} />
+        <WorkflowShowcase language={resolvedSearchParams?.language} />
       </section>
     </main>
   );
