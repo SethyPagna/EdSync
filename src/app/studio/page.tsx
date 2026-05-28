@@ -8,13 +8,14 @@ export const metadata = {
 };
 
 type StudioPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     adminView?: string;
-  };
+  }>;
 };
 
 export default async function StudioPage({ searchParams }: StudioPageProps) {
-  const adminView = normalizeAdminViewMode(searchParams?.adminView);
+  const resolvedSearchParams = await searchParams;
+  const adminView = normalizeAdminViewMode(resolvedSearchParams?.adminView);
   const nextPath = `/studio${adminView ? `?adminView=${adminView}` : ""}`;
   const user = await getSessionUser().catch(() => null);
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(nextPath)}`);
