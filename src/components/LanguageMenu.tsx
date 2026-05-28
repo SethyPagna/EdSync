@@ -32,6 +32,12 @@ function queryLanguage() {
   return value ? decodeURIComponent(value) : null;
 }
 
+function readInitialLanguage() {
+  if (typeof window === "undefined") return DEFAULT_PUBLIC_LANGUAGE;
+  const stored = queryLanguage() || window.localStorage.getItem("edsync-language") || cookieLanguage();
+  return normalizePublicLanguage(stored);
+}
+
 function persistLanguage(language: PublicLanguageName) {
   const code = languageCodeFor(language);
   window.localStorage.setItem("edsync-language", language);
@@ -47,15 +53,11 @@ export default function LanguageMenu({
   className = "",
 }: LanguageMenuProps) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const [language, setLanguage] = useState<PublicLanguageName>(DEFAULT_PUBLIC_LANGUAGE);
+  const [language, setLanguage] = useState<PublicLanguageName>(readInitialLanguage);
 
   useEffect(() => {
-    const queryValue = queryLanguage();
-    const stored = queryValue || window.localStorage.getItem("edsync-language") || cookieLanguage() || DEFAULT_PUBLIC_LANGUAGE;
-    const nextLanguage = normalizePublicLanguage(stored);
-    setLanguage(nextLanguage);
-    persistLanguage(nextLanguage);
-  }, []);
+    persistLanguage(language);
+  }, [language]);
 
   const chooseLanguage = (nextLanguage: PublicLanguageName) => {
     setLanguage(nextLanguage);
