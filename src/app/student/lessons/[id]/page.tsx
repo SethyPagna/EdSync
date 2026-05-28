@@ -106,7 +106,7 @@ function sanitizeLessonHtml(content: string) {
   return sanitizeHtml(content);
 }
 
-// ── Content renderers ──────────────────────────────────────────
+// Content renderers
 
 function renderContent(html: string) {
   // If it looks like HTML use dangerouslySetInnerHTML, otherwise treat as plain text
@@ -256,7 +256,7 @@ function DiscussionContent({ content }: { content: string }) {
   );
 }
 
-// ── Answer component for each question type ────────────────────
+// Answer component for each question type
 type AnswerState = { [questionId: string]: string };
 
 function QuestionItem({
@@ -464,7 +464,7 @@ function QuestionItem({
   );
 }
 
-// ── Quiz section renderer ──────────────────────────────────────
+// Quiz section renderer
 function QuizSection({
   questions,
   title,
@@ -566,7 +566,7 @@ function QuizSection({
   );
 }
 
-// ── Main Student Lesson Page ───────────────────────────────────
+// Main student lesson page
 export default function StudentLesson() {
   const params = useParams();
   const router = useRouter();
@@ -860,7 +860,7 @@ export default function StudentLesson() {
   };
 
   const checkSectionQuiz = async (sec: LessonSection) => {
-    // Look for quiz_questions with this section_id (no is_micro_check flag — it's inline)
+    // Look for inline quiz questions tied to this section.
     const inlineQs = questions.filter(
       (q) =>
         q.section_id === sec.id &&
@@ -1384,7 +1384,7 @@ export default function StudentLesson() {
 
   return (
     <div className="min-h-screen">
-      {/* ── Top bar ── */}
+      {/* Top bar */}
       <div className="sticky top-0 z-30 bg-edsync-surface border-b border-edsync-border">
         <div className="flex items-center gap-3 px-4 py-2.5 max-w-5xl mx-auto">
           <button
@@ -1536,9 +1536,9 @@ export default function StudentLesson() {
             )}
           </nav>
         </aside>
-        {/* ── MAIN CONTENT ── */}
+        {/* Main content */}
         <div id="lesson-content" className="order-1 min-w-0 animate-fade-in lg:order-2">
-          {/* DIAGNOSTIC */}
+          {/* Diagnostic */}
           {phase === "diagnostic" &&
             (() => {
               return (
@@ -1606,7 +1606,7 @@ export default function StudentLesson() {
               );
             })()}
 
-          {/* LEARNING */}
+          {/* Learning */}
           {phase === "learning" && currentSection && (
             <div>
               {/* Page header */}
@@ -1734,7 +1734,7 @@ export default function StudentLesson() {
             </div>
           )}
 
-          {/* MICRO CHECK */}
+          {/* Micro check */}
           {phase === "micro_check" && (
             <div>
               <div className="edsync-card mb-6 border-edsync-cyan/30 bg-edsync-cyan/5">
@@ -1770,7 +1770,7 @@ export default function StudentLesson() {
             </div>
           )}
 
-          {/* FINAL QUIZ */}
+          {/* Final quiz */}
           {phase === "final_quiz" &&
             (() => {
               return (
@@ -1832,7 +1832,7 @@ export default function StudentLesson() {
               );
             })()}
 
-          {/* REFLECTION */}
+          {/* Reflection */}
           {phase === "reflection" && finalScore !== null && (
             <div className="space-y-6">
               <div className="edsync-card border-edsync-blue/30 bg-edsync-blue/5">
@@ -1968,7 +1968,7 @@ export default function StudentLesson() {
             </div>
           )}
 
-          {/* CHOOSE PATH */}
+          {/* Choose path */}
           {phase === "choose_path" && finalScore !== null && (
             <div className="edsync-card text-center py-8">
               <div className="w-16 h-16 bg-edsync-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -2007,7 +2007,7 @@ export default function StudentLesson() {
             </div>
           )}
 
-          {/* EXTENDED LEARNING */}
+          {/* Extended learning */}
           {phase === "extended_learning" && (
             <div>
               <div className="edsync-card mb-6 border-edsync-purple/30 bg-edsync-purple/5">
@@ -2185,7 +2185,7 @@ export default function StudentLesson() {
             </div>
           )}
 
-          {/* COMPLETE */}
+          {/* Complete */}
           {phase === "complete" && (
             <div className="text-center py-12 animate-slide-up">
               <div className="w-24 h-24 bg-edsync-emerald/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-glow-emerald">
@@ -2234,7 +2234,7 @@ export default function StudentLesson() {
           )}
         </div>
 
-        {/* ── SIDEBARS ── */}
+        {/* Sidebars */}
         {showGlossary && !showChat && (
           <div className="w-72 flex-shrink-0 sticky top-28 self-start animate-fade-in">
             <div className="edsync-card max-h-[calc(100vh-10rem)] flex flex-col">
