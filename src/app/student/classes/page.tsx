@@ -84,7 +84,10 @@ export default function StudentClassesPage() {
   }, [edsync]);
 
   useEffect(() => {
-    loadClasses();
+    const loadTimer = window.setTimeout(() => {
+      void loadClasses();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadClasses]);
 
   const joinClass = async () => {
