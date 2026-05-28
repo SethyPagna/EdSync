@@ -89,7 +89,10 @@ export default function StudentLessonsPage() {
   }, [edsync]);
 
   useEffect(() => {
-    loadLessons();
+    const loadTimer = window.setTimeout(() => {
+      void loadLessons();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadLessons]);
 
   const completedCount = lessons.filter((lesson) => lesson.progress?.status === "completed").length;
