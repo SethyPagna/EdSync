@@ -12,7 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
-import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Building2, GraduationCap, Info, UserRound, UsersRound } from "lucide-react";
 
 type Role = "teacher" | "student";
 type AccountType = "organization" | "individual";
@@ -303,7 +303,8 @@ function SignupForm() {
                   key={item.key}
                   type="button"
                   onClick={() => changeAccountType(item.key)}
-                  className={`rounded-2xl border p-4 text-left shadow-sm transition ${
+                  aria-label={`${item.label}: ${item.copy}`}
+                  className={`edsync-auth-choice rounded-2xl border p-4 text-left shadow-sm transition ${
                     selected
                       ? "premium-active text-edsync-text"
                       : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
@@ -311,7 +312,10 @@ function SignupForm() {
                 >
                   <Icon className="mb-3 h-5 w-5" />
                   <span className="block font-semibold">{item.label}</span>
-                  <span className="mt-1 block text-xs">{item.copy}</span>
+                  <span className="edsync-auth-choice-info" aria-hidden="true">
+                    <Info className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="edsync-auth-choice-tooltip">{item.copy}</span>
                 </button>
               );
             })}
@@ -446,7 +450,8 @@ function SignupForm() {
               key={item}
               type="button"
               onClick={() => setRole(item)}
-              className={`rounded-2xl border p-4 text-left shadow-sm transition ${
+              aria-label={`${itemLabel}: ${itemCopy}`}
+              className={`edsync-auth-choice rounded-2xl border p-4 text-left shadow-sm transition ${
                 selected
                   ? "premium-active text-edsync-text"
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
@@ -454,9 +459,10 @@ function SignupForm() {
             >
               <Icon className="mb-3 h-5 w-5" />
               <span className="block font-semibold">{itemLabel}</span>
-              <span className="mt-1 block text-xs">
-                {itemCopy}
+              <span className="edsync-auth-choice-info" aria-hidden="true">
+                <Info className="h-3.5 w-3.5" />
               </span>
+              <span className="edsync-auth-choice-tooltip">{itemCopy}</span>
             </button>
           );
         })}
@@ -574,9 +580,7 @@ function SignupSidePanelCopy() {
       <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
         {copy.createRightSpaceTitle}
       </h1>
-      <p className="mt-4 max-w-lg leading-7 text-edsync-subtle">
-        {copy.signupPanelCopy}
-      </p>
+      <p className="sr-only">{copy.signupPanelCopy}</p>
     </>
   );
 }
