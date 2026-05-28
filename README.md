@@ -64,6 +64,7 @@ npm.cmd run build
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
 - `infra/` contains local, Cloudflare, and D1 database infrastructure files.
+- `docs/` is grouped into architecture, audits, deployment, and archive notes.
 - Framework-required root entry points remain at the root so Next.js, npm,
   Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
 
