@@ -12,8 +12,8 @@ import {
   type OrganizationMode,
   type SignupRole,
 } from "@/lib/auth/roles";
-import { validateEmailAddress } from "@/lib/email-address";
-import { validateTenantName } from "@/lib/tenant-validation";
+import { validateEmailAddress } from "@/lib/validation/email-address";
+import { validateTenantName } from "@/lib/validation/tenant";
 
 type QueryOptions = {
   count?: "exact";
