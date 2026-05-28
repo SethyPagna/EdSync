@@ -26,6 +26,18 @@ const defaultVisibility: GradeVisibility = {
   feedback: true,
 };
 
+function readGradeVisibility() {
+  if (typeof window === "undefined") return defaultVisibility;
+  try {
+    const saved = JSON.parse(window.localStorage.getItem("edsync-student-grade-visibility") || "null") as
+      | Partial<GradeVisibility>
+      | null;
+    return saved ? { ...defaultVisibility, ...saved } : defaultVisibility;
+  } catch {
+    return defaultVisibility;
+  }
+}
+
 function percentText(value: number | null) {
   return value === null ? "Not graded" : `${value}%`;
 }
@@ -33,7 +45,7 @@ function percentText(value: number | null) {
 export default function StudentGradesPage() {
   const [scores, setScores] = useState<Score[]>([]);
   const [overall, setOverall] = useState<number | null>(null);
-  const [visibility, setVisibility] = useState<GradeVisibility>(defaultVisibility);
+  const [visibility, setVisibility] = useState<GradeVisibility>(readGradeVisibility);
 
   useEffect(() => {
     fetch("/api/grades", { cache: "no-store" })
@@ -42,14 +54,6 @@ export default function StudentGradesPage() {
         setScores(payload.data?.scores ?? []);
         setOverall(payload.data?.overall ?? null);
       });
-    try {
-      const saved = JSON.parse(window.localStorage.getItem("edsync-student-grade-visibility") || "null") as
-        | Partial<GradeVisibility>
-        | null;
-      if (saved) setVisibility({ ...defaultVisibility, ...saved });
-    } catch {
-      setVisibility(defaultVisibility);
-    }
   }, []);
 
   const toggleVisibility = (key: keyof GradeVisibility) => {
