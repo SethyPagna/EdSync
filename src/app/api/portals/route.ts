@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
-import { normalizePortalInput, validatePortalId } from "@/lib/portal-validation";
+import { normalizePortalInput, validatePortalId } from "@/lib/validation/portal";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 export async function GET() {
