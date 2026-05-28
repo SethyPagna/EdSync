@@ -18,7 +18,7 @@ import {
   normalizePlannerPriority,
   normalizePlannerText,
   validatePlannerDateOrder,
-} from "@/lib/planner-validation";
+} from "@/lib/validation/planner";
 
 type PlannerPayload = {
   kind?: "announcement" | "event";
