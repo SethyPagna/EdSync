@@ -8,6 +8,7 @@ const dryRun = process.argv.includes("--dry-run");
 const generatedTargets = [
   ".next",
   ".open-next",
+  ".vercel/output",
   ".wrangler",
   ".turbo",
   ".cache",
