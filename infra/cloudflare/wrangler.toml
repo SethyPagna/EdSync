@@ -1,5 +1,5 @@
 name = "edsync-automation-dev"
-main = "cloudflare/workers/automation.ts"
+main = "workers/automation.ts"
 compatibility_date = "2026-05-12"
 
 [[d1_databases]]
