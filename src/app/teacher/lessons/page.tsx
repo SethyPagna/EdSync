@@ -53,7 +53,10 @@ export default function TeacherLessons() {
   }, [edsync]);
 
   useEffect(() => {
-    loadLessons();
+    const loadTimer = window.setTimeout(() => {
+      void loadLessons();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadLessons]);
 
   const deleteLesson = async (id: string) => {
