@@ -96,12 +96,18 @@ export default function TeacherReports() {
   }, [edsync]);
 
   useEffect(() => {
-    loadLessons();
+    const loadTimer = window.setTimeout(() => {
+      void loadLessons();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadLessons]);
 
   useEffect(() => {
     if (!selectedLesson) return;
-    loadReport(selectedLesson);
+    const loadTimer = window.setTimeout(() => {
+      void loadReport(selectedLesson);
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadReport, selectedLesson]);
 
   const exportCSV = () => {
