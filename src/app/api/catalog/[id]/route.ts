@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPublicCatalogItem } from "@/lib/catalog";
-import { validateCatalogProductId } from "@/lib/catalog-validation";
+import { validateCatalogProductId } from "@/lib/validation/catalog";
 
 export async function GET(
   _request: Request,
