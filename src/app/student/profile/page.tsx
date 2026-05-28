@@ -5,7 +5,7 @@ import { validateDisplayName } from "@/lib/auth/display-name";
 import SectionOrderSettings from "@/components/SectionOrderSettings";
 import { createClient } from "@/lib/edsync/client";
 import { GRADE_LEVELS } from "@/lib/grades";
-import { INTEREST_AREAS, validateGradeLevel, validateInterestAreas } from "@/lib/profile-fields";
+import { INTEREST_AREAS, validateGradeLevel, validateInterestAreas } from "@/lib/validation/profile-fields";
 import type { Profile, UserPreferences } from "@/types";
 import toast from "react-hot-toast";
 import { generateInitials } from "@/lib/utils";
