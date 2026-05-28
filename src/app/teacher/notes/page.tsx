@@ -116,7 +116,7 @@ export default function TeacherNotesPage() {
   const [editingPersonalId, setEditingPersonalId] = useState<string | null>(null);
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [uploadingPersonal, setUploadingPersonal] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => readViewMode(TEACHER_NOTES_VIEW_KEY));
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     studentId: "",
@@ -141,7 +141,6 @@ export default function TeacherNotesPage() {
 
   useEffect(() => {
     load();
-    setViewMode(readViewMode(TEACHER_NOTES_VIEW_KEY));
   }, []);
 
   const changeViewMode = (mode: ViewMode) => {
