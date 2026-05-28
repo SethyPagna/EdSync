@@ -74,24 +74,57 @@ function SignupForm() {
   const waitingForOrganization =
     accountType === "organization" && organizationMode === "join" && organizationStatus === "checking";
 
+  const resetOrganizationLookup = () => {
+    setOrganizationLookup(null);
+    setOrganizationStatus("idle");
+  };
+
+  const prepareOrganizationLookup = (code: string, mode = organizationMode, type = accountType) => {
+    setOrganizationLookup(null);
+    if (type !== "organization" || mode !== "join" || !code.trim()) {
+      setOrganizationStatus("idle");
+      return;
+    }
+    try {
+      validateOrganizationCode(code);
+      setOrganizationStatus("checking");
+    } catch {
+      setOrganizationStatus("missing");
+    }
+  };
+
+  const changeAccountType = (nextAccountType: AccountType) => {
+    setAccountType(nextAccountType);
+    if (nextAccountType === "organization") {
+      prepareOrganizationLookup(organizationCode, organizationMode, nextAccountType);
+      return;
+    }
+    resetOrganizationLookup();
+  };
+
+  const changeOrganizationMode = (mode: OrganizationMode) => {
+    setOrganizationMode(mode);
+    prepareOrganizationLookup(organizationCode, mode);
+  };
+
+  const changeOrganizationCode = (code: string) => {
+    setOrganizationCode(code);
+    prepareOrganizationLookup(code);
+  };
+
   useEffect(() => {
     if (accountType !== "organization" || organizationMode !== "join" || !organizationCode.trim()) {
-      setOrganizationLookup(null);
-      setOrganizationStatus("idle");
       return;
     }
     let code: string;
     try {
       code = validateOrganizationCode(organizationCode);
     } catch {
-      setOrganizationLookup(null);
-      setOrganizationStatus("missing");
       return;
     }
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      setOrganizationStatus("checking");
       fetch(`/api/auth/organizations?code=${encodeURIComponent(code)}`, {
         cache: "no-store",
         signal: controller.signal,
@@ -269,7 +302,7 @@ function SignupForm() {
                 <button
                   key={item.key}
                   type="button"
-                  onClick={() => setAccountType(item.key)}
+                  onClick={() => changeAccountType(item.key)}
                   className={`rounded-2xl border p-4 text-left shadow-sm transition ${
                     selected
                       ? "premium-active text-edsync-text"
@@ -293,7 +326,7 @@ function SignupForm() {
                   <button
                     key={mode}
                     type="button"
-                    onClick={() => setOrganizationMode(mode)}
+                    onClick={() => changeOrganizationMode(mode)}
                     className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                       organizationMode === mode
                         ? "premium-active"
@@ -312,7 +345,7 @@ function SignupForm() {
                 value={organizationMode === "join" ? organizationCode : organizationName}
                 onChange={(event) => {
                   if (organizationMode === "join") {
-                    setOrganizationCode(event.target.value);
+                    changeOrganizationCode(event.target.value);
                   } else {
                     setOrganizationName(event.target.value);
                   }
