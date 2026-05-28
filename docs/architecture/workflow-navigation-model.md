@@ -2,7 +2,7 @@
 
 Last updated: 2026-05-16
 
-This document implements Phase 2 of `docs/archive/planning/plan.md`. It defines the canonical product flow, navigation handoffs, saved-state labels, and route responsibilities before the next architecture phases introduce shared learning objects and refactor the large editor/player files.
+This document defines the canonical product flow, navigation handoffs, saved-state labels, and route responsibilities before the next architecture phases introduce shared learning objects and refactor the large editor/player files.
 
 ## Product Spine
 
