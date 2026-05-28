@@ -5,7 +5,7 @@ import {
   normalizeFeatureFlagInput,
   normalizeFeatureFlagKey,
   validateFeatureFlagId,
-} from "@/lib/admin-settings-validation";
+} from "@/lib/validation/admin-settings";
 import { d1Query } from "@/lib/db/d1";
 
 const DEFAULT_FLAGS = [
