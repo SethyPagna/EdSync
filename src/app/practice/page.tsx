@@ -18,21 +18,22 @@ type PracticePageSearchParams = PracticeSearchParams & {
 export default async function PracticePage({
   searchParams,
 }: {
-  searchParams?: PracticePageSearchParams;
+  searchParams?: Promise<PracticePageSearchParams>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const user = await getSessionUser().catch(() => null);
   const currentParams = new URLSearchParams();
-  if (searchParams?.mode) currentParams.set("mode", searchParams.mode);
-  if (searchParams?.ai) currentParams.set("ai", searchParams.ai);
-  if (searchParams?.task) currentParams.set("task", searchParams.task);
-  if (searchParams?.adminView) currentParams.set("adminView", searchParams.adminView);
+  if (resolvedSearchParams?.mode) currentParams.set("mode", resolvedSearchParams.mode);
+  if (resolvedSearchParams?.ai) currentParams.set("ai", resolvedSearchParams.ai);
+  if (resolvedSearchParams?.task) currentParams.set("task", resolvedSearchParams.task);
+  if (resolvedSearchParams?.adminView) currentParams.set("adminView", resolvedSearchParams.adminView);
   const currentPath = `/practice${currentParams.size ? `?${currentParams.toString()}` : ""}`;
 
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(currentPath)}`);
 
   const requestedAdminView =
     user.user_metadata.role === "admin"
-      ? normalizeAdminViewMode(searchParams?.adminView)
+      ? normalizeAdminViewMode(resolvedSearchParams?.adminView)
       : null;
   const adminWorkspaceRole = requestedAdminView ? workspaceRoleForAdminViewMode(requestedAdminView) : null;
   const shellRole = adminWorkspaceRole ?? user.user_metadata.role;
@@ -42,9 +43,9 @@ export default async function PracticePage({
   return (
     <AppShell role={shellRole} navItems={shellNavItems}>
       <PracticeWorkspace
-        initialAiOpen={searchParams?.ai === "1"}
-        initialAiTask={normalizeAiPromptContractId(searchParams?.task)}
-        initialMode={normalizePracticeMode(searchParams?.mode)}
+        initialAiOpen={resolvedSearchParams?.ai === "1"}
+        initialAiTask={normalizeAiPromptContractId(resolvedSearchParams?.task)}
+        initialMode={normalizePracticeMode(resolvedSearchParams?.mode)}
       />
     </AppShell>
   );
