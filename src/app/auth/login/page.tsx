@@ -47,24 +47,52 @@ function LoginForm() {
   const waitingForOrganization =
     accountType === "organization" && organizationStatus === "checking";
 
+  const resetOrganizationLookup = () => {
+    setOrganizationLookup(null);
+    setOrganizationStatus("idle");
+  };
+
+  const prepareOrganizationLookup = (code: string) => {
+    setOrganizationLookup(null);
+    if (!code.trim()) {
+      setOrganizationStatus("idle");
+      return;
+    }
+    try {
+      validateOrganizationCode(code);
+      setOrganizationStatus("checking");
+    } catch {
+      setOrganizationStatus("missing");
+    }
+  };
+
+  const changeAccountType = (nextAccountType: AccountType) => {
+    setAccountType(nextAccountType);
+    if (nextAccountType === "organization") {
+      prepareOrganizationLookup(organizationCode);
+      return;
+    }
+    resetOrganizationLookup();
+  };
+
+  const changeOrganizationCode = (code: string) => {
+    setOrganizationCode(code);
+    prepareOrganizationLookup(code);
+  };
+
   useEffect(() => {
     if (accountType !== "organization" || !organizationCode.trim()) {
-      setOrganizationLookup(null);
-      setOrganizationStatus("idle");
       return;
     }
     let code: string;
     try {
       code = validateOrganizationCode(organizationCode);
     } catch {
-      setOrganizationLookup(null);
-      setOrganizationStatus("missing");
       return;
     }
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      setOrganizationStatus("checking");
       fetch(`/api/auth/organizations?code=${encodeURIComponent(code)}`, {
         cache: "no-store",
         signal: controller.signal,
@@ -187,7 +215,7 @@ function LoginForm() {
             <button
               key={item.key}
               type="button"
-              onClick={() => setAccountType(item.key)}
+              onClick={() => changeAccountType(item.key)}
               className={`rounded-2xl border p-4 text-left shadow-sm transition ${
                 selected
                   ? "premium-active text-edsync-text"
@@ -210,7 +238,7 @@ function LoginForm() {
           <input
             type="text"
             value={organizationCode}
-            onChange={(event) => setOrganizationCode(event.target.value)}
+            onChange={(event) => changeOrganizationCode(event.target.value)}
             placeholder="example-academy"
             required={accountType === "organization"}
             autoComplete="organization"
