@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import CatalogPage from "./catalog/page";
 import { getSessionUser } from "@/lib/auth/session";
-import type { CatalogSearchParams } from "@/lib/catalog-filters";
+import type { CatalogSearchParams } from "@/lib/catalog/filters";
 import { publicLanguageHref } from "@/lib/public/languages";
 import { resolveTenantContext } from "@/lib/tenancy";
 
