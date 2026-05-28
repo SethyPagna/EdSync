@@ -80,6 +80,7 @@ a Cloudflare zone with WAF malicious upload detection enabled.
 ## D1 Migration
 
 ```powershell
+npm.cmd run db:migrate:dry-run
 npm.cmd run db:migrate
 npm.cmd run db:seed
 ```
