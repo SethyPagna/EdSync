@@ -82,18 +82,44 @@ function RichTextEditor({
     onChange(ref.current?.innerHTML || "");
   };
 
-  const toolbarBtn = (
-    label: string,
-    action: () => void,
-    title?: string,
-    active?: boolean,
-  ) => (
+  const handleToolbarMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const { action, command, html } = e.currentTarget.dataset;
+    if (command) {
+      exec(command);
+      return;
+    }
+    if (html) {
+      insertHtml(html);
+      return;
+    }
+    if (action === "link") {
+      const url = prompt("Enter URL:");
+      if (url) exec("createLink", url);
+    }
+  };
+
+  const toolbarBtn = ({
+    label,
+    title,
+    active,
+    command,
+    html,
+    action,
+  }: {
+    label: string;
+    title?: string;
+    active?: boolean;
+    command?: string;
+    html?: string;
+    action?: "link";
+  }) => (
     <button
       key={label}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        action();
-      }}
+      onMouseDown={handleToolbarMouseDown}
+      data-action={action}
+      data-command={command}
+      data-html={html}
       title={title || label}
       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${active ? "bg-edsync-blue text-white" : "text-edsync-subtle hover:text-edsync-text hover:bg-edsync-muted/30"}`}
     >
@@ -158,29 +184,29 @@ function RichTextEditor({
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Text style */}
-        {toolbarBtn("Undo", () => exec("undo"), "Undo")}
-        {toolbarBtn("Redo", () => exec("redo"), "Redo")}
-        {toolbarBtn("B", () => exec("bold"), "Bold", false)}
-        {toolbarBtn("I", () => exec("italic"), "Italic", false)}
-        {toolbarBtn("U", () => exec("underline"), "Underline", false)}
-        {toolbarBtn("S", () => exec("strikeThrough"), "Strikethrough", false)}
-        {toolbarBtn("Sub", () => exec("subscript"), "Subscript", false)}
-        {toolbarBtn("Sup", () => exec("superscript"), "Superscript", false)}
+        {toolbarBtn({ label: "Undo", command: "undo", title: "Undo" })}
+        {toolbarBtn({ label: "Redo", command: "redo", title: "Redo" })}
+        {toolbarBtn({ label: "B", command: "bold", title: "Bold", active: false })}
+        {toolbarBtn({ label: "I", command: "italic", title: "Italic", active: false })}
+        {toolbarBtn({ label: "U", command: "underline", title: "Underline", active: false })}
+        {toolbarBtn({ label: "S", command: "strikeThrough", title: "Strikethrough", active: false })}
+        {toolbarBtn({ label: "Sub", command: "subscript", title: "Subscript", active: false })}
+        {toolbarBtn({ label: "Sup", command: "superscript", title: "Superscript", active: false })}
 
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Alignment */}
-        {toolbarBtn("Left", () => exec("justifyLeft"), "Align Left")}
-        {toolbarBtn("Center", () => exec("justifyCenter"), "Center")}
-        {toolbarBtn("Right", () => exec("justifyRight"), "Align Right")}
-        {toolbarBtn("Justify", () => exec("justifyFull"), "Justify")}
+        {toolbarBtn({ label: "Left", command: "justifyLeft", title: "Align Left" })}
+        {toolbarBtn({ label: "Center", command: "justifyCenter", title: "Center" })}
+        {toolbarBtn({ label: "Right", command: "justifyRight", title: "Align Right" })}
+        {toolbarBtn({ label: "Justify", command: "justifyFull", title: "Justify" })}
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Lists */}
-        {toolbarBtn("Bullets", () => exec("insertUnorderedList"), "Bullet List")}
-        {toolbarBtn("Numbers", () => exec("insertOrderedList"), "Numbered List")}
-        {toolbarBtn("Indent", () => exec("indent"), "Indent")}
-        {toolbarBtn("Outdent", () => exec("outdent"), "Outdent")}
+        {toolbarBtn({ label: "Bullets", command: "insertUnorderedList", title: "Bullet List" })}
+        {toolbarBtn({ label: "Numbers", command: "insertOrderedList", title: "Numbered List" })}
+        {toolbarBtn({ label: "Indent", command: "indent", title: "Indent" })}
+        {toolbarBtn({ label: "Outdent", command: "outdent", title: "Outdent" })}
 
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
@@ -213,73 +239,44 @@ function RichTextEditor({
         <div className="w-px h-5 bg-edsync-border mx-1" />
 
         {/* Misc */}
-        {toolbarBtn(
-          "Line",
-          () => exec("insertHorizontalRule"),
-          "Horizontal Line",
-        )}
-        {toolbarBtn(
-          "Link",
-          () => {
-            const url = prompt("Enter URL:");
-            if (url) exec("createLink", url);
-          },
-          "Insert Link",
-        )}
-        {toolbarBtn(
-          "Table",
-          () =>
-            insertHtml(
-              "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>",
-            ),
-          "Insert Table",
-        )}
-        {toolbarBtn(
-          "Slide",
-          () =>
-            insertHtml(
-              '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>',
-            ),
-          "Insert Slide Block",
-        )}
-        {toolbarBtn(
-          "Callout",
-          () =>
-            insertHtml(
-              '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>',
-            ),
-          "Insert Callout",
-        )}
-        {toolbarBtn(
-          "2 Col",
-          () =>
-            insertHtml(
-              '<div class="lesson-columns"><section><h3>Concept</h3><p>Add explanation.</p></section><section><h3>Example</h3><p>Add application.</p></section></div>',
-            ),
-          "Insert Two Columns",
-        )}
-        {toolbarBtn(
-          "Checklist",
-          () =>
-            insertHtml(
-              '<ul class="lesson-checklist"><li>Step one or success criterion</li><li>Step two or evidence to submit</li><li>Reflection question</li></ul>',
-            ),
-          "Insert Checklist",
-        )}
-        {toolbarBtn(
-          "Practice",
-          () =>
-            insertHtml(
-              '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Set a timer, answer the prompt, then compare with the model answer.</p><ol><li>Try it alone.</li><li>Check your reasoning.</li><li>Revise one part.</li></ol></section>',
-            ),
-          "Insert Practice Sprint",
-        )}
-        {toolbarBtn(
-          "Spacer",
-          () => insertHtml('<div class="lesson-spacer"></div>'),
-          "Add Paragraph Spacing",
-        )}
-        {toolbarBtn("Clear", () => exec("removeFormat"), "Clear Formatting")}
+        {toolbarBtn({ label: "Line", command: "insertHorizontalRule", title: "Horizontal Line" })}
+        {toolbarBtn({ label: "Link", action: "link", title: "Insert Link" })}
+        {toolbarBtn({
+          label: "Table",
+          html: "<table><tbody><tr><th>Item</th><th>Notes</th></tr><tr><td>Example</td><td>Add details</td></tr></tbody></table>",
+          title: "Insert Table",
+        })}
+        {toolbarBtn({
+          label: "Slide",
+          html: '<div class="lesson-slide"><h2>Slide title</h2><ul><li>Main point</li><li>Evidence</li><li>Student action</li></ul></div>',
+          title: "Insert Slide Block",
+        })}
+        {toolbarBtn({
+          label: "Callout",
+          html: '<aside class="lesson-callout"><strong>Remember</strong><p>Add a key reminder, warning, or example.</p></aside>',
+          title: "Insert Callout",
+        })}
+        {toolbarBtn({
+          label: "2 Col",
+          html: '<div class="lesson-columns"><section><h3>Concept</h3><p>Add explanation.</p></section><section><h3>Example</h3><p>Add application.</p></section></div>',
+          title: "Insert Two Columns",
+        })}
+        {toolbarBtn({
+          label: "Checklist",
+          html: '<ul class="lesson-checklist"><li>Step one or success criterion</li><li>Step two or evidence to submit</li><li>Reflection question</li></ul>',
+          title: "Insert Checklist",
+        })}
+        {toolbarBtn({
+          label: "Practice",
+          html: '<section class="lesson-practice-card"><h3>Practice Sprint</h3><p>Set a timer, answer the prompt, then compare with the model answer.</p><ol><li>Try it alone.</li><li>Check your reasoning.</li><li>Revise one part.</li></ol></section>',
+          title: "Insert Practice Sprint",
+        })}
+        {toolbarBtn({
+          label: "Spacer",
+          html: '<div class="lesson-spacer"></div>',
+          title: "Add Paragraph Spacing",
+        })}
+        {toolbarBtn({ label: "Clear", command: "removeFormat", title: "Clear Formatting" })}
       </div>
 
       {/* Editor body */}
