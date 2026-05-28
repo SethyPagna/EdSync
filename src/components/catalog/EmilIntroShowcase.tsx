@@ -397,22 +397,21 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
           <div className="edsync-emil-copy">
             <span className="edsync-emil-kicker">
               <Sparkles className="h-4 w-4" />
-              Individual catalog or organization portal. One EdSync loop.
+              One EdSync loop.
             </span>
             <h1 id="emil-intro-title">Teach. Practice. Prove progress.</h1>
-            <p>
-              Start as an individual learner, or enter an organization where teachers and students work together.
-            </p>
+            <p>Individual learning or organization portals, without separate product paths.</p>
             <div className="edsync-emil-roles" aria-label="EdSync role paths">
               {roleCards.map((role) => {
                 const Icon = role.icon;
                 return (
-                  <Link key={role.id} href={role.href} title={role.detail}>
+                  <Link key={role.id} href={role.href} aria-label={`${role.label}: ${role.detail}`}>
                     <Icon className="h-4 w-4" />
                     <span>
                       <strong>{role.label}</strong>
                       <small>{role.detail}</small>
                     </span>
+                    <em>{role.detail}</em>
                   </Link>
                 );
               })}
