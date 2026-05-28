@@ -24,23 +24,21 @@ function readStoredLanguage() {
 export function usePublicLanguagePreference() {
   const searchParams = useSearchParams();
   const queryLanguage = searchParams.get("language");
-  const [language, setLanguage] = useState<PublicLanguageName>(() =>
-    queryLanguage ? normalizePublicLanguage(queryLanguage) : readStoredLanguage(),
-  );
-
-  useEffect(() => {
-    setLanguage(queryLanguage ? normalizePublicLanguage(queryLanguage) : readStoredLanguage());
-  }, [queryLanguage]);
+  const [storedLanguage, setStoredLanguage] = useState<PublicLanguageName>(readStoredLanguage);
 
   useEffect(() => {
     const handleLanguageChange = (event: Event) => {
       const nextLanguage = (event as CustomEvent<{ language?: string }>).detail?.language;
-      setLanguage(normalizePublicLanguage(nextLanguage));
+      setStoredLanguage(normalizePublicLanguage(nextLanguage));
     };
     window.addEventListener("edsync-language-change", handleLanguageChange);
     return () => window.removeEventListener("edsync-language-change", handleLanguageChange);
   }, []);
 
+  const language = useMemo(
+    () => (queryLanguage ? normalizePublicLanguage(queryLanguage) : storedLanguage),
+    [queryLanguage, storedLanguage],
+  );
   const querySuffix = useMemo(() => publicLanguageQuerySuffix(language), [language]);
 
   return { language, querySuffix };
