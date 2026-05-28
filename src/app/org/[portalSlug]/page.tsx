@@ -19,9 +19,10 @@ import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue
 export async function generateMetadata({
   params,
 }: {
-  params: { portalSlug: string };
+  params: Promise<{ portalSlug: string }>;
 }): Promise<Metadata> {
-  const portal = await getOrganizationPortal(params.portalSlug);
+  const { portalSlug } = await params;
+  const portal = await getOrganizationPortal(portalSlug);
   return {
     title: portal ? `${portal.name} Catalog` : "Organization Catalog",
     description: portal
@@ -34,14 +35,16 @@ export default async function OrganizationPortalPage({
   params,
   searchParams,
 }: {
-  params: { portalSlug: string };
-  searchParams?: CatalogSearchParams;
+  params: Promise<{ portalSlug: string }>;
+  searchParams?: Promise<CatalogSearchParams>;
 }) {
-  const portal = await getOrganizationPortal(params.portalSlug);
+  const { portalSlug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const portal = await getOrganizationPortal(portalSlug);
   if (!portal) notFound();
 
   const filters = normalizeCatalogFilters({
-    ...searchParams,
+    ...resolvedSearchParams,
     portal: portal.slug,
     tenant: portal.tenant_slug,
   });
