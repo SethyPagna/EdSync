@@ -96,7 +96,7 @@ export default function StudentNotesPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => readViewMode(STUDENT_NOTES_VIEW_KEY));
 
   const safeMedia = useMemo(() => classifySafeMediaUrl(draft.mediaUrl), [draft.mediaUrl]);
   const selectedDesign = designOptions.find((option) => option.id === draft.design) ?? designOptions[0];
@@ -112,7 +112,6 @@ export default function StudentNotesPage() {
 
   useEffect(() => {
     load();
-    setViewMode(readViewMode(STUDENT_NOTES_VIEW_KEY));
   }, []);
 
   const changeViewMode = (mode: ViewMode) => {
