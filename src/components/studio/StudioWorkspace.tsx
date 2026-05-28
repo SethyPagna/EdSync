@@ -244,8 +244,9 @@ function serverItemToDraft(item: StudioServerItem): StudioDraftValue {
 }
 
 export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorkspaceProps) {
-  const [activeKind, setActiveKind] = useState<StudioItemKind>(initialKind);
-  const [itemTitle, setItemTitle] = useState(titleForKind(initialKind));
+  const [initialDraftRecord] = useState(() => readStudioDraft<StudioDraftValue>(initialKind, "workspace"));
+  const [activeKind, setActiveKind] = useState<StudioItemKind>(() => initialKind);
+  const [itemTitle, setItemTitle] = useState(() => titleForKind(initialKind));
   const [serverItems, setServerItems] = useState<StudioServerItem[]>([]);
   const [currentServerId, setCurrentServerId] = useState<string | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -253,8 +254,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   const [historyOpen, setHistoryOpen] = useState(false);
   const [contentBlocks, setContentBlocks] = useState<StudioContentBlock[]>([]);
   const [includeArchivedBlocks, setIncludeArchivedBlocks] = useState(false);
-  const [draft, setDraft] = useState<StudioDraftValue>(defaultDraft);
-  const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">("saved");
+  const [draft, setDraft] = useState<StudioDraftValue>(() => initialDraftRecord?.value ?? defaultDraft);
+  const [draftStatus, setDraftStatus] = useState<"saved" | "local_draft" | "saving">(() =>
+    initialDraftRecord ? "local_draft" : "saved",
+  );
   const [selectedSlideId, setSelectedSlideId] = useState("slide-1");
   const [advancedSheetLoaded, setAdvancedSheetLoaded] = useState(false);
   const [presenting, setPresenting] = useState(false);
@@ -276,17 +279,6 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     });
     return writerRef.current;
   }, []);
-
-  useEffect(() => {
-    setActiveKind(initialKind);
-    activeKindRef.current = initialKind;
-    itemTitleRef.current = titleForKind(initialKind);
-    setItemTitle(titleForKind(initialKind));
-    setCurrentServerId(null);
-    const stored = readStudioDraft<StudioDraftValue>(initialKind, "workspace");
-    setDraft(stored?.value ?? defaultDraft);
-    setDraftStatus(stored ? "local_draft" : "saved");
-  }, [initialKind]);
 
   const selectKind = (kind: StudioItemKind) => {
     ensureDraftWriter().flush(draft);
