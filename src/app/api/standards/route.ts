@@ -10,7 +10,7 @@ import {
   validateStandardsFileName,
   validateStandardsManifestText,
   validateStandardsTitle,
-} from "@/lib/standards-validation";
+} from "@/lib/validation/standards";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
 const STANDARDS_PACKAGE_TABLE = "standards_packages";
