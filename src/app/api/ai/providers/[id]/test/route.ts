@@ -34,11 +34,12 @@ function statusForProviderTestError(message: string) {
   return 502;
 }
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if (auth.response) return auth.response;
 
-  const row = await getProviderRow(params.id);
+  const { id } = await params;
+  const row = await getProviderRow(id);
   if (!row) return NextResponse.json({ data: null, error: "Provider not found." }, { status: 404 });
 
   try {
@@ -47,17 +48,17 @@ export async function POST(_request: Request, { params }: { params: { id: string
       `UPDATE ai_provider_configs
           SET last_status = 'ok', last_error = NULL, last_checked_at = datetime('now'), updated_at = datetime('now')
         WHERE id = ?`,
-      [params.id],
+      [id],
     );
     await auditAdminAction({
       adminId: auth.user.id,
       action: "test",
       entityType: "ai_provider",
-      entityId: params.id,
+      entityId: id,
       metadata: { status: "ok" },
     });
-    await enqueueProviderTest(params.id, row.provider, "ok", message);
-    const updated = await getProviderRow(params.id);
+    await enqueueProviderTest(id, row.provider, "ok", message);
+    const updated = await getProviderRow(id);
     return NextResponse.json({
       data: { success: true, message, provider: updated ? serializeProvider(updated) : null },
       error: null,
@@ -68,17 +69,17 @@ export async function POST(_request: Request, { params }: { params: { id: string
       `UPDATE ai_provider_configs
           SET last_status = 'error', last_error = ?, last_checked_at = datetime('now'), updated_at = datetime('now')
         WHERE id = ?`,
-      [message, params.id],
+      [message, id],
     );
     await auditAdminAction({
       adminId: auth.user.id,
       action: "test",
       entityType: "ai_provider",
-      entityId: params.id,
+      entityId: id,
       metadata: { status: "error", message },
     });
-    await enqueueProviderTest(params.id, row.provider, "error", message);
-    const updated = await getProviderRow(params.id);
+    await enqueueProviderTest(id, row.provider, "error", message);
+    const updated = await getProviderRow(id);
     return NextResponse.json({
       data: { success: false, provider: updated ? serializeProvider(updated) : null },
       error: message,
