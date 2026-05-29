@@ -1694,6 +1694,30 @@ button:focus-visible > .edsync-practice-mode-detail {
   padding-top: 0.4rem;
 }
 
+.edsync-hover-detail {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  color: var(--subtle);
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.45;
+  opacity: 0;
+  transition:
+    max-height 160ms ease,
+    opacity 160ms ease,
+    padding-top 160ms ease;
+}
+
+.group:hover .edsync-hover-detail,
+.group:focus-within .edsync-hover-detail,
+:where(a, button):hover .edsync-hover-detail,
+:where(a, button):focus-visible .edsync-hover-detail {
+  max-height: 5rem;
+  opacity: 1;
+  padding-top: 0.4rem;
+}
+
 .edsync-catalog-reference {
   background:
     radial-gradient(circle at 86% 12%, rgb(var(--blue-rgb) / 0.12), transparent 30rem),
