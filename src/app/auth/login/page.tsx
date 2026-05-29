@@ -260,8 +260,8 @@ function LoginForm() {
               onClick={() =>
                 toast(
                   organizationLookup?.ssoEnabled
-                    ? `${organizationLookup.name} SSO is enabled. Provider handoff will be available from organization settings.`
-                    : "Organization SSO can be enabled by the organization owner from portal settings.",
+                    ? `${organizationLookup.name} SSO is enabled.`
+                    : "Organization owners can enable SSO.",
                   { duration: 7000 },
                 )
               }
