@@ -101,8 +101,8 @@ function buildLaunchPreviewSlides({
 }
 
 export default async function CatalogLaunchHero({
-  title = "Teach. Practice. Prove.",
-  description = "Turn lessons into practice and proof.",
+  title = "Learn. Practice. Succeed.",
+  description = "One workspace for courses, practice, and progress.",
   primaryLabel = "See it",
   secondaryLabel = "Start",
   language,
@@ -120,13 +120,13 @@ export default async function CatalogLaunchHero({
     {
       label: authCopy.individual,
       tag: "Personal",
-      detail: authCopy.individualCopy,
+      detail: "Personal catalog and practice.",
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "individual" }),
     },
     {
       label: authCopy.organization,
       tag: `${authCopy.teacher} + ${authCopy.student}`,
-      detail: `${authCopy.organizationCopy} ${authCopy.teacher} / ${authCopy.student}.`,
+      detail: "Teacher and student portal.",
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "organization" }),
     },
   ];
