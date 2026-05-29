@@ -193,12 +193,12 @@ export default function StudentPlannerPage() {
 
   return (
     <div className="page-shell max-w-6xl space-y-5">
-      <header className="premium-panel rounded-2xl p-4 sm:p-5">
+      <header className="premium-panel group rounded-2xl p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Planner</p>
             <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">Deadlines and study time</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-edsync-subtle">
+            <p className="edsync-hover-detail max-w-2xl">
               See class notifications, due dates, live sessions, and your own study plan in one place.
             </p>
           </div>
@@ -234,11 +234,11 @@ export default function StudentPlannerPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[360px_1fr]">
-        <aside className="premium-surface h-fit rounded-2xl p-4">
+        <aside className="premium-surface group h-fit rounded-2xl p-4">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-lg font-bold text-edsync-text">Add study time</h2>
-              <p className="text-sm text-edsync-subtle">Personal blocks stay private to you.</p>
+              <p className="edsync-hover-detail">Personal blocks stay private to you.</p>
             </div>
             <Plus className="h-5 w-5 text-edsync-blue" />
           </div>
@@ -283,16 +283,16 @@ export default function StudentPlannerPage() {
             />
             <button type="button" onClick={saveStudyEvent} disabled={saving} className="btn-primary w-full justify-center">
               <Plus className="h-4 w-4" />
-              {saving ? "Saving..." : "Add to planner"}
+              {saving ? "Saving..." : "Add"}
             </button>
           </div>
         </aside>
 
-        <section className="premium-surface rounded-2xl p-4 sm:p-5">
+        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-display text-xl font-bold text-edsync-text">Schedule</h2>
-              <p className="text-sm text-edsync-subtle">Class items and personal study blocks.</p>
+              <p className="edsync-hover-detail">Class items and personal study blocks.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex">
               {VIEW_OPTIONS.map((option) => (
@@ -322,7 +322,7 @@ export default function StudentPlannerPage() {
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
               <CheckCircle2 className="mx-auto mb-3 h-9 w-9 text-edsync-emerald" />
               <p className="font-semibold text-edsync-text">Nothing in this view</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Deadlines, class events, and personal study blocks will appear here.</p>
+              <p className="mt-1 text-sm text-edsync-subtle">No events yet.</p>
             </div>
           ) : (
             <div className="space-y-3">
