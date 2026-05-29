@@ -94,7 +94,7 @@ export default function RichTextStudioEditor({ value, onChange }: RichTextStudio
       TableCell,
       TaskList,
       TaskItem.configure({ nested: true }),
-      Placeholder.configure({ placeholder: "Write, paste, or ask AI to draft..." }),
+      Placeholder.configure({ placeholder: "Write or paste..." }),
       CharacterCount,
       Typography,
     ],
