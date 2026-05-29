@@ -12,6 +12,17 @@ type NotificationResponse = {
 
 const NOTIFICATION_REFRESH_MS = 60_000;
 
+async function readNotifications(response: Response): Promise<NotificationResponse> {
+  if (!response.ok) return { data: [], error: "Notifications are unavailable." };
+  const text = await response.text();
+  if (!text) return { data: [], error: null };
+  try {
+    return JSON.parse(text) as NotificationResponse;
+  } catch {
+    return { data: [], error: "Notifications returned an invalid response." };
+  }
+}
+
 function formatAge(value: string) {
   const date = new Date(value);
   const diff = Date.now() - date.getTime();
@@ -37,11 +48,15 @@ export default function NotificationMenu() {
   const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/notifications", { credentials: "include", cache: "no-store" });
-    if (!response.ok) return;
-    const payload = (await response.json()) as NotificationResponse;
-    setItems(payload.data ?? []);
-    setLoaded(true);
+    try {
+      const response = await fetch("/api/notifications", { credentials: "include", cache: "no-store" });
+      const payload = await readNotifications(response);
+      setItems(payload.data ?? []);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
