@@ -220,13 +220,13 @@ export default function TeacherPlannerPage() {
 
   return (
     <div className="page-shell space-y-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <header className="group flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-edsync-blue">Class planner</p>
           <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text">
             Notifications, deadlines, and schedule
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-edsync-subtle">
+          <p className="edsync-hover-detail max-w-2xl">
             Keep students aligned with class updates, visible work deadlines, and events.
           </p>
         </div>
@@ -241,11 +241,11 @@ export default function TeacherPlannerPage() {
         </button>
       </header>
 
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-3">
+      <section className="group rounded-xl border border-edsync-border bg-edsync-card p-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
-            <p className="mt-1 text-sm text-edsync-subtle">
+            <p className="edsync-hover-detail">
               Use Planner across all classes, or focus notifications, deadlines, and events for one course.
             </p>
           </div>
@@ -490,7 +490,7 @@ export default function TeacherPlannerPage() {
             <div className="space-y-3">
               {visibleAnnouncements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Class notifications you send will appear here.
+                  No notifications yet.
                 </p>
               ) : (
                 visibleAnnouncements.slice(0, 6).map((item) => (
