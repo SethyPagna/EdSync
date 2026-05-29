@@ -16,15 +16,16 @@ export type SectionOrderEventDetail = {
   order: string[];
 };
 
-function normalizeOrder(saved: string[] | null, sections: string[]) {
+function normalizeOrder(saved: string[] | null, sections: string[]): string[] {
   if (!saved) return sections;
   const known = new Set(sections);
   const ordered = saved.filter((section) => known.has(section));
-  const missing = sections.filter((section) => !ordered.includes(section));
+  const orderedSections = new Set(ordered);
+  const missing = sections.filter((section) => !orderedSections.has(section));
   return [...ordered, ...missing];
 }
 
-function readStoredOrder(storageKey: string) {
+function readStoredOrder(storageKey: string): string[] | null {
   if (typeof window === "undefined") return null;
   try {
     return JSON.parse(window.localStorage.getItem(storageKey) || "null") as string[] | null;
@@ -42,7 +43,7 @@ export default function SectionOrderSettings({
   const [storedOrder, setStoredOrder] = useState(() => readStoredOrder(storageKey));
   const order = useMemo(() => normalizeOrder(storedOrder, sections), [sections, storedOrder]);
 
-  const persist = (next: string[]) => {
+  const persist = (next: string[]): void => {
     setStoredOrder(next);
     window.localStorage.setItem(storageKey, JSON.stringify(next));
     window.dispatchEvent(
@@ -52,7 +53,7 @@ export default function SectionOrderSettings({
     );
   };
 
-  const move = (index: number, direction: -1 | 1) => {
+  const move = (index: number, direction: -1 | 1): void => {
     const target = index + direction;
     if (target < 0 || target >= order.length) return;
     const next = [...order];
@@ -61,11 +62,11 @@ export default function SectionOrderSettings({
   };
 
   return (
-    <section className="edsync-card">
+    <section className="edsync-card group">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-bold text-edsync-text">{title}</h2>
-          <p className="text-sm text-edsync-subtle">
+          <p className="edsync-hover-detail">
             Reorder how this workspace should feel on your next visits.
           </p>
         </div>
@@ -87,7 +88,7 @@ export default function SectionOrderSettings({
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-edsync-text">{section}</p>
-              <p className="text-xs text-edsync-subtle">Position {index + 1}</p>
+              <p className="text-xs text-edsync-subtle">#{index + 1}</p>
             </div>
             <div className="flex gap-1">
               <button
