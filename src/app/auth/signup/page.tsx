@@ -29,12 +29,12 @@ const roleDetails = {
   teacher: {
     label: "Teacher",
     icon: UsersRound,
-    copy: "Create courses, manage classes, grade work, and publish catalog items.",
+    copy: "Create, assign, and review work.",
   },
   student: {
     label: "Student",
     icon: BookOpenCheck,
-    copy: "Join learning spaces, take lessons, track grades, and save progress.",
+    copy: "Learn, practice, and track progress.",
   },
 };
 
@@ -359,8 +359,8 @@ function SignupForm() {
               />
               <p className="text-xs leading-5 text-edsync-subtle">
                 {organizationMode === "join"
-                  ? "Use the code or slug shared by your school, company, or academy."
-                  : "Create an organization you own and manage."}
+                  ? "Enter the shared code."
+                  : "Create your organization."}
               </p>
               {organizationMode === "join" && organizationStatus !== "idle" && (
                 <div
