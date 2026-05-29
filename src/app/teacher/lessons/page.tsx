@@ -179,7 +179,7 @@ export default function TeacherLessons() {
             {search ? "No lessons match your search" : "No lessons yet"}
           </h3>
           <p className="mb-6 text-sm text-edsync-subtle">
-            {search ? "Try a different search term." : "Create your first lesson to get started."}
+            {search ? "Try another search." : "Create your first lesson."}
           </p>
           {!search && (
             <Link href="/teacher/lessons/create" className="btn-primary inline-flex">
@@ -234,7 +234,7 @@ function LessonRow({
               {lesson.title}
             </h3>
             <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
-              {lesson.description || "No description added yet."}
+              {lesson.description || "No description."}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
               {lesson.subject && <span className="badge bg-edsync-muted/30">{lesson.subject}</span>}
