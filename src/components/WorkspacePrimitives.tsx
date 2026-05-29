@@ -17,7 +17,7 @@ export function MetricTile({
   detail,
 }: MetricTileProps) {
   return (
-    <div className="premium-card group min-w-0 rounded-2xl p-4 transition hover:-translate-y-0.5 sm:p-5">
+    <div className="premium-card group min-w-0 rounded-2xl p-4 transition hover:-translate-y-0.5 sm:p-5" title={detail}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-edsync-subtle">{label}</p>
@@ -29,7 +29,7 @@ export function MetricTile({
           <Icon className="h-6 w-6" />
         </div>
       </div>
-      {detail && <p className="mt-3 text-sm leading-5 text-edsync-subtle">{detail}</p>}
+      {detail && <p className="edsync-hover-detail">{detail}</p>}
     </div>
   );
 }
@@ -50,14 +50,14 @@ export function GuidePanel({
   tone = "text-edsync-blue",
 }: GuidePanelProps) {
   return (
-    <aside className="min-w-0 rounded-lg border border-edsync-border bg-edsync-surface p-4 sm:p-5">
+    <aside className="group min-w-0 rounded-lg border border-edsync-border bg-edsync-surface p-4 sm:p-5" tabIndex={0} title={description}>
       <div className="flex gap-3">
         <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-current/10 ${tone}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <h2 className="font-display text-lg font-bold text-edsync-text">{title}</h2>
-          <p className="mt-1 text-sm leading-6 text-edsync-subtle">{description}</p>
+          <p className="edsync-hover-detail">{description}</p>
         </div>
       </div>
       {items.length > 0 && (
