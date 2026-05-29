@@ -31,7 +31,7 @@ export async function generateMetadata({
   } catch {
     return {
       title: "Course",
-      description: "Preview an EdSync public course and enroll when ready.",
+      description: "Course preview.",
     };
   }
   const item = await getPublicCatalogItem(productId);
@@ -40,7 +40,7 @@ export async function generateMetadata({
     description:
       item?.metadata.previewSummary ||
       item?.description ||
-      "Preview an EdSync public course and enroll when ready.",
+      "Course preview.",
   };
 }
 
@@ -66,6 +66,7 @@ export default async function CatalogDetailPage({
   const copy = getPublicCopy(publicLanguage);
   const languageQuery = publicLanguageQuerySuffix(publicLanguage);
   const displayPrice = item.price.isFree ? copy.free : item.price.label;
+  const previewSummary = item.metadata.previewSummary || item.description || "Course preview.";
   const enrollLabels = {
     enrolled: copy.start,
     requestSent: copy.start,
@@ -132,7 +133,7 @@ export default async function CatalogDetailPage({
             <div className="p-5">
               <h1 className="mt-4 font-display text-4xl font-bold leading-tight">{item.title}</h1>
               <p className="mt-4 text-base leading-7 text-edsync-subtle">
-                {item.metadata.previewSummary || item.description || `${copy.courses}. ${copy.start}.`}
+                {previewSummary}
               </p>
             </div>
           </div>
@@ -161,20 +162,17 @@ export default async function CatalogDetailPage({
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           {resolvedSearchParams?.enrolled && (
             <div className="rounded-lg border border-edsync-emerald/30 bg-edsync-emerald/10 p-4 text-sm text-edsync-emerald">
-              {copy.start}: {copy.courses}.
+              Enrolled.
             </div>
           )}
           {resolvedSearchParams?.checkout === "cancelled" && (
             <div className="rounded-lg border border-edsync-amber/30 bg-edsync-amber/10 p-4 text-sm text-edsync-amber">
-              {copy.start}.
+              Checkout cancelled.
             </div>
           )}
           <div className="premium-panel rounded-2xl p-5">
             <p className="text-sm font-semibold text-edsync-subtle">{copy.start}</p>
             <p className="mt-2 font-display text-4xl font-bold">{displayPrice}</p>
-            <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-              {copy.signIn}. {copy.academies}. {copy.courses}.
-            </p>
             <div className="mt-5">
               <CatalogEnrollButton
                 productId={item.id}
@@ -191,9 +189,6 @@ export default async function CatalogDetailPage({
                 <UserRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-blue" />
                 <div>
                   <p className="font-semibold">{copy.signIn}</p>
-                  <p className="mt-1 text-sm leading-6 text-edsync-subtle">
-                    {copy.start}. {copy.courses}.
-                  </p>
                 </div>
               </div>
             </div>
@@ -202,9 +197,6 @@ export default async function CatalogDetailPage({
                 <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-emerald" />
                 <div>
                   <p className="font-semibold">{copy.academies}</p>
-                  <p className="mt-1 text-sm leading-6 text-edsync-subtle">
-                    {copy.signIn}. {copy.start}.
-                  </p>
                 </div>
               </div>
             </div>
@@ -232,7 +224,7 @@ export default async function CatalogDetailPage({
             <div className="flex gap-3">
               <ShieldCheck className="h-5 w-5 flex-shrink-0 text-edsync-emerald" />
               <p className="text-sm leading-6 text-edsync-subtle">
-                {copy.catalogLabel}. {copy.signIn}. {copy.start}.
+                Secure enrollment.
               </p>
             </div>
           </div>
