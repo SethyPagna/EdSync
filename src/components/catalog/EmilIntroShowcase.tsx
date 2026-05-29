@@ -52,6 +52,7 @@ type WorkflowSlide = {
   id: "catalog" | "access" | "canvas" | "assign" | "practice" | "proof";
   icon: LucideIcon;
   title: string;
+  tabLabel: string;
   detail: string;
   route: string;
   image: string;
@@ -109,7 +110,8 @@ const workflowSlides: WorkflowSlide[] = [
     id: "catalog",
     icon: Search,
     title: "Choose the right entrance",
-    detail: "Individuals start from the course catalog. Organizations keep teacher and student work inside one portal.",
+    tabLabel: "Entrance",
+    detail: "Individual catalog. Organization portal. Teacher and student views.",
     route: "/catalog",
     image: "/showcase/login-organization.jpg",
     panelTitle: "Catalog and access",
@@ -119,7 +121,8 @@ const workflowSlides: WorkflowSlide[] = [
     id: "access",
     icon: UserRound,
     title: "Sign in with context",
-    detail: "The same login separates individual learning from organization-managed access without changing the product story.",
+    tabLabel: "Access",
+    detail: "One login understands personal or organization access.",
     route: "/auth/login",
     image: "/showcase/login-organization.jpg",
     panelTitle: "Workspace access",
@@ -129,7 +132,8 @@ const workflowSlides: WorkflowSlide[] = [
     id: "canvas",
     icon: Layers3,
     title: "Create with a lesson canvas",
-    detail: "Lessons are pages with templates, elements, text, media, quiz blocks, practice cards, and bottom page navigation.",
+    tabLabel: "Create",
+    detail: "Templates, media, quizzes, and practice stay on the lesson canvas.",
     route: "/teacher/lessons/create",
     image: "/showcase/teacher-create.jpg",
     panelTitle: "Lesson Creation Studio",
@@ -139,7 +143,8 @@ const workflowSlides: WorkflowSlide[] = [
     id: "assign",
     icon: CheckCircle2,
     title: "Assign work with context",
-    detail: "Assignments, discussions, planner deadlines, projects, quizzes, and participation criteria stay tied to the class.",
+    tabLabel: "Assign",
+    detail: "Class work, deadlines, and scoring stay connected.",
     route: "/teacher/work",
     image: "/showcase/teacher-work.jpg",
     panelTitle: "Class work",
@@ -149,7 +154,8 @@ const workflowSlides: WorkflowSlide[] = [
     id: "practice",
     icon: Brain,
     title: "Learning stays personal",
-    detail: "Students keep catalog courses, assigned work, learning time, and practice entry points in their own workspace.",
+    tabLabel: "Practice",
+    detail: "Courses, assignments, and AI practice meet in one student space.",
     route: "/student/dashboard",
     image: "/showcase/student-dashboard.jpg",
     panelTitle: "Student dashboard",
@@ -159,7 +165,8 @@ const workflowSlides: WorkflowSlide[] = [
     id: "proof",
     icon: BarChart3,
     title: "Progress becomes evidence",
-    detail: "Student work, feedback, time spent, grade events, reports, and admin audit trails stay connected.",
+    tabLabel: "Proof",
+    detail: "Grades, feedback, reports, and audit trails connect the story.",
     route: "/admin/dashboard",
     image: "/showcase/admin-dashboard.jpg",
     panelTitle: "Evidence dashboard",
@@ -192,14 +199,14 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       {
         id: "individual",
         label: individualLabel,
-        detail: "Catalog, purchased courses, personal notes, and independent practice.",
+        detail: "Personal catalog and practice.",
         icon: UserRound,
         href: "/auth/signup?mode=individual",
       },
       {
         id: "organization",
         label: organizationLabel,
-        detail: `${teacherLabel} and ${studentLabel} access live inside the same portal.`,
+        detail: `${teacherLabel} and ${studentLabel} portal.`,
         icon: Building2,
         href: "/auth/signup?mode=organization",
       },
@@ -395,7 +402,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
         <div className="edsync-emil-hero-grid">
           <div className="edsync-emil-copy">
             <h1 id="emil-intro-title">Teach. Practice. Prove.</h1>
-            <p>Individual learning or organization portals, without separate product paths.</p>
+            <p>Individual and organization access in one workspace.</p>
             <div className="edsync-emil-roles" aria-label="EdSync role paths">
               {roleCards.map((role) => {
                 const Icon = role.icon;
@@ -507,7 +514,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
                 onClick={() => setWorkflowSlide(index)}
               >
                 <Icon className="h-4 w-4" />
-                <span>{slide.title}</span>
+                <span>{slide.tabLabel}</span>
               </button>
             );
           })}
