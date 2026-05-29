@@ -91,7 +91,7 @@ function buildLaunchPreviewSlides({
     proof: {
       label: proof,
       eyebrow: proof,
-      title: "Prove progress",
+      title: "Show progress",
       route: "/admin/dashboard",
       nav: [proof, "Feedback", "Reports", "Admin"],
       metrics: [["24", proof], [ai, "Audit"], [start, practice]],
@@ -101,8 +101,8 @@ function buildLaunchPreviewSlides({
 }
 
 export default async function CatalogLaunchHero({
-  title = "Learn. Practice. Succeed.",
-  description = "One workspace for courses, practice, and progress.",
+  title = "Create. Practice. Grow.",
+  description = "Courses, practice, and proof in one workspace.",
   primaryLabel = "See it",
   secondaryLabel = "Start",
   language,
@@ -120,13 +120,13 @@ export default async function CatalogLaunchHero({
     {
       label: authCopy.individual,
       tag: "Personal",
-      detail: "Personal catalog and practice.",
+      detail: "Personal learning.",
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "individual" }),
     },
     {
       label: authCopy.organization,
       tag: `${authCopy.teacher} + ${authCopy.student}`,
-      detail: "Teacher and student portal.",
+      detail: "Shared portal.",
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "organization" }),
     },
   ];
