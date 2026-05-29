@@ -4,8 +4,8 @@ import { getSessionUser } from "@/lib/auth/session";
 import { normalizeAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
-  title: "Practice & AI Tutor",
-  description: "Guided AI prompt builder for lessons, notes, slides, and practice.",
+  title: "AI",
+  description: "AI help for lessons, notes, slides, and practice.",
 };
 
 type AiPageProps = {
