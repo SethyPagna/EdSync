@@ -732,7 +732,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             </div>
             <div>
               <p className="font-display text-lg font-bold">EdSync Workspace</p>
-              <p className="text-xs text-edsync-subtle">Create, practice, publish</p>
+              <p className="text-xs text-edsync-subtle">Create</p>
             </div>
           </Link>
           <nav className="grid gap-1">
@@ -761,10 +761,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               );
             })}
           </nav>
-          <div className="mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+          <div className="group mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">Draft</p>
             <p className="mt-1 text-sm font-semibold capitalize">{draftStatus.replace("_", " ")}</p>
-            <p className="mt-2 text-xs leading-5 text-edsync-subtle">Local autosave.</p>
+            <p className="edsync-hover-detail">Local autosave.</p>
           </div>
           <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -909,9 +909,9 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               {activeKind === "sheet" && (
                 <div className="rounded-lg border border-edsync-border bg-edsync-card">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edsync-border p-3">
-                    <div>
+                    <div className="group">
                       <p className="font-semibold">Sheet Editor</p>
-                      <p className="text-xs text-edsync-subtle">Advanced tools {advancedSheetLoaded ? "on" : "ready"}.</p>
+                      <p className="edsync-hover-detail">Advanced tools {advancedSheetLoaded ? "on" : "ready"}.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadUniverEngine}>
@@ -1396,7 +1396,6 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
               <Panel title="Inspect" icon={PanelRight}>
                 <div className="space-y-2 text-sm text-edsync-subtle">
-                  <p>Settings and export live here.</p>
                   <button type="button" onClick={archiveCurrentItem} className="btn-secondary w-full justify-center py-2 text-sm">
                     <Trash2 className="h-4 w-4" />
                     Archive item
