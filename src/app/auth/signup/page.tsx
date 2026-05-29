@@ -281,7 +281,7 @@ function SignupForm() {
 
       {step === "space" && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             {([
               {
                 key: "organization" as const,
@@ -304,7 +304,7 @@ function SignupForm() {
                   type="button"
                   onClick={() => changeAccountType(item.key)}
                   aria-label={`${item.label}: ${item.copy}`}
-                  className={`edsync-auth-choice rounded-2xl border p-4 text-left shadow-sm transition ${
+                  className={`edsync-auth-choice rounded-2xl border p-3 text-left shadow-sm transition ${
                     selected
                       ? "premium-active text-edsync-text"
                       : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
@@ -439,7 +439,7 @@ function SignupForm() {
                 : `${authCopy.joiningOrganization}: ${organizationLabel}`
               : authCopy.individualWorkspace}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
         {(["teacher", "student"] as const).map((item) => {
           const Icon = roleDetails[item].icon;
           const selected = role === item;
@@ -451,7 +451,7 @@ function SignupForm() {
               type="button"
               onClick={() => setRole(item)}
               aria-label={`${itemLabel}: ${itemCopy}`}
-              className={`edsync-auth-choice rounded-2xl border p-4 text-left shadow-sm transition ${
+              className={`edsync-auth-choice rounded-2xl border p-3 text-left shadow-sm transition ${
                 selected
                   ? "premium-active text-edsync-text"
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
