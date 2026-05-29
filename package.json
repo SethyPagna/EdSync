@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --config config/eslint/eslint.config.mjs src scripts config",
     "test": "vitest run --config config/test/vitest.config.ts --passWithNoTests",
