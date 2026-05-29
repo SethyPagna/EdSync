@@ -377,11 +377,11 @@ export default function TeacherAnalytics() {
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "overview", label: "Overview" },
-    { key: "heatmap", label: "Heat Map" },
+    { key: "heatmap", label: "Map" },
     { key: "students", label: "Students" },
-    { key: "reflections", label: "Reflections" },
-    { key: "interventions", label: "Interventions" },
-    { key: "socratic", label: "Socratic Log" },
+    { key: "reflections", label: "Reflect" },
+    { key: "interventions", label: "Suggest" },
+    { key: "socratic", label: "AI Log" },
   ];
 
   return (
@@ -464,12 +464,12 @@ export default function TeacherAnalytics() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
+      <div className="mb-6 flex flex-wrap gap-2">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+            className={`min-w-[5.75rem] flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-all sm:flex-none ${
               tab === t.key
                 ? "bg-edsync-blue text-white"
                 : "bg-edsync-card text-edsync-subtle hover:text-edsync-text border border-edsync-border"
@@ -491,9 +491,7 @@ export default function TeacherAnalytics() {
           <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
             No data yet
           </h2>
-          <p className="text-edsync-subtle">
-            Create and assign lessons to students to see analytics.
-          </p>
+          <p className="text-edsync-subtle">Assign lessons to see data.</p>
         </div>
       ) : (
         <>
@@ -535,9 +533,7 @@ export default function TeacherAnalytics() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-edsync-subtle text-sm text-center py-8">
-                    No student progress recorded yet.
-                  </p>
+                  <p className="text-edsync-subtle text-sm text-center py-8">No progress yet.</p>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -598,16 +594,16 @@ export default function TeacherAnalytics() {
             <div className="animate-fade-in space-y-6">
               {/* Class readiness */}
               <div className="edsync-card">
-                <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
-                  Classroom Readiness Map
-                </h3>
-                <p className="text-edsync-subtle text-sm mb-5">
-                  Color-coded view of student understanding across concepts
-                </p>
-                {studentStats.length === 0 ? (
-                  <p className="text-edsync-subtle text-sm text-center py-8">
-                    No student data yet. Assign lessons to get started.
+                <div className="group mb-5">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text">
+                    Classroom Readiness Map
+                  </h3>
+                  <p className="edsync-hover-detail">
+                    Color-coded concept readiness.
                   </p>
+                </div>
+                {studentStats.length === 0 ? (
+                  <p className="text-edsync-subtle text-sm text-center py-8">No student data yet.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
@@ -900,19 +896,17 @@ export default function TeacherAnalytics() {
           {tab === "reflections" && (
             <div className="animate-fade-in space-y-6">
               <div className="edsync-card">
-                <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
-                  Student Reflection Log
-                </h3>
-                <p className="text-edsync-subtle text-sm mb-4">
-                  Captures what students say they learned and where they still
-                  feel uncertain.
-                </p>
+                <div className="group mb-4">
+                  <h3 className="font-display font-semibold text-lg text-edsync-text">
+                    Student Reflection Log
+                  </h3>
+                  <p className="edsync-hover-detail">
+                    What students learned and where they feel uncertain.
+                  </p>
+                </div>
 
                 {reflectionLog.length === 0 ? (
-                  <p className="text-edsync-subtle text-sm text-center py-8">
-                    No reflections yet. Students will appear here after using
-                    the reflection coach in lessons.
-                  </p>
+                  <p className="text-edsync-subtle text-sm text-center py-8">No reflections yet.</p>
                 ) : (
                   <div className="space-y-3">
                     {reflectionLog.map((entry) => (
@@ -975,8 +969,7 @@ export default function TeacherAnalytics() {
                     {lowConfidenceReflections > 1
                       ? "s indicate"
                       : " indicates"}{" "}
-                    low confidence (1-2/5). Consider small-group reteaching or
-                    one-to-one check-ins for these students.
+                    low confidence.
                   </p>
                 </div>
               )}
@@ -1009,14 +1002,13 @@ export default function TeacherAnalytics() {
               )}
 
               <div className="edsync-card">
-                <div className="flex items-start justify-between mb-4">
+                <div className="group mb-4 flex items-start justify-between gap-3">
                   <div>
                     <h3 className="font-display font-semibold text-lg text-edsync-text">
-                      AI Intervention Suggestions
+                      AI Suggestions
                     </h3>
-                    <p className="text-edsync-subtle text-sm mt-1">
-                      Personalized action recommendations based on your class
-                      data
+                    <p className="edsync-hover-detail">
+                      Personalized actions based on class data.
                     </p>
                   </div>
                   <button
@@ -1024,15 +1016,12 @@ export default function TeacherAnalytics() {
                     disabled={gettingSuggestions}
                     className="btn-primary text-sm py-2 flex-shrink-0"
                   >
-                    {gettingSuggestions ? " Analyzing..." : " Get Suggestions"}
+                    {gettingSuggestions ? "Analyzing..." : "Suggest"}
                   </button>
                 </div>
                 {aiSuggestions.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-edsync-subtle text-sm">
-                      Click "Get Suggestions" to have EdSync AI analyze your
-                      class data and recommend specific actions.
-                    </p>
+                    <p className="text-edsync-subtle text-sm">Run suggestions.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1053,7 +1042,7 @@ export default function TeacherAnalytics() {
 
               {/* At-risk students quick view */}
               {atRisk.length > 0 && (
-                <div className="edsync-card">
+                <div className="edsync-card group">
                   <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
                     Students Needing Support
                   </h3>
@@ -1092,10 +1081,7 @@ export default function TeacherAnalytics() {
                   <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
                     Advanced Students
                   </h3>
-                  <p className="text-edsync-subtle text-sm mb-3">
-                    Consider enrichment activities or peer tutoring assignments
-                    for these students.
-                  </p>
+                  <p className="edsync-hover-detail mb-3">Enrichment and peer support candidates.</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {advanced.map((s) => (
                       <div
@@ -1123,10 +1109,7 @@ export default function TeacherAnalytics() {
                 Student–AI Interactions
               </h3>
               {socraticLog.length === 0 ? (
-                <p className="text-edsync-subtle text-sm text-center py-8">
-                  No AI interactions yet. Students can use "Ask Socratic" while
-                  working through lessons.
-                </p>
+                <p className="text-edsync-subtle text-sm text-center py-8">No AI interactions yet.</p>
               ) : (
                 <div className="space-y-3">
                   {socraticLog.map((entry) => (
