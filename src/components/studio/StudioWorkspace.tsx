@@ -133,8 +133,8 @@ const INSERT_TOOLS: { id: InsertToolId; label: string; icon: typeof FileText }[]
 ];
 
 const defaultDraft: StudioDraftValue = {
-  html: "<h2>New workspace item</h2><p>Start writing, paste content, or use AI to create a draft.</p>",
-  plainText: "New workspace item",
+  html: "<h2>New item</h2><p>Start drafting.</p>",
+  plainText: "New item",
   sheet: [
     ["Criteria", "Developing", "Proficient", "Advanced"],
     ["Evidence", "Needs support", "Clear examples", "Detailed reasoning"],
@@ -1472,7 +1472,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     EdSync slideshow
                   </span>
                   <h3 className="mt-10 font-display text-6xl font-bold">{activeSlide.title}</h3>
-                  <p className="mt-8 max-w-2xl text-lg opacity-80">{activeSlide.body || "Use this native preview to rehearse pacing, notes, and slide flow before publishing."}</p>
+                  <p className="mt-8 max-w-2xl text-lg opacity-80">{activeSlide.body || "Preview before publishing."}</p>
                 </motion.div>
               </div>
               <aside className="rounded-2xl border border-white/10 bg-white/10 p-4">
