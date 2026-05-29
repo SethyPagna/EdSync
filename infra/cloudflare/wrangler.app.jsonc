@@ -1,11 +1,11 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "edsync-dev",
-  "main": ".open-next/worker.js",
+  "main": "../../.open-next/worker.js",
   "compatibility_date": "2026-05-12",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
-    "directory": ".open-next/assets",
+    "directory": "../../.open-next/assets",
     "binding": "ASSETS"
   },
   "services": [
