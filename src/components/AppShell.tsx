@@ -492,25 +492,30 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             </div>
           </div>
           {role === "admin" && (
-            <div className="mt-3 rounded-xl border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
-              Read-only view mode is audited.
+            <div className="group mt-3 rounded-xl border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
+              Owner preview
+              <span className="edsync-hover-detail text-edsync-blue">Read-only view mode is audited.</span>
             </div>
           )}
           {workspaceContext && (
-            <div className="mt-3 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs text-edsync-subtle">
+            <div className="group mt-3 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs text-edsync-subtle">
               <p className="font-semibold text-edsync-text">
-                {workspaceContext.type === "organization" ? "Organization" : "Individual workspace"}
+                {workspaceContext.type === "organization" ? "Organization" : "Individual"}
               </p>
               {workspaceContext.type === "organization" && (
-                <p className="mt-0.5 truncate">
+                <p className="mt-0.5 truncate" title={workspaceContext.organizationName || workspaceContext.organizationCode || "Organization"}>
                   {workspaceContext.organizationName || workspaceContext.organizationCode || "Organization context"}
                 </p>
               )}
+              <span className="edsync-hover-detail">
+                {workspaceContext.type === "organization" ? "Organization workspace" : "Individual workspace"}
+              </span>
             </div>
           )}
           {role === "student" && (
-            <div className="mt-3 rounded-xl border border-edsync-emerald/20 bg-edsync-emerald/10 px-3 py-2 text-xs font-semibold text-edsync-emerald">
-              Lessons, support, grades, and personal notes.
+            <div className="group mt-3 rounded-xl border border-edsync-emerald/20 bg-edsync-emerald/10 px-3 py-2 text-xs font-semibold text-edsync-emerald">
+              Student tools
+              <span className="edsync-hover-detail text-edsync-emerald">Lessons, support, grades, and notes.</span>
             </div>
           )}
         </div>
