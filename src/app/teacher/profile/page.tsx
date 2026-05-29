@@ -127,10 +127,10 @@ export default function TeacherProfile() {
 
   return (
     <div className="page-shell max-w-4xl space-y-6">
-      <div>
+      <div className="group">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Account</p>
         <h1 className="font-display text-3xl font-bold text-edsync-text">Profile & Settings</h1>
-        <p className="text-sm text-edsync-subtle">Manage identity, teaching context, and notifications.</p>
+        <p className="edsync-hover-detail">Identity, teaching context, and notifications.</p>
       </div>
 
       <div className="edsync-card">
