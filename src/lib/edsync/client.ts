@@ -55,6 +55,20 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
   return payload;
 }
 
+async function readAuthResponse(response: Response): Promise<AuthResponse> {
+  const fallback: AuthResponse = {
+    data: { user: null, session: null },
+    error: response.ok ? null : { message: "Session is unavailable. Try again shortly.", status: response.status },
+  };
+  const text = await response.text();
+  if (!text) return fallback;
+  try {
+    return JSON.parse(text) as AuthResponse;
+  } catch {
+    return fallback;
+  }
+}
+
 // The query builder keeps legacy table callers working while new code moves toward typed D1 helpers.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
@@ -178,9 +192,12 @@ export function createClient() {
   return {
     auth: {
       async getUser(): Promise<AuthResponse> {
-        return fetch("/api/auth/session", { credentials: "include", cache: "no-store" }).then((response) =>
-          response.json(),
-        );
+        try {
+          const response = await fetch("/api/auth/session", { credentials: "include", cache: "no-store" });
+          return readAuthResponse(response);
+        } catch {
+          return authValidationError("Session is unavailable. Try again shortly.");
+        }
       },
       async signInWithPassword(input: {
         email: string;
