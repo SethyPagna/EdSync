@@ -248,4 +248,28 @@ describe("EdSync client auth validation", () => {
     expect(response.error?.message).toBe("Full name must be a single line.");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it("handles empty login responses without throwing", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 200 }));
+    const edsync = createClient();
+
+    const response = await edsync.auth.signInWithPassword({
+      email: "student@example.com",
+      password: "password123",
+      account_type: "individual",
+    });
+
+    expect(response.data.user).toBeNull();
+    expect(response.error?.message).toBe("Request is unavailable. Try again shortly.");
+  });
+
+  it("handles empty data responses without throwing", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 200 }));
+    const edsync = createClient();
+
+    const response = await edsync.from("classes").select("*");
+
+    expect(response.data).toBeNull();
+    expect(response.error).toBeNull();
+  });
 });
