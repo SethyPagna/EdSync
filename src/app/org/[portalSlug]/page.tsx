@@ -56,9 +56,9 @@ export default async function OrganizationPortalPage({
   const cardLabels = {
     featured: copy.featured,
     free: copy.free,
-    preview: `${copy.courses}. ${copy.start}.`,
+    preview: "Course preview.",
     flexible: copy.anyDuration,
-    view: copy.courses,
+    view: "View",
     minutes: "min",
   };
   const languageQuery = publicLanguageQuerySuffix(filters.language);
@@ -82,9 +82,6 @@ export default async function OrganizationPortalPage({
               <h1 className="mt-4 font-display text-4xl font-bold leading-tight sm:text-5xl">
                 {portal.name}
               </h1>
-              <p className="mt-4 max-w-3xl text-base leading-7 text-edsync-subtle">
-                {portal.tenant_name}: {copy.courses}, {copy.catalogLabel}, {copy.start}.
-              </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.audience}</span>
                 <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{items.length} {copy.courses.toLowerCase()}</span>
@@ -165,16 +162,10 @@ export default async function OrganizationPortalPage({
             <div className="premium-card rounded-2xl p-5">
               <Globe2 className="mb-3 h-8 w-8 text-edsync-blue" />
               <p className="font-semibold">{copy.academies}</p>
-              <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-                {copy.catalogLabel}. {copy.courses}. {copy.start}.
-              </p>
             </div>
             <div className="premium-card rounded-2xl p-5">
               <UsersRound className="mb-3 h-8 w-8 text-edsync-emerald" />
               <p className="font-semibold">{copy.signIn}</p>
-              <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-                {copy.signIn}. {copy.start}. {copy.courses}.
-              </p>
             </div>
           </div>
         </div>
