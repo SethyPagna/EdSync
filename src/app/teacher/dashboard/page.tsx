@@ -225,11 +225,11 @@ export default function TeacherDashboard() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="premium-surface rounded-2xl p-4 sm:p-5">
+        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Today</h2>
-              <p className="text-sm text-edsync-subtle">Start with the most useful next action.</p>
+              <p className="edsync-hover-detail">Start with the most useful next action.</p>
             </div>
             <Link href="/teacher/planner" className="btn-ghost text-sm">
               Planner <ArrowRight className="h-4 w-4" />
@@ -286,11 +286,11 @@ export default function TeacherDashboard() {
           </div>
         </section>
 
-        <aside className="premium-surface rounded-2xl p-4 sm:p-5">
+        <aside className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Quick actions</h2>
-              <p className="text-sm text-edsync-subtle">Common tasks.</p>
+              <p className="edsync-hover-detail">Common tasks.</p>
             </div>
             <CalendarClock className="h-5 w-5 text-edsync-blue" />
           </div>
@@ -302,18 +302,18 @@ export default function TeacherDashboard() {
               <ClipboardList className="h-4 w-4" /> Gradebook
             </Link>
             <Link href="/teacher/analytics" className="btn-secondary justify-center text-sm">
-              <TrendingUp className="h-4 w-4" /> Analytics & Reports
+              <TrendingUp className="h-4 w-4" /> Reports
             </Link>
           </div>
         </aside>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="premium-surface rounded-2xl p-4 sm:p-5">
+        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Recent lessons</h2>
-              <p className="text-sm text-edsync-subtle">Drafts and recent updates.</p>
+              <p className="edsync-hover-detail">Drafts and recent updates.</p>
             </div>
             <Link href="/teacher/lessons" className="btn-ghost text-sm">
               View all <ArrowRight className="h-4 w-4" />
@@ -332,9 +332,6 @@ export default function TeacherDashboard() {
               <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
                 <ClipboardList className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
                 <p className="font-semibold text-edsync-text">No lessons yet</p>
-                <p className="mt-1 text-sm text-edsync-subtle">
-                  Start with AI-assisted lesson creation.
-                </p>
                 <Link
                   href="/teacher/lessons/create"
                   className="btn-primary mt-5 inline-flex"
@@ -435,9 +432,9 @@ export default function TeacherDashboard() {
             </div>
           </section>
 
-          <section className="premium-surface rounded-2xl p-4 sm:p-5">
+          <section className="premium-surface group rounded-2xl p-4 sm:p-5">
             <h2 className="font-display text-xl font-bold">Classes</h2>
-            <p className="mt-1 text-sm text-edsync-subtle">
+            <p className="edsync-hover-detail">
               Share join codes with students.
             </p>
             <div className="mt-4 space-y-3">
