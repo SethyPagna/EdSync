@@ -87,11 +87,11 @@ export default function StudentGradesPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+      <section className="group rounded-xl border border-edsync-border bg-edsync-card p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-display text-lg font-bold">Grade visibility</h2>
-            <p className="text-sm text-edsync-subtle">Choose what appears on this page. This only changes your view.</p>
+            <p className="edsync-hover-detail">Choose what appears on this page. This only changes your view.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {[
