@@ -168,9 +168,7 @@ export default function StudentWorkPage() {
           <p className="font-semibold text-edsync-text">
             {filter === "open" ? "Nothing due right now" : "No work in this view"}
           </p>
-          <p className="mt-2 text-sm text-edsync-subtle">
-            New tasks, tests, discussions, and activities will appear here.
-          </p>
+          <p className="mt-2 text-sm text-edsync-subtle">No new work.</p>
         </div>
       ) : (
         <div className="grid gap-3">
