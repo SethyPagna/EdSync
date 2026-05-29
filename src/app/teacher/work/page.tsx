@@ -293,7 +293,7 @@ export default function TeacherWorkPage() {
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Assignments</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {publishedCount} published, {submissionCount} submissions. Published class work notifies students and due dates appear in Planner.
+              {publishedCount} live / {submissionCount} submissions
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -316,17 +316,17 @@ export default function TeacherWorkPage() {
               className="btn-primary justify-center"
             >
               <Plus className="h-4 w-4" />
-              Create work
+              Create
             </button>
           </div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-3">
+      <section className="group rounded-xl border border-edsync-border bg-edsync-card p-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
-            <p className="mt-1 text-sm text-edsync-subtle">
+            <p className="edsync-hover-detail">
               Manage everything at once, or narrow assignments, projects, quizzes, and feedback to one class.
             </p>
           </div>
@@ -362,10 +362,10 @@ export default function TeacherWorkPage() {
 
       {formOpen && (
         <form onSubmit={saveWork} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="group mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit work item" : "New work item"}</h2>
-              <p className="text-sm text-edsync-subtle">
+              <p className="edsync-hover-detail">
                 Quiz, test, task, discussion, or activity. Published class work creates notifications; due dates sync to Planner.
               </p>
             </div>
@@ -417,7 +417,7 @@ export default function TeacherWorkPage() {
               onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
               aria-label="Due date"
             />
-            <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 lg:col-span-6">
+            <div className="group rounded-2xl border border-edsync-border bg-edsync-surface p-3 lg:col-span-6">
               <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr_1fr]">
                 <label className="space-y-1">
                   <span className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Scoring mode</span>
@@ -464,7 +464,7 @@ export default function TeacherWorkPage() {
                   Counts toward gradebook
                 </label>
               </div>
-              <p className="mt-2 text-xs text-edsync-subtle">
+              <p className="edsync-hover-detail">
                 {gradingModes.find((mode) => mode.value === form.gradingMode)?.description}
               </p>
               {form.gradingMode === "participation" && (
@@ -472,7 +472,7 @@ export default function TeacherWorkPage() {
                   className="edsync-input mt-3 min-h-20"
                   value={form.participationCriteria}
                   onChange={(event) => setForm({ ...form, participationCriteria: event.target.value })}
-                  placeholder="Participation criteria, for example: posted once, replied to two peers, used evidence, joined activity."
+                  placeholder="Participation criteria"
                 />
               )}
             </div>
@@ -550,7 +550,7 @@ export default function TeacherWorkPage() {
         <div className="border-b border-edsync-border p-4 sm:p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-display text-xl font-bold">Review submissions</h2>
+              <h2 className="font-display text-xl font-bold">Review</h2>
               <p className="text-sm text-edsync-subtle">
                 {filteredSubmissions.length} submitted, {unreviewedCount} waiting for feedback.
               </p>
@@ -560,7 +560,7 @@ export default function TeacherWorkPage() {
         </div>
         <div className="divide-y divide-edsync-border">
           {filteredSubmissions.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">Student submissions will appear here for scoring and feedback.</p>
+            <p className="p-5 text-sm text-edsync-subtle">No submissions yet.</p>
           ) : (
             filteredSubmissions.map((submission) => {
               const grading = normalizeWorkGradingSettings(submission.work_settings);
@@ -648,7 +648,7 @@ export default function TeacherWorkPage() {
                     />
                     <button type="button" className="btn-primary mt-3 w-full justify-center" onClick={() => review(submission)}>
                       <Save className="h-4 w-4" />
-                      Save feedback
+                      Save
                     </button>
                   </div>
                 </article>
