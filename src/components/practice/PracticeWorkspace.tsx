@@ -173,9 +173,6 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                   <h1 className="font-display text-4xl font-bold">Practice</h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-edsync-subtle">
-                    Start, answer, review.
-                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => setRunning((value) => !value)} className="btn-primary px-3 py-2 text-sm">
@@ -203,7 +200,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">AI</p>
-                    <h2 className="mt-1 font-display text-2xl font-bold">Generate practice</h2>
+                    <h2 className="mt-1 font-display text-2xl font-bold">Generate</h2>
                   </div>
                   <button type="button" onClick={() => setAiOpen(false)} className="btn-ghost px-3 py-2 text-sm">
                     Close
@@ -294,7 +291,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
           </div>
 
           <aside className="space-y-4">
-            <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
+            <section className="group rounded-xl border border-edsync-border bg-edsync-card p-5" tabIndex={0} title={`${modeConfig.bestFor} ${modeConfig.output}`}>
               <div className="mb-4 flex items-center gap-2">
                 <Clock3 className="h-5 w-5 text-edsync-blue" />
                 <h2 className="font-semibold">Timing</h2>
@@ -316,7 +313,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               </label>
               <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-xs leading-5 text-edsync-subtle">
                 <p className="font-semibold text-edsync-text">{modeConfig.bestFor}</p>
-                <p className="mt-1">{modeConfig.output}</p>
+                <p className="edsync-hover-detail">{modeConfig.output}</p>
               </div>
             </section>
 
@@ -369,7 +366,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               </div>
               <div className="space-y-2">
                 {reviewCards.length === 0 && (
-                  <p className="text-sm leading-6 text-edsync-subtle">Misses appear here after save.</p>
+                  <p className="text-sm leading-6 text-edsync-subtle">No reviews yet.</p>
                 )}
                 {reviewCards.slice(0, 5).map((card) => (
                   <div key={card.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
