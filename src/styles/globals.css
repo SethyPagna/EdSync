@@ -1650,6 +1650,28 @@ html.dark .action-menu-panel :where(button, a):hover {
   opacity: 1;
 }
 
+.edsync-practice-mode-detail {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  color: var(--edsync-subtle);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.45;
+  opacity: 0;
+  transition:
+    max-height 160ms ease,
+    opacity 160ms ease,
+    padding-top 160ms ease;
+}
+
+button:hover > .edsync-practice-mode-detail,
+button:focus-visible > .edsync-practice-mode-detail {
+  max-height: 4.5rem;
+  opacity: 1;
+  padding-top: 0.45rem;
+}
+
 .edsync-catalog-reference {
   background:
     radial-gradient(circle at 86% 12%, rgba(var(--blue-rgb), 0.12), transparent 30rem),
