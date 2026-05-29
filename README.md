@@ -7,7 +7,8 @@ background automation.
 
 ## Platform
 
-- Next.js 16 App Router, React 19, and TypeScript 6
+- Node.js 20.19 or newer
+- Next.js 16 App Router, React 19, TypeScript 6, and Tailwind CSS 4
 - Custom D1-backed authentication and role-aware routing
 - Cloudflare D1, R2, AI Gateway, Queues, Workers, Vectorize, Turnstile
 - Vercel deployment for the hosted Next.js runtime
@@ -54,6 +55,10 @@ npm.cmd run verify
 
 `verify` runs typecheck, ESLint, the Vitest suite, a moderate dependency audit,
 and a production Next.js build.
+
+Current dependency note: ESLint stays on 9.x until the React plugin bundled by
+`eslint-config-next` declares ESLint 10 support. A direct ESLint 10 upgrade
+currently fails while loading `react/display-name`.
 
 ## Repository Layout
 
