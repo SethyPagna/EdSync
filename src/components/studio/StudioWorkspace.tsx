@@ -362,6 +362,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
     () => Math.max(...draft.sheet.map((row) => row.length), 1),
     [draft.sheet],
   );
+  const sheetColumnIndexes = useMemo(
+    () => Array.from({ length: sheetColumnCount }, (_, columnIndex) => columnIndex),
+    [sheetColumnCount],
+  );
   const visibleContentBlocks = useMemo(
     () => contentBlocks.filter((block) => includeArchivedBlocks || block.status !== "archived").slice(0, 8),
     [contentBlocks, includeArchivedBlocks],
@@ -944,7 +948,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       <thead>
                         <tr>
                           <th className="w-12 border border-edsync-border bg-edsync-surface px-2 py-1 text-xs text-edsync-subtle" />
-                          {Array.from({ length: sheetColumnCount }, (_, columnIndex) => (
+                          {sheetColumnIndexes.map((columnIndex) => (
                             <th key={`column-${columnIndex}`} className="border border-edsync-border bg-edsync-surface px-2 py-1">
                               <div className="flex items-center justify-between gap-2 text-xs text-edsync-subtle">
                                 <span>{String.fromCharCode(65 + columnIndex)}</span>
@@ -977,11 +981,11 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                                 </button>
                               </div>
                             </th>
-                            {Array.from({ length: sheetColumnCount }, (_, columnIndex) => row[columnIndex] ?? "").map((cell, columnIndex) => (
+                            {sheetColumnIndexes.map((columnIndex) => (
                               <td key={`${rowIndex}-${columnIndex}`} className="border border-edsync-border">
                                 <input
                                   className="h-10 min-w-40 bg-transparent px-2 outline-none focus:bg-edsync-surface"
-                                  value={cell}
+                                  value={row[columnIndex] ?? ""}
                                   onChange={(event) => updateSheetCell(rowIndex, columnIndex, event.target.value)}
                                 />
                               </td>
