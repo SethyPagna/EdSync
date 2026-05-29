@@ -1350,7 +1350,7 @@ export default function StudentLesson() {
     { label: "Planner", href: scopedStudentHref("/student/planner") },
     { label: "Grades", href: scopedStudentHref("/student/grades") },
     { label: "Personal notes", href: "/student/notes" },
-    { label: "Practice & AI", href: "/practice?mode=generated_from_materials&ai=1" },
+    { label: "Practice", href: "/practice?mode=generated_from_materials&ai=1" },
   ];
 
   // Progress calculation
@@ -1503,10 +1503,10 @@ export default function StudentLesson() {
           >
             Back to lessons
           </button>
-          <div className="rounded-2xl bg-edsync-card p-3">
+          <div className="group rounded-2xl bg-edsync-card p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Lesson workspace</p>
             <p className="mt-1 line-clamp-2 text-sm font-semibold text-edsync-text">{lesson?.title || "Current lesson"}</p>
-            <p className="mt-2 text-xs leading-5 text-edsync-subtle">
+            <p className="edsync-hover-detail">
               {lesson?.class_id ? "Class tools stay connected to this lesson." : "Personal tools for this lesson."}
             </p>
           </div>
@@ -1839,10 +1839,7 @@ export default function StudentLesson() {
                 <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
                   Reflect Before You Move On
                 </h2>
-                <p className="text-edsync-subtle text-sm">
-                  Share what you learned from this lecture and EdSync AI will
-                  coach your next best step.
-                </p>
+                <p className="text-edsync-subtle text-sm">Reflect, then choose the next step.</p>
                 <p className="text-edsync-subtle text-sm mt-2">
                   Current lesson score:{" "}
                   <span className="font-semibold text-edsync-blue">
@@ -1909,7 +1906,7 @@ export default function StudentLesson() {
               {reflectionAdvice && (
                 <div className="edsync-card border-edsync-emerald/30 bg-edsync-emerald/5">
                   <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
-                    Your AI Coaching Summary
+                    Coach Summary
                   </h3>
                   <p className="text-sm text-edsync-subtle mb-4">
                     {reflectionAdvice.encouragement}
@@ -2037,9 +2034,7 @@ export default function StudentLesson() {
                   <p className="text-edsync-subtle">
                     Generating extended learning content...
                   </p>
-                  <p className="text-xs text-edsync-subtle mt-2">
-                    This may take up to 30 seconds
-                  </p>
+                  <p className="text-xs text-edsync-subtle mt-2">Up to 30 seconds.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -2314,9 +2309,7 @@ export default function StudentLesson() {
                     <p className="text-edsync-subtle text-sm">
                       I help you think, not just give answers.
                     </p>
-                    <p className="text-xs text-edsync-subtle mt-1">
-                      Ask me anything about this lesson!
-                    </p>
+                    <p className="text-xs text-edsync-subtle mt-1">Ask a lesson question.</p>
                   </div>
                 )}
                 {chatMessages.map((msg, i) => (
