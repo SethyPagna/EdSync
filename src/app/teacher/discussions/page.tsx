@@ -124,7 +124,7 @@ export default function TeacherDiscussionsPage() {
             className="btn-primary justify-center"
           >
             <Plus className="h-4 w-4" />
-            {formOpen ? "Close" : "New discussion"}
+            {formOpen ? "Close" : "New"}
           </button>
         </div>
       </section>
@@ -132,10 +132,7 @@ export default function TeacherDiscussionsPage() {
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
-            <p className="mt-1 text-sm text-edsync-subtle">
-              View every discussion, or focus on the threads attached to one class.
-            </p>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Scope</p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
             <button
@@ -174,7 +171,7 @@ export default function TeacherDiscussionsPage() {
               className="edsync-input md:col-span-2"
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
-              placeholder="Discussion title"
+              placeholder="Title"
               required
             />
             <select
@@ -197,7 +194,7 @@ export default function TeacherDiscussionsPage() {
               className="edsync-input min-h-24 md:col-span-4"
               value={form.prompt}
               onChange={(event) => setForm({ ...form, prompt: event.target.value })}
-              placeholder="Prompt students should respond to"
+              placeholder="Prompt"
             />
           </div>
         </form>
