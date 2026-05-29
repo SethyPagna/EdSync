@@ -85,12 +85,11 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
 
   useEffect(() => {
     if (!running) return;
-    startedRef.current = Date.now() - elapsedSeconds * 1000;
     const timer = window.setInterval(() => {
       if (startedRef.current) setElapsedSeconds(Math.floor((Date.now() - startedRef.current) / 1000));
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [elapsedSeconds, running]);
+  }, [running]);
 
   useEffect(() => {
     listPracticeReviews()
@@ -142,6 +141,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
     setSummary(null);
     setSaveError(null);
     setElapsedSeconds(0);
+    startedRef.current = Date.now();
     setRunning(true);
   };
 
@@ -150,7 +150,18 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
     setElapsedSeconds(0);
     setSummary(null);
     setSaveError(null);
+    startedRef.current = null;
     setRunning(false);
+  };
+
+  const toggleRunning = () => {
+    setRunning((current) => {
+      const next = !current;
+      if (next) {
+        startedRef.current = Date.now() - elapsedSeconds * 1000;
+      }
+      return next;
+    });
   };
 
   const updateReviewMastery = async (id: string, mastery: "again" | "almost" | "mastered") => {
@@ -175,7 +186,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
                   <h1 className="font-display text-4xl font-bold">Practice</h1>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setRunning((value) => !value)} className="btn-primary px-3 py-2 text-sm">
+                  <button type="button" onClick={toggleRunning} className="btn-primary px-3 py-2 text-sm">
                     {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     {running ? "Pause" : "Start"}
                   </button>
