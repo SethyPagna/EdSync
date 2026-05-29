@@ -1440,10 +1440,7 @@ export default function CreateLesson() {
             <h2 className="font-display font-bold text-2xl text-edsync-text mb-2">
               Building Your Lesson
             </h2>
-            <p className="text-edsync-subtle text-xs mb-6">
-              AI is running in two passes — extracting knowledge, then
-              generating rich content
-            </p>
+            <p className="text-edsync-subtle text-xs mb-6">Building content.</p>
             <div className="space-y-2.5">
               {GENERATION_STEPS.map((s, i) => (
                 <div
@@ -2160,10 +2157,7 @@ export default function CreateLesson() {
               {draft.quiz_questions.length === 0 && (
                 <div className="edsync-card text-center py-8">
                   <p className="text-edsync-subtle text-sm">
-                    No questions yet.{" "}
-                    {creationMode !== "manual"
-                      ? "Re-generate with AI or add manually."
-                      : "Add questions below."}
+                    No questions yet.
                   </p>
                 </div>
               )}
@@ -2277,9 +2271,9 @@ export default function CreateLesson() {
           {/* Save Actions — sticky bottom */}
           <div className="rounded-3xl border border-edsync-border bg-edsync-card p-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
+              <div className="group">
                 <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Pages</p>
-                <p className="text-sm text-edsync-subtle">Click a block to jump back into editing. Drag reorder comes next.</p>
+                <p className="edsync-hover-detail">Select a page to return to editing.</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
                 <span>Fit width</span>
