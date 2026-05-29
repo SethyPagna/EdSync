@@ -999,16 +999,16 @@ export default function CreateLesson() {
         </button>
         <div className="min-w-0">
           <h1 className="font-display font-bold text-2xl sm:text-3xl text-edsync-text">
-            Create Lesson
+            Create
           </h1>
           <p className="text-edsync-subtle text-sm">
             {step === "choose"
-              ? "Choose how you want to create your lesson"
+              ? "Pick a start"
               : step === "import"
-                ? "Provide your source material"
+                ? "Add source"
                 : step === "generating"
-                  ? "AI is building your lesson..."
-                  : "Review and edit your lesson"}
+                  ? "Building..."
+                  : "Edit lesson"}
           </p>
         </div>
         {step === "edit" && (
@@ -1017,13 +1017,13 @@ export default function CreateLesson() {
               {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Draft ready"}
             </span>
             <Link href="/teacher/lessons" className="btn-secondary px-3 py-1.5 text-xs">
-              My Courses
+              Courses
             </Link>
             <Link href="/practice?mode=quiz&ai=1&task=generate-practice" className="btn-secondary px-3 py-1.5 text-xs">
-              Generate practice
+              Practice
             </Link>
             <button type="button" onClick={clearSavedDraft} className="btn-secondary px-3 py-1.5 text-xs">
-              Clear draft
+              Clear
             </button>
           </div>
         )}
@@ -1068,10 +1068,10 @@ export default function CreateLesson() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-edsync-surface px-4 py-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-edsync-blue">
-                Lesson Creation Canvas
+                Lesson studio
               </p>
               <h2 className="font-display text-xl font-bold text-edsync-text">
-                Start with AI, a draft, or a blank canvas.
+                Choose a start
               </h2>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-edsync-subtle">
@@ -1092,7 +1092,7 @@ export default function CreateLesson() {
               mode: "ai_collab" as const,
               title: "AI draft",
               desc: "Generate a designed outline, then choose what to keep.",
-              badge: "Recommended",
+              badge: "Best",
               badgeColor:
                 "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20",
             },
@@ -1122,6 +1122,8 @@ export default function CreateLesson() {
                   setStep("edit");
                 } else setStep("import");
               }}
+              title={opt.desc}
+              aria-label={`${opt.title}: ${opt.desc}`}
               className={`group min-h-44 w-full rounded-[1.5rem] border-2 bg-edsync-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-card-hover ${
                 creationMode === opt.mode
                   ? "border-edsync-blue bg-edsync-blue/5"
@@ -1138,7 +1140,7 @@ export default function CreateLesson() {
                       {opt.badge}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-edsync-subtle">
+                  <p className="edsync-studio-hover-detail">
                     {opt.desc}
                   </p>
                 </div>
@@ -1157,8 +1159,8 @@ export default function CreateLesson() {
           <div className="edsync-card">
             <h2 className="mb-4 font-display text-xl font-bold text-edsync-text">
               {creationMode === "ai_collab"
-                ? "Starting point"
-                : "Lesson source"}
+                ? "Start"
+                : "Source"}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               {[
@@ -1190,6 +1192,7 @@ export default function CreateLesson() {
                     if (opt.mode === "file") fileRef.current?.click();
                   }}
                   title={opt.desc}
+                  aria-label={`${opt.label}: ${opt.desc}`}
                   className={`rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 ${
                     importMode === opt.mode
                       ? "border-edsync-blue bg-edsync-blue/10"
@@ -1199,7 +1202,7 @@ export default function CreateLesson() {
                   <p className="font-semibold text-sm text-edsync-text">
                     {opt.label}
                   </p>
-                  <p className="text-xs text-edsync-subtle">{opt.desc}</p>
+                  <p className="edsync-studio-hover-detail">{opt.desc}</p>
                 </button>
               ))}
             </div>
