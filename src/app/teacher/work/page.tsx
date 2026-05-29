@@ -326,9 +326,7 @@ export default function TeacherWorkPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
-            <p className="edsync-hover-detail">
-              Manage everything at once, or narrow assignments, projects, quizzes, and feedback to one class.
-            </p>
+            <p className="edsync-hover-detail">Filter work by class.</p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
             <button
@@ -365,9 +363,7 @@ export default function TeacherWorkPage() {
           <div className="group mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit work item" : "New work item"}</h2>
-              <p className="edsync-hover-detail">
-                Quiz, test, task, discussion, or activity. Published class work creates notifications; due dates sync to Planner.
-              </p>
+              <p className="edsync-hover-detail">Class work can notify students and sync due dates.</p>
             </div>
             <ClipboardList className="h-5 w-5 text-edsync-blue" />
           </div>
@@ -480,7 +476,7 @@ export default function TeacherWorkPage() {
               className="edsync-input min-h-24 lg:col-span-5"
               value={form.instructions}
               onChange={(event) => setForm({ ...form, instructions: event.target.value })}
-              placeholder="Instructions, rubric, links, practice rules, or quiz prompt"
+              placeholder="Instructions or rubric"
             />
             <button className="btn-primary justify-center" type="submit">
               <Send className="h-4 w-4" />
