@@ -292,13 +292,13 @@ export default function StudentNotesPage() {
 
       {composerOpen && (
         <form onSubmit={savePersonalNote} className="premium-surface rounded-2xl p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="group mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Quick note builder</h2>
-              <p className="text-sm text-edsync-subtle">
+              <p className="edsync-hover-detail">
                 {editingId
-                  ? "Update this personal note without losing its history."
-                  : "Personal notes can include designs, links, images, videos, and study ideas."}
+                  ? "Update this note without losing its history."
+                  : "Text, links, media, and study ideas."}
               </p>
             </div>
             <Palette className="h-5 w-5 text-edsync-blue" />
@@ -365,7 +365,7 @@ export default function StudentNotesPage() {
               <div className="mt-4 rounded-xl border border-edsync-border bg-edsync-card p-3">
                 <p className="font-display text-lg font-bold">{draft.title || "Preview title"}</p>
                 <p className="mt-2 line-clamp-4 text-sm leading-6 text-edsync-subtle">
-                  {draft.body || "Your note preview will appear here."}
+                  {draft.body || "Preview"}
                 </p>
                 {draft.mediaUrl && (
                   <p className={`mt-3 text-xs font-semibold ${safeMedia ? "text-edsync-emerald" : "text-rose-600"}`}>
@@ -375,7 +375,7 @@ export default function StudentNotesPage() {
               </div>
               <button type="submit" disabled={saving} className="btn-primary mt-4 w-full justify-center">
                 <Save className="h-4 w-4" />
-                {saving ? "Saving..." : "Save note"}
+                {saving ? "Saving..." : "Save"}
               </button>
             </aside>
           </div>
@@ -385,9 +385,9 @@ export default function StudentNotesPage() {
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-3">
-            <div>
+            <div className="group">
               <h2 className="font-display text-xl font-bold">Personal notes</h2>
-              <p className="text-sm text-edsync-subtle">{personalNotes.length} personal note drafts</p>
+              <p className="edsync-hover-detail">{personalNotes.length} personal note drafts</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
@@ -420,7 +420,7 @@ export default function StudentNotesPage() {
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
               <StickyNote className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No personal notes yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Create one with text, media, links, or design style.</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Start with one note.</p>
             </div>
           ) : (
             <div className={viewMode === "grid" ? "grid gap-3 md:grid-cols-2" : "grid gap-3"}>
@@ -446,7 +446,7 @@ export default function StudentNotesPage() {
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-edsync-subtle">{plainTextOf(note)}</p>
                     {media && (
                       <a href={media.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                        Open attached {media.kind}
+                        Open {media.kind}
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
@@ -472,9 +472,9 @@ export default function StudentNotesPage() {
         </div>
 
         <aside className="space-y-3">
-          <div>
+          <div className="group">
             <h2 className="font-display text-xl font-bold">Teacher feedback</h2>
-            <p className="text-sm text-edsync-subtle">Notes shared by your teachers.</p>
+            <p className="edsync-hover-detail">Notes shared by your teachers.</p>
           </div>
           {teacherNotes.length === 0 ? (
             <p className="rounded-2xl border border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle">
