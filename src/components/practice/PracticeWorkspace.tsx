@@ -169,12 +169,12 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-4">
             <div className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-              <p className="text-sm font-semibold text-edsync-blue">Practice, quizzes, and games</p>
+              <p className="text-sm font-semibold text-edsync-blue">Practice</p>
               <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <h1 className="font-display text-4xl font-bold">Practice & AI Tutor</h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-                    Timed practice with explanations, retry missed, saved mistakes, and review recommendations.
+                  <h1 className="font-display text-4xl font-bold">Practice</h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-edsync-subtle">
+                    Start, answer, review.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -188,11 +188,11 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
                   </button>
                   <button type="button" onClick={submit} className="btn-secondary px-3 py-2 text-sm">
                     <Save className="h-4 w-4" />
-                    {saving ? "Saving..." : "Submit"}
+                    {saving ? "Saving..." : "Save"}
                   </button>
                   <button type="button" onClick={() => setAiOpen((value) => !value)} className="btn-secondary px-3 py-2 text-sm">
                     <Sparkles className="h-4 w-4" />
-                    {aiOpen ? "Hide AI" : "AI Copilot"}
+                    {aiOpen ? "Hide" : "AI"}
                   </button>
                 </div>
               </div>
@@ -202,11 +202,8 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               <section className="rounded-xl border border-edsync-blue/25 bg-edsync-card p-4 shadow-sm">
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Practice & AI Tutor</p>
-                    <h2 className="mt-1 font-display text-2xl font-bold">Generate, explain, and insert learning support</h2>
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-edsync-subtle">
-                      Use AI to clean source notes, generate practice, create review cards, and send the result back into the learning loop.
-                    </p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">AI</p>
+                    <h2 className="mt-1 font-display text-2xl font-bold">Generate practice</h2>
                   </div>
                   <button type="button" onClick={() => setAiOpen(false)} className="btn-ghost px-3 py-2 text-sm">
                     Close
@@ -227,6 +224,8 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
                     setSummary(null);
                     setSaveError(null);
                   }}
+                  aria-label={`${entry.label}: ${entry.description} ${entry.loop.join(", ")}`}
+                  title={`${entry.description} ${entry.loop.join(" -> ")}`}
                   className={`rounded-lg border p-3 text-left transition ${
                     mode === entry.mode
                       ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
@@ -239,10 +238,9 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
                       {entry.targetMinutes}m
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs">{entry.description}</p>
-                  <p className="mt-2 line-clamp-1 text-[11px] font-semibold text-edsync-blue">
-                    {entry.loop.join(" -> ")}
-                  </p>
+                  <span className="edsync-practice-mode-detail">
+                    {entry.description} {entry.loop.join(" -> ")}
+                  </span>
                 </button>
               ))}
             </div>
@@ -325,7 +323,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
             <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
               <div className="mb-4 flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-edsync-amber" />
-                <h2 className="font-semibold">Attempt Summary</h2>
+                <h2 className="font-semibold">Summary</h2>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Metric label="Score" value={`${liveSummary.percent}%`} />
@@ -339,7 +337,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               </button>
               {summary && !saveError && (
                 <p className="mt-3 rounded-lg border border-edsync-emerald/30 bg-edsync-emerald/10 p-2 text-xs font-semibold text-edsync-emerald">
-                  Attempt saved and missed items queued for review.
+                  Saved. Misses queued.
                 </p>
               )}
               {saveError && (
@@ -352,7 +350,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
             <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
               <div className="mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-edsync-blue" />
-                <h2 className="font-semibold">Learning Loop</h2>
+                <h2 className="font-semibold">Loop</h2>
               </div>
               <div className="space-y-2 text-sm text-edsync-subtle">
                 {modeConfig.loop.map((step, index) => (
@@ -371,9 +369,7 @@ export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask
               </div>
               <div className="space-y-2">
                 {reviewCards.length === 0 && (
-                  <p className="text-sm leading-6 text-edsync-subtle">
-                    Missed items become review cards after submit. The dashboard can recommend the next retry set from those cards.
-                  </p>
+                  <p className="text-sm leading-6 text-edsync-subtle">Misses appear here after save.</p>
                 )}
                 {reviewCards.slice(0, 5).map((card) => (
                   <div key={card.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
