@@ -60,7 +60,7 @@ const DEFAULT_SKILL_METRICS: SkillMetric[] = [
     key: "socratic",
     label: "Socratic Use",
     value: 0,
-    tip: "Ask follow-up questions while learning to deepen understanding.",
+    tip: "Ask follow-up questions while learning.",
   },
 ];
 
@@ -160,7 +160,7 @@ function buildSkillMetrics(
       key: "socratic",
       label: "Socratic Use",
       value: socraticUse,
-      tip: "Use Ask Socratic when stuck instead of guessing.",
+      tip: "Use hints before guessing.",
     },
   ];
 }
@@ -353,7 +353,7 @@ export default function StudentProfile() {
       </div>
 
       {/* Avatar & basic info */}
-      <div className="edsync-card">
+      <div className="edsync-card group">
         <div className="flex items-start gap-6">
           <div className="relative flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-emerald to-edsync-cyan font-display text-3xl font-bold text-white">
             {profile?.avatar_url ? (
@@ -417,7 +417,7 @@ export default function StudentProfile() {
         </label>
       </div>
 
-      <div className="edsync-card">
+      <div className="edsync-card group">
         <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
           Preferences
         </h3>
@@ -481,13 +481,12 @@ export default function StudentProfile() {
       </div>
 
       {/* Interests */}
-      <div className="edsync-card">
+      <div className="edsync-card group">
         <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
           My Interests
         </h3>
-        <p className="text-edsync-subtle text-sm mb-4">
-          We use these to personalize "Why This Matters" connections in your
-          lessons
+        <p className="edsync-hover-detail mb-4">
+          Used to personalize lesson examples.
         </p>
         <div className="flex flex-wrap gap-2">
           {INTEREST_AREAS.map((interest) => {
@@ -541,13 +540,12 @@ export default function StudentProfile() {
         ]}
       />
 
-      <div className="edsync-card">
+      <div className="edsync-card group">
         <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
           Learning Stats Hexagon
         </h3>
-        <p className="text-edsync-subtle text-sm mb-4">
-          This chart shows your strengths and weak points across 6 learning
-          dimensions.
+        <p className="edsync-hover-detail mb-4">
+          Strengths and weak spots across six learning dimensions.
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
