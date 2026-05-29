@@ -51,8 +51,22 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
-  const payload = (await response.json()) as T;
-  return payload;
+  const fallback = (message: string, forceError = false) => {
+    const error = !response.ok || forceError ? { message, status: response.status } : null;
+    if (url.startsWith("/api/auth/")) {
+      return { data: { user: null, session: null }, error } as T;
+    }
+    return { data: null, error } as T;
+  };
+  const text = await response.text();
+  if (!text) {
+    return fallback("Request is unavailable. Try again shortly.", url.startsWith("/api/auth/"));
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return fallback("Request returned an invalid response.", true);
+  }
 }
 
 async function readAuthResponse(response: Response): Promise<AuthResponse> {
