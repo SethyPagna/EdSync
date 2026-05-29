@@ -71,8 +71,13 @@ React, import, and jsx-a11y plugins.
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
 - `infra/` contains local, Cloudflare, and D1 database infrastructure files.
+- `infra/cloudflare/` owns Worker, Wrangler, OpenNext, and automation Worker
+  configuration for EdSync-specific Cloudflare resources.
 - Framework-required root entry points remain at the root so Next.js, npm,
   Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
+  This intentionally includes `package.json`, `package-lock.json`,
+  `next.config.mjs`, `next-env.d.ts`, `tsconfig.json`, `vercel.json`,
+  `README.md`, and `AGENTS.md`.
 
 ## Local Cleanup
 
