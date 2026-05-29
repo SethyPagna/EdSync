@@ -517,7 +517,6 @@ export default function TeacherStudents() {
                 aria-label={`Delete ${cls.name}`}
               >
                 <Trash2 className="h-4 w-4" />
-                ×
               </button>
             </div>
           ))}
@@ -550,12 +549,12 @@ export default function TeacherStudents() {
           ) : students.length === 0 ? (
             <div className="text-center py-12">
               <p className="font-semibold text-edsync-text mb-1">
-                No students yet
+                No students
               </p>
               <p className="text-edsync-subtle text-sm">
                 {selectedClass === "all"
-                  ? "Share a class join code with your students so they can enroll."
-                  : `Share the join code ${activeClass ? `"${activeClass.join_code}"` : ""} with your students.`}
+                  ? "Share a class code to enroll students."
+                  : `Share code ${activeClass ? `"${activeClass.join_code}"` : ""} to enroll students.`}
               </p>
             </div>
           ) : (
@@ -683,13 +682,13 @@ export default function TeacherStudents() {
                 {assignments.length === 0 ? (
                   <div className="text-center py-6">
                     <p className="text-edsync-subtle text-sm mb-3">
-                      No lessons assigned yet.
+                      No assigned lessons.
                     </p>
                     <button
                       onClick={() => setShowAssign(true)}
                       className="btn-secondary text-sm py-2"
                     >
-                      Assign a Lesson
+                      Assign lesson
                     </button>
                   </div>
                 ) : (
@@ -720,7 +719,7 @@ export default function TeacherStudents() {
                           className="text-edsync-subtle hover:text-edsync-red text-sm flex-shrink-0"
                           title="Remove"
                         >
-                          ×
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
@@ -732,8 +731,7 @@ export default function TeacherStudents() {
             <div className="edsync-card text-center py-8">
               <p className="font-medium text-edsync-text mb-1">Select a class</p>
               <p className="text-edsync-subtle text-sm">
-                Click a class card to see its details, students, and manage
-                lesson assignments.
+                Select a class to manage students and lessons.
               </p>
             </div>
           )}
