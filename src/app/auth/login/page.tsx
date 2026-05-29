@@ -194,7 +194,7 @@ function LoginForm() {
 
   return (
     <form onSubmit={handleLogin} className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2">
         {([
           {
             key: "organization" as const,
@@ -217,7 +217,7 @@ function LoginForm() {
               type="button"
               onClick={() => changeAccountType(item.key)}
               aria-label={`${item.label}: ${item.copy}`}
-              className={`edsync-auth-choice rounded-2xl border p-4 text-left shadow-sm transition ${
+              className={`edsync-auth-choice rounded-2xl border p-3 text-left shadow-sm transition ${
                 selected
                   ? "premium-active text-edsync-text"
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
