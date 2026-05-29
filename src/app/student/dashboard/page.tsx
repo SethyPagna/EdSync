@@ -532,7 +532,7 @@ export default function StudentDashboard() {
                 <Link
                   key={course.id}
                   href={course.courseId ? `/student/lessons/${course.courseId}` : "/catalog"}
-                  className="rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card"
+                  className="group rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
@@ -540,7 +540,7 @@ export default function StudentDashboard() {
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-edsync-text">{course.title}</p>
-                      <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">{course.description}</p>
+                      <p className="edsync-hover-detail">{course.description}</p>
                       <span className="mt-3 inline-flex text-xs font-bold uppercase tracking-wide text-edsync-blue">
                         {course.sourceType.replace("_", " ")}
                       </span>
@@ -552,7 +552,7 @@ export default function StudentDashboard() {
                 <Link
                   key={item.id}
                   href={`/catalog/${item.id}`}
-                  className="rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-emerald/40 hover:bg-edsync-card"
+                  className="group rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-emerald/40 hover:bg-edsync-card"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-emerald/10 text-edsync-emerald">
@@ -565,7 +565,7 @@ export default function StudentDashboard() {
                           {item.price?.label ?? "Catalog"}
                         </span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">
+                      <p className="edsync-hover-detail">
                         {item.description || "Start a public EdSync course."}
                       </p>
                     </div>
@@ -575,24 +575,24 @@ export default function StudentDashboard() {
           {individualCourses.length === 0 && catalogSuggestions.length === 0 && (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-5 md:col-span-3">
               <p className="font-semibold text-edsync-text">No personal courses yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">
-                Browse the catalog to enroll in free courses or start checkout for paid courses.
-              </p>
+              <Link href="/catalog" className="btn-secondary mt-4 inline-flex px-3 py-2 text-sm">
+                Browse
+              </Link>
             </div>
           )}
         </div>
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="premium-surface rounded-2xl p-4 sm:p-5">
+        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">Continue learning</h2>
-              <p className="text-sm text-edsync-subtle">Your next recommended step.</p>
+              <p className="edsync-hover-detail">Your next recommended step.</p>
             </div>
             {visibility.practice && (
               <Link href="/practice" className="btn-secondary justify-center text-sm">
-                Practice & AI
+                Practice
               </Link>
             )}
           </div>
@@ -655,12 +655,12 @@ export default function StudentDashboard() {
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
               <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No lesson assigned yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Join a class to get started.</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Join a class.</p>
             </div>
           )}
         </section>
 
-        <section className="premium-surface rounded-2xl p-4 sm:p-5">
+        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <h2 className="font-display text-xl font-bold">Join a class</h2>
           <div className="mt-3 flex gap-2">
             <input
@@ -687,14 +687,14 @@ export default function StudentDashboard() {
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Learning path</h2>
-              <p className="text-sm text-edsync-subtle">Grouped by what needs attention.</p>
+              <p className="edsync-hover-detail">Grouped by what needs attention.</p>
             </div>
           </div>
 
           {!visibility.newContent ? (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
               <p className="font-semibold text-edsync-text">Learning path hidden</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Turn on New content in Notifications to show lessons here.</p>
+              <p className="mt-1 text-sm text-edsync-subtle">New content is off.</p>
             </div>
           ) : loading ? (
             <div className="space-y-3">
@@ -706,9 +706,7 @@ export default function StudentDashboard() {
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-10 text-center">
               <Target className="mx-auto mb-4 h-9 w-9 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No lessons yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">
-                Join a class or ask your teacher to assign a lesson.
-              </p>
+              <p className="mt-1 text-sm text-edsync-subtle">Join a class.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -724,11 +722,11 @@ export default function StudentDashboard() {
         </section>
 
         <aside className="space-y-5">
-          <section className="premium-surface rounded-2xl p-4 sm:p-5">
+          <section className="premium-surface group rounded-2xl p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-xl font-bold">Notifications</h2>
-                <p className="text-sm text-edsync-subtle">Choose what appears on your dashboard.</p>
+                <p className="edsync-hover-detail">Choose what appears on your dashboard.</p>
               </div>
               <Megaphone className="h-5 w-5 text-edsync-amber" />
             </div>
@@ -755,13 +753,11 @@ export default function StudentDashboard() {
               {notificationsPaused ? (
                 <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-surface p-3">
                   <p className="text-sm font-semibold text-edsync-text">Notifications are paused</p>
-                  <p className="mt-1 text-xs text-edsync-subtle">
-                    Turn on Master or any notification type to show updates here again.
-                  </p>
+                  <p className="mt-1 text-xs text-edsync-subtle">All updates are hidden.</p>
                 </div>
               ) : planner.announcements.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  New class notifications will appear here.
+                  No updates yet.
                 </p>
               ) : (
                 planner.announcements.slice(0, 3).map((item) => (
@@ -788,7 +784,7 @@ export default function StudentDashboard() {
               <div className="mt-4 grid gap-2">
                 {visibility.practice && (
                   <Link href="/practice" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Practice & AI <ArrowRight className="h-4 w-4" />
+                    Practice <ArrowRight className="h-4 w-4" />
                   </Link>
                 )}
                 {visibility.grades && (
@@ -798,7 +794,7 @@ export default function StudentDashboard() {
                 )}
                 {visibility.feedback && (
                   <Link href="/student/notes" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Feedback notes <ArrowRight className="h-4 w-4" />
+                    Feedback <ArrowRight className="h-4 w-4" />
                   </Link>
                 )}
               </div>
@@ -840,7 +836,7 @@ export default function StudentDashboard() {
             <div className="space-y-3">
               {visibleEvents.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Deadlines and personal study blocks will appear here.
+                  No events yet.
                 </p>
               ) : (
                 visibleEvents.slice(0, 5).map((event) => (
@@ -883,7 +879,7 @@ export default function StudentDashboard() {
             <div className="mt-4 space-y-3">
               {goals.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Create a goal to make your next study session concrete.
+                  No goals yet.
                 </p>
               ) : (
                 goals.map((goal) => {
@@ -927,7 +923,7 @@ export default function StudentDashboard() {
             <div className="mt-4 space-y-3">
               {reflections.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  Reflection notes will appear after lessons.
+                  No reflections yet.
                 </p>
               ) : (
                 reflections.map((reflection) => (
