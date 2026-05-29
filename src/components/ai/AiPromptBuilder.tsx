@@ -202,6 +202,8 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
               key={contract.id}
               type="button"
               onClick={() => updateContract(contract.id)}
+              title={contract.description}
+              aria-label={`${contract.title}: ${contract.description}`}
               className={`w-full rounded-lg border p-3 text-left transition ${
                 selectedId === contract.id
                   ? "border-edsync-blue bg-edsync-blue/10"
@@ -209,7 +211,7 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
               }`}
             >
               <p className="text-sm font-semibold">{contract.title}</p>
-              <p className="mt-1 line-clamp-2 text-xs text-edsync-subtle">{contract.description}</p>
+              <span className="edsync-hover-detail">{contract.description}</span>
             </button>
           ))}
         </div>
@@ -217,10 +219,10 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
 
       <div className="min-w-0 rounded-xl border border-edsync-border bg-edsync-card p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
+          <div className="group" tabIndex={0} title={selectedContract.description}>
             <p className="text-sm font-semibold text-edsync-blue">{selectedContract.feature.replaceAll("_", " ")}</p>
             <h2 className="font-display text-2xl font-bold">{selectedContract.title}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-edsync-subtle">{selectedContract.description}</p>
+            <p className="edsync-hover-detail max-w-2xl">{selectedContract.description}</p>
           </div>
           <button type="button" onClick={runWorkflow} disabled={state.loading} className="btn-primary px-4 py-2 text-sm disabled:opacity-60">
             {state.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -268,8 +270,8 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold">Output contract</p>
-              <p className="text-xs text-edsync-subtle">
-                {Object.keys(selectedContract.outputShape).join(", ")} {"->"} {selectedContract.insertTargets.join(", ")}
+              <p className="text-xs text-edsync-subtle" title={`${Object.keys(selectedContract.outputShape).join(", ")} -> ${selectedContract.insertTargets.join(", ")}`}>
+                Shape ready.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -278,7 +280,7 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
                 {state.inserted ? "Inserted" : "Save draft"}
               </button>
               <Link href="/notes" className="btn-secondary px-3 py-2 text-sm">
-                Open drafts <ArrowRight className="h-4 w-4" />
+                Drafts <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
