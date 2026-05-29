@@ -12,7 +12,6 @@ import {
   GraduationCap,
   Layers3,
   Search,
-  Sparkles,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -395,11 +394,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
 
         <div className="edsync-emil-hero-grid">
           <div className="edsync-emil-copy">
-            <span className="edsync-emil-kicker">
-              <Sparkles className="h-4 w-4" />
-              One EdSync loop.
-            </span>
-            <h1 id="emil-intro-title">Teach. Practice. Prove progress.</h1>
+            <h1 id="emil-intro-title">Teach. Practice. Prove.</h1>
             <p>Individual learning or organization portals, without separate product paths.</p>
             <div className="edsync-emil-roles" aria-label="EdSync role paths">
               {roleCards.map((role) => {
