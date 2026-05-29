@@ -112,9 +112,9 @@ const workflowSlides: WorkflowSlide[] = [
     title: "Choose an entrance",
     tabLabel: "Entrance",
     detail: "Individual or organization.",
-    route: "/catalog",
-    image: "/showcase/login-organization.jpg",
-    panelTitle: "Catalog and access",
+    route: "/auth/signup",
+    image: "/showcase/signup-access.png",
+    panelTitle: "Workspace setup",
     pills: ["Individual", "Organization", "Roles"],
   },
   {
