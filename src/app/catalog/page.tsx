@@ -39,9 +39,9 @@ export default async function CatalogPage({
   const cardLabels = {
     featured: copy.featured,
     free: copy.free,
-    preview: `${copy.courses}. ${copy.start}.`,
+    preview: "Course preview.",
     flexible: copy.anyDuration,
-    view: copy.courses,
+    view: "View",
     minutes: "min",
   };
   const catalogHref = (params: Record<string, string> = {}) => {
