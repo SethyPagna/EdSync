@@ -75,7 +75,7 @@ export default function StudentDiscussionsPage() {
     <div className="page-shell max-w-5xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-          Class conversations
+          Class talk
         </p>
         <h1 className="mt-1 font-display text-3xl font-bold">Discussions</h1>
         <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -85,7 +85,7 @@ export default function StudentDiscussionsPage() {
           </p>
           {requestedClassId !== ALL_CLASSES_SCOPE && (
             <Link href="/student/discussions" className="btn-secondary w-fit px-3 py-2 text-sm">
-              All discussions
+              All
             </Link>
           )}
         </div>
@@ -126,7 +126,7 @@ export default function StudentDiscussionsPage() {
                 <details className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
                   <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-edsync-text marker:hidden">
                     <MessageSquareText className="h-4 w-4 text-edsync-blue" />
-                    Add response
+                    Reply
                   </summary>
                   <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
                     <textarea
@@ -135,7 +135,7 @@ export default function StudentDiscussionsPage() {
                       onChange={(event) =>
                         setResponses((current) => ({ ...current, [thread.id]: event.target.value }))
                       }
-                      placeholder="Add your response..."
+                      placeholder="Reply..."
                     />
                     <button className="btn-primary self-end justify-center" type="button" onClick={() => post(thread.id)}>
                       <Send className="h-4 w-4" />
