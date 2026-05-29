@@ -70,8 +70,8 @@ const previewSlides: PreviewSlide[] = [
     route: "/auth/login",
     accent: "access",
     image: "/showcase/login-organization.jpg",
-    summary: "Individual learners and organization users enter through one clear account flow.",
-    tags: ["Catalog", "Organization", "Return path"],
+    summary: "Personal or organization access.",
+    tags: ["Catalog", "Portal", "Return"],
   },
   {
     id: "teacher",
@@ -80,8 +80,8 @@ const previewSlides: PreviewSlide[] = [
     route: "/teacher/lessons/create",
     accent: "studio",
     image: "/showcase/teacher-create.jpg",
-    summary: "Teachers can start with AI, a draft, or a blank canvas.",
-    tags: ["AI draft", "Canvas", "Templates"],
+    summary: "AI, draft, or blank canvas.",
+    tags: ["AI", "Canvas", "Templates"],
   },
   {
     id: "student",
@@ -90,8 +90,8 @@ const previewSlides: PreviewSlide[] = [
     route: "/student/dashboard",
     accent: "practice",
     image: "/showcase/student-dashboard.jpg",
-    summary: "Learners see progress, catalog courses, practice, and class context in one place.",
-    tags: ["Progress", "Practice", "Catalog"],
+    summary: "Courses, practice, and progress.",
+    tags: ["Courses", "Practice", "Progress"],
   },
   {
     id: "admin",
@@ -100,8 +100,8 @@ const previewSlides: PreviewSlide[] = [
     route: "/admin/dashboard",
     accent: "admin",
     image: "/showcase/admin-dashboard.jpg",
-    summary: "Owners manage portals, permissions, governance, and platform evidence.",
-    tags: ["Admin", "Governance", "Audit"],
+    summary: "Portals, permissions, and evidence.",
+    tags: ["Admin", "Roles", "Audit"],
   },
 ];
 
@@ -109,68 +109,68 @@ const workflowSlides: WorkflowSlide[] = [
   {
     id: "catalog",
     icon: Search,
-    title: "Choose the right entrance",
+    title: "Choose an entrance",
     tabLabel: "Entrance",
-    detail: "Individual catalog. Organization portal. Teacher and student views.",
+    detail: "Individual or organization.",
     route: "/catalog",
     image: "/showcase/login-organization.jpg",
     panelTitle: "Catalog and access",
-    pills: ["Individual", "Organization", "Teacher + Student"],
+    pills: ["Individual", "Organization", "Roles"],
   },
   {
     id: "access",
     icon: UserRound,
-    title: "Sign in with context",
+    title: "Sign in cleanly",
     tabLabel: "Access",
-    detail: "One login understands personal or organization access.",
+    detail: "Personal or portal access.",
     route: "/auth/login",
     image: "/showcase/login-organization.jpg",
     panelTitle: "Workspace access",
-    pills: ["Organization code", "Individual workspace", "Return after login"],
+    pills: ["Org code", "Individual", "Return"],
   },
   {
     id: "canvas",
     icon: Layers3,
-    title: "Create with a lesson canvas",
+    title: "Create lessons",
     tabLabel: "Create",
-    detail: "Templates, media, quizzes, and practice stay on the lesson canvas.",
+    detail: "Templates, media, quizzes.",
     route: "/teacher/lessons/create",
     image: "/showcase/teacher-create.jpg",
     panelTitle: "Lesson Creation Studio",
-    pills: ["Templates", "Elements", "Bottom pages"],
+    pills: ["Templates", "Media", "Pages"],
   },
   {
     id: "assign",
     icon: CheckCircle2,
-    title: "Assign work with context",
+    title: "Assign work",
     tabLabel: "Assign",
-    detail: "Class work, deadlines, and scoring stay connected.",
+    detail: "Deadlines and scoring.",
     route: "/teacher/work",
     image: "/showcase/teacher-work.jpg",
     panelTitle: "Class work",
-    pills: ["Assignments", "Deadlines", "Weighted score"],
+    pills: ["Work", "Deadlines", "Scores"],
   },
   {
     id: "practice",
     icon: Brain,
-    title: "Learning stays personal",
+    title: "Practice adapts",
     tabLabel: "Practice",
-    detail: "Courses, assignments, and AI practice meet in one student space.",
+    detail: "Courses, class work, AI.",
     route: "/student/dashboard",
     image: "/showcase/student-dashboard.jpg",
     panelTitle: "Student dashboard",
-    pills: ["Catalog courses", "Practice & AI", "Class join"],
+    pills: ["Courses", "Practice", "Classes"],
   },
   {
     id: "proof",
     icon: BarChart3,
-    title: "Progress becomes evidence",
+    title: "Prove progress",
     tabLabel: "Proof",
-    detail: "Grades, feedback, reports, and audit trails connect the story.",
+    detail: "Grades, feedback, reports.",
     route: "/admin/dashboard",
     image: "/showcase/admin-dashboard.jpg",
     panelTitle: "Evidence dashboard",
-    pills: ["Gradebook", "Reports", "Admin audit"],
+    pills: ["Grades", "Reports", "Audit"],
   },
 ];
 
@@ -199,14 +199,14 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       {
         id: "individual",
         label: individualLabel,
-        detail: "Personal catalog and practice.",
+        detail: "Personal learning.",
         icon: UserRound,
         href: "/auth/signup?mode=individual",
       },
       {
         id: "organization",
         label: organizationLabel,
-        detail: `${teacherLabel} and ${studentLabel} portal.`,
+        detail: `${teacherLabel} + ${studentLabel}.`,
         icon: Building2,
         href: "/auth/signup?mode=organization",
       },
@@ -348,8 +348,8 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       `${labels.free} ${labels.courses}`,
       `${labels.paid} ${labels.courses}`,
       "Organization portal",
-      "Practice and AI Tutor",
-      "Teacher gradebook feedback",
+      "AI practice",
+      "Gradebook",
     ],
     [labels.courses, labels.free, labels.paid],
   );
@@ -401,8 +401,8 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
 
         <div className="edsync-emil-hero-grid">
           <div className="edsync-emil-copy">
-            <h1 id="emil-intro-title">Learn. Practice. Succeed.</h1>
-            <p>Individual and organization access in one workspace.</p>
+            <h1 id="emil-intro-title">Create. Practice. Grow.</h1>
+            <p>Personal learning or organization portals.</p>
             <div className="edsync-emil-roles" aria-label="EdSync role paths">
               {roleCards.map((role) => {
                 const Icon = role.icon;
@@ -525,11 +525,11 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
         <div className="edsync-emil-search">
           <div>
             <span>{labels.catalog}</span>
-            <h2>Search courses and academies</h2>
+            <h2>Search courses</h2>
           </div>
           <form action="/catalog">
             <Search className="h-4 w-4" />
-            <input name="q" placeholder="Search courses, portals, practice, gradebook..." />
+            <input name="q" placeholder="Search courses or portals..." />
             <select name="price" defaultValue="all">
               <option value="all">{labels.free} + {labels.paid}</option>
               <option value="free">{labels.free}</option>
