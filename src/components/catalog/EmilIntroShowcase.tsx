@@ -401,7 +401,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
 
         <div className="edsync-emil-hero-grid">
           <div className="edsync-emil-copy">
-            <h1 id="emil-intro-title">Teach. Practice. Prove.</h1>
+            <h1 id="emil-intro-title">Learn. Practice. Succeed.</h1>
             <p>Individual and organization access in one workspace.</p>
             <div className="edsync-emil-roles" aria-label="EdSync role paths">
               {roleCards.map((role) => {
