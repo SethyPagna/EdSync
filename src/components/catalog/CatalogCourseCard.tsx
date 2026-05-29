@@ -26,9 +26,9 @@ export default function CatalogCourseCard({
   labels = {
     featured: "Featured",
     free: "Free",
-    preview: "Preview this course and enroll when you are ready.",
+    preview: "Course preview.",
     flexible: "Flexible",
-    view: "View course",
+    view: "View",
     minutes: "min",
   },
 }: CatalogCourseCardProps) {
