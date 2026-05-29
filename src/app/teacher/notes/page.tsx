@@ -451,7 +451,7 @@ export default function TeacherNotesPage() {
               <div className="mt-4 rounded-xl border border-edsync-border bg-edsync-card p-3">
                 <p className="font-display text-lg font-bold">{personalDraft.title || "Preview title"}</p>
                 <p className="mt-2 line-clamp-4 text-sm leading-6 text-edsync-subtle">
-                  {personalDraft.body || "Your teaching note preview will appear here."}
+                  {personalDraft.body || "Preview"}
                 </p>
                 {personalDraft.mediaUrl && (
                   <p className={`mt-3 text-xs font-semibold ${safePersonalMedia ? "text-edsync-emerald" : "text-rose-600"}`}>
@@ -461,7 +461,7 @@ export default function TeacherNotesPage() {
               </div>
               <button type="submit" disabled={savingPersonal} className="btn-primary mt-4 w-full justify-center">
                 <Save className="h-4 w-4" />
-                {savingPersonal ? "Saving..." : "Save note"}
+                {savingPersonal ? "Saving..." : "Save"}
               </button>
             </aside>
           </div>
@@ -470,9 +470,9 @@ export default function TeacherNotesPage() {
 
       {formOpen && (
         <form onSubmit={save} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-          <div className="mb-3">
+          <div className="group mb-3">
             <h2 className="font-display text-lg font-bold">{editingId ? "Edit feedback note" : "New feedback note"}</h2>
-            <p className="text-sm text-edsync-subtle">
+            <p className="edsync-hover-detail">
               Shared notes appear in the student's personal notes workspace when visibility allows it.
             </p>
           </div>
@@ -534,9 +534,9 @@ export default function TeacherNotesPage() {
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
+            <div className="group">
               <h2 className="font-display text-xl font-bold">Teaching notes</h2>
-              <p className="text-sm text-edsync-subtle">Personal planning notes with designs, links, images, and video cues.</p>
+              <p className="edsync-hover-detail">Planning notes, links, media, and lesson ideas.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
@@ -569,7 +569,7 @@ export default function TeacherNotesPage() {
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
               <StickyNote className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
               <p className="font-semibold text-edsync-text">No teaching notes yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Create a note for planning, media, links, or lesson ideas.</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Start with one note.</p>
             </div>
           ) : (
             <div className={viewMode === "grid" ? "grid gap-3 md:grid-cols-2" : "grid gap-3"}>
@@ -591,7 +591,7 @@ export default function TeacherNotesPage() {
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-edsync-subtle">{personalNoteText(note)}</p>
                     {media && (
                       <a href={media.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                        Open attached {media.kind}
+                        Open {media.kind}
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
@@ -617,9 +617,9 @@ export default function TeacherNotesPage() {
         </div>
 
         <aside className="space-y-3">
-          <div>
+          <div className="group">
             <h2 className="font-display text-xl font-bold">Student feedback</h2>
-            <p className="text-sm text-edsync-subtle">Notes shared with or kept about students.</p>
+            <p className="edsync-hover-detail">Shared or private student notes.</p>
           </div>
           <div className="rounded-2xl border border-edsync-border bg-edsync-card">
         <div className="divide-y divide-edsync-border">
