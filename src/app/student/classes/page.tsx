@@ -136,12 +136,12 @@ export default function StudentClassesPage() {
 
   return (
     <div className="page-shell space-y-5">
-      <header className="premium-panel rounded-2xl p-4 sm:p-5">
+      <header className="premium-panel group rounded-2xl p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Teachers & classes</p>
         <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="font-display text-3xl font-bold">Teachers & Classes</h1>
-            <p className="mt-1 max-w-2xl text-sm text-edsync-subtle">
+            <p className="edsync-hover-detail max-w-2xl">
               Join an organization class, see who teaches it, and jump into assigned learning without returning to the dashboard.
             </p>
           </div>
@@ -183,11 +183,11 @@ export default function StudentClassesPage() {
         </div>
       </section>
 
-      <section className="premium-surface rounded-2xl p-4 sm:p-5">
+      <section className="premium-surface group rounded-2xl p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="font-display text-xl font-bold">Your classes</h2>
-            <p className="text-sm text-edsync-subtle">Organization classes, teacher context, and class-linked work.</p>
+            <p className="edsync-hover-detail">Organization classes, teacher context, and class-linked work.</p>
           </div>
           <Link href="/student/lessons" className="btn-secondary px-3 py-2 text-sm">
             Lessons <ArrowRight className="h-4 w-4" />
@@ -204,7 +204,7 @@ export default function StudentClassesPage() {
           <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
             <UsersRound className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
             <p className="font-semibold text-edsync-text">No classes yet</p>
-            <p className="mt-1 text-sm text-edsync-subtle">Enter a class code above, or continue browsing self-paced courses.</p>
+            <p className="mt-1 text-sm text-edsync-subtle">Use a class code.</p>
             <Link href="/catalog" className="btn-secondary mx-auto mt-4 w-fit px-4 py-2 text-sm">
               Browse catalog <ArrowRight className="h-4 w-4" />
             </Link>
@@ -212,14 +212,14 @@ export default function StudentClassesPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {classes.map((classItem) => (
-              <article key={classItem.id} className="premium-card rounded-2xl p-4">
+              <article key={classItem.id} className="premium-card group rounded-2xl p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
                     <GraduationCap className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-display text-xl font-bold text-edsync-text">{classItem.name}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">
+                    <p className="edsync-hover-detail">
                       {classItem.description || `${classItem.subject || "Class"} learning space`}
                     </p>
                   </div>
