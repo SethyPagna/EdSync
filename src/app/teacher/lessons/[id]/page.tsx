@@ -1574,9 +1574,7 @@ export default function TeacherLessonDetail() {
                   </div>
                 ))}
                 {objectives.length === 0 && (
-                  <p className="text-xs text-edsync-subtle">
-                    No objectives yet. Click + Add.
-                  </p>
+                  <p className="text-xs text-edsync-subtle">No objectives yet.</p>
                 )}
               </div>
             </div>
@@ -1840,20 +1838,16 @@ export default function TeacherLessonDetail() {
             ))}
           </div>
 
-          <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-subtle">
-            <strong className="text-edsync-text">How it works:</strong> Pre-check
-            questions appear before the lesson starts. Micro-check questions
-            appear after a specific page. Final quiz questions appear at the
-            end. Quiz blocks (created in the Canvas tab) appear inline during
-            the lesson.
+          <div className="group p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-subtle">
+            <strong className="text-edsync-text">Question flow</strong>
+            <p className="edsync-hover-detail">
+              Pre-checks start the lesson. Micro-checks follow pages. Final quiz questions close it.
+            </p>
           </div>
 
           {qDrafts.length === 0 && (
             <div className="edsync-card text-center py-10">
-              <p className="text-edsync-text font-medium mb-4">
-                No questions yet. Add pre-checks, micro-checks, or final quiz
-                questions.
-              </p>
+              <p className="text-edsync-text font-medium mb-4">No questions yet.</p>
             </div>
           )}
 
@@ -2108,7 +2102,7 @@ export default function TeacherLessonDetail() {
               Assign to Class
             </h3>
             <p className="text-edsync-subtle text-sm mb-4">
-              Students in that class will see this lesson in their dashboard.
+              Assign to a class.
               {lesson.status !== "published" && (
                 <span className="text-edsync-amber">
                   {" "}
