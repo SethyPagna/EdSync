@@ -273,14 +273,14 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const router = useRouter();
   const edsync = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [collapsed, setCollapsed] = useState(() => sidebarCollapsedFromStorage());
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
-  const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(() => sessionRoleFromCookie());
-  const [workspaceContext] = useState<WorkspaceContext | null>(() => workspaceContextFromStorage());
+  const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
+  const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
   const requestedAdminViewMode = adminViewModeFromLocation();
-  const [sectionOrder, setSectionOrder] = useState<string[]>(() => readSectionOrder(sectionOrderStorageKey(role)));
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const copy = roleCopy[role];
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
   const adminViewMode = isAdminViewMode
@@ -291,7 +291,13 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const stored = window.localStorage.getItem("edsync-theme");
     const useDark = stored === "dark";
     document.documentElement.classList.toggle("dark", useDark);
-  }, []);
+    queueMicrotask(() => {
+      setCollapsed(sidebarCollapsedFromStorage());
+      setSessionRole(sessionRoleFromCookie());
+      setWorkspaceContext(workspaceContextFromStorage());
+      setSectionOrder(readSectionOrder(sectionOrderStorageKey(role)));
+    });
+  }, [role]);
 
   useEffect(() => {
     window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
