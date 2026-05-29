@@ -56,9 +56,11 @@ npm.cmd run verify
 `verify` runs typecheck, ESLint, the Vitest suite, a moderate dependency audit,
 and a production Next.js build.
 
-Current dependency note: ESLint stays on 9.x until the React plugin bundled by
+Current dependency note: ESLint stays on 9.x until the plugin chain bundled by
 `eslint-config-next` declares ESLint 10 support. A direct ESLint 10 upgrade
-currently fails while loading `react/display-name`.
+currently fails while loading React rules such as `react/display-name` and
+`react/no-direct-mutation-state`, and npm reports invalid peers for the bundled
+React, import, and jsx-a11y plugins.
 
 ## Repository Layout
 
