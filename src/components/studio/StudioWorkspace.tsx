@@ -783,7 +783,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
               {serverItems.length === 0 && (
                 <p className="rounded-lg border border-dashed border-edsync-border p-3 text-xs leading-5 text-edsync-subtle">
-                  No saved items yet.
+                  No saved items.
                 </p>
               )}
               {serverItems.map((item) => (
@@ -916,7 +916,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     <div className="flex flex-wrap gap-2">
                       <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadUniverEngine}>
                         <Grid3X3 className="h-4 w-4" />
-                        Advanced tools
+                        Advanced
                       </button>
                       <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => updateDraft({ ...draft, sheet: addSheetRow(draft.sheet) })}>
                         <Plus className="h-4 w-4" />
@@ -1116,7 +1116,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                               className="mt-4 min-h-24 w-full resize-none bg-transparent text-lg leading-7 outline-none placeholder:text-current/50"
                               value={activeSlide.body}
                               onChange={(event) => updateActiveSlide({ body: event.target.value })}
-                              placeholder="Add slide body, media notes, quiz prompt, or activity instructions..."
+                              placeholder="Slide body or prompt"
                             />
                           </div>
                           <p className="text-sm opacity-70">
@@ -1226,7 +1226,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       </div>
                       <Link href="/ai?task=create-slide-deck" className="btn-secondary w-full justify-center py-2 text-sm">
                         <Sparkles className="h-4 w-4" />
-                        AI Co-creator
+                        AI
                       </Link>
                     </div>
                   </div>
@@ -1297,7 +1297,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   </div>
                   {visibleContentBlocks.length === 0 && (
                     <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
-                      No blocks saved yet.
+                      No blocks.
                     </div>
                   )}
                   {visibleLearningBlocks.map(({ block, learningBlock, stateLabel }) => (
@@ -1388,7 +1388,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="Show" icon={MonitorPlay}>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <button type="button" onClick={() => setPresenting(true)} className="btn-secondary justify-center py-2">Present</button>
-                  <button type="button" onClick={() => setStatusMessage("Fade transition selected")} className="btn-secondary justify-center py-2">Transitions</button>
+                  <button type="button" onClick={() => setStatusMessage("Fade transition selected")} className="btn-secondary justify-center py-2">Fade</button>
                   <button type="button" onClick={() => setStatusMessage("Rise animation selected")} className="btn-secondary justify-center py-2">Animation</button>
                   <button type="button" onClick={() => selectKind("slide")} className="btn-secondary justify-center py-2">Notes</button>
                 </div>
@@ -1398,7 +1398,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <div className="space-y-2 text-sm text-edsync-subtle">
                   <button type="button" onClick={archiveCurrentItem} className="btn-secondary w-full justify-center py-2 text-sm">
                     <Trash2 className="h-4 w-4" />
-                    Archive item
+                    Archive
                   </button>
                 </div>
               </Panel>
@@ -1408,7 +1408,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   <div className="space-y-2">
                     {historyEvents.length === 0 && (
                       <p className="rounded-lg border border-dashed border-edsync-border p-3 text-sm text-edsync-subtle">
-                        No history yet.
+                        No history.
                       </p>
                     )}
                     {historyEvents.map((event) => (
