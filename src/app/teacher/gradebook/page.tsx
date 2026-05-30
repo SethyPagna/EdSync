@@ -110,9 +110,9 @@ export default function TeacherGradebookPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-              Assessment
+              Feedback
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Gradebook</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">Progress Review</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
               {classLabel}, {rows.length} learner{rows.length !== 1 ? "s" : ""}
             </p>
@@ -156,7 +156,7 @@ export default function TeacherGradebookPage() {
             onChange={(event) => setForm({ ...form, studentId: event.target.value })}
             required
           >
-            <option value="">Student</option>
+            <option value="">Learner</option>
             {filteredStudents.map((student) => (
               <option key={`${student.class_id}-${student.id}`} value={student.id}>
                 {student.full_name || student.email}
@@ -212,7 +212,7 @@ export default function TeacherGradebookPage() {
             </div>
             <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-edsync-border bg-edsync-surface p-4">
               <span>
-                <span className="block text-sm font-semibold text-edsync-text">Visible to student</span>
+                <span className="block text-sm font-semibold text-edsync-text">Visible to learner</span>
                 <span className="mt-1 block text-xs text-edsync-subtle">
                   Turn off to save as draft until review is ready.
                 </span>
