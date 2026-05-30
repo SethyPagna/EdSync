@@ -137,11 +137,11 @@ export async function POST(request: NextRequest) {
         : "N/A";
 
     const context = `
-Class data:
-- Teacher profile:
+Space data:
+- Creator profile:
 ${aiContext.prompt}
 
-- Total students: ${studentStats.length}
+- Total learners: ${studentStats.length}
 - At risk (below 60%): ${atRisk.length} - names: ${atRisk.map((student) => student.name).join(", ") || "none"}
 - Advanced (80%+): ${advanced.length}
 - Reflection entries logged: ${reflectionsLogged}
@@ -150,7 +150,7 @@ ${aiContext.prompt}
 - Practice review mode needing attention: ${reviewSignal.topModeLabel}
 - Practice review status: ${reviewSignal.copy}
 - Common knowledge gaps: ${uniqueGaps.slice(0, 6).join(", ") || "none identified yet"}
-- Avg class score: ${classAverage}%
+- Avg space result: ${classAverage}%
 `;
 
     const raw = await generateAIChat({
@@ -158,11 +158,11 @@ ${aiContext.prompt}
         {
           role: "system",
           content:
-            "You are an expert EdSync instructional coach. Give specific, actionable intervention suggestions for a teacher. Personalize recommendations to the teacher profile, grade level, subjects, and class evidence. Reply ONLY with a JSON array of 5 suggestion strings. No markdown, no preamble.",
+            "You are an expert EdSync learning coach. Give specific, actionable intervention suggestions for a creator. Personalize recommendations to the creator profile, audience level, subjects, and space evidence. Reply ONLY with a JSON array of 5 suggestion strings. No markdown, no preamble.",
         },
         {
           role: "user",
-          content: `Based on this class data, provide 5 specific intervention suggestions:\n${context}\nReply ONLY with: ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4", "suggestion 5"]`,
+          content: `Based on this space data, provide 5 specific intervention suggestions:\n${context}\nReply ONLY with: ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4", "suggestion 5"]`,
         },
       ],
       maxTokens: 500,
