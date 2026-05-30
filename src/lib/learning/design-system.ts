@@ -422,7 +422,7 @@ export const DESIGN_BLOCKS: DesignBlock[] = [
     id: "rubric",
     title: "Rubric",
     kind: "assess",
-    description: "Criteria table for teacher feedback and student self-check.",
+    description: "Criteria table for creator feedback and learner self-check.",
     insertTarget: "new_sheet",
     estimatedMinutes: 10,
     content: { columns: ["Criteria", "Developing", "Proficient", "Advanced"] },
