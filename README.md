@@ -68,6 +68,12 @@ To guard the TypeScript-first source policy, run:
 npm.cmd run check:typescript
 ```
 
+To guard package script references after moving files, run:
+
+```powershell
+npm.cmd run check:scripts
+```
+
 Current dependency note: ESLint stays on 9.x until the plugin chain bundled by
 `eslint-config-next` declares ESLint 10 support. A direct ESLint 10 upgrade
 currently fails while loading React rules such as `react/display-name` and
@@ -95,6 +101,8 @@ React, import, and jsx-a11y plugins.
 - `npm.cmd run check:typescript` fails if tracked JavaScript, JSX, or CJS files
   are added. The only tracked `.mjs` exceptions are runtime config files that
   must stay directly loadable by Node or the framework.
+- `npm.cmd run check:scripts` fails if `package.json` commands point at missing
+  local files after scripts, configs, or infra files move.
 
 ## Local Cleanup
 
