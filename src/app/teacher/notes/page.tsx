@@ -259,11 +259,11 @@ export default function TeacherNotesPage() {
           ...payload,
         });
       }
-      toast.success(editingPersonalId ? "Teaching note updated." : "Teaching note saved.");
+      toast.success(editingPersonalId ? "Creator note updated." : "Creator note saved.");
       resetPersonal();
       load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Teaching note was not saved.");
+      toast.error(error instanceof Error ? error.message : "Creator note was not saved.");
     } finally {
       setSavingPersonal(false);
     }
@@ -322,10 +322,10 @@ export default function TeacherNotesPage() {
           source: "teacher_notes",
         },
       });
-      toast.success("Teaching note duplicated.");
+      toast.success("Creator note duplicated.");
       load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Teaching note was not duplicated.");
+      toast.error(error instanceof Error ? error.message : "Creator note was not duplicated.");
     }
   };
 
@@ -334,10 +334,10 @@ export default function TeacherNotesPage() {
     if (!confirmed) return;
     try {
       await archiveStudioItem(note.id);
-      toast.success("Teaching note archived.");
+      toast.success("Creator note archived.");
       load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Teaching note was not archived.");
+      toast.error(error instanceof Error ? error.message : "Creator note was not archived.");
     }
   };
 
@@ -351,7 +351,7 @@ export default function TeacherNotesPage() {
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Notes</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {personalNotes.length} teaching drafts, {notes.length} student feedback notes, {visibleCount} shared.
+              {personalNotes.length} creator drafts, {notes.length} learner notes, {visibleCount} shared.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -363,11 +363,11 @@ export default function TeacherNotesPage() {
             )}
             <button type="button" onClick={() => setFormOpen(true)} className="btn-primary justify-center">
               <Plus className="h-4 w-4" />
-              Student feedback
+              Learner note
             </button>
             <button type="button" onClick={() => setPersonalOpen(true)} className="btn-secondary justify-center">
               <StickyNote className="h-4 w-4" />
-              Teaching note
+              Creator note
             </button>
           </div>
         </div>
@@ -378,7 +378,7 @@ export default function TeacherNotesPage() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-bold">
-                {editingPersonalId ? "Edit teaching note" : "New teaching note"}
+                {editingPersonalId ? "Edit creator note" : "New creator note"}
               </h2>
               <p className="text-sm text-edsync-subtle">
                 Save lesson ideas, references, media, links, and planning notes as editable drafts.
@@ -392,7 +392,7 @@ export default function TeacherNotesPage() {
                 className="edsync-input"
                 value={personalDraft.title}
                 onChange={(event) => setPersonalDraft({ ...personalDraft, title: event.target.value })}
-                placeholder="Teaching note title"
+                placeholder="Creator note title"
                 required
               />
               <textarea
@@ -409,8 +409,8 @@ export default function TeacherNotesPage() {
                 placeholder="Optional HTTPS image, video, YouTube, Vimeo, or reference link"
               />
               <label className="flex flex-col gap-2 rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle sm:flex-row sm:items-center sm:justify-between">
-                <span>
-                  <span className="font-semibold text-edsync-text">Upload teaching media</span>
+                  <span>
+                  <span className="font-semibold text-edsync-text">Upload media</span>
                   <span className="block text-xs">Attach safe references, examples, videos, PDFs, or source docs.</span>
                 </span>
                 <span className="btn-secondary w-fit px-3 py-2 text-sm">
@@ -473,7 +473,7 @@ export default function TeacherNotesPage() {
           <div className="group mb-3">
             <h2 className="font-display text-lg font-bold">{editingId ? "Edit feedback note" : "New feedback note"}</h2>
             <p className="edsync-hover-detail">
-              Shared notes appear in the student's personal notes workspace when visibility allows it.
+              Shared notes appear in the learner's personal notes workspace when visibility allows it.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
@@ -484,7 +484,7 @@ export default function TeacherNotesPage() {
               disabled={Boolean(editingId)}
               required
             >
-              <option value="">Student</option>
+              <option value="">Learner</option>
               {students.map((student) => (
                 <option key={`${student.class_id}-${student.id}`} value={student.id}>
                   {student.full_name || student.email} / {student.class_name}
@@ -503,9 +503,9 @@ export default function TeacherNotesPage() {
               value={form.visibility}
               onChange={(event) => setForm({ ...form, visibility: event.target.value })}
             >
-              <option value="student">Student visible</option>
-              <option value="teacher">Teacher only</option>
-              <option value="guardian">Student/guardian</option>
+              <option value="student">Learner visible</option>
+              <option value="teacher">Creator only</option>
+              <option value="guardian">Learner/guardian</option>
             </select>
             <select
               className="edsync-input"
@@ -535,7 +535,7 @@ export default function TeacherNotesPage() {
         <div className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="group">
-              <h2 className="font-display text-xl font-bold">Teaching notes</h2>
+              <h2 className="font-display text-xl font-bold">Creator notes</h2>
               <p className="edsync-hover-detail">Planning notes, links, media, and lesson ideas.</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -568,7 +568,7 @@ export default function TeacherNotesPage() {
           {personalNotes.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
               <StickyNote className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">No teaching notes yet</p>
+              <p className="font-semibold text-edsync-text">No creator notes yet</p>
               <p className="mt-1 text-sm text-edsync-subtle">Start with one note.</p>
             </div>
           ) : (
@@ -618,8 +618,8 @@ export default function TeacherNotesPage() {
 
         <aside className="space-y-3">
           <div className="group">
-            <h2 className="font-display text-xl font-bold">Student feedback</h2>
-            <p className="edsync-hover-detail">Shared or private student notes.</p>
+            <h2 className="font-display text-xl font-bold">Learner notes</h2>
+            <p className="edsync-hover-detail">Shared or private learner notes.</p>
           </div>
           <div className="rounded-2xl border border-edsync-border bg-edsync-card">
         <div className="divide-y divide-edsync-border">
