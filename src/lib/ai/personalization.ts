@@ -67,7 +67,7 @@ export async function loadAiUserContext(userId: string) {
     "EdSync user profile:",
     `- Role: ${profile.role}`,
     `- Name: ${profile.full_name || "not provided"}`,
-    `- Grade level: ${profile.grade_level || "not provided"}`,
+    `- Audience level: ${profile.grade_level || "not provided"}`,
     `- Subjects: ${subjects.length ? subjects.join(", ") : "not provided"}`,
     `- Interests: ${interests.length ? interests.join(", ") : "not provided"}`,
     `- Preferred text size/detail: ${textSize}`,
