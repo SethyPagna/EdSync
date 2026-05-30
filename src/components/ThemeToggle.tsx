@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 
 export type ThemePreference = "light" | "dark";
@@ -27,30 +27,32 @@ function applyTheme(theme: ThemePreference) {
   window.dispatchEvent(new CustomEvent("edsync-theme-change", { detail: { theme } }));
 }
 
+function subscribeThemePreference(onStoreChange: () => void) {
+  window.addEventListener("edsync-theme-change", onStoreChange);
+  return () => window.removeEventListener("edsync-theme-change", onStoreChange);
+}
+
+function readServerThemePreference(): ThemePreference {
+  return "light";
+}
+
 export default function ThemeToggle({
   compact = false,
   className = "",
   onThemeChange,
 }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
+  const theme = useSyncExternalStore(
+    subscribeThemePreference,
+    readThemePreference,
+    readServerThemePreference,
+  );
 
   useEffect(() => {
     syncThemeDocument(theme);
-
-    const handleThemeEvent = (event: Event) => {
-      const detail = (event as CustomEvent<{ theme?: ThemePreference }>).detail;
-      if (detail?.theme === "dark" || detail?.theme === "light") {
-        setTheme(detail.theme);
-      }
-    };
-
-    window.addEventListener("edsync-theme-change", handleThemeEvent);
-    return () => window.removeEventListener("edsync-theme-change", handleThemeEvent);
   }, [theme]);
 
   const toggleTheme = () => {
     const nextTheme: ThemePreference = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
     applyTheme(nextTheme);
     onThemeChange?.(nextTheme);
   };
