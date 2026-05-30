@@ -70,7 +70,21 @@ function SignupForm() {
     organizationMode === "create"
       ? organizationName
       : organizationLookup?.name || organizationCode;
-  const roleLabel = role === "teacher" ? authCopy.teacher : authCopy.student;
+  const roleOptions = {
+    teacher: {
+      label: accountType === "individual" ? "Create courses" : authCopy.teacher,
+      copy: accountType === "individual"
+        ? "Build, publish, and improve independent courses."
+        : authCopy.teacherCopy,
+    },
+    student: {
+      label: accountType === "individual" ? "Learn courses" : authCopy.student,
+      copy: accountType === "individual"
+        ? "Take courses, practice, and track progress."
+        : authCopy.studentCopy,
+    },
+  } satisfies Record<Role, { label: string; copy: string }>;
+  const roleLabel = roleOptions[role].label;
   const waitingForOrganization =
     accountType === "organization" && organizationMode === "join" && organizationStatus === "checking";
 
@@ -443,8 +457,8 @@ function SignupForm() {
         {(["teacher", "student"] as const).map((item) => {
           const Icon = roleDetails[item].icon;
           const selected = role === item;
-          const itemLabel = item === "teacher" ? authCopy.teacher : authCopy.student;
-          const itemCopy = item === "teacher" ? authCopy.teacherCopy : authCopy.studentCopy;
+          const itemLabel = roleOptions[item].label;
+          const itemCopy = roleOptions[item].copy;
           return (
             <button
               key={item}
