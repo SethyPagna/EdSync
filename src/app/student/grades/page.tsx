@@ -75,9 +75,9 @@ export default function StudentGradesPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
               Progress
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Grades</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">Progress</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {gradedScores.length} graded item{gradedScores.length !== 1 ? "s" : ""}, {feedbackCount} with feedback
+              {gradedScores.length} scored item{gradedScores.length !== 1 ? "s" : ""}, {feedbackCount} with feedback
             </p>
           </div>
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-center">
@@ -90,7 +90,7 @@ export default function StudentGradesPage() {
       <section className="group rounded-xl border border-edsync-border bg-edsync-card p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="font-display text-lg font-bold">Grade visibility</h2>
+            <h2 className="font-display text-lg font-bold">Progress visibility</h2>
             <p className="edsync-hover-detail">Choose what appears on this page. This only changes your view.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -126,7 +126,7 @@ export default function StudentGradesPage() {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <SummaryTile icon={TrendingUp} label="Current overall" value={visibility.overall ? percentText(overall) : "Hidden"} tone="text-edsync-blue" />
-        <SummaryTile icon={CheckCircle2} label="Graded" value={gradedScores.length} tone="text-edsync-emerald" />
+        <SummaryTile icon={CheckCircle2} label="Scored" value={gradedScores.length} tone="text-edsync-emerald" />
         <SummaryTile icon={MessageSquareText} label="Feedback" value={feedbackCount} tone="text-edsync-amber" />
       </section>
 
@@ -136,7 +136,7 @@ export default function StudentGradesPage() {
         </div>
         <div className="divide-y divide-edsync-border">
           {scores.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No grades yet.</p>
+            <p className="p-5 text-sm text-edsync-subtle">No progress scores yet.</p>
           ) : (
             scores.map((score) => (
               <article key={score.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center">
