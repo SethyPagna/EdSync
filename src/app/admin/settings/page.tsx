@@ -167,8 +167,8 @@ export default function AdminSettingsPage() {
           <select className="edsync-input" value={flagDraft.audience} onChange={(event) => setFlagDraft({ ...flagDraft, audience: event.target.value as FlagDraft["audience"] })}>
             <option value="all">All</option>
             <option value="admin">Admin</option>
-            <option value="teacher">Teacher</option>
-            <option value="student">Student</option>
+            <option value="teacher">Org creator</option>
+            <option value="student">Org learner</option>
           </select>
           <button className="btn-primary justify-center" type="submit">Add flag</button>
         </form>
@@ -183,8 +183,8 @@ export default function AdminSettingsPage() {
                   <select className="edsync-input" value={editDraft.audience} onChange={(event) => setEditDraft({ ...editDraft, audience: event.target.value as FlagDraft["audience"] })}>
                     <option value="all">All</option>
                     <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="student">Student</option>
+                    <option value="teacher">Org creator</option>
+                    <option value="student">Org learner</option>
                   </select>
                 </div>
               ) : (
