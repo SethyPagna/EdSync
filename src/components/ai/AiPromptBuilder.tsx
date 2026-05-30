@@ -57,7 +57,7 @@ function outputToHtml(output: unknown) {
     ["Quiz", draft.quiz],
     ["Rubric", draft.rubric],
     ["Tags", draft.tags],
-    ["Teacher Review", draft.review],
+    ["Creator Review", draft.review],
   ];
 
   return [
@@ -149,7 +149,7 @@ export default function AiPromptBuilder({ contracts, initialTask }: AiPromptBuil
           topic,
           audience: values.audience || "mixed learners",
           durationMinutes: Number(values.slideCount || 45),
-          tone: values.tone || "clear, student-friendly, professional",
+          tone: values.tone || "clear, learner-friendly, professional",
           sourceText: values.source || values.topic || "",
           designTemplateId: values.designTemplate || values.template || "",
           practiceMode: values.mode || values.practiceMode || "",
