@@ -30,7 +30,7 @@ function metadataOf(value: SecurityPayload["auditLogs"][number]["metadata"]) {
 
 function auditTitle(event: SecurityPayload["auditLogs"][number]) {
   if (event.action === "open_view_mode") {
-    return `Opened ${event.entity_id === "student" ? "Student" : "Teacher"} view`;
+    return `Opened ${event.entity_id === "student" ? "org learner" : "org creator"} view`;
   }
   return event.action
     .split("_")
