@@ -140,8 +140,9 @@ React, import, and jsx-a11y plugins.
   a Node major below the package engine.
 - `npm.cmd run check:cloudflare` fails if Wrangler resource names stop using
   EdSync-owned D1, R2, Queue, Vectorize, Worker, or Pages names.
-- `npm.cmd run check:assets` fails if referenced public assets are missing or
-  showcase screenshots are replaced with tiny placeholder files.
+- `npm.cmd run check:assets` fails if referenced public assets are missing,
+  image extensions do not match file content, or showcase screenshots are
+  replaced with tiny placeholder files.
 - `npm.cmd run check:docs` fails if README command examples or local path
   references stop matching the current project layout.
 
