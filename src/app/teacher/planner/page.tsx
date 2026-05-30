@@ -350,7 +350,7 @@ export default function TeacherPlannerPage() {
                 value={form.body}
                 onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
                 className="edsync-textarea min-h-28"
-                placeholder="Write it in student-friendly language."
+                placeholder="Write it in clear learner-friendly language."
               />
             </label>
 
