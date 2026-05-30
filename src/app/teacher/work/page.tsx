@@ -223,7 +223,7 @@ export default function TeacherWorkPage() {
   };
 
   const archiveWork = async (item: WorkItem) => {
-    const confirmed = window.confirm(`Archive "${item.title}"? Students will no longer see it as open work.`);
+    const confirmed = window.confirm(`Archive "${item.title}"? Learners will no longer see it as open work.`);
     if (!confirmed) return;
     const response = await fetch(`/api/work?id=${encodeURIComponent(item.id)}`, {
       method: "DELETE",
@@ -291,7 +291,7 @@ export default function TeacherWorkPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
               Work builder
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Assignments</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">Work</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
               {publishedCount} live / {submissionCount} submissions
             </p>
@@ -363,7 +363,7 @@ export default function TeacherWorkPage() {
           <div className="group mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit work item" : "New work item"}</h2>
-              <p className="edsync-hover-detail">Class work can notify students and sync due dates.</p>
+              <p className="edsync-hover-detail">Course work can notify learners and sync due dates.</p>
             </div>
             <ClipboardList className="h-5 w-5 text-edsync-blue" />
           </div>
