@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { adminNavItems, navGroupsForRole, shellWorkspaceLabel } from "./AppShell";
+import {
+  adminNavItems,
+  navGroupsForRole,
+  shellNavDisplayLabel,
+  shellNavGroupDisplayLabel,
+  shellWorkspaceLabel,
+} from "./AppShell";
 
 function labelsForGroup(groupLabel: string) {
   return navGroupsForRole("admin", adminNavItems).find((group) => group.label === groupLabel)?.items.map((item) => item.label) ?? [];
@@ -60,5 +66,30 @@ describe("shellWorkspaceLabel", () => {
       adminViewMode: "organization-student",
       isAdminViewMode: true,
     })).toBe("organization student workspace");
+  });
+});
+
+describe("shell nav display labels", () => {
+  it("uses creator language for individual creator workspaces", () => {
+    const workspaceContext = { type: "individual" as const };
+    expect(shellNavDisplayLabel({ label: "Create Lesson", role: "teacher", workspaceContext })).toBe("Create Course");
+    expect(shellNavDisplayLabel({ label: "Gradebook & Feedback", role: "teacher", workspaceContext })).toBe("Feedback");
+    expect(shellNavDisplayLabel({ label: "Students", role: "teacher", workspaceContext })).toBe("Learners");
+    expect(shellNavGroupDisplayLabel({ label: "Classroom", role: "teacher", workspaceContext })).toBe("Course Ops");
+  });
+
+  it("uses learner progress language for individual learner workspaces", () => {
+    const workspaceContext = { type: "individual" as const };
+    expect(shellNavDisplayLabel({ label: "Lessons", role: "student", workspaceContext })).toBe("Courses");
+    expect(shellNavDisplayLabel({ label: "Teachers & Classes", role: "student", workspaceContext })).toBe("Course Access");
+    expect(shellNavDisplayLabel({ label: "Grades", role: "student", workspaceContext })).toBe("Progress");
+    expect(shellNavGroupDisplayLabel({ label: "Support", role: "student", workspaceContext })).toBe("Progress");
+  });
+
+  it("preserves organization role labels inside organization workspaces", () => {
+    const workspaceContext = { type: "organization" as const };
+    expect(shellNavDisplayLabel({ label: "Grades", role: "student", workspaceContext })).toBe("Grades");
+    expect(shellNavDisplayLabel({ label: "Students", role: "teacher", workspaceContext })).toBe("Students");
+    expect(shellNavGroupDisplayLabel({ label: "Classroom", role: "teacher", workspaceContext })).toBe("Classroom");
   });
 });
