@@ -72,8 +72,8 @@ export async function loadAiUserContext(userId: string) {
     `- Interests: ${interests.length ? interests.join(", ") : "not provided"}`,
     `- Preferred text size/detail: ${textSize}`,
     profile.role === "student"
-      ? `- Student engagement signal: ${profile.streak_days ?? 0} day streak; personalize with current class, interests, recent submitted work, and active learning time when available.`
-      : "- Teacher goal: produce classroom-ready, editable materials.",
+      ? `- Learner engagement signal: ${profile.streak_days ?? 0} day streak; personalize with current space, interests, recent submitted work, and active learning time when available.`
+      : "- Creator goal: produce editable course materials.",
   ].join("\n");
 
   return { profile: { ...profile, subjects, interests, preferences }, prompt };
@@ -89,17 +89,17 @@ export function buildGenerationStylePrompt(style: GenerationStyle = {}) {
     depth === "zero_to_expert"
       ? "Depth: build from zero assumptions to expert transfer, with clear beginner entry points and advanced extension tasks."
       : depth === "quick"
-        ? "Depth: concise, classroom-ready, and focused on the minimum useful explanation."
+        ? "Depth: concise, ready to publish, and focused on the minimum useful explanation."
         : "Depth: balanced and grade-appropriate, with enough explanation for independent study.";
 
   const styleLine =
     languageStyle === "professional"
-      ? "Language style: polished professional classroom language, precise but still readable."
+      ? "Language style: polished professional course language, precise but still readable."
       : languageStyle === "speaking"
-        ? "Language style: natural spoken teacher script, easy to read aloud."
-        : languageStyle === "simple"
-          ? "Language style: plain language, short sentences, define terms before using them."
-          : "Language style: warm student-friendly teaching language.";
+        ? "Language style: natural spoken creator script, easy to read aloud."
+      : languageStyle === "simple"
+        ? "Language style: plain language, short sentences, define terms before using them."
+        : "Language style: warm learner-friendly course language.";
 
   return [
     depthLine,
