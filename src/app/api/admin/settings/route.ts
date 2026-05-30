@@ -9,7 +9,7 @@ import {
 import { d1Query } from "@/lib/db/d1";
 
 const DEFAULT_FLAGS = [
-  ["work_items", "Work items", "Tasks, tests, quizzes, discussions, and activities."],
+  ["work_items", "Tasks", "Courses, practice, discussions, and activities."],
   ["gradebook", "Progress feedback", "Weighted progress review and feedback."],
   ["student_notes", "Learner notes", "Creator notes visible to learners when selected."],
   ["ai_provider_fallback", "Smart AI fallback", "Use provider priority, cooldowns, and health for AI routing."],
