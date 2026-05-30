@@ -74,8 +74,6 @@ export default async function CatalogPage({
           filters: copy.filters,
           individual: authCopy.individual,
           organization: authCopy.organization,
-          teacher: authCopy.teacher,
-          student: authCopy.student,
         }}
       />
 
