@@ -31,8 +31,6 @@ type EmilIntroShowcaseProps = {
     workflow?: string;
     individual?: string;
     organization?: string;
-    teacher?: string;
-    student?: string;
     brandSubhead?: string;
   };
 };
