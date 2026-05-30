@@ -10,10 +10,10 @@ import { d1Query } from "@/lib/db/d1";
 
 const DEFAULT_FLAGS = [
   ["work_items", "Work items", "Tasks, tests, quizzes, discussions, and activities."],
-  ["gradebook", "Gradebook", "Weighted class gradebook and score review."],
-  ["student_notes", "Student notes", "Teacher notes visible to students when selected."],
+  ["gradebook", "Progress feedback", "Weighted progress review and feedback."],
+  ["student_notes", "Learner notes", "Creator notes visible to learners when selected."],
   ["ai_provider_fallback", "Smart AI fallback", "Use provider priority, cooldowns, and health for AI routing."],
-  ["email_outbox", "Email outbox", "Free compose/outbox workflow for class messages."],
+  ["email_outbox", "Email outbox", "Free compose/outbox workflow for course messages."],
 ];
 
 async function seedDefaults() {
