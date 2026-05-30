@@ -140,7 +140,7 @@ export default function TeacherProfile() {
               {profile?.avatar_url ? (
                 <Image src={profile.avatar_url} alt="" fill sizes="96px" className="object-cover" />
               ) : (
-                generateInitials(fullName || profile?.email || "Teacher")
+                generateInitials(fullName || profile?.email || "Creator")
               )}
             </div>
             <label className="btn-secondary cursor-pointer py-2 text-xs">
