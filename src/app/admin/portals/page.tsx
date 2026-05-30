@@ -172,7 +172,7 @@ export default function AdminPortalsPage() {
             <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Tenant command</p>
             <h1 className="font-display text-3xl font-bold text-edsync-text">Organizations & Portals</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-              Manage branded academy spaces, domains, public catalogs, and scoped organization access.
+              Manage branded organization portals, domains, public catalogs, and scoped access.
             </p>
           </div>
           <div className="grid gap-2 rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle sm:min-w-80">
