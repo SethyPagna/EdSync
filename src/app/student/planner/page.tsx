@@ -199,7 +199,7 @@ export default function StudentPlannerPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Planner</p>
             <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">Deadlines and study time</h1>
             <p className="edsync-hover-detail max-w-2xl">
-              See class notifications, due dates, live sessions, and your own study plan in one place.
+              See space updates, due dates, live sessions, and your own study plan in one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -292,7 +292,7 @@ export default function StudentPlannerPage() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-display text-xl font-bold text-edsync-text">Schedule</h2>
-              <p className="edsync-hover-detail">Class items and personal study blocks.</p>
+              <p className="edsync-hover-detail">Space items and personal study blocks.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex">
               {VIEW_OPTIONS.map((option) => (
@@ -336,7 +336,7 @@ export default function StudentPlannerPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="badge bg-edsync-amber/10 text-edsync-amber">Notification</span>
                         <span className="badge bg-edsync-surface text-edsync-subtle">
-                          {announcement.class_name || "Class"}
+                          {announcement.class_name || "Space"}
                         </span>
                       </div>
                       <h3 className="mt-2 font-display text-lg font-bold text-edsync-text">{announcement.title}</h3>
