@@ -26,6 +26,6 @@ export function workspaceRoleForAdminViewMode(mode: AdminViewMode): "teacher" | 
 export function adminViewModeLabel(mode: AdminViewMode) {
   if (mode === "individual") return "individual account workspace";
   if (mode === "organization") return "organization owner workspace";
-  if (mode === "organization-teacher") return "organization teacher workspace";
-  return "organization student workspace";
+  if (mode === "organization-teacher") return "organization creator workspace";
+  return "organization learner workspace";
 }
