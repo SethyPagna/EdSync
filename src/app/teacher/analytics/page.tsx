@@ -378,7 +378,7 @@ export default function TeacherAnalytics() {
   const TABS: { key: Tab; label: string }[] = [
     { key: "overview", label: "Overview" },
     { key: "heatmap", label: "Map" },
-    { key: "students", label: "Students" },
+    { key: "students", label: "Learners" },
     { key: "reflections", label: "Reflect" },
     { key: "interventions", label: "Suggest" },
     { key: "socratic", label: "AI Log" },
@@ -391,14 +391,14 @@ export default function TeacherAnalytics() {
           <h1 className="font-display font-bold text-3xl text-edsync-text">
             Analytics Dashboard
           </h1>
-          <p className="text-edsync-subtle">Real-time classroom insights</p>
+          <p className="text-edsync-subtle">Real-time course insights</p>
         </div>
         <select
           value={selectedLesson}
           onChange={(e) => setSelectedLesson(e.target.value)}
           className="edsync-input w-56 py-2"
         >
-          <option value="all">All Lessons</option>
+          <option value="all">All Courses</option>
           {lessons.map((l) => (
             <option key={l.id} value={l.id}>
               {l.title}
@@ -411,7 +411,7 @@ export default function TeacherAnalytics() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         {[
           {
-            label: "Total Students",
+            label: "Total Learners",
             value: loading ? "..." : studentStats.length,
             icon: "STU",
             color: "blue",
@@ -491,7 +491,7 @@ export default function TeacherAnalytics() {
           <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
             No data yet
           </h2>
-          <p className="text-edsync-subtle">Assign lessons to see data.</p>
+          <p className="text-edsync-subtle">Share courses to see data.</p>
         </div>
       ) : (
         <>
@@ -596,21 +596,21 @@ export default function TeacherAnalytics() {
               <div className="edsync-card">
                 <div className="group mb-5">
                   <h3 className="font-display font-semibold text-lg text-edsync-text">
-                    Classroom Readiness Map
+                    Course Readiness Map
                   </h3>
                   <p className="edsync-hover-detail">
                     Color-coded concept readiness.
                   </p>
                 </div>
                 {studentStats.length === 0 ? (
-                  <p className="text-edsync-subtle text-sm text-center py-8">No student data yet.</p>
+                  <p className="text-edsync-subtle text-sm text-center py-8">No learner data yet.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[600px]">
                       <thead>
                         <tr className="border-b border-edsync-border">
                           <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                            Student
+                            Learner
                           </th>
                           {filteredLessonStats.slice(0, 5).map((l) => (
                             <th
@@ -706,10 +706,10 @@ export default function TeacherAnalytics() {
               {topGaps.length > 0 && (
                 <div className="edsync-card">
                   <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
-                    Class-Wide Knowledge Gaps
+                    Course-Wide Knowledge Gaps
                   </h3>
                   <p className="text-edsync-subtle text-sm mb-4">
-                    Concepts where multiple students are struggling
+                    Concepts where multiple learners are struggling
                   </p>
                   <div className="space-y-3">
                     {topGaps.map(([gap, count]) => (
@@ -810,7 +810,7 @@ export default function TeacherAnalytics() {
                           colSpan={7}
                           className="py-8 text-center text-edsync-subtle text-sm"
                         >
-                          No students have started your lessons yet.
+                          No learners have started your courses yet.
                         </td>
                       </tr>
                     ) : (
@@ -898,10 +898,10 @@ export default function TeacherAnalytics() {
               <div className="edsync-card">
                 <div className="group mb-4">
                   <h3 className="font-display font-semibold text-lg text-edsync-text">
-                    Student Reflection Log
+                    Learner Reflection Log
                   </h3>
                   <p className="edsync-hover-detail">
-                    What students learned and where they feel uncertain.
+                    What learners understood and where they feel uncertain.
                   </p>
                 </div>
 
@@ -1044,7 +1044,7 @@ export default function TeacherAnalytics() {
               {atRisk.length > 0 && (
                 <div className="edsync-card group">
                   <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                    Students Needing Support
+                    Learners Needing Support
                   </h3>
                   <div className="space-y-3">
                     {atRisk.map((s) => (
@@ -1079,7 +1079,7 @@ export default function TeacherAnalytics() {
               {advanced.length > 0 && (
                 <div className="edsync-card">
                   <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                    Advanced Students
+                    Advanced Learners
                   </h3>
                   <p className="edsync-hover-detail mb-3">Enrichment and peer support candidates.</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
