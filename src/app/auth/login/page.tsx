@@ -243,7 +243,7 @@ function LoginForm() {
             type="text"
             value={organizationCode}
             onChange={(event) => changeOrganizationCode(event.target.value)}
-            placeholder="example-academy"
+            placeholder="your-workspace"
             required={accountType === "organization"}
             autoComplete="organization"
             className="edsync-input"
@@ -261,7 +261,7 @@ function LoginForm() {
                 toast(
                   organizationLookup?.ssoEnabled
                     ? `${organizationLookup.name} SSO is enabled.`
-                    : "Organization owners can enable SSO.",
+                    : "Workspace owners can enable SSO.",
                   { duration: 7000 },
                 )
               }
@@ -298,7 +298,7 @@ function LoginForm() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@school.edu"
+          placeholder="you@example.com"
           required
           autoComplete="email"
           className="edsync-input"
@@ -393,7 +393,7 @@ export default function LoginPage() {
         </div>
         <div className="flex items-center gap-3 text-sm text-edsync-subtle">
           <ShieldCheck className="h-5 w-5 text-edsync-emerald" />
-          <Suspense fallback={<span>Protected teacher, student, and admin portals.</span>}>
+          <Suspense fallback={<span>Protected individual, organization, and owner views.</span>}>
             <ProtectedPortalsCopy />
           </Suspense>
         </div>
