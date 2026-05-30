@@ -66,7 +66,7 @@ React, import, and jsx-a11y plugins.
 
 - `src/` contains the TypeScript application, API routes, shared libraries, and
   tests.
-- `scripts/` contains TypeScript commands grouped by purpose: maintenance,
+- `ops/scripts/` contains TypeScript commands grouped by purpose: maintenance,
   deployment, database, admin, and shared helpers.
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
