@@ -112,7 +112,7 @@ function QuestionBuilder({
   const typeLabel: Record<QType, string> = {
     multiple_choice: " Multiple Choice",
     true_false: " True / False",
-    fill_blank: " Fill in the Blank",
+    fill_blank: " Fill Blank",
     short_answer: " Short Answer",
     long_answer: " Long Answer",
   };
