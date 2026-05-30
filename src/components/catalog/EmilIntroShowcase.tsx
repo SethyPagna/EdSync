@@ -100,7 +100,7 @@ const previewSlides: PreviewSlide[] = [
     route: "/admin/dashboard",
     accent: "admin",
     image: "/showcase/admin-dashboard.jpg",
-    summary: "Individual, organization, teacher, and learner views.",
+    summary: "Individual, organization, creator, and learner views.",
     tags: ["Owner", "Portals", "Modes"],
   },
 ];
@@ -191,8 +191,8 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   const workflowLabel = labels.workflow ?? "Workflow";
   const individualLabel = labels.individual ?? "Individual";
   const organizationLabel = labels.organization ?? "Organization";
-  const teacherLabel = labels.teacher ?? "Teacher";
-  const studentLabel = labels.student ?? "Student";
+  const creatorLabel = "Creator";
+  const learnerLabel = "Learner";
   const brandSubhead = labels.brandSubhead ?? "Teaching and learning workspace";
   const roleCards = useMemo(
     () => [
@@ -206,12 +206,12 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       {
         id: "organization",
         label: organizationLabel,
-        detail: `Owner, ${teacherLabel}, ${studentLabel}.`,
+        detail: `Owner, ${creatorLabel}, ${learnerLabel}.`,
         icon: Building2,
         href: "/auth/signup?mode=organization",
       },
     ],
-    [individualLabel, organizationLabel, studentLabel, teacherLabel],
+    [individualLabel, organizationLabel],
   );
   const setWorkflowSlide = useCallback((nextIndex: number) => {
     const safeIndex = Math.max(0, Math.min(workflowSlides.length - 1, nextIndex));
@@ -349,7 +349,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       `${labels.paid} ${labels.courses}`,
       "Organization portal",
       "AI practice",
-      "Gradebook",
+      "Progress",
     ],
     [labels.courses, labels.free, labels.paid],
   );
