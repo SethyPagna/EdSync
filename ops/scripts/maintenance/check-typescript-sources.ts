@@ -1,6 +1,5 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { commandForPlatform } from "../shared/ops";
+import { listTrackedFiles } from "../shared/git";
 
 const allowedRuntimeConfigFiles = new Set([
   "config/eslint/eslint.config.mjs",
@@ -9,25 +8,12 @@ const allowedRuntimeConfigFiles = new Set([
 
 const legacyJavaScriptPattern = /\.(?:cjs|js|jsx|mjs)$/;
 
-function listGitTrackedFiles() {
-  const result = spawnSync(commandForPlatform("git"), ["ls-files"], {
-    encoding: "utf8",
-  });
-  if (result.error) {
-    throw new Error(`Failed to inspect tracked files: ${result.error.message}`);
-  }
-  if (result.status !== 0) {
-    throw new Error(result.stderr || `git ls-files exited with status ${result.status ?? 1}`);
-  }
-  return result.stdout.split(/\r?\n/).filter(Boolean);
-}
-
 function normalizeForGit(file: string) {
   return file.split(path.sep).join("/");
 }
 
 function main() {
-  const unexpectedJavaScript = listGitTrackedFiles()
+  const unexpectedJavaScript = listTrackedFiles()
     .map(normalizeForGit)
     .filter((file) => legacyJavaScriptPattern.test(file))
     .filter((file) => !allowedRuntimeConfigFiles.has(file))
