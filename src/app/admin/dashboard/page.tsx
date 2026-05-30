@@ -22,9 +22,9 @@ type Summary = {
 
 const platformMetrics = [
   ["users", "Users", UsersRound, "text-edsync-blue", ""],
-  ["classes", "Classes", BookOpenCheck, "text-edsync-emerald", ""],
-  ["workItems", "Work items", Activity, "text-edsync-amber", ""],
-  ["submissions", "Submissions", Activity, "text-edsync-cyan", ""],
+  ["classes", "Spaces", BookOpenCheck, "text-edsync-emerald", ""],
+  ["workItems", "Tasks", Activity, "text-edsync-amber", ""],
+  ["submissions", "Evidence", Activity, "text-edsync-cyan", ""],
 ] as const;
 
 const systemMetrics = [
@@ -54,25 +54,25 @@ const priorityActions = [
 const ownerViewActions = [
   {
     title: "Individual account",
-    detail: "Preview the solo learner workspace and personal catalog path.",
+    detail: "Solo creator and learner path.",
     href: "/admin/view/individual",
     icon: UserRound,
   },
   {
     title: "Organizations",
-    detail: "Open the owner view for organization portals and tenant setup.",
+    detail: "Portals and tenant setup.",
     href: "/admin/view/organization",
     icon: Building2,
   },
   {
     title: "Organization teacher",
-    detail: "Preview the teacher workspace inside an organization.",
+    detail: "Creator workspace inside an organization.",
     href: "/admin/view/teacher",
     icon: UsersRound,
   },
   {
     title: "Organization student",
-    detail: "Preview the student workspace inside an organization.",
+    detail: "Learner workspace inside an organization.",
     href: "/admin/view/student",
     icon: BookOpenCheck,
   },
