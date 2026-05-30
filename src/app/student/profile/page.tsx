@@ -30,7 +30,7 @@ const DEFAULT_SKILL_METRICS: SkillMetric[] = [
     key: "completion",
     label: "Completion",
     value: 0,
-    tip: "Finish more lessons to build consistency.",
+    tip: "Finish more courses to build consistency.",
   },
   {
     key: "mastery",
@@ -48,7 +48,7 @@ const DEFAULT_SKILL_METRICS: SkillMetric[] = [
     key: "reflection",
     label: "Reflection Habit",
     value: 0,
-    tip: "Write short notes after each lesson section.",
+    tip: "Write short notes after each course section.",
   },
   {
     key: "confidence",
@@ -130,7 +130,7 @@ function buildSkillMetrics(
       key: "completion",
       label: "Completion",
       value: completion,
-      tip: "Finish assigned lessons to raise this quickly.",
+      tip: "Finish active courses to raise this quickly.",
     },
     {
       key: "mastery",
@@ -148,7 +148,7 @@ function buildSkillMetrics(
       key: "reflection",
       label: "Reflection Habit",
       value: reflectionHabit,
-      tip: "Add 3-5 lines of notes after each lecture section.",
+      tip: "Add 3-5 lines of notes after each course section.",
     },
     {
       key: "confidence",
@@ -378,7 +378,7 @@ export default function StudentProfile() {
                   onChange={(e) => setGradeLevel(e.target.value)}
                   className="edsync-input"
                 >
-                  <option value="">Select Grade Level</option>
+                  <option value="">Select level</option>
                   {GRADE_LEVELS.map((g) => (
                     <option key={g} value={g}>
                       {g}
@@ -393,7 +393,7 @@ export default function StudentProfile() {
                 </h2>
                 <p className="text-edsync-subtle">{profile?.email}</p>
                 <p className="text-sm text-edsync-subtle mt-1">
-                  {profile?.grade_level || "Grade level not set"}
+                  {profile?.grade_level || "Level not set"}
                 </p>
               </>
             )}
