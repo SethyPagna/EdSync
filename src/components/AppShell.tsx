@@ -75,6 +75,12 @@ type ShellWorkspaceLabelInput = {
   isAdminViewMode: boolean;
 };
 
+type ShellNavDisplayInput = {
+  label: string;
+  role: AppShellProps["role"];
+  workspaceContext: WorkspaceContext | null;
+};
+
 type NavItemReference = string | Pick<ShellNavItem, "href" | "label">;
 
 const roleCopy = {
@@ -107,6 +113,36 @@ export function shellWorkspaceLabel({
     return role === "teacher" ? "Organization Teacher" : "Organization Student";
   }
   return role === "teacher" ? roleCopy.teacher.label : roleCopy.student.label;
+}
+
+export function shellNavDisplayLabel({ label, role, workspaceContext }: ShellNavDisplayInput) {
+  if (workspaceContext?.type === "organization" || role === "admin") return label;
+
+  if (role === "teacher") {
+    const creatorLabels: Record<string, string> = {
+      "Create Lesson": "Create Course",
+      Assignments: "Work",
+      "Gradebook & Feedback": "Feedback",
+      Students: "Learners",
+      "Analytics & Reports": "Insights",
+    };
+    return creatorLabels[label] ?? label;
+  }
+
+  const learnerLabels: Record<string, string> = {
+    Lessons: "Courses",
+    "Teachers & Classes": "Course Access",
+    Grades: "Progress",
+    "My Work": "Work",
+  };
+  return learnerLabels[label] ?? label;
+}
+
+export function shellNavGroupDisplayLabel({ label, role, workspaceContext }: ShellNavDisplayInput) {
+  if (workspaceContext?.type === "organization" || role === "admin") return label;
+  if (role === "teacher" && label === "Classroom") return "Course Ops";
+  if (role === "student" && label === "Support") return "Progress";
+  return label;
 }
 
 function sessionRoleFromCookie() {
@@ -467,6 +503,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const renderNavItem = (item: ShellNavItem) => {
     const Icon = item.icon;
+    const displayLabel = shellNavDisplayLabel({ label: item.label, role, workspaceContext });
     const itemPath = pathWithoutQuery(item.href);
     const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
     const href = appendAdminViewMode(item.href, adminViewMode);
@@ -475,7 +512,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         key={item.href}
         href={href}
         onClick={() => setMobileOpen(false)}
-        title={collapsed ? item.label : undefined}
+        title={collapsed ? displayLabel : undefined}
         className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
           isActive
             ? "premium-active"
@@ -484,7 +521,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
         {!collapsed && (
-          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          <span className="min-w-0 flex-1 truncate">{displayLabel}</span>
         )}
       </Link>
     );
@@ -583,6 +620,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </Link>
         )}
         {visibleNavGroups.map((group) => {
+          const groupLabel = shellNavGroupDisplayLabel({ label: group.label, role, workspaceContext });
           const groupActive = group.items.some((item) => {
             const itemPath = pathWithoutQuery(item.href);
             return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
@@ -595,7 +633,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
                     groupActive ? "text-edsync-blue" : "text-edsync-subtle"
                   }`}
                 >
-                  <span>{group.label}</span>
+                  <span>{groupLabel}</span>
                 </div>
               )}
               <div className="space-y-1">{group.items.map(renderNavItem)}</div>
