@@ -19,16 +19,16 @@ type UserGroupKey = "admins" | "teachers" | "students";
 
 const groupCopy: Record<UserGroupKey, { title: string; description: string }> = {
   admins: {
-    title: "Platform Admins",
-    description: "Global EdSync operators with full application access.",
+    title: "Owner admins",
+    description: "Global EdSync access for the platform owner team.",
   },
   teachers: {
-    title: "Teachers",
-    description: "Course creators and class managers inside their tenant or workspace.",
+    title: "Org creators",
+    description: "Organization course creators and space managers.",
   },
   students: {
-    title: "Students",
-    description: "Learners with access to assigned work, grades, notes, and discussions.",
+    title: "Org learners",
+    description: "Organization learners with courses, progress, notes, and discussions.",
   },
 };
 
@@ -122,14 +122,14 @@ export default function AdminUsersPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">People and access</p>
-          <h1 className="font-display text-3xl font-bold">Users</h1>
+          <h1 className="font-display text-3xl font-bold">Accounts</h1>
           <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
-            Platform admin is for the app owner. Organization owners and managers should use tenant-scoped role profiles, not global access.
+            Platform admin is for EdSync ownership. Organization managers stay tenant-scoped.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <InfoPopover label="User access help">
-            Global admin is for the platform owner console. Organization owners and managers should be handled through tenant-scoped permissions so their changes stay inside their own organization.
+            Global admin unlocks the owner console. Organization owners and managers stay inside their own tenant permissions.
           </InfoPopover>
           <button
             type="button"
@@ -209,7 +209,7 @@ export default function AdminUsersPage() {
                     <p className="truncate font-semibold">{user.full_name || "Unnamed"}</p>
                     <p className="truncate text-edsync-subtle">{user.email}</p>
                   </div>
-                  <p className="capitalize text-edsync-subtle">{user.is_admin ? "platform admin" : user.role}</p>
+                  <p className="capitalize text-edsync-subtle">{user.is_admin ? "owner admin" : user.role === "teacher" ? "org creator" : "org learner"}</p>
                   <p className="text-edsync-subtle">
                     {user.last_active_at ? formatDate(user.last_active_at) : "Never active"}
                   </p>
@@ -229,7 +229,7 @@ export default function AdminUsersPage() {
                         className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text disabled:opacity-50"
                       >
                         <ShieldCheck className="h-4 w-4" />
-                        {user.is_admin ? "Remove global admin" : "Grant global admin"}
+                        {user.is_admin ? "Remove owner admin" : "Grant owner admin"}
                       </button>
                     </ActionMenu>
                   </div>
