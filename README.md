@@ -62,6 +62,12 @@ To guard the compact root layout, run:
 npm.cmd run check:root
 ```
 
+To guard the TypeScript-first source policy, run:
+
+```powershell
+npm.cmd run check:typescript
+```
+
 Current dependency note: ESLint stays on 9.x until the plugin chain bundled by
 `eslint-config-next` declares ESLint 10 support. A direct ESLint 10 upgrade
 currently fails while loading React rules such as `react/display-name` and
@@ -86,6 +92,9 @@ React, import, and jsx-a11y plugins.
   `README.md`, and `AGENTS.md`.
 - `npm.cmd run check:root` fails if tracked config, docs, scripts, or source
   files drift back into the root instead of their owning folders.
+- `npm.cmd run check:typescript` fails if tracked JavaScript, JSX, or CJS files
+  are added. The only tracked `.mjs` exceptions are runtime config files that
+  must stay directly loadable by Node or the framework.
 
 ## Local Cleanup
 
