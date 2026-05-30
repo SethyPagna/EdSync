@@ -117,7 +117,7 @@ export default function TeacherReports() {
     const lessonTitle =
       lessons.find((l) => l.id === selectedLesson)?.title || "Report";
     const rows = [
-      "Student,Email,Status,Final Score,Diagnostic,Time (min),Pages Done,Knowledge Gaps",
+      "Learner,Email,Status,Final Result,Diagnostic,Time (min),Pages Done,Knowledge Gaps",
       ...reports.map(
         (r) =>
           `"${r.name}","${r.email}","${r.status}","${r.score !== null ? r.score + "%" : "N/A"}","${r.diagnosticScore !== null ? r.diagnosticScore + "%" : "N/A"}","${Math.round(r.timeSpent / 60)}","${r.sectionsCompleted}","${r.knowledgeGaps.join("; ")}"`,
@@ -160,10 +160,10 @@ export default function TeacherReports() {
               Analytics & Reports
             </p>
             <h1 className="font-display font-bold text-3xl text-edsync-text">
-              Lesson reports
+              Course reports
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-edsync-subtle">
-              Detailed lesson evidence for grading, family updates, and interventions.
+              Detailed course evidence for feedback, updates, and support.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -189,7 +189,7 @@ export default function TeacherReports() {
           <div className="h-10 w-64 bg-edsync-card rounded-xl shimmer" />
         ) : lessons.length === 0 ? (
           <p className="text-edsync-subtle">
-            No lessons yet. Create a lesson to see reports.
+            No courses yet. Create a course to see reports.
           </p>
         ) : (
           <select
@@ -267,15 +267,15 @@ export default function TeacherReports() {
             })}
           </div>
 
-          {/* Student Report Table */}
+          {/* Learner report table */}
           <div className="premium-surface rounded-2xl p-4 sm:p-5">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-display font-semibold text-lg text-edsync-text">
-                  Individual student report
+                  Individual learner report
                 </h3>
                 <p className="text-sm text-edsync-subtle">
-                  Scores, time, progress, and knowledge gaps for the selected lesson.
+                  Results, time, progress, and knowledge gaps for the selected course.
                 </p>
               </div>
               <span className="badge bg-edsync-blue/10 text-edsync-blue">{reports.length} records</span>
@@ -285,9 +285,9 @@ export default function TeacherReports() {
                 <thead>
                   <tr className="border-b border-edsync-border">
                     {[
-                      "Student",
+                      "Learner",
                       "Status",
-                      "Final Score",
+                      "Final Result",
                       "Diagnostic",
                       "Time (min)",
                       "Pages",
