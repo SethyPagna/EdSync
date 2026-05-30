@@ -51,10 +51,10 @@ type ReviewDraft = {
 
 const workTypes = ["quiz", "test", "task", "discussion", "activity"];
 const gradingModes: Array<{ value: WorkGradingMode; label: string; description: string }> = [
-  { value: "points", label: "Points", description: "Score against possible points and release to gradebook." },
-  { value: "weighted", label: "Weighted", description: "Score points, then count this item as a fixed percent of the whole grade." },
-  { value: "completion", label: "Completion only", description: "Track done/not done and feedback without changing grade average." },
-  { value: "participation", label: "Participation", description: "Use criteria for engagement, discussion, or class activity evidence." },
+  { value: "points", label: "Points", description: "Score against possible points and release to progress." },
+  { value: "weighted", label: "Weighted", description: "Score points, then count this item as fixed course progress." },
+  { value: "completion", label: "Completion only", description: "Track done/not done and feedback without changing the average." },
+  { value: "participation", label: "Participation", description: "Use criteria for engagement, discussion, or activity evidence." },
 ];
 
 function dueLabel(value: string | null) {
@@ -175,7 +175,7 @@ export default function TeacherWorkPage() {
   const saveWork = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.classId && !editingId) {
-      toast.error("Choose a class so assignments, quizzes, and deadlines stay connected.");
+      toast.error("Choose a space so work, quizzes, and deadlines stay connected.");
       return;
     }
     const method = editingId ? "PATCH" : "POST";
@@ -326,7 +326,7 @@ export default function TeacherWorkPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
-            <p className="edsync-hover-detail">Filter work by class.</p>
+            <p className="edsync-hover-detail">Filter work by space.</p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
             <button
@@ -338,7 +338,7 @@ export default function TeacherWorkPage() {
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
               }`}
             >
-              All classes
+              All spaces
             </button>
             {classes.map((classRow) => (
               <button
@@ -392,7 +392,7 @@ export default function TeacherWorkPage() {
               onChange={(event) => setForm({ ...form, classId: event.target.value })}
               disabled={Boolean(editingId)}
             >
-              <option value="">Choose class</option>
+              <option value="">Choose space</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -457,7 +457,7 @@ export default function TeacherWorkPage() {
                     disabled={form.gradingMode === "completion" || form.gradingMode === "participation"}
                     onChange={(event) => setForm({ ...form, countsTowardGrade: event.target.checked })}
                   />
-                  Counts toward gradebook
+                  Counts toward progress
                 </label>
               </div>
               <p className="edsync-hover-detail">
@@ -511,7 +511,7 @@ export default function TeacherWorkPage() {
                     <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-edsync-subtle">
                       <span className="inline-flex items-center gap-1.5">
                         <UsersRound className="h-4 w-4" />
-                        {item.class_name || "All classes"}
+                        {item.class_name || "All spaces"}
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <CalendarClock className="h-4 w-4" />
