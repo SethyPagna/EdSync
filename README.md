@@ -53,8 +53,8 @@ GitHub Actions runs the same checks on `main` and pull requests:
 npm.cmd run verify
 ```
 
-`verify` runs typecheck, ESLint, the Vitest suite, a moderate dependency audit,
-and a production Next.js build.
+`verify` runs the repository hygiene gates, typecheck, ESLint, the Vitest suite,
+a moderate dependency audit, and a production Next.js build.
 
 To guard the compact root layout, run:
 
@@ -84,6 +84,12 @@ To guard referenced public images and PWA assets, run:
 
 ```powershell
 npm.cmd run check:assets
+```
+
+To guard README command and path references, run:
+
+```powershell
+npm.cmd run check:docs
 ```
 
 Current dependency note: ESLint stays on 9.x until the plugin chain bundled by
@@ -119,6 +125,8 @@ React, import, and jsx-a11y plugins.
   EdSync-owned D1, R2, Queue, Vectorize, Worker, or Pages names.
 - `npm.cmd run check:assets` fails if referenced public assets are missing or
   showcase screenshots are replaced with tiny placeholder files.
+- `npm.cmd run check:docs` fails if README command examples or local path
+  references stop matching the current project layout.
 
 ## Local Cleanup
 
