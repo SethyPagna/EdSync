@@ -23,10 +23,11 @@ describe("profile field validation", () => {
     );
   });
 
-  it("accepts only supported grade levels", () => {
+  it("accepts supported and legacy audience levels", () => {
+    expect(validateGradeLevel(" Intermediate ")).toBe("Intermediate");
     expect(validateGradeLevel(" Grade 8 ")).toBe("Grade 8");
     expect(validateGradeLevel("")).toBeNull();
-    expect(() => validateGradeLevel("Grade 99")).toThrow("Choose a supported grade level.");
+    expect(() => validateGradeLevel("Grade 99")).toThrow("Choose a supported audience level.");
   });
 
   it("deduplicates supported subjects", () => {
