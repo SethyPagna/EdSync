@@ -144,7 +144,7 @@ export default function TeacherDiscussionsPage() {
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
               }`}
             >
-              All classes
+              All spaces
             </button>
             {classes.map((classRow) => (
               <button
@@ -179,7 +179,7 @@ export default function TeacherDiscussionsPage() {
               value={form.classId}
               onChange={(event) => setForm({ ...form, classId: event.target.value })}
             >
-              <option value="">All classes</option>
+              <option value="">All spaces</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -210,7 +210,7 @@ export default function TeacherDiscussionsPage() {
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap gap-2">
                     <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                      {thread.class_name || "All classes"}
+                      {thread.class_name || "All spaces"}
                     </span>
                     <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
                       {thread.post_count} posts
