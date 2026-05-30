@@ -67,6 +67,8 @@ type WorkspaceContext = {
   organizationName?: string | null;
 };
 
+type NavItemReference = string | Pick<ShellNavItem, "href" | "label">;
+
 const roleCopy = {
   teacher: {
     label: "Teaching Workspace",
@@ -159,6 +161,14 @@ function isShellNavItem(item: ShellNavItem | undefined): item is ShellNavItem {
   return item !== undefined;
 }
 
+function findNavItem(navItems: ShellNavItem[], reference: NavItemReference) {
+  if (typeof reference === "string") {
+    return navItems.find((item) => item.href === reference);
+  }
+
+  return navItems.find((item) => item.href === reference.href && item.label === reference.label);
+}
+
 function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: string[]) {
   if (preferredOrder.length === 0) return groups;
   const orderIndex = new Map(preferredOrder.map((label, index) => [label, index]));
@@ -229,9 +239,8 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/student/dashboard?adminView=organization-student", label: "Organization Student", icon: BookOpenCheck },
 ];
 
-function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
-  const byHref = new Map(navItems.map((item) => [item.href, item]));
-  const pick = (hrefs: string[]) => hrefs.map((href) => byHref.get(href)).filter(isShellNavItem);
+export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
+  const pick = (items: NavItemReference[]) => items.map((item) => findNavItem(navItems, item)).filter(isShellNavItem);
 
   if (role === "admin") {
     return [
@@ -245,7 +254,7 @@ function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[])
         label: "Owner Views",
         items: pick([
           "/student/dashboard?adminView=individual",
-          "/admin/portals",
+          { href: "/admin/portals", label: "Organizations" },
           "/teacher/dashboard?adminView=organization-teacher",
           "/student/dashboard?adminView=organization-student",
         ]),
