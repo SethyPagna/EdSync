@@ -409,7 +409,7 @@ export default function TeacherNotesPage() {
                 placeholder="Optional HTTPS image, video, YouTube, Vimeo, or reference link"
               />
               <label className="flex flex-col gap-2 rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle sm:flex-row sm:items-center sm:justify-between">
-                  <span>
+                <span>
                   <span className="font-semibold text-edsync-text">Upload media</span>
                   <span className="block text-xs">Attach safe references, examples, videos, PDFs, or source docs.</span>
                 </span>
