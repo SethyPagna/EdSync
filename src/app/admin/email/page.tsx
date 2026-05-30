@@ -48,7 +48,7 @@ export default function AdminEmailPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Email outbox</h1>
-          <p className="mt-2 text-sm text-edsync-subtle">Review teacher messages, compose links, provider status, and recipient reach.</p>
+          <p className="mt-2 text-sm text-edsync-subtle">Review creator messages, compose links, provider status, and reach.</p>
         </div>
         <InfoPopover label="How email works">
           <p>Free mode stores an audited outbox row and generates compose links. Provider mode can send through the configured provider, while keeping reply-to and recipients transparent.</p>
@@ -75,7 +75,7 @@ export default function AdminEmailPage() {
                 <h2 className="break-words font-display text-xl font-bold text-edsync-text">{event.subject}</h2>
                 <p className="line-clamp-2 text-sm leading-6 text-edsync-subtle">{event.preview}</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-edsync-subtle">
-                  <span>{event.teacher_name || event.teacher_email || "Unknown teacher"}</span>
+                  <span>{event.teacher_name || event.teacher_email || "Unknown creator"}</span>
                   <span>{event.recipient_count} recipients</span>
                   <span>{new Date(event.created_at).toLocaleString()}</span>
                 </div>
@@ -111,7 +111,7 @@ export default function AdminEmailPage() {
           <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
             <Mail className="mx-auto h-10 w-10 text-edsync-subtle" />
             <p className="mt-3 font-semibold text-edsync-text">No outbox events yet</p>
-            <p className="mt-1 text-sm text-edsync-subtle">Class emails and compose drafts will appear here after teachers send them.</p>
+            <p className="mt-1 text-sm text-edsync-subtle">Space emails and compose drafts will appear here after creators send them.</p>
           </div>
         )}
       </section>
