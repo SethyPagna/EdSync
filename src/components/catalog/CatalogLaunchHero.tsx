@@ -115,7 +115,7 @@ export default async function CatalogLaunchHero({
   const authCopy = getPublicAuthCopy(publicLanguage);
   const loginHref = publicLanguageHref("/auth/login", publicLanguage);
   const signupHref = publicLanguageHref("/auth/signup", publicLanguage);
-  const [, studioLabel = "Lessons", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Grades"] = copy.heroTags;
+  const [, studioLabel = "Studio", aiLabel = "AI", practiceLabel = "Practice", proofLabel = "Progress"] = copy.heroTags;
   const rolePaths = [
     {
       label: authCopy.individual,
