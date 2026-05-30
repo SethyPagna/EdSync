@@ -1357,7 +1357,7 @@ export default function TeacherLessonDetail() {
     setAssignClassId("");
     setAssignDueDate("");
     setAssigning(false);
-    toast.success(`Assigned to ${cls?.name}!`);
+    toast.success(`Shared with ${cls?.name}.`);
   };
 
   const unassign = async (classId: string) => {
@@ -1485,7 +1485,7 @@ export default function TeacherLessonDetail() {
           { key: "glossary" as Tab, label: `Glossary (${glossary.length})` },
           {
             key: "assign" as Tab,
-            label: `Assign${assignments.length > 0 ? ` (${assignments.length})` : ""}`,
+            label: `Share${assignments.length > 0 ? ` (${assignments.length})` : ""}`,
           },
         ].map((t) => (
           <button
@@ -2046,7 +2046,7 @@ export default function TeacherLessonDetail() {
           {assignments.length > 0 && (
             <div className="edsync-card">
               <h3 className="font-semibold text-edsync-text mb-4">
-                Currently Assigned
+                Shared spaces
               </h3>
               <div className="space-y-2">
                 {assignments.map((a) => (
@@ -2060,7 +2060,7 @@ export default function TeacherLessonDetail() {
                           {a.class_name}
                         </p>
                         <p className="text-xs text-edsync-subtle">
-                          Assigned {formatRelativeTime(a.created_at)}
+                          Shared {formatRelativeTime(a.created_at)}
                         </p>
                       </div>
                     </div>
@@ -2085,7 +2085,7 @@ export default function TeacherLessonDetail() {
                       </Link>
                       <button
                         onClick={() => {
-                          if (confirm("Remove?")) unassign(a.class_id);
+                          if (confirm("Remove sharing?")) unassign(a.class_id);
                         }}
                         className="text-edsync-subtle hover:text-edsync-red text-xs"
                       >
@@ -2099,41 +2099,41 @@ export default function TeacherLessonDetail() {
           )}
           <div className="edsync-card">
             <h3 className="font-semibold text-edsync-text mb-1">
-              Assign to Class
+              Share to space
             </h3>
             <p className="text-edsync-subtle text-sm mb-4">
-              Assign to a class.
+              Share this course with a learner space.
               {lesson.status !== "published" && (
                 <span className="text-edsync-amber">
                   {" "}
-                  Lesson auto-publishes on assign.
+                  Course auto-publishes when shared.
                 </span>
               )}
             </p>
             {myClasses.length === 0 ? (
               <div className="text-center py-6">
                 <p className="text-edsync-subtle text-sm mb-3">
-                  No classes yet.
+                  No spaces yet.
                 </p>
                 <button
                   onClick={() => router.push("/teacher/students")}
                   className="btn-secondary text-sm"
                 >
-                  Go create a class →
+                  Create a space
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs text-edsync-subtle mb-1">
-                    Class *
+                    Space *
                   </label>
                   <select
                     value={assignClassId}
                     onChange={(e) => setAssignClassId(e.target.value)}
                     className="edsync-input py-2"
                   >
-                    <option value="">— Choose a class —</option>
+                    <option value="">Choose a space</option>
                     {myClasses
                       .filter(
                         (c) => !assignments.find((a) => a.class_id === c.id),
@@ -2141,14 +2141,14 @@ export default function TeacherLessonDetail() {
                       .map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
-                          {c.subject ? ` · ${c.subject}` : ""}
+                          {c.subject ? ` / ${c.subject}` : ""}
                         </option>
                       ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs text-edsync-subtle mb-1">
-                    Due Date (optional)
+                    Due date (optional)
                   </label>
                   <input
                     type="date"
@@ -2163,7 +2163,7 @@ export default function TeacherLessonDetail() {
                   disabled={assigning || !assignClassId}
                   className="btn-primary py-3 px-8 glow-blue disabled:opacity-40"
                 >
-                  {assigning ? " Assigning..." : " Assign Lesson"}
+                  {assigning ? "Sharing..." : "Share course"}
                 </button>
               </div>
             )}
