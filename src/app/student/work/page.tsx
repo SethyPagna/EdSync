@@ -129,7 +129,7 @@ export default function StudentWorkPage() {
             <h1 className="mt-1 font-display text-3xl font-bold">My work</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
               {openCount} to do, {submittedCount} submitted
-              {requestedClassId !== ALL_CLASSES_SCOPE ? " in this class" : ""}
+              {requestedClassId !== ALL_CLASSES_SCOPE ? " in this space" : ""}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
@@ -207,7 +207,7 @@ export default function StudentWorkPage() {
                       </div>
                       <h2 className="truncate font-display text-xl font-bold">{item.title}</h2>
                       <p className="mt-1 text-sm text-edsync-subtle">
-                        {item.class_name || "Class"}
+                        {item.class_name || "Space"}
                       </p>
                       {item.instructions && (
                         <p className="mt-3 line-clamp-2 text-sm leading-6 text-edsync-text">
@@ -216,7 +216,7 @@ export default function StudentWorkPage() {
                       )}
                       {item.submission_feedback && (
                         <div className="mt-3 rounded-xl border border-edsync-amber/25 bg-edsync-amber/10 p-3">
-                          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Teacher feedback</p>
+                          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Creator feedback</p>
                           <p className="mt-1 text-sm leading-6 text-edsync-text">{item.submission_feedback}</p>
                         </div>
                       )}
