@@ -160,7 +160,7 @@ export default function TeacherDashboard() {
     setAlerts((current) => current.filter((alert) => alert.id !== alertId));
   };
 
-  const firstName = profile?.full_name?.split(" ")[0] || "Teacher";
+  const firstName = profile?.full_name?.split(" ")[0] || "Creator";
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
@@ -168,7 +168,7 @@ export default function TeacherDashboard() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-              Teacher home
+              Creator home
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">
               Good to see you, {firstName}
@@ -177,7 +177,7 @@ export default function TeacherDashboard() {
           <div className="grid gap-2 sm:grid-cols-2 lg:flex">
             <Link href="/teacher/lessons/create" className="btn-primary justify-center">
               <Plus className="h-4 w-4" />
-              New lesson
+              New course
             </Link>
             <Link href="/teacher/lessons/create" className="btn-secondary justify-center">
               <Sparkles className="h-4 w-4" />
@@ -189,13 +189,13 @@ export default function TeacherDashboard() {
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Students",
+              label: "Learners",
               value: stats.totalStudents,
               icon: UsersRound,
               tone: "text-edsync-blue",
             },
             {
-              label: "Lessons",
+              label: "Courses",
               value: stats.activeLessons,
               icon: BookOpenCheck,
               tone: "text-edsync-emerald",
@@ -296,10 +296,10 @@ export default function TeacherDashboard() {
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
             <Link href="/teacher/lessons/create" className="btn-secondary justify-center text-sm">
-              <Plus className="h-4 w-4" /> Create lesson
+              <Plus className="h-4 w-4" /> Create course
             </Link>
             <Link href="/teacher/gradebook" className="btn-secondary justify-center text-sm">
-              <ClipboardList className="h-4 w-4" /> Gradebook
+              <ClipboardList className="h-4 w-4" /> Feedback
             </Link>
             <Link href="/teacher/analytics" className="btn-secondary justify-center text-sm">
               <TrendingUp className="h-4 w-4" /> Reports
@@ -433,14 +433,14 @@ export default function TeacherDashboard() {
           </section>
 
           <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-            <h2 className="font-display text-xl font-bold">Classes</h2>
+            <h2 className="font-display text-xl font-bold">Course spaces</h2>
             <p className="edsync-hover-detail">
-              Share join codes with students.
+              Share access codes with learners.
             </p>
             <div className="mt-4 space-y-3">
               {classes.length === 0 ? (
                 <Link href="/teacher/students" className="btn-secondary w-full justify-center">
-                  Create class
+                  Create space
                 </Link>
               ) : (
                 classes.slice(0, 4).map((cls) => (
