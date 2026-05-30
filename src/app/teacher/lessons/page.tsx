@@ -60,14 +60,14 @@ export default function TeacherLessons() {
   }, [loadLessons]);
 
   const deleteLesson = async (id: string) => {
-    if (!confirm("Delete this lesson? This cannot be undone.")) return;
+    if (!confirm("Delete this course? This cannot be undone.")) return;
     const { error } = await edsync.from("lessons").delete().eq("id", id);
     if (error) {
-      toast.error(`Could not delete lesson: ${error.message}`);
+      toast.error(`Could not delete course: ${error.message}`);
       return;
     }
     setLessons((current) => current.filter((lesson) => lesson.id !== id));
-    toast.success("Lesson deleted");
+    toast.success("Course deleted");
   };
 
   const duplicateLesson = async (lesson: Lesson) => {
@@ -90,7 +90,7 @@ export default function TeacherLessons() {
       .single();
     if (data) {
       setLessons((current) => [data, ...current]);
-      toast.success("Lesson duplicated");
+      toast.success("Course duplicated");
     }
   };
 
@@ -111,18 +111,18 @@ export default function TeacherLessons() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              Lesson library
+              Course library
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
-              Lessons
+              Courses
             </h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {lessons.length} lesson{lessons.length !== 1 ? "s" : ""} total
+              {lessons.length} course{lessons.length !== 1 ? "s" : ""} total
             </p>
           </div>
           <Link href="/teacher/lessons/create" className="btn-primary justify-center">
             <Plus className="h-4 w-4" />
-            New lesson
+            New course
           </Link>
         </div>
 
@@ -132,7 +132,7 @@ export default function TeacherLessons() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search lessons..."
+              placeholder="Search courses..."
               className="edsync-input py-2 pl-10"
             />
           </label>
