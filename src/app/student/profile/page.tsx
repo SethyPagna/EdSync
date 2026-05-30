@@ -530,11 +530,11 @@ export default function StudentProfile() {
         storageKey="edsync-student-profile-section-order"
         sections={[
           "Dashboard",
-          "Lessons",
+          "Courses",
           "Work",
           "Activities",
           "AI Coach",
-          "Grades",
+          "Progress",
           "Notes",
           "Discussions",
         ]}
