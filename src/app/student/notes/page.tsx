@@ -262,7 +262,7 @@ export default function StudentNotesPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Personal workspace</p>
             <h1 className="mt-1 font-display text-3xl font-bold">Notes</h1>
             <p className="mt-1 max-w-2xl text-sm text-edsync-subtle">
-              Save personal notes with designs, images, video links, references, and teacher feedback in one place.
+              Save personal notes with designs, images, video links, references, and creator feedback in one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -473,12 +473,12 @@ export default function StudentNotesPage() {
 
         <aside className="space-y-3">
           <div className="group">
-            <h2 className="font-display text-xl font-bold">Teacher feedback</h2>
-            <p className="edsync-hover-detail">Notes shared by your teachers.</p>
+            <h2 className="font-display text-xl font-bold">Creator feedback</h2>
+            <p className="edsync-hover-detail">Notes shared by course creators.</p>
           </div>
           {teacherNotes.length === 0 ? (
             <p className="rounded-2xl border border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle">
-              No teacher feedback notes yet.
+              No creator feedback yet.
             </p>
           ) : (
             teacherNotes.map((note) => (
@@ -488,7 +488,7 @@ export default function StudentNotesPage() {
                   <span className="text-xs text-edsync-subtle">{new Date(note.created_at).toLocaleDateString()}</span>
                 </div>
                 <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-edsync-subtle">
-                  {note.teacher_name || "Teacher"} / {note.priority}
+                  {note.teacher_name || "Creator"} / {note.priority}
                 </p>
                 <p className="mt-3 text-sm leading-6">{note.body}</p>
               </article>
