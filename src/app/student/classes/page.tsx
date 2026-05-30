@@ -108,13 +108,13 @@ export default function StudentClassesPage() {
       .maybeSingle();
 
     if (classError) {
-      toast.error(`Could not look up class: ${classError.message}`);
+      toast.error(`Could not look up space: ${classError.message}`);
       setJoining(false);
       return;
     }
 
     if (!classItem) {
-      toast.error("Invalid join code. Ask for the current access code.");
+      toast.error("Invalid access code. Ask for the current code.");
       setJoining(false);
       return;
     }
@@ -125,9 +125,9 @@ export default function StudentClassesPage() {
     );
 
     if (error) {
-      toast.error(`Could not join class: ${error.message}`);
+      toast.error(`Could not add access: ${error.message}`);
     } else {
-      toast.success(`Joined ${classItem.name}.`);
+      toast.success(`Access added: ${classItem.name}.`);
       setJoinCode("");
       await loadClasses();
     }
@@ -142,7 +142,7 @@ export default function StudentClassesPage() {
           <div>
             <h1 className="font-display text-3xl font-bold">Course Access</h1>
             <p className="edsync-hover-detail max-w-2xl">
-              Join an organization space, see who manages it, and jump into linked courses without returning to the dashboard.
+              Enter an organization access code, see who manages the space, and open linked courses.
             </p>
           </div>
           <div className="flex w-full max-w-md gap-2">
@@ -159,7 +159,7 @@ export default function StudentClassesPage() {
               disabled={joining || !joinCode.trim()}
               className="btn-primary flex-none justify-center px-4 py-2"
             >
-              Join
+              Enter
             </button>
           </div>
         </div>
