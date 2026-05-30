@@ -9,24 +9,32 @@ import {
   type AdminViewMode,
 } from "@/lib/admin-view";
 
+const PROTECTED_ROUTE_PREFIXES = [
+  "/admin",
+  "/teacher",
+  "/student",
+  "/studio",
+  "/notes",
+  "/docs",
+  "/sheets",
+  "/slides",
+  "/ai",
+  "/practice",
+  "/quizzes",
+  "/games",
+] as const;
+
+const AUTH_ROUTE_PREFIXES = ["/auth/login", "/auth/signup"] as const;
+
+const TEACHER_ROUTE_PREFIX = "/teacher";
+const STUDENT_ROUTE_PREFIX = "/student";
+const ADMIN_ROUTE_PREFIX = "/admin";
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestedAdminViewMode = normalizeAdminViewMode(request.nextUrl.searchParams.get("adminView"));
-  const isProtected =
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/teacher") ||
-    pathname.startsWith("/student") ||
-    pathname.startsWith("/studio") ||
-    pathname.startsWith("/notes") ||
-    pathname.startsWith("/docs") ||
-    pathname.startsWith("/sheets") ||
-    pathname.startsWith("/slides") ||
-    pathname.startsWith("/ai") ||
-    pathname.startsWith("/practice") ||
-    pathname.startsWith("/quizzes") ||
-    pathname.startsWith("/games");
-  const isAuthPage =
-    pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup");
+  const isProtected = startsWithAny(pathname, PROTECTED_ROUTE_PREFIXES);
+  const isAuthPage = startsWithAny(pathname, AUTH_ROUTE_PREFIXES);
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
   const role = normalizeUserRole(request.cookies.get(ROLE_COOKIE)?.value);
 
@@ -52,25 +60,29 @@ export function middleware(request: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (hasSession && role && role !== "admin" && pathname.startsWith("/admin")) {
+  if (hasSession && role && role !== "admin" && pathname.startsWith(ADMIN_ROUTE_PREFIX)) {
     const url = request.nextUrl.clone();
     url.pathname = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (hasSession && role === "admin" && (pathname.startsWith("/teacher") || pathname.startsWith("/student"))) {
+  if (
+    hasSession &&
+    role === "admin" &&
+    (pathname.startsWith(TEACHER_ROUTE_PREFIX) || pathname.startsWith(STUDENT_ROUTE_PREFIX))
+  ) {
     const response = NextResponse.next();
     syncAdminViewModeCookie(response, pathname, requestedAdminViewMode);
     return withSecurityHeaders(response);
   }
 
-  if (hasSession && role === "teacher" && pathname.startsWith("/student")) {
+  if (hasSession && role === "teacher" && pathname.startsWith(STUDENT_ROUTE_PREFIX)) {
     const url = request.nextUrl.clone();
     url.pathname = "/teacher/dashboard";
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (hasSession && role === "student" && pathname.startsWith("/teacher")) {
+  if (hasSession && role === "student" && pathname.startsWith(TEACHER_ROUTE_PREFIX)) {
     const url = request.nextUrl.clone();
     url.pathname = "/student/dashboard";
     return withSecurityHeaders(NextResponse.redirect(url));
@@ -83,15 +95,19 @@ export function middleware(request: NextRequest) {
   return withSecurityHeaders(response);
 }
 
+function startsWithAny(pathname: string, prefixes: readonly string[]) {
+  return prefixes.some((prefix) => pathname.startsWith(prefix));
+}
+
 function syncAdminViewModeCookie(response: NextResponse, pathname: string, mode: AdminViewMode | null) {
   const inferredMode =
     mode ??
-    (pathname.startsWith("/teacher")
+    (pathname.startsWith(TEACHER_ROUTE_PREFIX)
       ? adminViewModeForWorkspaceRole("teacher")
-      : pathname.startsWith("/student")
+      : pathname.startsWith(STUDENT_ROUTE_PREFIX)
         ? adminViewModeForWorkspaceRole("student")
         : null);
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith(ADMIN_ROUTE_PREFIX)) {
     response.cookies.delete(ADMIN_VIEW_MODE_COOKIE);
     return;
   }
