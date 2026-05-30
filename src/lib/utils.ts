@@ -76,9 +76,9 @@ export function truncate(str: string, length: number): string {
 }
 
 export function generateInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(n => n[0])
+  return (name.trim() || 'E')
+    .split(/\s+/)
+    .map((part) => part[0])
     .slice(0, 2)
     .join('')
     .toUpperCase()
