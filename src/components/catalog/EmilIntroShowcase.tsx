@@ -6,11 +6,11 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
-  Brain,
   Building2,
   CheckCircle2,
   GraduationCap,
   Layers3,
+  BookOpenCheck,
   Search,
   UserRound,
   type LucideIcon,
@@ -66,27 +66,27 @@ const previewSlides: PreviewSlide[] = [
   {
     id: "login",
     eyebrow: "Workspace entrance",
-    title: "Choose the right path",
+    title: "Pick your space",
     route: "/auth/login",
     accent: "access",
     image: "/showcase/login-organization.jpg",
-    summary: "Personal or organization access.",
-    tags: ["Catalog", "Portal", "Return"],
+    summary: "Individual work or organization portal.",
+    tags: ["Individual", "Organization", "Owner"],
   },
   {
     id: "teacher",
-    eyebrow: "Teacher lesson canvas",
-    title: "Create lessons",
+    eyebrow: "Creator workspace",
+    title: "Build courses",
     route: "/teacher/lessons/create",
     accent: "studio",
     image: "/showcase/teacher-create.jpg",
-    summary: "AI, draft, or blank canvas.",
-    tags: ["AI", "Canvas", "Templates"],
+    summary: "Create, publish, and improve courses.",
+    tags: ["Create", "Publish", "AI"],
   },
   {
     id: "student",
-    eyebrow: "Student learning",
-    title: "Continue learning",
+    eyebrow: "Learner workspace",
+    title: "Learn by doing",
     route: "/student/dashboard",
     accent: "practice",
     image: "/showcase/student-dashboard.jpg",
@@ -95,13 +95,13 @@ const previewSlides: PreviewSlide[] = [
   },
   {
     id: "admin",
-    eyebrow: "Platform control",
-    title: "Admin command",
+    eyebrow: "Owner control",
+    title: "View every mode",
     route: "/admin/dashboard",
     accent: "admin",
     image: "/showcase/admin-dashboard.jpg",
-    summary: "Portals, permissions, and evidence.",
-    tags: ["Admin", "Roles", "Audit"],
+    summary: "Individual, organization, teacher, and learner views.",
+    tags: ["Owner", "Portals", "Modes"],
   },
 ];
 
@@ -109,68 +109,68 @@ const workflowSlides: WorkflowSlide[] = [
   {
     id: "catalog",
     icon: Search,
-    title: "Choose an entrance",
+    title: "Choose space",
     tabLabel: "Entrance",
     detail: "Individual or organization.",
     route: "/auth/signup",
     image: "/showcase/signup-access.png",
     panelTitle: "Workspace setup",
-    pills: ["Individual", "Organization", "Roles"],
+    pills: ["Individual", "Organization", "Owner"],
   },
   {
     id: "access",
     icon: UserRound,
-    title: "Sign in cleanly",
+    title: "Enter once",
     tabLabel: "Access",
     detail: "Personal or portal access.",
     route: "/auth/login",
     image: "/showcase/login-organization.jpg",
     panelTitle: "Workspace access",
-    pills: ["Org code", "Individual", "Return"],
+    pills: ["Personal", "Portal", "Return"],
   },
   {
     id: "canvas",
     icon: Layers3,
-    title: "Create lessons",
+    title: "Create courses",
     tabLabel: "Create",
-    detail: "Templates, media, quizzes.",
+    detail: "AI, pages, practice.",
     route: "/teacher/lessons/create",
     image: "/showcase/teacher-create.jpg",
-    panelTitle: "Lesson Creation Studio",
-    pills: ["Templates", "Media", "Pages"],
+    panelTitle: "Course Studio",
+    pills: ["AI", "Pages", "Practice"],
   },
   {
     id: "assign",
     icon: CheckCircle2,
-    title: "Assign work",
-    tabLabel: "Assign",
-    detail: "Deadlines and scoring.",
+    title: "Publish",
+    tabLabel: "Publish",
+    detail: "Share, sell, or assign.",
     route: "/teacher/work",
     image: "/showcase/teacher-work.jpg",
-    panelTitle: "Class work",
-    pills: ["Work", "Deadlines", "Scores"],
+    panelTitle: "Course Work",
+    pills: ["Share", "Review", "Improve"],
   },
   {
     id: "practice",
-    icon: Brain,
-    title: "Practice adapts",
+    icon: BookOpenCheck,
+    title: "Practice",
     tabLabel: "Practice",
-    detail: "Courses, class work, AI.",
+    detail: "Focused drills and AI help.",
     route: "/student/dashboard",
     image: "/showcase/student-dashboard.jpg",
-    panelTitle: "Student dashboard",
-    pills: ["Courses", "Practice", "Classes"],
+    panelTitle: "Learner dashboard",
+    pills: ["Courses", "Practice", "Progress"],
   },
   {
     id: "proof",
     icon: BarChart3,
-    title: "Prove progress",
+    title: "Show progress",
     tabLabel: "Proof",
-    detail: "Grades, feedback, reports.",
+    detail: "Progress, feedback, evidence.",
     route: "/admin/dashboard",
     image: "/showcase/admin-dashboard.jpg",
-    panelTitle: "Evidence dashboard",
-    pills: ["Grades", "Reports", "Audit"],
+    panelTitle: "Progress dashboard",
+    pills: ["Progress", "Feedback", "Evidence"],
   },
 ];
 
@@ -199,14 +199,14 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       {
         id: "individual",
         label: individualLabel,
-        detail: "Personal learning.",
+        detail: "Create + learn.",
         icon: UserRound,
         href: "/auth/signup?mode=individual",
       },
       {
         id: "organization",
         label: organizationLabel,
-        detail: `${teacherLabel} + ${studentLabel}.`,
+        detail: `Owner, ${teacherLabel}, ${studentLabel}.`,
         icon: Building2,
         href: "/auth/signup?mode=organization",
       },
@@ -401,8 +401,8 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
 
         <div className="edsync-emil-hero-grid">
           <div className="edsync-emil-copy">
-            <h1 id="emil-intro-title">Create. Practice. Grow.</h1>
-            <p>Personal learning or organization portals.</p>
+            <h1 id="emil-intro-title">Build. Learn. Grow.</h1>
+            <p>One workspace for independent courses and organization portals.</p>
             <div className="edsync-emil-roles" aria-label="EdSync role paths">
               {roleCards.map((role) => {
                 const Icon = role.icon;
@@ -423,7 +423,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
           <div className="edsync-emil-device" aria-label="EdSync workspace preview">
             <div className="edsync-emil-device-top">
               <span>{preview.eyebrow}</span>
-              <Link href={preview.route}>{preview.route}</Link>
+              <Link href={preview.route}>Open</Link>
             </div>
             <div className="edsync-emil-device-body edsync-emil-shot-body">
               <figure className={`edsync-emil-shot-frame is-${preview.accent}`}>
@@ -479,7 +479,6 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
                 <WorkflowIcon className="h-7 w-7" />
                 <div>
                   <strong>{workflow.panelTitle}</strong>
-                  <span>{workflow.route}</span>
                 </div>
               </header>
               <figure className={`edsync-emil-workflow-visual is-${workflow.id}`}>
@@ -491,7 +490,6 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
                   sizes="(max-width: 760px) 100vw, 58vw"
                 />
                 <figcaption>
-                  <small>{workflow.route}</small>
                   <strong>{workflow.panelTitle}</strong>
                   <span>
                     {workflow.pills.map((pill) => (
