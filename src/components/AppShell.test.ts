@@ -22,8 +22,8 @@ describe("navGroupsForRole", () => {
     expect(labelsForGroup("Owner Views")).toEqual([
       "Individual Account",
       "Organizations",
-      "Organization Teacher",
-      "Organization Student",
+      "Org Creator",
+      "Org Learner",
     ]);
   });
 });
@@ -44,19 +44,19 @@ describe("shellWorkspaceLabel", () => {
     })).toBe("Learner Workspace");
   });
 
-  it("keeps teacher and student labels scoped to organizations", () => {
+  it("uses concise organization creator and learner labels", () => {
     expect(shellWorkspaceLabel({
       role: "teacher",
       workspaceContext: { type: "organization", organizationCode: "edsync" },
       adminViewMode: null,
       isAdminViewMode: false,
-    })).toBe("Organization Teacher");
+    })).toBe("Org Creator");
     expect(shellWorkspaceLabel({
       role: "student",
       workspaceContext: { type: "organization", organizationCode: "edsync" },
       adminViewMode: null,
       isAdminViewMode: false,
-    })).toBe("Organization Student");
+    })).toBe("Org Learner");
   });
 
   it("shows owner preview labels for platform admin mode", () => {
