@@ -417,7 +417,7 @@ export default function TeacherAnalytics() {
             color: "blue",
           },
           {
-            label: "Class Avg Score",
+            label: "Space Avg",
             value: loading
               ? "..."
               : studentStats.length === 0
@@ -592,7 +592,7 @@ export default function TeacherAnalytics() {
           {/* Heat map */}
           {tab === "heatmap" && (
             <div className="animate-fade-in space-y-6">
-              {/* Class readiness */}
+              {/* Space readiness */}
               <div className="edsync-card">
                 <div className="group mb-5">
                   <h3 className="font-display font-semibold text-lg text-edsync-text">
@@ -720,7 +720,7 @@ export default function TeacherAnalytics() {
                               {gap}
                             </span>
                             <span className="text-edsync-red text-xs font-bold">
-                              {count} student{count > 1 ? "s" : ""}
+                              {count} learner{count > 1 ? "s" : ""}
                             </span>
                           </div>
                           <div className="h-2 bg-edsync-muted/20 rounded-full">
@@ -740,7 +740,7 @@ export default function TeacherAnalytics() {
             </div>
           )}
 
-          {/* Students */}
+          {/* Learners */}
           {tab === "students" && (
             <div className="animate-fade-in space-y-4">
               <div className="grid grid-cols-3 gap-4 mb-2">
@@ -781,7 +781,7 @@ export default function TeacherAnalytics() {
                   <thead>
                     <tr className="text-left border-b border-edsync-border">
                       <th className="text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                        Student
+                        Learner
                       </th>
                       <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
                         Status
@@ -1106,7 +1106,7 @@ export default function TeacherAnalytics() {
           {tab === "socratic" && (
             <div className="animate-fade-in edsync-card">
               <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                Student–AI Interactions
+                Learner-AI Interactions
               </h3>
               {socraticLog.length === 0 ? (
                 <p className="text-edsync-subtle text-sm text-center py-8">No AI interactions yet.</p>
