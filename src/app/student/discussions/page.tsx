@@ -75,13 +75,13 @@ export default function StudentDiscussionsPage() {
     <div className="page-shell max-w-5xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-          Class talk
+          Course discussion
         </p>
         <h1 className="mt-1 font-display text-3xl font-bold">Discussions</h1>
         <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-edsync-subtle">
             {threads.length} thread{threads.length !== 1 ? "s" : ""}, {postCount} posts
-            {requestedClassId !== ALL_CLASSES_SCOPE ? " in this class" : ""}
+            {requestedClassId !== ALL_CLASSES_SCOPE ? " in this space" : ""}
           </p>
           {requestedClassId !== ALL_CLASSES_SCOPE && (
             <Link href="/student/discussions" className="btn-secondary w-fit px-3 py-2 text-sm">
@@ -102,7 +102,7 @@ export default function StudentDiscussionsPage() {
                   <div className="min-w-0">
                     <div className="mb-2 flex flex-wrap gap-2">
                       <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                        {thread.class_name || "Class"}
+                        {thread.class_name || "Space"}
                       </span>
                       <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
                         {thread.post_count} posts
@@ -118,7 +118,7 @@ export default function StudentDiscussionsPage() {
                     </p>
                     <p className="mt-2 flex items-center gap-2">
                       <UsersRound className="h-4 w-4 text-edsync-emerald" />
-                      {thread.class_name || "Class"}
+                      {thread.class_name || "Space"}
                     </p>
                   </div>
                 </div>
