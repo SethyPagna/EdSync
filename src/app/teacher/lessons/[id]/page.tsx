@@ -325,7 +325,7 @@ function QuestionBuilder({
       {/* Explanation */}
       <div>
         <label className="block text-xs text-edsync-subtle mb-1">
-          Explanation (shown after student answers)
+          Explanation (shown after learner answers)
         </label>
         <textarea
           value={q.explanation}
@@ -1944,7 +1944,7 @@ export default function TeacherLessonDetail() {
                   }
                   rows={2}
                   className="edsync-textarea"
-                  placeholder="Clear, student-friendly definition..."
+                  placeholder="Clear, learner-friendly definition..."
                 />
               </div>
               <div>
