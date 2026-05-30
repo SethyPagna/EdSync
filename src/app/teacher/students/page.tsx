@@ -371,7 +371,7 @@ export default function TeacherStudents() {
         </div>
       )}
 
-      {/* Assign Lesson Modal */}
+      {/* Share course modal */}
       {showAssign && selectedClass !== "all" && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="edsync-card w-full max-w-md animate-slide-up p-8">
