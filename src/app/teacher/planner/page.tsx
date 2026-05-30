@@ -203,7 +203,7 @@ export default function TeacherPlannerPage() {
   };
 
   const deletePlannerItem = async (type: "announcement" | "event", id: string, title: string) => {
-    const confirmed = window.confirm(`Delete "${title}"? Students will no longer see this ${type}.`);
+    const confirmed = window.confirm(`Delete "${title}"? Learners will no longer see this ${type}.`);
     if (!confirmed) return;
     const response = await fetch(`/api/planner?type=${type}&id=${encodeURIComponent(id)}`, {
       method: "DELETE",
