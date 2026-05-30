@@ -33,7 +33,7 @@ describe("practice attempt context", () => {
     const context = getPracticeModeContext("generated_from_studio");
 
     expect(context.mode).toBe("generated_from_materials");
-    expect(context.label).toBe("Generated from materials");
+    expect(context.label).toBe("From Materials");
   });
 
   it("builds attempt context with source and recommendation metadata", () => {
