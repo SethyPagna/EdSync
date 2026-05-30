@@ -142,7 +142,7 @@ const workflowSlides: WorkflowSlide[] = [
     icon: CheckCircle2,
     title: "Publish",
     tabLabel: "Publish",
-    detail: "Share, sell, or assign.",
+    detail: "Share, sell, or grant access.",
     route: "/teacher/work",
     image: "/showcase/teacher-work.jpg",
     panelTitle: "Course Work",
