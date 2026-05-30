@@ -64,11 +64,11 @@ function buildLaunchPreviewSlides({
     studio: {
       label: studio,
       eyebrow: studio,
-      title: "Build the lesson",
+      title: "Build the course",
       route: "/teacher/lessons/create",
       nav: [studio, "Templates", "Media", ai],
       metrics: [["Slides", studio], ["Quiz", practice], ["Draft", start]],
-      blocks: [[studio, "Canvas blocks, media, quiz."], [courses, "Assign to class or catalog."]],
+      blocks: [[studio, "Canvas, media, quiz."], [courses, "Share, sell, or publish."]],
     },
     ai: {
       label: ai,
@@ -125,7 +125,7 @@ export default async function CatalogLaunchHero({
     },
     {
       label: authCopy.organization,
-      tag: `${authCopy.teacher} + ${authCopy.student}`,
+      tag: "Owner + team",
       detail: "Shared portal.",
       href: publicLanguageHref("/auth/signup", publicLanguage, { mode: "organization" }),
     },
