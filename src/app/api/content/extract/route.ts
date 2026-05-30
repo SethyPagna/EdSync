@@ -22,10 +22,10 @@ function fileKind(file: File) {
 function mediaPrompt(file: File, kind: string) {
   const title = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
   if (kind === "image") {
-    return `Image: "${file.name}"\nTopic inferred from file name: ${title}\n\nCreate a visual analysis lesson. Ask students to observe, describe evidence, infer meaning, and connect the image to the learning objective. Include an image section placeholder and a teacher review note.`;
+    return `Image: "${file.name}"\nTopic inferred from file name: ${title}\n\nCreate a visual analysis course section. Ask learners to observe, describe evidence, infer meaning, and connect the image to the learning objective. Include an image section placeholder and a creator review note.`;
   }
   if (kind === "video" || kind === "audio") {
-    return `${kind === "video" ? "Video" : "Audio"}: "${file.name}"\nTopic inferred from file name: ${title}\n\nCreate a media-based lesson with a preview question, active viewing/listening checkpoints, discussion prompts, vocabulary, and a final reflection. Include timestamps as placeholders for the teacher to edit.`;
+    return `${kind === "video" ? "Video" : "Audio"}: "${file.name}"\nTopic inferred from file name: ${title}\n\nCreate a media-based course section with a preview question, active viewing/listening checkpoints, discussion prompts, vocabulary, and a final reflection. Include timestamps as placeholders for the creator to edit.`;
   }
   return "";
 }
