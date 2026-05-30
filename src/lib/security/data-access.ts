@@ -287,7 +287,7 @@ export async function authorizeDataRequest(user: SessionUser, request: DataReque
   if (request.table === "lesson_assignments" && (request.action === "insert" || request.action === "upsert")) {
     return valuesArray(request).every((row) => row.assigned_by === user.id)
       ? null
-      : "Assignments must be created by the signed-in teacher.";
+      : "Course work must be shared by the signed-in creator.";
   }
 
   if (request.table === "storage_objects" || request.table === "media_assets") {
