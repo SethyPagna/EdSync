@@ -120,7 +120,7 @@ export const NOTE_DESIGN_PRESETS: NoteDesignPreset[] = [
   {
     id: "feedback",
     label: "Feedback",
-    description: "Teacher feedback card for student evidence and coaching.",
+    description: "Creator feedback card for learner evidence and coaching.",
     accent: "#F59E0B",
     className: "border-edsync-amber/30 bg-edsync-amber/10",
   },
