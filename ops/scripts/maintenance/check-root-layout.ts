@@ -1,7 +1,6 @@
 import { readdir } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { commandForPlatform } from "../shared/ops";
+import { listTrackedFiles } from "../shared/git";
 
 const allowedTrackedRootFiles = new Set([
   ".gitignore",
@@ -37,20 +36,6 @@ const allowedIgnoredRootEntries = new Set([
   "tsconfig.tsbuildinfo",
 ]);
 
-function listGitTrackedFiles() {
-  const result = spawnSync(commandForPlatform("git"), ["ls-files"], {
-    encoding: "utf8",
-  });
-  if (result.error) {
-    throw new Error(`Failed to inspect tracked files: ${result.error.message}`);
-  }
-  if (result.status !== 0) {
-    throw new Error(result.stderr || `git ls-files exited with status ${result.status ?? 1}`);
-  }
-  const output = result.stdout;
-  return output.split(/\r?\n/).filter(Boolean).map((file) => file.replaceAll("/", path.sep));
-}
-
 function findUnexpectedTrackedRootEntries(files: string[]) {
   const rootFiles = new Set<string>();
   const rootDirs = new Set<string>();
@@ -80,7 +65,7 @@ async function listAllowedIgnoredRootEntries() {
 }
 
 async function main() {
-  const trackedFiles = listGitTrackedFiles();
+  const trackedFiles = listTrackedFiles().map((file) => file.replaceAll("/", path.sep));
   const unexpected = findUnexpectedTrackedRootEntries(trackedFiles);
 
   if (unexpected.files.length > 0 || unexpected.dirs.length > 0) {
