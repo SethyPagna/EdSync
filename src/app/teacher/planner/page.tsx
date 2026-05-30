@@ -142,7 +142,7 @@ export default function TeacherPlannerPage() {
 
   const submitPlannerItem = async () => {
     if (!form.classId) {
-      toast.error("Create or select a class first.");
+      toast.error("Create or select a space first.");
       return;
     }
     if (!form.title.trim()) {
@@ -222,12 +222,12 @@ export default function TeacherPlannerPage() {
     <div className="page-shell space-y-6">
       <header className="group flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-edsync-blue">Class planner</p>
+          <p className="text-sm font-semibold text-edsync-blue">Course planner</p>
           <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text">
             Notifications, deadlines, and schedule
           </h1>
           <p className="edsync-hover-detail max-w-2xl">
-            Keep students aligned with class updates, visible work deadlines, and events.
+            Keep learners aligned with space updates, visible work deadlines, and events.
           </p>
         </div>
         <button
@@ -246,7 +246,7 @@ export default function TeacherPlannerPage() {
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
             <p className="edsync-hover-detail">
-              Use Planner across all classes, or focus notifications, deadlines, and events for one course.
+              Use Planner across all spaces, or focus notifications, deadlines, and events for one course.
             </p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
@@ -259,7 +259,7 @@ export default function TeacherPlannerPage() {
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
               }`}
             >
-              All classes
+              All spaces
             </button>
             {classes.map((classRow) => (
               <button
@@ -308,14 +308,14 @@ export default function TeacherPlannerPage() {
 
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Class</span>
+              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Space</span>
               <select
                 value={form.classId}
                 onChange={(event) => setForm((current) => ({ ...current, classId: event.target.value }))}
                 className="edsync-input"
               >
                 {classes.length === 0 ? (
-                  <option value="">No active classes</option>
+                  <option value="">No active spaces</option>
                 ) : (
                   classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
@@ -501,7 +501,7 @@ export default function TeacherPlannerPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="font-semibold text-edsync-text">{item.title}</p>
                       <span className="text-xs text-edsync-subtle">
-                        {item.class_name || "Class"}
+                        {item.class_name || "Space"}
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
