@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { ADMIN_VIEW_MODE_COOKIE } from "@/lib/admin-view";
 import { ROLE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 import { middleware } from "./middleware";
 
@@ -33,5 +34,11 @@ describe("middleware", () => {
     const response = middleware(makeRequest("/admin/dashboard", cookie));
     expect(response.status).toBe(307);
     expect(redirectPath(response)).toBe("/teacher/dashboard");
+  });
+
+  it("syncs the selected organization workspace view for owner previews", () => {
+    const cookie = `${SESSION_COOKIE}=session-1; ${ROLE_COOKIE}=admin`;
+    const response = middleware(makeRequest("/teacher/dashboard?adminView=student", cookie));
+    expect(response.headers.get("set-cookie")).toContain(`${ADMIN_VIEW_MODE_COOKIE}=organization-student`);
   });
 });
