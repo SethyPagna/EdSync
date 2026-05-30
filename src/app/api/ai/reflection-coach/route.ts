@@ -147,9 +147,9 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `You are an expert learning coach for EdSync.
 
-Given a student's reflection and lecture context, provide concise coaching advice.
+Given a learner's reflection and course context, provide concise coaching advice.
 
-Student profile:
+Learner profile:
 ${aiContext.prompt}
 
 Return ONLY one valid JSON object with this exact shape:
@@ -163,7 +163,7 @@ Return ONLY one valid JSON object with this exact shape:
 
 Rules:
 - Keep each item practical and specific.
-- Match the student's grade, interests, confidence, and preferred detail level.
+- Match the learner's level, interests, confidence, and preferred detail.
 - Do not provide direct answers to quiz questions.
 - Keep guidingQuestion as exactly one question.
 - Keep encouragement to one sentence.
@@ -177,9 +177,9 @@ Rules:
           content: `Lesson: ${lessonTitle ?? "Unknown"}
 Current section: ${currentSection ?? "Unknown"}
 Objectives: ${objectives}
-Student confidence (1-5): ${confidenceScore}
+Learner confidence (1-5): ${confidenceScore}
 
-Student reflection:
+Learner reflection:
 ${reflectionText}
 
 Lecture context:
