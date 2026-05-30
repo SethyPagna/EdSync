@@ -368,7 +368,7 @@ function SignupForm() {
                     setOrganizationName(event.target.value);
                   }
                 }}
-                placeholder={organizationMode === "join" ? "example-academy" : "Example Academy"}
+                placeholder={organizationMode === "join" ? "your-workspace" : "Your Workspace"}
                 className="edsync-input"
               />
               <p className="text-xs leading-5 text-edsync-subtle">
@@ -524,7 +524,7 @@ function SignupForm() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@school.edu"
+          placeholder="you@example.com"
           required
           className="edsync-input"
         />
