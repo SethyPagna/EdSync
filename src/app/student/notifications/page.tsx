@@ -13,11 +13,11 @@ import {
 } from "@/lib/student/dashboard-preferences";
 
 const previewItems = [
-  { key: "newContent", title: "New lesson content", detail: "A teacher publishes a lesson or a new course module.", icon: Sparkles },
-  { key: "assignments", title: "Assignments and work", detail: "Projects, quizzes, and class work assigned to you.", icon: ClipboardList },
+  { key: "newContent", title: "New course content", detail: "A creator publishes a course update or new module.", icon: Sparkles },
+  { key: "assignments", title: "Work updates", detail: "Projects, quizzes, and practice work assigned to you.", icon: ClipboardList },
   { key: "deadlines", title: "Deadlines", detail: "Due dates, study blocks, and planner events.", icon: CalendarClock },
-  { key: "grades", title: "Grades posted", detail: "Visible gradebook updates and score releases.", icon: GraduationCap },
-  { key: "feedback", title: "Feedback", detail: "Teacher comments and improvement notes.", icon: MessageSquareText },
+  { key: "grades", title: "Progress posted", detail: "Visible progress updates and score releases.", icon: GraduationCap },
+  { key: "feedback", title: "Feedback", detail: "Creator comments and improvement notes.", icon: MessageSquareText },
 ] as const;
 
 function readVisibility() {
@@ -57,10 +57,10 @@ export default function StudentNotificationsPage() {
       <section className="premium-panel group rounded-2xl p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Student preferences</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Learner preferences</p>
             <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Notifications</h1>
             <p className="edsync-hover-detail max-w-2xl">
-              Choose which updates appear on your dashboard. These settings stay personal to your browser and keep the student portal quieter.
+              Choose which updates appear on your dashboard. These settings stay personal to your browser and keep the learner portal quieter.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
