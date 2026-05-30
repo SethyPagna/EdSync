@@ -1367,7 +1367,7 @@ export default function TeacherLessonDetail() {
       .eq("lesson_id", lessonId)
       .eq("class_id", classId);
     setAssignments((a) => a.filter((x) => x.class_id !== classId));
-    toast.success("Assignment removed");
+    toast.success("Sharing removed");
   };
 
   const TYPE_INFO: Record<string, { icon: string; color: string }> = {
