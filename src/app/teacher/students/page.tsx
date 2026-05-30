@@ -46,7 +46,7 @@ export default function TeacherStudents() {
   const [newSubject, setNewSubject] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Assign lesson modal
+  // Assign course modal
   const [showAssign, setShowAssign] = useState(false);
   const [assignLessonId, setAssignLessonId] = useState("");
   const [assignDueDate, setAssignDueDate] = useState("");
@@ -211,7 +211,7 @@ export default function TeacherStudents() {
 
   const assignLesson = async () => {
     if (!assignLessonId) {
-      toast.error("Pick a lesson first");
+      toast.error("Pick a course first");
       return;
     }
     if (selectedClass === "all") {
@@ -254,7 +254,7 @@ export default function TeacherStudents() {
           dueDate: assignDueDate || null,
         }),
       });
-      toast.success("Lesson assigned!");
+      toast.success("Course assigned!");
       await loadAssignments(selectedClass);
       setAssignLessonId("");
       setAssignDueDate("");
@@ -275,7 +275,7 @@ export default function TeacherStudents() {
 
   const deleteClass = async (classId: string) => {
     if (
-      !confirm("Delete this class? Students will lose access to its lessons.")
+      !confirm("Delete this space? Learners will lose access to its courses.")
     )
       return;
     await edsync
@@ -287,7 +287,7 @@ export default function TeacherStudents() {
       setSelectedClass("all");
       setStudents(allStudents);
     }
-    toast.success("Class deleted");
+    toast.success("Space deleted");
   };
 
   return (
@@ -297,10 +297,10 @@ export default function TeacherStudents() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-            Classroom
+            Course access
           </p>
           <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
-            Students
+            Learners
           </h1>
           <p className="mt-1 text-sm text-edsync-subtle">
             {allStudents.length} enrolled · {classes.length} class
@@ -376,7 +376,7 @@ export default function TeacherStudents() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="edsync-card w-full max-w-md animate-slide-up p-8">
             <h2 className="font-display font-bold text-xl text-edsync-text mb-1">
-              Assign lesson
+              Assign course
             </h2>
             <p className="text-edsync-subtle text-sm mb-6">
               To:{" "}
@@ -387,14 +387,14 @@ export default function TeacherStudents() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-edsync-subtle mb-2">
-                  Lesson *
+                  Course *
                 </label>
                 <select
                   value={assignLessonId}
                   onChange={(e) => setAssignLessonId(e.target.value)}
                   className="edsync-input"
                 >
-                  <option value="">— Choose a lesson —</option>
+                  <option value="">— Choose a course —</option>
                   {myLessons
                     .filter(
                       (lesson) => !assignedLessonIds.has(lesson.id),
@@ -410,7 +410,7 @@ export default function TeacherStudents() {
                   (lesson) => !assignedLessonIds.has(lesson.id),
                 ).length === 0 && (
                   <p className="text-xs text-edsync-subtle mt-1">
-                    All your lessons are already assigned to this class.
+                    All your courses are already assigned to this space.
                   </p>
                 )}
               </div>
@@ -444,7 +444,7 @@ export default function TeacherStudents() {
                 disabled={assigning || !assignLessonId}
                 className="btn-primary flex-1 justify-center"
               >
-                {assigning ? "Assigning..." : "Assign Lesson"}
+                {assigning ? "Assigning..." : "Assign Course"}
               </button>
             </div>
           </div>
@@ -472,7 +472,7 @@ export default function TeacherStudents() {
               All Classes
             </h3>
             <p className="text-xs text-edsync-subtle">
-              {allStudents.length} students total
+              {allStudents.length} learners total
             </p>
           </div>
 
@@ -529,11 +529,11 @@ export default function TeacherStudents() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-semibold text-lg text-edsync-text">
               {selectedClass === "all"
-                ? "All Students"
+                ? "All Learners"
                 : activeClass?.name || "Class"}
             </h2>
             <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20">
-              {students.length} students
+              {students.length} learners
             </span>
           </div>
 
@@ -549,12 +549,12 @@ export default function TeacherStudents() {
           ) : students.length === 0 ? (
             <div className="text-center py-12">
               <p className="font-semibold text-edsync-text mb-1">
-                No students
+                No learners
               </p>
               <p className="text-edsync-subtle text-sm">
                 {selectedClass === "all"
-                  ? "Share a class code to enroll students."
-                  : `Share code ${activeClass ? `"${activeClass.join_code}"` : ""} to enroll students.`}
+                  ? "Share an access code to enroll learners."
+                  : `Share code ${activeClass ? `"${activeClass.join_code}"` : ""} to enroll learners.`}
               </p>
             </div>
           ) : (
@@ -658,7 +658,7 @@ export default function TeacherStudents() {
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-edsync-subtle">Students</span>
+                      <span className="text-edsync-subtle">Learners</span>
                       <span className="text-edsync-text">{students.length}</span>
                     </div>
                   </div>
@@ -669,7 +669,7 @@ export default function TeacherStudents() {
               <div className="edsync-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-edsync-text">
-                    Assigned Lessons
+                    Assigned Courses
                   </h3>
                   <button
                     onClick={() => setShowAssign(true)}
@@ -682,13 +682,13 @@ export default function TeacherStudents() {
                 {assignments.length === 0 ? (
                   <div className="text-center py-6">
                     <p className="text-edsync-subtle text-sm mb-3">
-                      No assigned lessons.
+                      No assigned courses.
                     </p>
                     <button
                       onClick={() => setShowAssign(true)}
                       className="btn-secondary text-sm py-2"
                     >
-                      Assign lesson
+                      Assign course
                     </button>
                   </div>
                 ) : (
@@ -731,7 +731,7 @@ export default function TeacherStudents() {
             <div className="edsync-card text-center py-8">
               <p className="font-medium text-edsync-text mb-1">Select a class</p>
               <p className="text-edsync-subtle text-sm">
-                Select a class to manage students and lessons.
+                Select a space to manage learners and courses.
               </p>
             </div>
           )}
