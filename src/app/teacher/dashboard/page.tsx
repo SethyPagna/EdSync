@@ -248,7 +248,7 @@ export default function TeacherDashboard() {
               },
               {
                 href: "/teacher/students",
-                title: "Classes",
+                title: "Spaces",
                 value: `${classes.length}`,
                 copy: "active spaces",
                 icon: UsersRound,
@@ -312,7 +312,7 @@ export default function TeacherDashboard() {
         <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-display text-xl font-bold">Recent lessons</h2>
+              <h2 className="font-display text-xl font-bold">Recent courses</h2>
               <p className="edsync-hover-detail">Drafts and recent updates.</p>
             </div>
             <Link href="/teacher/lessons" className="btn-ghost text-sm">
@@ -331,12 +331,12 @@ export default function TeacherDashboard() {
             ) : recentLessons.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
                 <ClipboardList className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-                <p className="font-semibold text-edsync-text">No lessons yet</p>
+                <p className="font-semibold text-edsync-text">No courses yet</p>
                 <Link
                   href="/teacher/lessons/create"
                   className="btn-primary mt-5 inline-flex"
                 >
-                  Create first lesson
+                  Create first course
                 </Link>
               </div>
             ) : (
@@ -397,7 +397,7 @@ export default function TeacherDashboard() {
                 ))
               ) : alerts.length === 0 ? (
                 <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No urgent alerts. Your class queue is clear.
+                  No urgent alerts. Your course queue is clear.
                 </p>
               ) : (
                 alerts.map((alert) => (
