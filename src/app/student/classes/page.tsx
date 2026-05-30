@@ -74,7 +74,7 @@ export default function StudentClassesPage() {
       setClasses(
         activeClasses.map((classItem) => ({
           ...classItem,
-          teacherName: teacherById.get(classItem.teacher_id) || "Teacher",
+          teacherName: teacherById.get(classItem.teacher_id) || "Creator",
           lessonCount: lessonCounts.get(classItem.id) || 0,
         })),
       );
@@ -114,7 +114,7 @@ export default function StudentClassesPage() {
     }
 
     if (!classItem) {
-      toast.error("Invalid join code. Ask your teacher for the current code.");
+      toast.error("Invalid join code. Ask for the current access code.");
       setJoining(false);
       return;
     }
@@ -137,12 +137,12 @@ export default function StudentClassesPage() {
   return (
     <div className="page-shell space-y-5">
       <header className="premium-panel group rounded-2xl p-4 sm:p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Teachers & classes</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Course access</p>
         <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Teachers & Classes</h1>
+            <h1 className="font-display text-3xl font-bold">Course Access</h1>
             <p className="edsync-hover-detail max-w-2xl">
-              Join an organization class, see who teaches it, and jump into assigned learning without returning to the dashboard.
+              Join an organization space, see who manages it, and jump into linked courses without returning to the dashboard.
             </p>
           </div>
           <div className="flex w-full max-w-md gap-2">
@@ -150,7 +150,7 @@ export default function StudentClassesPage() {
               value={joinCode}
               onChange={(event) => setJoinCode(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && joinClass()}
-              placeholder="Class code"
+              placeholder="Access code"
               className="edsync-input min-w-0 flex-1 py-2 font-mono uppercase"
             />
             <button
@@ -169,28 +169,28 @@ export default function StudentClassesPage() {
         <div className="metric-card">
           <UsersRound className="h-5 w-5 text-edsync-blue" />
           <span>{classes.length}</span>
-          <p>Active classes</p>
+          <p>Active spaces</p>
         </div>
         <div className="metric-card">
           <BookOpenCheck className="h-5 w-5 text-edsync-emerald" />
           <span>{classes.reduce((total, classItem) => total + (classItem.lessonCount || 0), 0)}</span>
-          <p>Assigned lessons</p>
+          <p>Linked courses</p>
         </div>
         <div className="metric-card">
           <GraduationCap className="h-5 w-5 text-edsync-amber" />
           <span>{new Set(classes.map((classItem) => classItem.teacher_id)).size}</span>
-          <p>Teachers</p>
+          <p>Creators</p>
         </div>
       </section>
 
       <section className="premium-surface group rounded-2xl p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="font-display text-xl font-bold">Your classes</h2>
-            <p className="edsync-hover-detail">Organization classes, teacher context, and class-linked work.</p>
+            <h2 className="font-display text-xl font-bold">Your access</h2>
+            <p className="edsync-hover-detail">Organization spaces, creator context, and linked work.</p>
           </div>
           <Link href="/student/lessons" className="btn-secondary px-3 py-2 text-sm">
-            Lessons <ArrowRight className="h-4 w-4" />
+            Courses <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
@@ -203,8 +203,8 @@ export default function StudentClassesPage() {
         ) : classes.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
             <UsersRound className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-            <p className="font-semibold text-edsync-text">No classes yet</p>
-            <p className="mt-1 text-sm text-edsync-subtle">Use a class code.</p>
+            <p className="font-semibold text-edsync-text">No access yet</p>
+            <p className="mt-1 text-sm text-edsync-subtle">Use an access code.</p>
             <Link href="/catalog" className="btn-secondary mx-auto mt-4 w-fit px-4 py-2 text-sm">
               Browse catalog <ArrowRight className="h-4 w-4" />
             </Link>
@@ -220,7 +220,7 @@ export default function StudentClassesPage() {
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-display text-xl font-bold text-edsync-text">{classItem.name}</h3>
                     <p className="edsync-hover-detail">
-                      {classItem.description || `${classItem.subject || "Class"} learning space`}
+                      {classItem.description || `${classItem.subject || "Course"} learning space`}
                     </p>
                   </div>
                 </div>
@@ -232,7 +232,7 @@ export default function StudentClassesPage() {
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2">
                     <BookOpenCheck className="h-4 w-4" />
-                    {classItem.lessonCount} lessons
+                    {classItem.lessonCount} courses
                   </span>
                 </div>
 
