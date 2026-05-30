@@ -39,7 +39,7 @@ function readGradeVisibility() {
 }
 
 function percentText(value: number | null) {
-  return value === null ? "Not graded" : `${value}%`;
+  return value === null ? "Not scored" : `${value}%`;
 }
 
 export default function StudentGradesPage() {
@@ -77,7 +77,7 @@ export default function StudentGradesPage() {
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Progress</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {gradedScores.length} scored item{gradedScores.length !== 1 ? "s" : ""}, {feedbackCount} with feedback
+              {gradedScores.length} result{gradedScores.length !== 1 ? "s" : ""}, {feedbackCount} with feedback
             </p>
           </div>
           <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-center">
@@ -96,7 +96,7 @@ export default function StudentGradesPage() {
           <div className="grid gap-2 sm:grid-cols-3">
             {[
               ["overall", "Overall"],
-              ["scores", "Scores"],
+              ["scores", "Results"],
               ["feedback", "Feedback"],
             ].map(([key, label]) => {
               const typedKey = key as keyof GradeVisibility;
@@ -126,17 +126,17 @@ export default function StudentGradesPage() {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <SummaryTile icon={TrendingUp} label="Current overall" value={visibility.overall ? percentText(overall) : "Hidden"} tone="text-edsync-blue" />
-        <SummaryTile icon={CheckCircle2} label="Scored" value={gradedScores.length} tone="text-edsync-emerald" />
+        <SummaryTile icon={CheckCircle2} label="Results" value={gradedScores.length} tone="text-edsync-emerald" />
         <SummaryTile icon={MessageSquareText} label="Feedback" value={feedbackCount} tone="text-edsync-amber" />
       </section>
 
       <section className="rounded-xl border border-edsync-border bg-edsync-card">
         <div className="border-b border-edsync-border p-4 sm:p-5">
-          <h2 className="font-display text-xl font-bold">Score history</h2>
+          <h2 className="font-display text-xl font-bold">Progress history</h2>
         </div>
         <div className="divide-y divide-edsync-border">
           {scores.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No progress scores yet.</p>
+            <p className="p-5 text-sm text-edsync-subtle">No progress results yet.</p>
           ) : (
             scores.map((score) => (
               <article key={score.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center">
