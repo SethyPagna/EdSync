@@ -110,7 +110,7 @@ export function shellWorkspaceLabel({
   if (role === "admin") return roleCopy.admin.label;
   if (isAdminViewMode && adminViewMode) return adminViewModeLabel(adminViewMode);
   if (workspaceContext?.type === "organization") {
-    return role === "teacher" ? "Organization Teacher" : "Organization Student";
+    return role === "teacher" ? "Org Creator" : "Org Learner";
   }
   return role === "teacher" ? roleCopy.teacher.label : roleCopy.student.label;
 }
@@ -293,8 +293,8 @@ export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
   { href: "/student/dashboard?adminView=individual", label: "Individual Account", icon: UserRound },
   { href: "/admin/portals", label: "Organizations", icon: Building2 },
-  { href: "/teacher/dashboard?adminView=organization-teacher", label: "Organization Teacher", icon: GraduationCap },
-  { href: "/student/dashboard?adminView=organization-student", label: "Organization Student", icon: BookOpenCheck },
+  { href: "/teacher/dashboard?adminView=organization-teacher", label: "Org Creator", icon: GraduationCap },
+  { href: "/student/dashboard?adminView=organization-student", label: "Org Learner", icon: BookOpenCheck },
 ];
 
 export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
@@ -595,7 +595,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           )}
           {role === "student" && (
             <div className="group mt-3 rounded-xl border border-edsync-emerald/20 bg-edsync-emerald/10 px-3 py-2 text-xs font-semibold text-edsync-emerald">
-              {workspaceContext?.type === "organization" ? "Student tools" : "Learner tools"}
+              {workspaceContext?.type === "organization" ? "Org learner tools" : "Learner tools"}
               <span className="edsync-hover-detail text-edsync-emerald">Courses, practice, progress, and notes.</span>
             </div>
           )}
