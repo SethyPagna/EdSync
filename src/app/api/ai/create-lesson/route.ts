@@ -427,7 +427,7 @@ export async function POST(request: NextRequest) {
 
     const userPrompt = makeUserPrompt(
       requestedVersions > 1
-        ? "Version 1: balanced classroom-ready version with the clearest progression."
+        ? "Version 1: balanced publish-ready version with the clearest progression."
         : undefined,
     );
 
