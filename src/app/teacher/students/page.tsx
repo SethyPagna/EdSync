@@ -40,7 +40,7 @@ export default function TeacherStudents() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Create class modal
+  // Create space modal
   const [showAddClass, setShowAddClass] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [newSubject, setNewSubject] = useState("");
@@ -171,7 +171,7 @@ export default function TeacherStudents() {
 
   const createClass = async () => {
     if (!newClassName.trim()) {
-      toast.error("Class name is required");
+      toast.error("Space name is required");
       return;
     }
     setCreating(true);
@@ -206,7 +206,7 @@ export default function TeacherStudents() {
     setNewSubject("");
     setShowAddClass(false);
     setCreating(false);
-    toast.success(`Class "${data.name}" created. Join code: ${data.join_code}`);
+    toast.success(`Space "${data.name}" created. Access code: ${data.join_code}`);
   };
 
   const assignLesson = async () => {
@@ -215,7 +215,7 @@ export default function TeacherStudents() {
       return;
     }
     if (selectedClass === "all") {
-      toast.error("Select a specific class first");
+      toast.error("Select a specific space first");
       return;
     }
     setAssigning(true);
@@ -228,7 +228,7 @@ export default function TeacherStudents() {
     }
 
     if (assignedLessonIds.has(assignLessonId)) {
-      toast.error("Already assigned");
+      toast.error("Already shared");
       setAssigning(false);
       return;
     }
@@ -254,7 +254,7 @@ export default function TeacherStudents() {
           dueDate: assignDueDate || null,
         }),
       });
-      toast.success("Course assigned!");
+      toast.success("Course shared");
       await loadAssignments(selectedClass);
       setAssignLessonId("");
       setAssignDueDate("");
@@ -264,13 +264,13 @@ export default function TeacherStudents() {
   };
 
   const removeAssignment = async (id: string) => {
-    if (!confirm("Remove this assignment from the class?")) return;
+    if (!confirm("Remove this course from the space?")) return;
     await edsync
       .from("lesson_assignments")
       .update({ is_active: false })
       .eq("id", id);
     setAssignments((a) => a.filter((x) => x.id !== id));
-    toast.success("Assignment removed");
+    toast.success("Course removed");
   };
 
   const deleteClass = async (classId: string) => {
@@ -303,33 +303,33 @@ export default function TeacherStudents() {
             Learners
           </h1>
           <p className="mt-1 text-sm text-edsync-subtle">
-            {allStudents.length} enrolled · {classes.length} class
-            {classes.length !== 1 ? "es" : ""}
+            {allStudents.length} enrolled / {classes.length} space
+            {classes.length !== 1 ? "s" : ""}
           </p>
         </div>
         <button onClick={() => setShowAddClass(true)} className="btn-primary justify-center">
           <Plus className="h-4 w-4" />
-          New class
+          New space
         </button>
       </div>
       </section>
 
-      {/* Create Class Modal */}
+      {/* Create space modal */}
       {showAddClass && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="edsync-card w-full max-w-md animate-slide-up p-8">
             <h2 className="font-display font-bold text-xl text-edsync-text mb-6">
-              Create class
+              Create space
             </h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-edsync-subtle mb-2">
-                  Class Name *
+                  Space name *
                 </label>
                 <input
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
-                  placeholder="e.g. Biology 10A"
+                  placeholder="e.g. Biology cohort"
                   className="edsync-input"
                   onKeyDown={(e) => e.key === "Enter" && createClass()}
                   autoFocus
@@ -364,7 +364,7 @@ export default function TeacherStudents() {
                 disabled={creating || !newClassName.trim()}
                 className="btn-primary flex-1 justify-center"
               >
-                {creating ? "Creating..." : "Create Class"}
+                {creating ? "Creating..." : "Create space"}
               </button>
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function TeacherStudents() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="edsync-card w-full max-w-md animate-slide-up p-8">
             <h2 className="font-display font-bold text-xl text-edsync-text mb-1">
-              Assign course
+              Share course
             </h2>
             <p className="text-edsync-subtle text-sm mb-6">
               To:{" "}
@@ -410,7 +410,7 @@ export default function TeacherStudents() {
                   (lesson) => !assignedLessonIds.has(lesson.id),
                 ).length === 0 && (
                   <p className="text-xs text-edsync-subtle mt-1">
-                    All your courses are already assigned to this space.
+                    All your courses are already shared with this space.
                   </p>
                 )}
               </div>
@@ -444,14 +444,14 @@ export default function TeacherStudents() {
                 disabled={assigning || !assignLessonId}
                 className="btn-primary flex-1 justify-center"
               >
-                {assigning ? "Assigning..." : "Assign Course"}
+                {assigning ? "Sharing..." : "Share course"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Classes Grid */}
+      {/* Spaces grid */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
@@ -460,7 +460,7 @@ export default function TeacherStudents() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          {/* All Classes card */}
+          {/* All spaces card */}
           <div
             onClick={() => selectClass("all")}
             className={`edsync-card cursor-pointer transition-all border-dashed ${selectedClass === "all" ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
@@ -469,7 +469,7 @@ export default function TeacherStudents() {
               <UsersRound className="h-5 w-5" />
             </div>
             <h3 className="font-display font-bold text-edsync-text">
-              All Classes
+              All spaces
             </h3>
             <p className="text-xs text-edsync-subtle">
               {allStudents.length} learners total
@@ -502,7 +502,7 @@ export default function TeacherStudents() {
                 {cls.subject || "No subject"}
               </p>
               <div className="mt-3 flex items-center justify-between border-t border-edsync-border pt-3">
-                <span className="text-xs text-edsync-subtle">Join code</span>
+                <span className="text-xs text-edsync-subtle">Access code</span>
                 <span className="font-mono text-edsync-amber font-bold text-sm">
                   {cls.join_code}
                 </span>
@@ -513,7 +513,7 @@ export default function TeacherStudents() {
                   deleteClass(cls.id);
                 }}
                 className="absolute right-3 top-3 rounded-lg p-1.5 text-[0] text-edsync-subtle opacity-0 transition-opacity hover:bg-edsync-red/10 hover:text-edsync-red group-hover:opacity-100"
-                title="Delete class"
+                title="Delete space"
                 aria-label={`Delete ${cls.name}`}
               >
                 <Trash2 className="h-4 w-4" />
@@ -524,13 +524,13 @@ export default function TeacherStudents() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Students table */}
+        {/* Learners table */}
         <div className="lg:col-span-2 edsync-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-semibold text-lg text-edsync-text">
               {selectedClass === "all"
                 ? "All Learners"
-                : activeClass?.name || "Class"}
+                : activeClass?.name || "Space"}
             </h2>
             <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20">
               {students.length} learners
@@ -563,10 +563,10 @@ export default function TeacherStudents() {
                 <thead>
                   <tr className="border-b border-edsync-border">
                     <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                      Student
+                      Learner
                     </th>
                     <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                      Grade
+                      Progress
                     </th>
                     <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
                       Interests
@@ -632,19 +632,19 @@ export default function TeacherStudents() {
           )}
         </div>
 
-        {/* Assignments panel for selected class */}
+        {/* Course panel for selected space */}
         <div className="space-y-4">
           {selectedClass !== "all" ? (
             <>
-              {/* Class info */}
+              {/* Space info */}
               {activeClass && (
                 <div className="edsync-card">
                   <h3 className="font-semibold text-edsync-text mb-3">
-                    Class Info
+                    Space info
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-edsync-subtle">Join Code</span>
+                      <span className="text-edsync-subtle">Access code</span>
                       <span className="font-mono font-bold text-edsync-amber">
                         {activeClass.join_code}
                       </span>
@@ -669,26 +669,26 @@ export default function TeacherStudents() {
               <div className="edsync-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-edsync-text">
-                    Assigned Courses
+                    Shared courses
                   </h3>
                   <button
                     onClick={() => setShowAssign(true)}
                     className="btn-primary text-xs py-1.5 px-3"
                   >
                     <BookOpenCheck className="h-3.5 w-3.5" />
-                    Assign
+                    Share
                   </button>
                 </div>
                 {assignments.length === 0 ? (
                   <div className="text-center py-6">
                     <p className="text-edsync-subtle text-sm mb-3">
-                      No assigned courses.
+                      No shared courses.
                     </p>
                     <button
                       onClick={() => setShowAssign(true)}
                       className="btn-secondary text-sm py-2"
                     >
-                      Assign course
+                      Share course
                     </button>
                   </div>
                 ) : (
@@ -711,7 +711,7 @@ export default function TeacherStudents() {
                             </p>
                           )}
                           <p className="text-xs text-edsync-subtle">
-                            Assigned {formatRelativeTime(a.created_at)}
+                            Shared {formatRelativeTime(a.created_at)}
                           </p>
                         </div>
                         <button
@@ -729,7 +729,7 @@ export default function TeacherStudents() {
             </>
           ) : (
             <div className="edsync-card text-center py-8">
-              <p className="font-medium text-edsync-text mb-1">Select a class</p>
+              <p className="font-medium text-edsync-text mb-1">Select a space</p>
               <p className="text-edsync-subtle text-sm">
                 Select a space to manage learners and courses.
               </p>
