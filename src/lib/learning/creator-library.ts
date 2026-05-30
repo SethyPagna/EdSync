@@ -113,7 +113,7 @@ export const NOTE_DESIGN_PRESETS: NoteDesignPreset[] = [
   {
     id: "planning",
     label: "Planning",
-    description: "Teacher planning note for lesson prep and resources.",
+    description: "Creator planning note for course prep and resources.",
     accent: "#7C3AED",
     className: "border-purple-500/30 bg-purple-500/10",
   },
@@ -137,7 +137,7 @@ export const PRACTICE_GAME_STYLE_PRESETS: CreatorLibraryItem[] = [
   { id: "classic-quiz", label: "Classic Quiz", description: "Clear choices, explanation, and points.", tags: ["quiz", "points"] },
   { id: "speed-sprint", label: "Speed Sprint", description: "Target time, streak, and speed meter.", tags: ["timer", "kahoot"] },
   { id: "matching-race", label: "Matching Race", description: "Pair terms quickly with accuracy feedback.", tags: ["matching", "game"] },
-  { id: "mistake-retry", label: "Mistake Retry", description: "Retry missed items and save review cards.", tags: ["review", "mastery"] },
+  { id: "mistake-retry", label: "Retry", description: "Retry missed items and save review cards.", tags: ["review", "mastery"] },
   { id: "scenario-challenge", label: "Scenario Challenge", description: "Apply concepts in realistic prompts.", tags: ["scenario", "practice"] },
 ];
 
