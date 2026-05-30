@@ -324,7 +324,7 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
       { label: "Create", items: pick(["/teacher/lessons", "/teacher/lessons/create"]) },
-      { label: "Classroom", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
+      { label: "Course Ops", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
       { label: "Support", items: pick(["/practice"]) },
       { label: "Insights", items: pick(["/teacher/analytics"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
