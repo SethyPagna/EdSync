@@ -13,6 +13,8 @@ type AllowedOutdatedPackage = {
   stableMajor: number;
 };
 
+type VersionParts = [number, number, number];
+
 const allowedOutdatedPackages: AllowedOutdatedPackage[] = [
   {
     latestMajor: 10,
@@ -32,6 +34,30 @@ function parseOutdatedPackages(output: string) {
 function parseMajor(version: string | undefined) {
   const match = version?.match(/^(\d+)/);
   return match?.[1] ? Number.parseInt(match[1], 10) : null;
+}
+
+function parseVersionParts(version: string | undefined): VersionParts | null {
+  const match = version?.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match?.[1] || !match[2] || !match[3]) return null;
+
+  return [Number.parseInt(match[1], 10), Number.parseInt(match[2], 10), Number.parseInt(match[3], 10)];
+}
+
+function compareVersions(left: VersionParts, right: VersionParts) {
+  for (let index = 0; index < left.length; index += 1) {
+    const difference = left[index] - right[index];
+    if (difference !== 0) return difference;
+  }
+
+  return 0;
+}
+
+function isCurrentAtLeastLatest(details: OutdatedPackage) {
+  const current = parseVersionParts(details.current);
+  const latest = parseVersionParts(details.latest);
+  if (!current || !latest) return false;
+
+  return compareVersions(current, latest) >= 0;
 }
 
 function isAllowedOutdatedPackage(name: string, details: OutdatedPackage) {
@@ -67,6 +93,7 @@ if (result.status !== 0 && result.status !== 1) {
 
 const outdatedPackages = parseOutdatedPackages(result.stdout);
 const unexpectedOutdated = [...outdatedPackages.entries()]
+  .filter(([, details]) => !isCurrentAtLeastLatest(details))
   .filter(([name, details]) => !isAllowedOutdatedPackage(name, details))
   .sort(([left], [right]) => left.localeCompare(right));
 
