@@ -100,11 +100,11 @@ export default function StudentLessonsPage() {
   return (
     <div className="page-shell space-y-5">
       <header className="premium-panel rounded-2xl p-4 sm:p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Student lessons</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Learner courses</p>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Lessons</h1>
-            <p className="mt-1 text-sm text-edsync-subtle">Assigned lessons, progress, and next steps in one place.</p>
+            <h1 className="font-display text-3xl font-bold">Courses</h1>
+            <p className="mt-1 text-sm text-edsync-subtle">Active courses, progress, and next steps in one place.</p>
           </div>
           <div className="rounded-xl border border-edsync-border bg-edsync-surface px-4 py-3 text-sm font-semibold text-edsync-subtle">
             {completedCount} of {lessons.length} complete
@@ -121,8 +121,8 @@ export default function StudentLessonsPage() {
       ) : lessons.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-10 text-center">
           <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-          <h2 className="font-display text-xl font-bold">No lessons assigned yet</h2>
-          <p className="mt-1 text-sm text-edsync-subtle">Join a class or ask your teacher to assign the next lesson.</p>
+          <h2 className="font-display text-xl font-bold">No courses yet</h2>
+          <p className="mt-1 text-sm text-edsync-subtle">Join an organization or open a course when it is available.</p>
           <Link href="/student/dashboard" className="btn-secondary mx-auto mt-4 w-fit px-4 py-2 text-sm">
             Back to dashboard
           </Link>
