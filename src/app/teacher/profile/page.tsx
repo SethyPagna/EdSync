@@ -87,7 +87,7 @@ export default function TeacherProfile() {
     let normalizedGradeLevel: string | null;
     let normalizedSubjects: string[];
     try {
-      normalizedSchool = validateOptionalProfileLine(school, "School");
+      normalizedSchool = validateOptionalProfileLine(school, "Organization or brand");
       normalizedGradeLevel = validateGradeLevel(gradeLevel);
       normalizedSubjects = validateSubjectAreas(subjects);
     } catch (error) {
@@ -130,7 +130,7 @@ export default function TeacherProfile() {
       <div className="group">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Account</p>
         <h1 className="font-display text-3xl font-bold text-edsync-text">Profile & Settings</h1>
-        <p className="edsync-hover-detail">Identity, teaching context, and notifications.</p>
+        <p className="edsync-hover-detail">Identity, course context, and notifications.</p>
       </div>
 
       <div className="edsync-card">
@@ -160,13 +160,13 @@ export default function TeacherProfile() {
               <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="edsync-input" />
             </label>
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-edsync-subtle">School</span>
+              <span className="text-xs font-semibold text-edsync-subtle">Organization or brand</span>
               <input value={school} onChange={(event) => setSchool(event.target.value)} className="edsync-input" />
             </label>
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-edsync-subtle">Primary grade</span>
+              <span className="text-xs font-semibold text-edsync-subtle">Audience level</span>
               <select value={gradeLevel} onChange={(event) => setGradeLevel(event.target.value)} className="edsync-input">
-                <option value="">Select grade</option>
+                <option value="">Select audience</option>
                 {GRADE_LEVELS.map((grade) => (
                   <option key={grade} value={grade}>
                     {grade}
@@ -191,7 +191,7 @@ export default function TeacherProfile() {
       </div>
 
       <div className="edsync-card">
-        <h2 className="font-display text-lg font-bold text-edsync-text">Teaching subjects</h2>
+        <h2 className="font-display text-lg font-bold text-edsync-text">Course topics</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {SUBJECT_AREAS.map((subject) => (
             <button
@@ -215,7 +215,7 @@ export default function TeacherProfile() {
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {[
             ["email_notifications", "Email updates"],
-            ["assignment_notifications", "Assignment notices"],
+            ["assignment_notifications", "Work notices"],
             ["weekly_digest", "Weekly digest"],
           ].map(([key, label]) => (
             <label key={key} className="flex items-center justify-between rounded-lg border border-edsync-border p-3">
