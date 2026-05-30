@@ -333,13 +333,13 @@ export default function StudentDashboard() {
       .maybeSingle();
 
     if (clsError) {
-      toast.error(`Could not look up class: ${clsError.message}`);
+      toast.error(`Could not look up space: ${clsError.message}`);
       setJoiningClass(false);
       return;
     }
 
     if (!cls) {
-      toast.error("Invalid join code. Ask your teacher for the current code.");
+      toast.error("Invalid access code. Ask the creator or organization for the current code.");
       setJoiningClass(false);
       return;
     }
@@ -350,9 +350,9 @@ export default function StudentDashboard() {
     );
 
     if (error) {
-      toast.error(`Could not join class: ${error.message}`);
+      toast.error(`Could not join space: ${error.message}`);
     } else {
-      toast.success(`Joined ${cls.name}.`);
+      toast.success(`Access added: ${cls.name}.`);
       setJoinCode("");
       await loadDashboard();
     }
@@ -468,7 +468,7 @@ export default function StudentDashboard() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-              Student home
+              Learner home
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">
               Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
@@ -644,7 +644,7 @@ export default function StudentDashboard() {
                         {recommendation.progress?.status?.replace("_", " ") || "not started"}
                       </span>
                       <span className="inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                        Open lesson <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                        Open course <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                       </span>
                     </div>
                   </div>
@@ -654,14 +654,14 @@ export default function StudentDashboard() {
           ) : (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
               <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">No lesson assigned yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Join a class.</p>
+              <p className="font-semibold text-edsync-text">No course yet</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Browse catalog or enter an access code.</p>
             </div>
           )}
         </section>
 
         <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-          <h2 className="font-display text-xl font-bold">Join a class</h2>
+          <h2 className="font-display text-xl font-bold">Enter access code</h2>
           <div className="mt-3 flex gap-2">
             <input
               value={joinCode}
@@ -676,7 +676,7 @@ export default function StudentDashboard() {
               disabled={joiningClass || !joinCode.trim()}
               className="btn-primary flex-none justify-center px-4 py-2"
             >
-              Join
+              Enter
             </button>
           </div>
         </section>
@@ -705,8 +705,8 @@ export default function StudentDashboard() {
           ) : lessons.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-10 text-center">
               <Target className="mx-auto mb-4 h-9 w-9 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">No lessons yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Join a class.</p>
+              <p className="font-semibold text-edsync-text">No courses yet</p>
+              <p className="mt-1 text-sm text-edsync-subtle">Browse catalog or enter an access code.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -768,7 +768,7 @@ export default function StudentDashboard() {
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold text-edsync-text">{item.title}</p>
                       <span className="text-xs text-edsync-subtle">
-                        {item.class_name || "Class"}
+                        {item.class_name || "Space"}
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
