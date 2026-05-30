@@ -12,7 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
-import { ArrowRight, BookOpenCheck, Building2, GraduationCap, Info, UserRound, UsersRound } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Building2, GraduationCap, Info, UserRound, UsersRound, type LucideIcon } from "lucide-react";
 
 type Role = "teacher" | "student";
 type AccountType = "organization" | "individual";
@@ -25,18 +25,10 @@ type OrganizationLookup = {
   ssoEnabled: boolean;
 };
 
-const roleDetails = {
-  teacher: {
-    label: "Teacher",
-    icon: UsersRound,
-    copy: "Create, assign, and review work.",
-  },
-  student: {
-    label: "Student",
-    icon: BookOpenCheck,
-    copy: "Learn, practice, and track progress.",
-  },
-};
+const roleIcons = {
+  teacher: UsersRound,
+  student: BookOpenCheck,
+} satisfies Record<Role, LucideIcon>;
 
 function SignupForm() {
   const searchParams = useSearchParams();
@@ -455,7 +447,7 @@ function SignupForm() {
           </div>
           <div className="grid grid-cols-2 gap-2">
         {(["teacher", "student"] as const).map((item) => {
-          const Icon = roleDetails[item].icon;
+          const Icon = roleIcons[item];
           const selected = role === item;
           const itemLabel = roleOptions[item].label;
           const itemCopy = roleOptions[item].copy;
@@ -496,11 +488,7 @@ function SignupForm() {
       {step === "account" && (
         <div className="space-y-5">
           <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
-            {accountType === "organization"
-              ? organizationMode === "create"
-                ? `${organizationLabel} - ${roleLabel}`
-                : `${organizationLabel} - ${roleLabel}`
-              : `${authCopy.individual} - ${roleLabel}`}
+            {accountType === "organization" ? `${organizationLabel} - ${roleLabel}` : `${authCopy.individual} - ${roleLabel}`}
           </div>
 
       <div>
