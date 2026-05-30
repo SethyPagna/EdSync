@@ -34,8 +34,6 @@ export default async function SkillShowcasePage({
         filters: copy.filters,
         individual: authCopy.individual,
         organization: authCopy.organization,
-        teacher: authCopy.teacher,
-        student: authCopy.student,
       }}
     />
   );
