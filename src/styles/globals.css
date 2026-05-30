@@ -1553,20 +1553,25 @@ html.dark .action-menu-panel :where(button, a):hover {
 }
 
 .edsync-auth-choice {
+  display: flex;
+  min-height: 3.25rem;
   position: relative;
+  align-items: center;
+  gap: 0.65rem;
   isolation: isolate;
-  min-height: 5rem;
+  padding-right: 2.35rem !important;
 }
 
 .edsync-auth-choice-info {
   position: absolute;
-  top: 0.65rem;
+  top: 50%;
   right: 0.65rem;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.45rem;
-  height: 1.45rem;
+  width: 1.3rem;
+  height: 1.3rem;
   border: 1px solid color-mix(in srgb, var(--edsync-blue) 22%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--edsync-blue) 8%, transparent);
@@ -1616,12 +1621,17 @@ html.dark .action-menu-panel :where(button, a):hover {
 
 .edsync-auth-choice-tooltip {
   top: 50%;
-  right: 0.9rem;
-  left: 0.9rem;
+  right: 0.7rem;
+  left: 0.7rem;
   transform: translateY(calc(-50% + 0.35rem));
   padding: 0.45rem 0.55rem;
   font-size: 0.72rem;
   text-align: center;
+}
+
+.edsync-auth-choice > svg {
+  margin-bottom: 0 !important;
+  flex: 0 0 auto;
 }
 
 .edsync-auth-choice > svg,
