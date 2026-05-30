@@ -86,9 +86,9 @@ export function buildLessonAssignmentCopy(input: {
   const dueText = formatAssignmentDueText(input.dueDate);
   const baseUrl = String(input.appUrl ?? "").replace(/\/$/, "");
   return {
-    title: "New lesson assigned",
+    title: "New course shared",
     message: `"${input.lessonTitle}" is ready for you.${dueText}`,
-    subject: `EdSync lesson assigned: ${input.lessonTitle}`,
-    bodyText: `Hi ${input.studentName || "there"},\n\nYour teacher assigned "${input.lessonTitle}".${dueText}\n\nOpen EdSync to start: ${baseUrl}${input.actionUrl}`,
+    subject: `EdSync course ready: ${input.lessonTitle}`,
+    bodyText: `Hi ${input.studentName || "there"},\n\n"${input.lessonTitle}" is ready for you.${dueText}\n\nOpen EdSync to start: ${baseUrl}${input.actionUrl}`,
   };
 }
