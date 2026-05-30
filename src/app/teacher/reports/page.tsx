@@ -216,10 +216,10 @@ export default function TeacherReports() {
         <div className="premium-surface rounded-2xl py-16 text-center">
           <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-edsync-subtle" />
           <h3 className="font-display font-bold text-xl text-edsync-text mb-2">
-            No student data yet
+            No learner data yet
           </h3>
           <p className="text-edsync-subtle">
-            Assign this lesson to a class and wait for students to start working
+            Share this course with a space and wait for learners to start working
             on it.
           </p>
         </div>
@@ -229,7 +229,7 @@ export default function TeacherReports() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
               {
-                label: "Total Students",
+                label: "Total Learners",
                 value: reports.length,
                 icon: UsersRound,
                 tone: "text-edsync-blue",
