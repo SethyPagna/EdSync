@@ -15,7 +15,7 @@ type GradeRow = {
 };
 
 function gradeText(value: number | null) {
-  return value === null ? "Not graded" : `${value}%`;
+  return value === null ? "Not scored" : `${value}%`;
 }
 
 export default function TeacherGradebookPage() {
@@ -38,7 +38,7 @@ export default function TeacherGradebookPage() {
     [classId, students],
   );
 
-  const classLabel = classes.find((item) => item.id === classId)?.name || "All classes";
+  const classLabel = classes.find((item) => item.id === classId)?.name || "All spaces";
   const gradedRows = rows.filter((row) => row.overall !== null);
   const average =
     gradedRows.length > 0
@@ -122,7 +122,7 @@ export default function TeacherGradebookPage() {
             value={classId}
             onChange={(event) => setClassId(event.target.value)}
           >
-            <option value="">All classes</option>
+            <option value="">All spaces</option>
             {classes.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -132,8 +132,8 @@ export default function TeacherGradebookPage() {
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <SummaryTile icon={TrendingUp} label="Class average" value={gradeText(average)} tone="text-edsync-blue" />
-          <SummaryTile icon={GraduationCap} label="Graded learners" value={gradedRows.length} tone="text-edsync-emerald" />
+          <SummaryTile icon={TrendingUp} label="Average result" value={gradeText(average)} tone="text-edsync-blue" />
+          <SummaryTile icon={GraduationCap} label="Reviewed learners" value={gradedRows.length} tone="text-edsync-emerald" />
           <SummaryTile icon={ClipboardList} label="Open rows" value={Math.max(0, rows.length - gradedRows.length)} tone="text-edsync-amber" />
         </div>
       </section>
@@ -144,8 +144,8 @@ export default function TeacherGradebookPage() {
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-bold">Add score</h2>
-            <p className="text-sm text-edsync-subtle">Record a quick manual score.</p>
+            <h2 className="font-display text-xl font-bold">Add result</h2>
+            <p className="text-sm text-edsync-subtle">Record quick progress feedback.</p>
           </div>
           <Plus className="h-5 w-5 text-edsync-blue" />
         </div>
@@ -234,9 +234,9 @@ export default function TeacherGradebookPage() {
         </div>
         <div className="divide-y divide-edsync-border">
           {loading ? (
-            <p className="p-5 text-sm text-edsync-subtle">Loading gradebook...</p>
+            <p className="p-5 text-sm text-edsync-subtle">Loading progress...</p>
           ) : rows.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No gradebook rows yet.</p>
+            <p className="p-5 text-sm text-edsync-subtle">No progress rows yet.</p>
           ) : (
             rows.map((row) => (
               <article key={row.studentId} className="grid gap-3 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center">
@@ -253,7 +253,7 @@ export default function TeacherGradebookPage() {
                       </span>
                     ))}
                     {row.scores.length === 0 && (
-                      <span className="text-sm text-edsync-subtle">No scores yet</span>
+                      <span className="text-sm text-edsync-subtle">No results yet</span>
                     )}
                   </div>
                 </div>
