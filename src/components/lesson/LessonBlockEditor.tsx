@@ -43,7 +43,7 @@ function insertPlainText(text: string) {
 const textStyleInsertById: Record<string, string> = {
   heading: "## Heading",
   subheading: "### Subheading",
-  body: "Body paragraph\nWrite the explanation, example, or student-facing direction here.",
+  body: "Body paragraph\nWrite the explanation, example, or learner-facing direction here.",
   callout: "Callout: Remember\nAdd a key reminder, warning, misconception, or example.",
   citation: "Reference\nSource: https://\nWhy it matters:",
   glossary: "Glossary\nTerm | Definition | Example",
@@ -99,8 +99,12 @@ export default function LessonBlockEditor({
             <Sparkles className="h-4 w-4" />
           </span>
             <div>
-              <p className="text-sm font-bold text-edsync-text">{contentTypeLabel} canvas</p>
-              <p className="text-xs text-edsync-subtle">Compose with blocks, media cues, game modes, and design markers. No HTML needed.</p>
+              <p
+                className="text-sm font-bold text-edsync-text"
+                title="Compose with blocks, media cues, game modes, and design markers."
+              >
+                {contentTypeLabel} canvas
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -185,7 +189,7 @@ export default function LessonBlockEditor({
           <div
             ref={editorRef}
             role="textbox"
-            aria-label={`${contentTypeLabel} lesson content`}
+            aria-label={`${contentTypeLabel} course content`}
             aria-multiline="true"
             contentEditable
             suppressContentEditableWarning
@@ -212,7 +216,7 @@ export default function LessonBlockEditor({
           </div>
           <button
             type="button"
-            onClick={() => appendBlock("Media cue\nType: image or video\nSource: HTTPS, YouTube, Vimeo, or uploaded R2 asset\nCaption:\nStudent action:")}
+            onClick={() => appendBlock("Media cue\nType: image or video\nSource: HTTPS, YouTube, Vimeo, or uploaded R2 asset\nCaption:\nLearner action:")}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-bold text-edsync-subtle transition hover:border-edsync-blue/50 hover:text-edsync-blue"
           >
             <ImageIcon className="h-4 w-4" />
