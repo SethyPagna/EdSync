@@ -98,6 +98,12 @@ To guard referenced public images and PWA assets, run:
 npm.cmd run check:assets
 ```
 
+To guard dependency freshness with documented compatibility holds, run:
+
+```powershell
+npm.cmd run check:deps
+```
+
 To guard README command and path references, run:
 
 ```powershell
@@ -143,6 +149,8 @@ React, import, and jsx-a11y plugins.
 - `npm.cmd run check:assets` fails if referenced public assets are missing,
   image extensions do not match file content, or showcase screenshots are
   replaced with tiny placeholder files.
+- `npm.cmd run check:deps` fails if dependencies become outdated outside of
+  documented compatibility holds such as the current ESLint 10 migration block.
 - `npm.cmd run check:docs` fails if README command examples or local path
   references stop matching the current project layout.
 
