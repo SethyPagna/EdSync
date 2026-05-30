@@ -642,7 +642,7 @@ export default function CreateLesson() {
           </button>
           <div className="grid gap-2">
             {[
-              "Create a shorter student-friendly version",
+              "Create a shorter learner-friendly version",
               "Add a Kahoot-style sprint block",
               "Convert the outline into slide pages",
               "Add rubric and feedback prompts",
@@ -1374,7 +1374,7 @@ export default function CreateLesson() {
                   }
                   className="edsync-input py-2"
                 >
-                  <option value="student_friendly">Student-friendly</option>
+                  <option value="student_friendly">Learner-friendly</option>
                   <option value="professional">Professional</option>
                   <option value="speaking">Speaking script</option>
                   <option value="simple">Simple language</option>
