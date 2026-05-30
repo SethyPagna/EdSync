@@ -789,7 +789,7 @@ export default function StudentDashboard() {
                 )}
                 {visibility.grades && (
                   <Link href="/student/grades" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Grades <ArrowRight className="h-4 w-4" />
+                    Progress <ArrowRight className="h-4 w-4" />
                   </Link>
                 )}
                 {visibility.feedback && (
