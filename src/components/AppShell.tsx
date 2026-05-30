@@ -155,6 +155,10 @@ function navOrderLabel(item: ShellNavItem) {
   return item.label;
 }
 
+function isShellNavItem(item: ShellNavItem | undefined): item is ShellNavItem {
+  return item !== undefined;
+}
+
 function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: string[]) {
   if (preferredOrder.length === 0) return groups;
   const orderIndex = new Map(preferredOrder.map((label, index) => [label, index]));
@@ -227,7 +231,7 @@ export const adminNavItems: ShellNavItem[] = [
 
 function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
   const byHref = new Map(navItems.map((item) => [item.href, item]));
-  const pick = (hrefs: string[]) => hrefs.map((href) => byHref.get(href)).filter(Boolean) as ShellNavItem[];
+  const pick = (hrefs: string[]) => hrefs.map((href) => byHref.get(href)).filter(isShellNavItem);
 
   if (role === "admin") {
     return [
