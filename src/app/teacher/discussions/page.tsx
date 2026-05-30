@@ -108,7 +108,7 @@ export default function TeacherDiscussionsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              Classroom talk
+              Course discussion
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Discussions</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
