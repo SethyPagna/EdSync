@@ -6,7 +6,7 @@ import { publicLanguageHref, type PublicLanguageSearchParams } from "@/lib/publi
 
 export const metadata: Metadata = {
   title: "Workflow",
-  description: "Slide through the EdSync catalog, lesson editor, AI, teacher, student, and admin workflow.",
+  description: "Slide through the EdSync catalog, studio, AI, practice, progress, and owner workflow.",
 };
 
 export default async function ShowcasePage({
