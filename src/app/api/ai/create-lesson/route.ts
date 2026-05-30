@@ -299,17 +299,17 @@ function buildLocalFallbackLesson(topic: string): FallbackLessonDraft {
       {
         term: "Core idea",
         definition: "A central concept learners must understand.",
-        example: "Students explain the core idea in their own words.",
+        example: "Learners explain the core idea in their own words.",
       },
       {
         term: "Application",
         definition: "Using a concept in a practical situation.",
-        example: "Students apply the concept in a case study.",
+        example: "Learners apply the concept in a case study.",
       },
       {
         term: "Misconception",
         definition: "A common but incorrect understanding.",
-        example: "The class discusses a misconception and corrects it.",
+        example: "The group discusses a misconception and corrects it.",
       },
       {
         term: "Scaffold",
@@ -319,7 +319,7 @@ function buildLocalFallbackLesson(topic: string): FallbackLessonDraft {
       {
         term: "Reflection",
         definition: "Thinking about what was learned and why it matters.",
-        example: "Students write a short reflection at the end.",
+        example: "Learners write a short reflection at the end.",
       },
     ],
   };
