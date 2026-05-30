@@ -203,7 +203,7 @@ export default function AdminPortalsPage() {
         <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
           <span>
             <span className="font-display text-xl font-bold">Add organization portal</span>
-            <span className="block text-sm text-edsync-subtle">Create a branded public, internal, customer, or partner space.</span>
+            <span className="block text-sm text-edsync-subtle">Create a branded public, internal, customer, or partner portal.</span>
           </span>
         </div>
         <form onSubmit={createPortal} className="grid gap-3 border-t border-edsync-border p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-6">
