@@ -80,6 +80,12 @@ To guard the TypeScript-first source policy, run:
 npm.cmd run check:typescript
 ```
 
+To guard runtime source import boundaries, run:
+
+```powershell
+npm.cmd run check:boundaries
+```
+
 To guard package script references after moving files, run:
 
 ```powershell
@@ -147,6 +153,9 @@ React, import, and jsx-a11y plugins.
 - `npm.cmd run check:typescript` fails if tracked JavaScript, JSX, or CJS files
   are added. The only tracked `.mjs` exceptions are runtime config files that
   must stay directly loadable by Node or the framework.
+- `npm.cmd run check:boundaries` fails if files under `src/` import runtime
+  code from non-app owner folders such as `config/`, `infra/`, `ops/`, or
+  `public/`.
 - `npm.cmd run check:scripts` fails if `package.json` commands point at missing
   local files after scripts, configs, or infra files move.
 - `npm.cmd run check:ci` fails if GitHub Actions stops installing with
