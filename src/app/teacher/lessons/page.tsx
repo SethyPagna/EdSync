@@ -176,14 +176,14 @@ export default function TeacherLessons() {
         <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card py-16 text-center">
           <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
           <h3 className="mb-2 font-display text-xl font-bold text-edsync-text">
-            {search ? "No lessons match your search" : "No lessons yet"}
+            {search ? "No courses match your search" : "No courses yet"}
           </h3>
           <p className="mb-6 text-sm text-edsync-subtle">
-            {search ? "Try another search." : "Create your first lesson."}
+            {search ? "Try another search." : "Create your first course."}
           </p>
           {!search && (
             <Link href="/teacher/lessons/create" className="btn-primary inline-flex">
-              Create first lesson
+              Create first course
             </Link>
           )}
         </div>
