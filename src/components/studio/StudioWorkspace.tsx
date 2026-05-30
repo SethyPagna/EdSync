@@ -159,7 +159,7 @@ const defaultDraft: StudioDraftValue = {
       id: "slide-2",
       title: "Key Idea",
       body: "Explain the concept with one concrete example.",
-      notes: "Pause after the example and ask students to restate the pattern.",
+      notes: "Pause after the example and ask learners to restate the pattern.",
       accent: "#10b981",
       kind: "content",
       layout: "content",
@@ -172,7 +172,7 @@ const defaultDraft: StudioDraftValue = {
     {
       id: "slide-3",
       title: "Practice",
-      body: "Students try, compare, and revise.",
+      body: "Learners try, compare, and revise.",
       notes: "Use this as a quick check before moving on.",
       accent: "#f59e0b",
       kind: "interactive",
