@@ -5,7 +5,7 @@ const config = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
-    files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "config/**/*.ts"],
+    files: ["src/**/*.{ts,tsx}", "ops/scripts/**/*.ts", "config/**/*.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": "warn",
