@@ -1348,7 +1348,7 @@ export default function StudentLesson() {
     { label: "My work", href: scopedStudentHref("/student/work") },
     { label: "Discussions", href: scopedStudentHref("/student/discussions") },
     { label: "Planner", href: scopedStudentHref("/student/planner") },
-    { label: "Grades", href: scopedStudentHref("/student/grades") },
+    { label: "Progress", href: scopedStudentHref("/student/grades") },
     { label: "Personal notes", href: "/student/notes" },
     { label: "Practice", href: "/practice?mode=generated_from_materials&ai=1" },
   ];
@@ -1504,13 +1504,13 @@ export default function StudentLesson() {
             Back to lessons
           </button>
           <div className="group rounded-2xl bg-edsync-card p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Lesson workspace</p>
-            <p className="mt-1 line-clamp-2 text-sm font-semibold text-edsync-text">{lesson?.title || "Current lesson"}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course workspace</p>
+            <p className="mt-1 line-clamp-2 text-sm font-semibold text-edsync-text">{lesson?.title || "Current course"}</p>
             <p className="edsync-hover-detail">
-              {lesson?.class_id ? "Class tools stay connected to this lesson." : "Personal tools for this lesson."}
+              {lesson?.class_id ? "Space tools stay connected to this course." : "Personal tools for this course."}
             </p>
           </div>
-          <nav className="mt-3 grid gap-1" aria-label="Lesson workspace tools">
+          <nav className="mt-3 grid gap-1" aria-label="Course workspace tools">
             {lessonContextLinks.map((item) =>
               item.href.startsWith("#") ? (
                 <a
@@ -1841,7 +1841,7 @@ export default function StudentLesson() {
                 </h2>
                 <p className="text-edsync-subtle text-sm">Reflect, then choose the next step.</p>
                 <p className="text-edsync-subtle text-sm mt-2">
-                  Current lesson score:{" "}
+                  Current course result:{" "}
                   <span className="font-semibold text-edsync-blue">
                     {finalScore}%
                   </span>
