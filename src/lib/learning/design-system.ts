@@ -86,7 +86,7 @@ export const LESSON_SLIDE_LAYOUTS: Array<{
   { layout: "two_column", label: "Two Column", description: "Compare, contrast, or show steps beside evidence." },
   { layout: "image_focus", label: "Image Focus", description: "Media-led slide with a short caption." },
   { layout: "quiz", label: "Quiz", description: "Question stem, options, and explanation." },
-  { layout: "activity", label: "Activity", description: "Student action, timing, and collaboration prompt." },
+  { layout: "activity", label: "Activity", description: "Learner action, timing, and collaboration prompt." },
   { layout: "comparison", label: "Comparison", description: "Two ideas, methods, or answers side by side." },
   { layout: "timeline", label: "Timeline", description: "Sequence a process, history, or workflow." },
   { layout: "reflection", label: "Reflection", description: "Learner confidence, evidence, and next-step prompt." },
@@ -210,7 +210,7 @@ export const LESSON_TEMPLATE_PRESETS = [
     designNotes: [
       "Use clear short sentences and generous spacing.",
       "Add image-focus slides, checks for understanding, and confidence prompts.",
-      "Make practice feel playful but keep answers teacher-reviewable.",
+      "Make practice feel playful but keep answers creator-reviewable.",
     ],
     slidePlan: ["title", "image_focus", "activity", "quiz", "reflection"],
     transition: "slide_left",
@@ -443,7 +443,7 @@ export const DESIGN_BLOCKS: DesignBlock[] = [
     description: "Image/video/link validation checklist before publishing.",
     insertTarget: "lesson_section",
     estimatedMinutes: 4,
-    content: { checks: ["Allowed source", "Clear caption", "Alt text", "Student action"] },
+    content: { checks: ["Allowed source", "Clear caption", "Alt text", "Learner action"] },
   },
   {
     id: "slide-animation-sequence",
