@@ -83,7 +83,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 12,
     title: "Slide Deck",
     content:
-      "Slide 1: Slide title\n- Main point\n- Evidence or example\n- Student action\n\n---\n\nSlide 2: Practice slide\nAdd a prompt, scenario, or image cue.",
+      "Slide 1: Slide title\n- Main point\n- Evidence or example\n- Learner action\n\n---\n\nSlide 2: Practice slide\nAdd a prompt, scenario, or image cue.",
   },
   {
     id: "guided-notes",
@@ -94,7 +94,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 10,
     title: "Guided Notes",
     content:
-      "Students complete the blanks while reading or listening.\n\n1. The main idea is __________.\n2. One example is __________.\n3. This matters because __________.",
+      "Learners complete the blanks while reading or listening.\n\n1. The main idea is __________.\n2. One example is __________.\n3. This matters because __________.",
   },
   {
     id: "practice-sprint",
@@ -116,7 +116,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 8,
     title: "Flashcard Round",
     content:
-      "Flashcard Round\n\nFront | Back\nKey term or question | Answer, example, or hint\nApplication prompt | Model response\n\nStudents mark each card as Again, Almost, or Mastered.",
+      "Flashcard Round\n\nFront | Back\nKey term or question | Answer, example, or hint\nApplication prompt | Model response\n\nLearners mark each card as Again, Almost, or Mastered.",
   },
   {
     id: "scenario-game",
@@ -127,7 +127,7 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
     durationMinutes: 15,
     title: "Scenario Game",
     content:
-      "Scenario Game\nGive students a realistic situation and three choices. Award points for evidence-backed reasoning.\n\n1. Choose a response.\n2. Explain why it works.\n3. Unlock the next scenario after a strong answer.",
+      "Scenario Game\nGive learners a realistic situation and three choices. Award points for evidence-backed reasoning.\n\n1. Choose a response.\n2. Explain why it works.\n3. Unlock the next scenario after a strong answer.",
   },
   {
     id: "media-analysis",
