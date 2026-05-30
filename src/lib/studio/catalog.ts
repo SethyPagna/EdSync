@@ -136,7 +136,7 @@ export const AI_PROMPT_CONTRACTS: AiPromptContract[] = [
     feature: "clean_notes",
     fields: [
       { id: "source", label: "Source text", type: "textarea", required: true, placeholder: "Paste rough notes..." },
-      { id: "tone", label: "Tone", type: "tone", required: false, defaultValue: "clear and student-friendly" },
+      { id: "tone", label: "Tone", type: "tone", required: false, defaultValue: "clear and learner-friendly" },
     ],
     insertTargets: ["new_doc", "lesson_section"],
     outputShape: { title: "string", blocks: "array", plainText: "string" },
