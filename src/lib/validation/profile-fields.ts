@@ -1,4 +1,4 @@
-import { GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
+import { GRADE_LEVELS, LEGACY_GRADE_LEVELS, SUBJECT_AREAS } from "@/lib/grades";
 
 export const PROFILE_TEXT_MAX_LENGTH = 160;
 export const PROFILE_LIST_MAX_ITEMS = 24;
@@ -21,7 +21,7 @@ export const INTEREST_AREAS = [
   "Business",
 ] as const;
 
-const GRADE_LEVEL_SET = new Set<string>(GRADE_LEVELS);
+const GRADE_LEVEL_SET = new Set<string>([...GRADE_LEVELS, ...LEGACY_GRADE_LEVELS]);
 const SUBJECT_AREA_SET = new Set<string>(SUBJECT_AREAS);
 const INTEREST_AREA_SET = new Set<string>(INTEREST_AREAS);
 
@@ -41,10 +41,10 @@ export function validateOptionalProfileLine(
 }
 
 export function validateGradeLevel(value: unknown): string | null {
-  const gradeLevel = validateOptionalProfileLine(value, "Grade level");
+  const gradeLevel = validateOptionalProfileLine(value, "Audience level");
   if (!gradeLevel) return null;
   if (!GRADE_LEVEL_SET.has(gradeLevel)) {
-    throw new Error("Choose a supported grade level.");
+    throw new Error("Choose a supported audience level.");
   }
   return gradeLevel;
 }
