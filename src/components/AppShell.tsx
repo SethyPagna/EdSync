@@ -26,6 +26,7 @@ import {
   ClipboardList,
   FileCheck2,
   GraduationCap,
+  Layers3,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -67,25 +68,46 @@ type WorkspaceContext = {
   organizationName?: string | null;
 };
 
+type ShellWorkspaceLabelInput = {
+  role: AppShellProps["role"];
+  workspaceContext: WorkspaceContext | null;
+  adminViewMode: AdminViewMode | null;
+  isAdminViewMode: boolean;
+};
+
 type NavItemReference = string | Pick<ShellNavItem, "href" | "label">;
 
 const roleCopy = {
   teacher: {
-    label: "Teaching Workspace",
+    label: "Creator Workspace",
     accent: "text-edsync-blue",
     gradient: "from-edsync-blue to-edsync-emerald",
   },
   admin: {
-    label: "Platform Admin",
+    label: "Platform Owner",
     accent: "text-edsync-blue",
     gradient: "from-edsync-blue to-edsync-emerald",
   },
   student: {
-    label: "Student Workspace",
+    label: "Learner Workspace",
     accent: "text-edsync-blue",
     gradient: "from-edsync-blue to-edsync-emerald",
   },
 };
+
+export function shellWorkspaceLabel({
+  role,
+  workspaceContext,
+  adminViewMode,
+  isAdminViewMode,
+}: ShellWorkspaceLabelInput) {
+  if (role === "admin") return roleCopy.admin.label;
+  if (isAdminViewMode && adminViewMode) return adminViewModeLabel(adminViewMode);
+  if (workspaceContext?.type === "organization") {
+    return role === "teacher" ? "Organization Teacher" : "Organization Student";
+  }
+  return role === "teacher" ? roleCopy.teacher.label : roleCopy.student.label;
+}
 
 function sessionRoleFromCookie() {
   if (typeof document === "undefined") return null;
@@ -299,6 +321,15 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const adminViewMode = isAdminViewMode
     ? requestedAdminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student")
     : null;
+  const shellLabel = shellWorkspaceLabel({ role, workspaceContext, adminViewMode, isAdminViewMode });
+  const ShellIcon =
+    role === "admin"
+      ? ShieldCheck
+      : workspaceContext?.type === "organization"
+        ? Building2
+        : role === "teacher"
+          ? Layers3
+          : BookOpenCheck;
 
   useEffect(() => {
     const stored = window.localStorage.getItem("edsync-theme");
@@ -475,7 +506,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
               <p className="font-display text-lg font-bold text-edsync-text">
                 EdSync
               </p>
-              <p className="text-xs text-edsync-subtle">{copy.label}</p>
+              <p className="text-xs text-edsync-subtle">{shellLabel}</p>
             </div>
           )}
         </Link>
@@ -521,14 +552,14 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
                 </p>
               )}
               <span className="edsync-hover-detail">
-                {workspaceContext.type === "organization" ? "Organization workspace" : "Individual workspace"}
+                {workspaceContext.type === "organization" ? "Owner-managed workspace" : "Create and learn independently"}
               </span>
             </div>
           )}
           {role === "student" && (
             <div className="group mt-3 rounded-xl border border-edsync-emerald/20 bg-edsync-emerald/10 px-3 py-2 text-xs font-semibold text-edsync-emerald">
-              Student tools
-              <span className="edsync-hover-detail text-edsync-emerald">Lessons, support, grades, and notes.</span>
+              {workspaceContext?.type === "organization" ? "Student tools" : "Learner tools"}
+              <span className="edsync-hover-detail text-edsync-emerald">Courses, practice, progress, and notes.</span>
             </div>
           )}
         </div>
@@ -618,7 +649,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           <Menu className="h-5 w-5" />
         </button>
         <Link href="/" className="flex items-center gap-2 font-display font-bold" aria-label="EdSync home">
-          <Brain className={`h-5 w-5 ${copy.accent}`} />
+          <ShellIcon className={`h-5 w-5 ${copy.accent}`} />
           <span className="hidden sm:inline">EdSync</span>
         </Link>
         <div className="flex items-center gap-1.5">
