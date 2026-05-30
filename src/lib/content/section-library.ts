@@ -32,7 +32,7 @@ export const SECTION_INSERT_TOOLS: SectionInsertTool[] = [
     label: "Slide",
     description: "Slide-style block",
     content:
-      "Slide title\n- Main point\n- Evidence or example\n- Student action",
+      "Slide title\n- Main point\n- Evidence or example\n- Learner action",
   },
   {
     label: "Table",
