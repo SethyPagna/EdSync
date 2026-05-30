@@ -62,6 +62,12 @@ To guard the compact root layout, run:
 npm.cmd run check:root
 ```
 
+To guard folder ownership inside the compact root layout, run:
+
+```powershell
+npm.cmd run check:folders
+```
+
 To guard against tracked generated output or local secret files, run:
 
 ```powershell
@@ -134,6 +140,8 @@ React, import, and jsx-a11y plugins.
   `README.md`, and `AGENTS.md`.
 - `npm.cmd run check:root` fails if tracked config, docs, scripts, or source
   files drift back into the root instead of their owning folders.
+- `npm.cmd run check:folders` fails if tracked files drift outside the expected
+  owner folders under `config/`, `infra/`, `ops/scripts/`, `public/`, or `src/`.
 - `npm.cmd run check:artifacts` fails if generated output, dependency folders,
   build caches, logs, or local secret-like files are tracked.
 - `npm.cmd run check:typescript` fails if tracked JavaScript, JSX, or CJS files
