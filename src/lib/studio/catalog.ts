@@ -46,9 +46,9 @@ export const PRACTICE_MODES: Array<{
     label: "Exam",
     description: "Longer timed attempts with summary review.",
     targetMinutes: 30,
-    loop: ["attempt", "grade", "review readiness"],
-    bestFor: "Formal checks, unit reviews, and evidence for gradebook decisions.",
-    output: "Attempt summary, points, missed concepts, and teacher-review evidence.",
+    loop: ["attempt", "score", "review readiness"],
+    bestFor: "Formal checks, unit reviews, and evidence for progress decisions.",
+    output: "Attempt summary, points, missed concepts, and creator-review evidence.",
   },
   {
     mode: "flashcards",
@@ -79,7 +79,7 @@ export const PRACTICE_MODES: Array<{
   },
   {
     mode: "mistake_retry",
-    label: "Mistake Retry",
+    label: "Retry",
     description: "Practice only missed or weak items.",
     targetMinutes: 7,
     loop: ["load misses", "explain", "master"],
@@ -88,7 +88,7 @@ export const PRACTICE_MODES: Array<{
   },
   {
     mode: "fill_blank",
-    label: "Fill in the Blank",
+    label: "Fill Blank",
     description: "Recall key terms in context.",
     targetMinutes: 8,
     loop: ["read context", "fill", "compare"],
@@ -97,7 +97,7 @@ export const PRACTICE_MODES: Array<{
   },
   {
     mode: "true_false",
-    label: "True or False",
+    label: "True/False",
     description: "Quick misconception checks.",
     targetMinutes: 5,
     loop: ["decide", "justify", "correct misconception"],
@@ -106,7 +106,7 @@ export const PRACTICE_MODES: Array<{
   },
   {
     mode: "generated_from_materials",
-    label: "Generated from materials",
+    label: "From Materials",
     description: "Create practice from notes, docs, sheets, or slides.",
     targetMinutes: 12,
     loop: ["select EdSync item", "AI generate", "attempt"],
@@ -143,7 +143,7 @@ export const AI_PROMPT_CONTRACTS: AiPromptContract[] = [
   },
   {
     id: "create-slide-deck",
-    title: "Create Slide Deck",
+    title: "Slides",
     description: "Convert notes or a lesson outline into editable slides.",
     feature: "slide_deck",
     fields: [
@@ -172,7 +172,7 @@ export const AI_PROMPT_CONTRACTS: AiPromptContract[] = [
   },
   {
     id: "generate-practice",
-    title: "Generate Practice",
+    title: "Practice",
     description: "Create quiz, flashcards, matching, or sprint practice from saved materials.",
     feature: "quiz",
     fields: [
