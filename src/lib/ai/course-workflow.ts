@@ -63,7 +63,7 @@ export async function generateCourseWorkflow(input: CourseWorkflowInput): Promis
   const modules = await jsonStep(
     "course_workflow.modules",
     "You write polished LMS lesson content that is concise, accurate, accessible, editable, and compatible with EdSync learning blocks.",
-    `Create lesson scripts, slide-ready sections, media notes, teacher review flags, and activity blocks for this outline, using a ${tone} tone. Respect the output length plan, tool groups, reusable blocks, and design spec:\n${JSON.stringify({ outputLength: designContext.outputLength, toolGroups: designContext.toolGroups, reusableBlocks: designContext.reusableBlocks, outline, design })}`,
+    `Create course scripts, slide-ready sections, media notes, creator review flags, and activity blocks for this outline, using a ${tone} tone. Respect the output length plan, tool groups, reusable blocks, and design spec:\n${JSON.stringify({ outputLength: designContext.outputLength, toolGroups: designContext.toolGroups, reusableBlocks: designContext.reusableBlocks, outline, design })}`,
   );
   const practicePlan = await jsonStep(
     "course_workflow.practice_plan",
