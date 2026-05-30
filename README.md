@@ -74,6 +74,12 @@ To guard package script references after moving files, run:
 npm.cmd run check:scripts
 ```
 
+To guard GitHub Actions workflow commands, run:
+
+```powershell
+npm.cmd run check:ci
+```
+
 To guard EdSync-specific Cloudflare resources, run:
 
 ```powershell
@@ -121,6 +127,9 @@ React, import, and jsx-a11y plugins.
   must stay directly loadable by Node or the framework.
 - `npm.cmd run check:scripts` fails if `package.json` commands point at missing
   local files after scripts, configs, or infra files move.
+- `npm.cmd run check:ci` fails if GitHub Actions stops installing with
+  `npm ci`, stops running `verify`, references missing package scripts, or uses
+  a Node major below the package engine.
 - `npm.cmd run check:cloudflare` fails if Wrangler resource names stop using
   EdSync-owned D1, R2, Queue, Vectorize, Worker, or Pages names.
 - `npm.cmd run check:assets` fails if referenced public assets are missing or
