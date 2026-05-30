@@ -65,7 +65,7 @@ describe("shellWorkspaceLabel", () => {
       workspaceContext: { type: "individual" },
       adminViewMode: "organization-student",
       isAdminViewMode: true,
-    })).toBe("organization student workspace");
+    })).toBe("organization learner workspace");
   });
 });
 
