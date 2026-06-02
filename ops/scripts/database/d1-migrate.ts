@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadEnvFile, run } from "../shared/ops";
 
-const DEFAULT_D1_DATABASE_NAME = "edsync-dev-d1";
+const DEFAULT_D1_DATABASE_NAME = "edsync-prod-d1";
 const DATABASE_ROOT = "infra/database";
 const MIGRATIONS_DIR = join(DATABASE_ROOT, "migrations");
 const SEED_SQL_PATH = join(DATABASE_ROOT, "seed.sql");
