@@ -2,8 +2,8 @@
 
 EdSync is a role-based learning workspace for teachers and students. It uses
 Next.js, Cloudflare D1 for relational data, Cloudflare R2 for object storage,
-Cloudflare AI Gateway for AI provider routing, and Cloudflare Workers/Queues for
-background automation.
+Cloudflare AI Gateway for AI provider routing, and one Cloudflare Worker with
+EdSync-owned data bindings.
 
 ## Platform
 
@@ -11,7 +11,7 @@ background automation.
 - Next.js 16 App Router, React 19, TypeScript 6, and Tailwind CSS 4
 - Custom D1-backed authentication and role-aware routing
 - Cloudflare D1, R2, AI Gateway, Queues, Workers, Vectorize, Turnstile
-- Vercel deployment for the hosted Next.js runtime
+- Cloudflare Worker deployment for the hosted Next.js runtime
 - Docker/local profile for self-deployment behind Cloudflare
 
 ## Local Setup
@@ -35,13 +35,12 @@ background automation.
 
 ## Deployment
 
-- Vercel project name: `EdSync`
 - Cloudflare app Worker link: `https://edsync.learn-app.workers.dev`
-- Cloudflare Pages redirect link: `https://edsync.pages.dev`
-- Cloudflare D1 database names should follow `edsync-dev-d1`,
-  `edsync-preview-d1`, and `edsync-prod-d1`.
-- Cloudflare R2 bucket names should follow `edsync-assets-dev`,
-  `edsync-assets-preview`, and `edsync-assets-prod`.
+- Cloudflare app Worker name: `edsync`
+- Cloudflare D1 database: `edsync-prod-d1`
+- Cloudflare R2 bucket: `edsync-assets-prod`
+- Cloudflare Queue: `edsync-automation-prod`
+- Cloudflare Vectorize index: `edsync-learning-prod`
 - Real secrets belong in `.env.local`, Vercel environment variables, Cloudflare
   secrets, or CI secrets. They must not be committed.
 
@@ -137,7 +136,7 @@ React, import, and jsx-a11y plugins.
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
 - `infra/` contains local, Cloudflare, and D1 database infrastructure files.
-- `infra/cloudflare/` owns Worker, Wrangler, OpenNext, and automation Worker
+- `infra/cloudflare/` owns the single Worker, Wrangler, and OpenNext
   configuration for EdSync-specific Cloudflare resources.
 - Framework-required root entry points remain at the root so Next.js, npm,
   Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
@@ -162,7 +161,7 @@ React, import, and jsx-a11y plugins.
   `npm ci`, stops running `verify`, references missing package scripts, or uses
   a Node major below the package engine.
 - `npm.cmd run check:cloudflare` fails if Wrangler resource names stop using
-  EdSync-owned D1, R2, Queue, Vectorize, Worker, or Pages names.
+  the single EdSync Worker and EdSync-owned D1, R2, Queue, or Vectorize names.
 - `npm.cmd run check:assets` fails if referenced public assets are missing,
   image extensions do not match file content, or showcase screenshots are
   replaced with tiny placeholder files.
