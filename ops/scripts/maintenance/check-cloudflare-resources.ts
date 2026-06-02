@@ -1,9 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const cloudflareConfigFiles = [
-  "infra/cloudflare/wrangler.app.jsonc",
-  "infra/cloudflare/wrangler.toml",
-];
+const cloudflareConfigFiles = ["infra/cloudflare/wrangler.app.jsonc"];
 
 const resourceKeys = new Set([
   "name",
@@ -16,7 +13,6 @@ const resourceKeys = new Set([
   "R2_BUCKET",
   "CLOUDFLARE_QUEUE_NAME",
   "CLOUDFLARE_VECTORIZE_INDEX",
-  "CLOUDFLARE_PAGES_PROJECT",
 ]);
 
 const forbiddenResourcePattern = /\b(?:allchess|learn-(?:assets|automation|d1|learning|prod|preview|dev))\b/i;
@@ -36,6 +32,8 @@ type CloudflareAppEnv = {
 };
 
 type CloudflareAppConfig = CloudflareAppEnv & {
+  name?: string;
+  services?: Array<{ service?: string }>;
   env?: Record<string, CloudflareAppEnv>;
 };
 
@@ -103,8 +101,20 @@ const forbiddenResources = resources
   .filter((resource) => forbiddenResourcePattern.test(resource.value))
   .sort((left, right) => `${left.file}:${left.key}`.localeCompare(`${right.file}:${right.key}`));
 const appResourceMismatches = collectAppResourceMismatches(readCloudflareAppConfig());
+const appConfig = readCloudflareAppConfig();
+const workerNameMismatch = appConfig.name === "edsync" ? null : appConfig.name;
+const serviceMismatches =
+  appConfig.services
+    ?.map((service) => service.service)
+    .filter((service): service is string => Boolean(service) && service !== "edsync") ?? [];
 
-if (invalidResources.length > 0 || forbiddenResources.length > 0 || appResourceMismatches.length > 0) {
+if (
+  invalidResources.length > 0 ||
+  forbiddenResources.length > 0 ||
+  appResourceMismatches.length > 0 ||
+  workerNameMismatch ||
+  serviceMismatches.length > 0
+) {
   if (invalidResources.length > 0) {
     console.error("Cloudflare resource names must stay EdSync-specific:");
     for (const resource of invalidResources) {
@@ -123,7 +133,16 @@ if (invalidResources.length > 0 || forbiddenResources.length > 0 || appResourceM
       console.error(`- ${mismatch.env} ${mismatch.label}: var=${mismatch.expected ?? "(missing)"} binding=${mismatch.actual ?? "(missing)"}`);
     }
   }
+  if (workerNameMismatch) {
+    console.error(`Cloudflare app Worker must stay named edsync, found ${workerNameMismatch}.`);
+  }
+  if (serviceMismatches.length > 0) {
+    console.error("Cloudflare service bindings must point at the single edsync Worker:");
+    for (const service of serviceMismatches) {
+      console.error(`- service=${service}`);
+    }
+  }
   process.exit(1);
 }
 
-console.log("Cloudflare resource names and app bindings are EdSync-specific.");
+console.log("Cloudflare resource names and single Worker bindings are EdSync-specific.");
