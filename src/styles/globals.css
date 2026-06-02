@@ -1554,12 +1554,14 @@ html.dark .action-menu-panel :where(button, a):hover {
 
 .edsync-auth-choice {
   display: flex;
-  min-height: 3.25rem;
+  min-width: 0;
+  min-height: 3rem;
   position: relative;
   align-items: center;
-  gap: 0.65rem;
+  justify-content: center;
+  gap: 0.46rem;
   isolation: isolate;
-  padding-right: 2.35rem !important;
+  padding: 0.72rem 0.78rem !important;
 }
 
 .edsync-auth-choice-info {
@@ -1636,20 +1638,43 @@ html.dark .action-menu-panel :where(button, a):hover {
 
 .edsync-auth-choice > svg,
 .edsync-auth-choice > span:not(.edsync-auth-choice-tooltip) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: opacity 140ms ease;
 }
 
-.edsync-auth-choice:hover > svg,
-.edsync-auth-choice:hover > span:not(.edsync-auth-choice-tooltip),
-.edsync-auth-choice:focus-visible > svg,
-.edsync-auth-choice:focus-visible > span:not(.edsync-auth-choice-tooltip) {
-  opacity: 0;
+@media (hover: hover) and (pointer: fine) {
+  .edsync-auth-choice:hover > svg,
+  .edsync-auth-choice:hover > span:not(.edsync-auth-choice-tooltip) {
+    opacity: 0;
+  }
+
+  .edsync-auth-choice:hover .edsync-auth-choice-tooltip {
+    transform: translateY(-50%);
+    opacity: 1;
+  }
 }
 
-.edsync-auth-choice:hover .edsync-auth-choice-tooltip,
-.edsync-auth-choice:focus-visible .edsync-auth-choice-tooltip {
-  transform: translateY(-50%);
-  opacity: 1;
+@media (max-width: 430px) {
+  .edsync-auth-choice {
+    min-height: 2.9rem;
+    gap: 0.36rem;
+    border-radius: 0.95rem !important;
+    padding: 0.58rem 0.48rem !important;
+    font-size: 0.92rem;
+  }
+
+  .edsync-auth-choice > svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .edsync-auth-choice-info,
+  .edsync-auth-choice-tooltip {
+    display: none;
+  }
 }
 
 .edsync-emil-roles a:hover em,
