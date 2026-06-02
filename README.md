@@ -7,7 +7,7 @@ EdSync-owned data bindings.
 
 ## Platform
 
-- Node.js 20.19 or newer
+- Node.js 22 or newer
 - Next.js 16 App Router, React 19, TypeScript 6, and Tailwind CSS 4
 - Custom D1-backed authentication and role-aware routing
 - Cloudflare D1, R2, AI Gateway, Queues, Workers, Vectorize, Turnstile
