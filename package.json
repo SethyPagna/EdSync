@@ -26,6 +26,7 @@
     "check:assets": "tsx ops/scripts/maintenance/check-public-assets.ts",
     "check:deps": "tsx ops/scripts/maintenance/check-dependencies.ts",
     "check:docs": "tsx ops/scripts/maintenance/check-docs.ts",
+    "check:local-routes": "tsx ops/scripts/maintenance/check-local-routes.ts",
     "clean:local": "tsx ops/scripts/maintenance/clean-local.ts",
     "clean:all": "tsx ops/scripts/maintenance/clean-local.ts --include-node-modules",
     "check:extraction": "tsx ops/scripts/maintenance/check-extraction-bounds.ts",
