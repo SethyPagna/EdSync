@@ -185,7 +185,7 @@ html[data-theme="dark"] .edsync-launch-brand-mark {
   font-family: "Bricolage Grotesque", sans-serif;
   font-size: clamp(4rem, 7.4vw, 6.35rem);
   font-weight: 950;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
   line-height: 0.9;
 }
 
@@ -438,7 +438,7 @@ html[data-theme="dark"] .edsync-launch-primary {
   margin-top: 0.2rem;
   font-family: "Bricolage Grotesque", sans-serif;
   font-weight: 950;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
 .edsync-launch-workspace-head h2 {
@@ -542,7 +542,7 @@ html[data-theme="dark"] .edsync-launch-primary {
   font-family: "Bricolage Grotesque", sans-serif;
   font-size: clamp(2.1rem, 4.1vw, 3.35rem);
   font-weight: 950;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
   line-height: 0.95;
 }
 
@@ -743,7 +743,7 @@ html[data-theme="light"] .edsync-public-launch .edsync-workflow-bridge-sticky {
 
 .edsync-public-launch .edsync-workflow-bridge-card h2 {
   font-size: clamp(2.6rem, 5.6vw, 5rem);
-  letter-spacing: -0.055em;
+  letter-spacing: 0;
 }
 
 .edsync-public-launch .edsync-workflow-bridge-card p {
@@ -880,7 +880,7 @@ html[data-theme="light"] .edsync-public-launch #organizations .premium-card {
     max-width: 21rem;
     margin-top: 0;
     font-size: clamp(2.78rem, 13.8vw, 3.62rem);
-    letter-spacing: -0.05em;
+    letter-spacing: 0;
   }
 
   .edsync-launch-copy p {
@@ -3400,7 +3400,7 @@ button:focus-visible > .edsync-practice-mode-detail {
     max-width: calc(100vw - 2rem);
     font-size: clamp(2rem, 10.5vw, 2.7rem);
     line-height: 1.02;
-    letter-spacing: -0.045em;
+    letter-spacing: 0;
     overflow-wrap: anywhere;
     white-space: normal;
   }
@@ -3953,7 +3953,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .edsync-launch-brand-inline strong {
   font-size: 1rem;
   font-weight: 950;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .edsync-launch-brand-inline small {
@@ -4902,7 +4902,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-public-launch .edsync-workflow-copy h3 {
     font-size: clamp(1.85rem, 9.5vw, 2.45rem);
-    letter-spacing: -0.035em;
+    letter-spacing: 0;
   }
 
   .edsync-public-launch .edsync-workflow-showcase .edsync-workflow-sidepanel {
@@ -5468,7 +5468,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   font-size: clamp(2.6rem, 6vw, 5.8rem);
   font-weight: 900;
   line-height: 0.95;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .edsync-emil-workflow-copy p {
@@ -5617,7 +5617,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   font-size: clamp(2rem, 4vw, 4.3rem);
   font-weight: 950;
   line-height: 0.9;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .edsync-emil-workflow-mock article p {
@@ -5869,7 +5869,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(2rem, 4vw, 3.8rem);
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .edsync-emil-search form {
