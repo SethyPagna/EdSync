@@ -299,17 +299,17 @@ function SignupForm() {
 
       {step === "space" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
             {([
               {
                 key: "organization" as const,
-                label: authCopy.enterOrganization,
+                label: authCopy.organization,
                 copy: authCopy.organizationCopy,
                 icon: Building2,
               },
               {
                 key: "individual" as const,
-                label: authCopy.useIndividual,
+                label: authCopy.individual,
                 copy: authCopy.individualCopy,
                 icon: UserRound,
               },
@@ -457,7 +457,7 @@ function SignupForm() {
                 : `${authCopy.joiningOrganization}: ${organizationLabel}`
               : authCopy.individualWorkspace}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
         {(["teacher", "student"] as const).map((item) => {
           const Icon = roleIcons[item];
           const selected = role === item;
@@ -629,7 +629,7 @@ export default function SignupPage() {
       </section>
 
       <section className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-5 sm:py-10">
-        <div className="w-full max-w-[21rem] min-w-0 sm:max-w-md">
+        <div className="w-full max-w-[22rem] min-w-0 sm:max-w-md">
           <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-blue shadow-sm">
