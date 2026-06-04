@@ -1388,15 +1388,14 @@ export default function CreateLesson() {
                       <Languages className="h-4 w-4 text-edsync-blue" />
                       <span>{audienceLanguage}</span>
                     </span>
-                    <span className="text-xs font-semibold text-edsync-subtle">Change</span>
                   </summary>
-                  <div className="absolute z-40 mt-2 grid max-h-72 w-full grid-cols-1 gap-1 overflow-y-auto rounded-lg border border-edsync-border bg-edsync-surface p-2 shadow-2xl shadow-slate-200/60 sm:grid-cols-2 dark:shadow-black/30">
+                  <div className="absolute z-40 mt-2 grid max-h-72 w-full grid-cols-1 gap-1.5 overflow-y-auto rounded-[1.35rem] border border-edsync-border bg-edsync-surface p-2 shadow-2xl shadow-slate-200/60 sm:grid-cols-2 dark:shadow-black/30">
                     {languageOptions.map((language) => (
                       <button
                         key={language}
                         type="button"
                         onClick={() => setAudienceLanguage(language)}
-                        className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition hover:bg-edsync-blue/10 hover:text-edsync-blue ${
+                        className={`rounded-2xl px-3 py-2 text-left text-sm font-semibold transition hover:bg-edsync-blue/10 hover:text-edsync-blue ${
                           audienceLanguage === language ? "bg-edsync-blue/10 text-edsync-blue" : "text-edsync-text"
                         }`}
                       >
