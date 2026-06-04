@@ -108,7 +108,7 @@ export default function TeacherDiscussionsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              Course discussion
+              Social
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold">Discussions</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
@@ -144,7 +144,7 @@ export default function TeacherDiscussionsPage() {
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
               }`}
             >
-              All spaces
+              All
             </button>
             {classes.map((classRow) => (
               <button
@@ -179,7 +179,7 @@ export default function TeacherDiscussionsPage() {
               value={form.classId}
               onChange={(event) => setForm({ ...form, classId: event.target.value })}
             >
-              <option value="">All spaces</option>
+              <option value="">All</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -210,7 +210,7 @@ export default function TeacherDiscussionsPage() {
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap gap-2">
                     <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                      {thread.class_name || "All spaces"}
+                      {thread.class_name || "All"}
                     </span>
                     <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
                       {thread.post_count} posts
