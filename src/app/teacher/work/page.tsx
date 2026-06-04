@@ -323,38 +323,32 @@ export default function TeacherWorkPage() {
       </section>
 
       <section className="group rounded-xl border border-edsync-border bg-edsync-card p-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Course scope</p>
-            <p className="edsync-hover-detail">Filter work by space.</p>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 lg:max-w-3xl">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => chooseClassScope(ALL_CLASSES_SCOPE)}
+            className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+              selectedClassId === "all"
+                ? "border-edsync-blue bg-edsync-blue text-white"
+                : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+            }`}
+          >
+            All spaces
+          </button>
+          {classes.map((classRow) => (
             <button
+              key={classRow.id}
               type="button"
-              onClick={() => chooseClassScope(ALL_CLASSES_SCOPE)}
+              onClick={() => chooseClassScope(classRow.id)}
               className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                selectedClassId === "all"
+                selectedClassId === classRow.id
                   ? "border-edsync-blue bg-edsync-blue text-white"
                   : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
               }`}
             >
-              All spaces
+              {classRow.name}
             </button>
-            {classes.map((classRow) => (
-              <button
-                key={classRow.id}
-                type="button"
-                onClick={() => chooseClassScope(classRow.id)}
-                className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                  selectedClassId === classRow.id
-                    ? "border-edsync-blue bg-edsync-blue text-white"
-                    : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
-                }`}
-              >
-                {classRow.name}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </section>
 
