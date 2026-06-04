@@ -53,7 +53,7 @@ export default function StudentDiscussionsPage() {
   const post = async (threadId: string) => {
     const body = responses[threadId] || "";
     if (!body.trim()) {
-      toast.error("Write a response first.");
+      toast.error("Write first.");
       return;
     }
 
@@ -75,7 +75,7 @@ export default function StudentDiscussionsPage() {
     <div className="page-shell max-w-5xl space-y-5">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-          Course discussion
+          Social
         </p>
         <h1 className="mt-1 font-display text-3xl font-bold">Discussions</h1>
         <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
