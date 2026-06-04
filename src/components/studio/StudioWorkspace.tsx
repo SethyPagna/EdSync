@@ -735,8 +735,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Layers3 className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-lg font-bold">EdSync Workspace</p>
-              <p className="text-xs text-edsync-subtle">Create</p>
+              <p className="font-display text-lg font-bold">Studio</p>
             </div>
           </Link>
           <nav className="grid gap-1">
@@ -787,7 +786,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
             <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
               {serverItems.length === 0 && (
                 <p className="rounded-lg border border-dashed border-edsync-border p-3 text-xs leading-5 text-edsync-subtle">
-                  No saved items.
+                  No saved.
                 </p>
               )}
               {serverItems.map((item) => (
@@ -874,7 +873,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   <Layers3 className="h-4 w-4" />
                   Block
                 </button>
-                <button type="button" className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto" onClick={() => setStatusMessage("Split panes are ready for the next layout pass")}>
+                <button type="button" className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto" onClick={() => setStatusMessage("Split ready")}>
                   <SplitSquareHorizontal className="h-4 w-4" />
                   Split
                 </button>
@@ -914,7 +913,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <div className="rounded-lg border border-edsync-border bg-edsync-card">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edsync-border p-3">
                     <div className="group">
-                      <p className="font-semibold">Sheet Editor</p>
+                      <p className="font-semibold">Sheet</p>
                       <p className="edsync-hover-detail">Advanced tools {advancedSheetLoaded ? "on" : "ready"}.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
