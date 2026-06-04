@@ -130,22 +130,26 @@ export default async function OrganizationPortalPage({
                   <option value="120">2 hours</option>
                 </select>
                 <details className="group relative">
-                  <summary className="btn-secondary h-full min-h-11 cursor-pointer justify-center px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                  <summary
+                    aria-label={copy.filters}
+                    title={copy.filters}
+                    className="premium-icon-button h-11 w-11 cursor-pointer list-none marker:hidden [&::-webkit-details-marker]:hidden"
+                  >
                     <SlidersHorizontal className="h-4 w-4" />
-                    {copy.filters}
+                    <span className="sr-only">{copy.filters}</span>
                   </summary>
-                  <div className="premium-overlay animate-overlay-in absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl p-3">
+                  <div className="premium-overlay animate-overlay-in absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-[1.5rem] p-2 shadow-2xl shadow-edsync-blue/10">
                     <div className="grid gap-2">
                       <input
                         name="difficulty"
                         defaultValue={filters.difficulty}
-                        className="edsync-input min-w-0"
+                        className="edsync-input min-w-0 rounded-2xl"
                         placeholder={copy.difficulty}
                       />
                       <input
                         name="courseLanguage"
                         defaultValue={filters.courseLanguage}
-                        className="edsync-input min-w-0"
+                        className="edsync-input min-w-0 rounded-2xl"
                         placeholder={copy.language}
                       />
                     </div>
