@@ -458,32 +458,32 @@ function SignupForm() {
               : authCopy.individualWorkspace}
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-        {(["teacher", "student"] as const).map((item) => {
-          const Icon = roleIcons[item];
-          const selected = role === item;
-          const itemLabel = roleOptions[item].label;
-          const itemCopy = roleOptions[item].copy;
-          return (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setRole(item)}
-              aria-label={`${itemLabel}: ${itemCopy}`}
-              className={`edsync-auth-choice rounded-2xl border p-3 text-left shadow-sm transition ${
-                selected
-                  ? "premium-active text-edsync-text"
-                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
-              }`}
-            >
-              <Icon className="mb-3 h-5 w-5" />
-              <span className="block font-semibold">{itemLabel}</span>
-              <span className="edsync-auth-choice-info" aria-hidden="true">
-                <Info className="h-3.5 w-3.5" />
-              </span>
-              <span className="edsync-auth-choice-tooltip">{itemCopy}</span>
-            </button>
-          );
-        })}
+            {(["teacher", "student"] as const).map((item) => {
+              const Icon = roleIcons[item];
+              const selected = role === item;
+              const itemLabel = roleOptions[item].label;
+              const itemCopy = roleOptions[item].copy;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setRole(item)}
+                  aria-label={`${itemLabel}: ${itemCopy}`}
+                  className={`edsync-auth-choice rounded-2xl border p-3 text-left shadow-sm transition ${
+                    selected
+                      ? "premium-active text-edsync-text"
+                      : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:-translate-y-0.5 hover:border-edsync-blue/50 hover:text-edsync-text"
+                  }`}
+                >
+                  <Icon className="mb-3 h-5 w-5" />
+                  <span className="block font-semibold">{itemLabel}</span>
+                  <span className="edsync-auth-choice-info" aria-hidden="true">
+                    <Info className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="edsync-auth-choice-tooltip">{itemCopy}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={() => setStep("space")} className="btn-secondary justify-center py-3">
@@ -503,57 +503,57 @@ function SignupForm() {
             {accountType === "organization" ? `${organizationLabel} - ${roleLabel}` : `${authCopy.individual} - ${roleLabel}`}
           </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          {authCopy.fullName}
-        </label>
-        <input
-          type="text"
-          value={fullName}
-          onChange={(event) => setFullName(event.target.value)}
-          placeholder="Your full name"
-          required
-          className="edsync-input"
-        />
-      </div>
-      <div>
-        <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          {authCopy.email}
-        </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
-          required
-          className="edsync-input"
-        />
-      </div>
-      <div>
-        <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
-          {authCopy.password}
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder={authCopy.passwordPlaceholder}
-          minLength={8}
-          required
-          className="edsync-input"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn-primary w-full justify-center py-3.5"
-      >
-        {loading ? authCopy.creatingAccount : `${copy.createWorkspace} - ${roleLabel}`}
-        {!loading && <ArrowRight className="h-4 w-4" />}
-      </button>
-      <button type="button" onClick={() => setStep("role")} className="btn-secondary w-full justify-center py-3">
-        {authCopy.back}
-      </button>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
+              {authCopy.fullName}
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder="Your full name"
+              required
+              className="edsync-input"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
+              {authCopy.email}
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              required
+              className="edsync-input"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
+              {authCopy.password}
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={authCopy.passwordPlaceholder}
+              minLength={8}
+              required
+              className="edsync-input"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary w-full justify-center py-3.5"
+          >
+            {loading ? authCopy.creatingAccount : copy.createWorkspace}
+            {!loading && <ArrowRight className="h-4 w-4" />}
+          </button>
+          <button type="button" onClick={() => setStep("role")} className="btn-secondary w-full justify-center py-3">
+            {authCopy.back}
+          </button>
         </div>
       )}
     </form>
