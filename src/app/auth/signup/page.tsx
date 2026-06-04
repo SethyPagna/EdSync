@@ -450,13 +450,13 @@ function SignupForm() {
 
       {step === "role" && (
         <div className="space-y-4">
-          <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
-            {accountType === "organization"
-              ? organizationMode === "create"
+          {accountType === "organization" && (
+            <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
+              {organizationMode === "create"
                 ? `${authCopy.newOrganization}: ${organizationLabel}`
-                : `${authCopy.joiningOrganization}: ${organizationLabel}`
-              : authCopy.individualWorkspace}
-          </div>
+                : `${authCopy.joiningOrganization}: ${organizationLabel}`}
+            </div>
+          )}
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
             {(["teacher", "student"] as const).map((item) => {
               const Icon = roleIcons[item];
@@ -499,9 +499,11 @@ function SignupForm() {
 
       {step === "account" && (
         <div className="space-y-5">
-          <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
-            {accountType === "organization" ? `${organizationLabel} - ${roleLabel}` : `${authCopy.individual} - ${roleLabel}`}
-          </div>
+          {accountType === "organization" && (
+            <div className="premium-surface rounded-2xl p-3 text-sm text-edsync-subtle">
+              {organizationLabel} - {roleLabel}
+            </div>
+          )}
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-edsync-subtle">
