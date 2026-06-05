@@ -12,7 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
-import { ArrowRight, BookOpenCheck, Building2, GraduationCap, Info, UserRound, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Building2, GraduationCap, UserRound, UsersRound, type LucideIcon } from "lucide-react";
 
 type Role = "teacher" | "student";
 type AccountType = "organization" | "individual";
@@ -330,9 +330,6 @@ function SignupForm() {
                 >
                   <Icon className="mb-3 h-5 w-5" />
                   <span className="block font-semibold">{item.label}</span>
-                  <span className="edsync-auth-choice-info" aria-hidden="true">
-                    <Info className="h-3.5 w-3.5" />
-                  </span>
                   <span className="edsync-auth-choice-tooltip">{item.copy}</span>
                 </button>
               );
@@ -477,9 +474,6 @@ function SignupForm() {
                 >
                   <Icon className="mb-3 h-5 w-5" />
                   <span className="block font-semibold">{itemLabel}</span>
-                  <span className="edsync-auth-choice-info" aria-hidden="true">
-                    <Info className="h-3.5 w-3.5" />
-                  </span>
                   <span className="edsync-auth-choice-tooltip">{itemCopy}</span>
                 </button>
               );
