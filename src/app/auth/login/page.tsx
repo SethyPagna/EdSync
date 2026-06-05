@@ -13,7 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
-import { ArrowRight, Building2, GraduationCap, Info, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
 type OrganizationLookup = {
@@ -233,9 +233,6 @@ function LoginForm() {
             >
               <Icon className="mb-3 h-5 w-5" />
               <span className="block font-semibold">{item.label}</span>
-              <span className="edsync-auth-choice-info" aria-hidden="true">
-                <Info className="h-3.5 w-3.5" />
-              </span>
               <span className="edsync-auth-choice-tooltip">{item.copy}</span>
             </button>
           );
