@@ -7476,6 +7476,137 @@ html[data-theme="dark"] .edsync-emil-signin:hover {
   .edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) {
     height: auto;
   }
+
+  .edsync-emil-workflow-tabs {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.18rem;
+    border-radius: 1rem;
+    padding: 0.24rem;
+  }
+
+  .edsync-emil-workflow-tabs button {
+    min-height: 2.1rem;
+    gap: 0.16rem;
+    border-radius: 0.72rem;
+    padding: 0.34rem 0.12rem;
+    font-size: clamp(0.56rem, 1.85vw, 0.68rem);
+    line-height: 1;
+  }
+
+  .edsync-emil-workflow-tabs button svg {
+    width: 0.88rem;
+    height: 0.88rem;
+  }
+
+  .edsync-emil-search {
+    padding: 1rem;
+    border-radius: 1.25rem;
+  }
+
+  .edsync-emil-search h2 {
+    font-size: clamp(2rem, 8vw, 2.55rem);
+  }
+
+  .edsync-emil-search form {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.55rem 0.45rem;
+    padding: 0.58rem;
+  }
+
+  .edsync-emil-search form > svg {
+    align-self: center;
+  }
+
+  .edsync-emil-search input {
+    min-height: 2.4rem;
+    min-width: 0;
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .edsync-emil-price-menu {
+    grid-column: 1 / 2;
+    min-width: 0;
+    flex-basis: auto;
+  }
+
+  .edsync-emil-price-menu > button {
+    min-height: 2.65rem;
+    border-color: rgba(37, 99, 235, 0.12);
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.64);
+    padding: 0.55rem 0.72rem;
+  }
+
+  .edsync-emil-price-menu > div {
+    left: 0;
+    right: auto;
+    width: min(12rem, calc(100vw - 2rem));
+    border-radius: 1.05rem;
+  }
+
+  .edsync-emil-search form > button[type="submit"] {
+    grid-column: 2 / 3;
+    min-height: 2.65rem;
+    border-radius: 0.9rem;
+    padding: 0.55rem 0.78rem;
+  }
+
+  .edsync-emil-search > div:last-child {
+    gap: 0.42rem;
+  }
+
+  .edsync-emil-search a {
+    padding: 0.48rem 0.6rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .edsync-emil-intro .edsync-emil-workflow-tabs {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.18rem;
+    padding: 0.24rem;
+  }
+
+  .edsync-emil-intro .edsync-emil-workflow-tabs button {
+    min-width: 0;
+    min-height: 2.1rem;
+    gap: 0.16rem;
+    padding: 0.34rem 0.12rem;
+    font-size: clamp(0.56rem, 1.85vw, 0.68rem);
+    line-height: 1;
+  }
+
+  .edsync-emil-intro .edsync-emil-workflow-tabs button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .edsync-emil-intro .edsync-emil-workflow-tabs button svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .edsync-emil-intro .edsync-emil-search form {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.55rem 0.45rem;
+  }
+
+  .edsync-emil-intro .edsync-emil-price-menu {
+    grid-column: 1 / 2;
+    min-width: 0;
+  }
+
+  .edsync-emil-intro .edsync-emil-search form > button[type="submit"] {
+    grid-column: 2 / 3;
+  }
 }
 
 @media (max-width: 360px) {
