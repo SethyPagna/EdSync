@@ -56,8 +56,6 @@ function main() {
     "deploy",
     "--config",
     APP_WORKER_CONFIG_PATH,
-    "--openNextConfigPath",
-    OPEN_NEXT_CONFIG_PATH,
     "--",
     "--keep-vars",
   ]);
