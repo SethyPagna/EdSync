@@ -7011,6 +7011,19 @@ html[data-theme="dark"] .edsync-emil-actions {
 .edsync-emil-signin {
   background: #07111f;
   color: #f8fafc;
+  border-color: rgba(8, 19, 34, 0.16);
+  box-shadow: 0 0.75rem 1.5rem rgba(8, 19, 34, 0.14);
+}
+
+:root:not(.dark) .edsync-emil-signin {
+  background: #07111f;
+  color: #f8fafc;
+  border-color: rgba(8, 19, 34, 0.16);
+}
+
+.edsync-emil-signin:hover {
+  background: #111c2d;
+  color: #ffffff;
 }
 
 html.dark .edsync-emil-jump:hover,
@@ -7027,8 +7040,30 @@ html[data-theme="dark"] .edsync-emil-secondary {
 
 html.dark .edsync-emil-signin,
 html[data-theme="dark"] .edsync-emil-signin {
-  background: #f8fafc;
-  color: #07111f;
+  background: #9af1c4;
+  color: #061511;
+  border-color: rgba(154, 241, 196, 0.52);
+  box-shadow: 0 0.8rem 1.7rem rgba(34, 197, 94, 0.16);
+}
+
+html.dark .edsync-emil-signin:hover,
+html[data-theme="dark"] .edsync-emil-signin:hover {
+  background: #b8f8d6;
+  color: #03100c;
+}
+
+.edsync-emil-roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(9.5rem, 15rem));
+  justify-content: center;
+  width: min(100%, 32rem);
+  margin-inline: auto;
+}
+
+.edsync-emil-roles a {
+  flex: none;
+  justify-content: center;
+  text-align: center;
 }
 
 .edsync-emil-icon.premium-icon-button {
