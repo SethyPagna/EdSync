@@ -626,7 +626,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
           </div>
           <form action="/catalog">
             <Search className="h-4 w-4" />
-            <input name="q" placeholder="Search courses or portals..." />
+            <input name="q" placeholder="Search" />
             <input type="hidden" name="price" value={priceFilter} readOnly />
             <div className="edsync-emil-price-menu">
               <button
