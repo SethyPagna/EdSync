@@ -539,9 +539,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     >
       <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
-          <div
-            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${copy.gradient} shadow-sm`}
-          >
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           {!collapsed && (
