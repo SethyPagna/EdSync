@@ -4986,7 +4986,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 .edsync-emil-intro {
   min-height: 100vh;
   overflow-x: clip;
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
   background:
     radial-gradient(circle at 18% 18%, rgba(35, 209, 139, 0.14), transparent 28rem),
     radial-gradient(circle at 88% 72%, rgba(79, 134, 247, 0.16), transparent 30rem),
@@ -5444,7 +5444,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   align-content: center;
   padding-block: clamp(3rem, 8vh, 6rem);
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
 }
 
 .edsync-emil-workflow-card {
@@ -5841,9 +5841,10 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 .edsync-emil-catalog {
+  min-height: 100svh;
   padding-block: clamp(2rem, 5vh, 4rem) clamp(4rem, 8vh, 7rem);
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
 }
 
 .edsync-emil-search {
@@ -7240,7 +7241,7 @@ html[data-theme="dark"] .edsync-emil-workflow-tabs button[aria-current="true"] {
 
 html:has(.edsync-emil-intro),
 body:has(.edsync-emil-intro) {
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
 }
 
 :root:not(.dark) .edsync-emil-intro,
@@ -7369,6 +7370,17 @@ html[data-theme="dark"] .edsync-emil-signin:hover {
   width: 100%;
   margin: -1.45rem 0 0;
   transform: none !important;
+}
+
+.edsync-emil-intro[data-catalog-stage-visible="true"] .edsync-emil-workflow {
+  scroll-snap-align: none;
+  scroll-snap-stop: normal;
+  min-height: 0;
+  height: 0;
+  padding-block: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .edsync-emil-intro[data-catalog-stage-visible="true"] .edsync-emil-workflow-tabs {
