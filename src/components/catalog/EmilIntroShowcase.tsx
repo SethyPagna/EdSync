@@ -199,6 +199,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   const sectionTransitionTimerRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const [sectionTransition, setSectionTransition] = useState<SectionTransition>("idle");
+  const [catalogStageVisible, setCatalogStageVisible] = useState(false);
   const preview = previewSlides[previewIndex];
   const workflow = workflowSlides[workflowIndex];
   const WorkflowIcon = workflow.icon;
@@ -257,6 +258,23 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   useEffect(() => {
     workflowIndexRef.current = workflowIndex;
   }, [workflowIndex]);
+
+  useEffect(() => {
+    const updateCatalogStageVisible = () => {
+      const catalog = catalogRef.current;
+      if (!catalog) return;
+      const rect = catalog.getBoundingClientRect();
+      setCatalogStageVisible(rect.top < window.innerHeight * 0.82);
+    };
+
+    updateCatalogStageVisible();
+    window.addEventListener("scroll", updateCatalogStageVisible, { passive: true });
+    window.addEventListener("resize", updateCatalogStageVisible);
+    return () => {
+      window.removeEventListener("scroll", updateCatalogStageVisible);
+      window.removeEventListener("resize", updateCatalogStageVisible);
+    };
+  }, []);
 
   useEffect(() => {
     const section = workflowRef.current;
@@ -379,7 +397,11 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   const selectedPriceLabel = priceOptions.find((option) => option.value === priceFilter)?.label ?? priceOptions[0].label;
 
   return (
-    <main className="edsync-emil-intro" data-section-transition={sectionTransition}>
+    <main
+      className="edsync-emil-intro"
+      data-section-transition={sectionTransition}
+      data-catalog-stage-visible={catalogStageVisible ? "true" : "false"}
+    >
       <div className="edsync-emil-section-transition" aria-hidden="true" />
       <section ref={heroRef} className="edsync-emil-hero" aria-labelledby="emil-intro-title">
         <div className="edsync-emil-floating">
@@ -539,22 +561,22 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
               </figure>
             </div>
           </div>
-        </div>
-        <div className="edsync-emil-workflow-tabs">
-          {workflowSlides.map((slide, index) => {
-            const Icon = slide.icon;
-            return (
-              <button
-                key={slide.id}
-                type="button"
-                aria-current={workflowIndex === index}
-                onClick={() => setWorkflowSlide(index)}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{slide.tabLabel}</span>
-              </button>
-            );
-          })}
+          <div className="edsync-emil-workflow-tabs">
+            {workflowSlides.map((slide, index) => {
+              const Icon = slide.icon;
+              return (
+                <button
+                  key={slide.id}
+                  type="button"
+                  aria-current={workflowIndex === index}
+                  onClick={() => setWorkflowSlide(index)}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{slide.tabLabel}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
