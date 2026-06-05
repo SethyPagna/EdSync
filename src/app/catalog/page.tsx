@@ -77,7 +77,7 @@ export default async function CatalogPage({
         }}
       />
 
-      <main id="catalog-results" className="edsync-catalog-reference edsync-public-launch min-h-screen text-edsync-text">
+      <main id="catalog-results" className="edsync-catalog-reference edsync-public-launch text-edsync-text">
         <section className="mx-auto max-w-[90rem] px-4 py-10">
           <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
             <div className="mb-5 flex flex-col gap-3 border-b border-edsync-border pb-5 lg:flex-row lg:items-end lg:justify-between">
