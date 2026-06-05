@@ -466,9 +466,15 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   }, [role]);
 
   const handleLogout = async () => {
-    await edsync.auth.signOut();
-    router.push("/auth/login");
-    router.refresh();
+    try {
+      await edsync.auth.signOut();
+    } finally {
+      window.localStorage.removeItem("edsync-auth-workspace");
+      document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
+      document.cookie = "edsync_role=; path=/; max-age=0; SameSite=Lax";
+      router.replace("/auth/login");
+      router.refresh();
+    }
   };
 
   const handleThemeChange = (theme: ThemePreference) => {
