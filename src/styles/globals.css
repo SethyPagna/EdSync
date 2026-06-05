@@ -6931,3 +6931,263 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     transform: none !important;
   }
 }
+
+/* Final public intro polish: stable scroll stages, segmented controls, and theme-aware screenshots. */
+.edsync-emil-image-dark {
+  display: none !important;
+}
+
+html.dark .edsync-emil-image-light,
+html[data-theme="dark"] .edsync-emil-image-light {
+  display: none !important;
+}
+
+html.dark .edsync-emil-image-dark,
+html[data-theme="dark"] .edsync-emil-image-dark {
+  display: block !important;
+}
+
+html.dark .edsync-emil-shot-frame,
+html.dark .edsync-emil-workflow-visual,
+html[data-theme="dark"] .edsync-emil-shot-frame,
+html[data-theme="dark"] .edsync-emil-workflow-visual {
+  border-color: rgba(226, 232, 240, 0.16);
+  background: #071323;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.08);
+}
+
+html.dark .edsync-emil-workflow-window,
+html[data-theme="dark"] .edsync-emil-workflow-window {
+  background: #071323;
+  color: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.1);
+}
+
+html.dark .edsync-emil-workflow-window header,
+html[data-theme="dark"] .edsync-emil-workflow-window header {
+  border-bottom-color: rgba(226, 232, 240, 0.14);
+}
+
+html.dark .edsync-emil-workflow-window header svg,
+html[data-theme="dark"] .edsync-emil-workflow-window header svg {
+  color: #93f0ca;
+}
+
+.edsync-emil-actions {
+  border: 1px solid rgba(8, 19, 34, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0.28rem;
+  box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+html.dark .edsync-emil-actions,
+html[data-theme="dark"] .edsync-emil-actions {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(7, 18, 28, 0.68);
+  box-shadow: 0 1rem 2.6rem rgba(0, 0, 0, 0.28);
+}
+
+.edsync-emil-signin,
+.edsync-emil-secondary,
+.edsync-emil-jump {
+  border-color: transparent;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0.66rem 0.9rem;
+  box-shadow: none;
+}
+
+.edsync-emil-jump:hover,
+.edsync-emil-secondary:hover {
+  background: rgba(8, 19, 34, 0.07);
+}
+
+.edsync-emil-secondary {
+  background: rgba(8, 19, 34, 0.08);
+}
+
+.edsync-emil-signin {
+  background: #07111f;
+  color: #f8fafc;
+}
+
+html.dark .edsync-emil-jump:hover,
+html.dark .edsync-emil-secondary:hover,
+html[data-theme="dark"] .edsync-emil-jump:hover,
+html[data-theme="dark"] .edsync-emil-secondary:hover {
+  background: rgba(226, 232, 240, 0.1);
+}
+
+html.dark .edsync-emil-secondary,
+html[data-theme="dark"] .edsync-emil-secondary {
+  background: rgba(226, 232, 240, 0.1);
+}
+
+html.dark .edsync-emil-signin,
+html[data-theme="dark"] .edsync-emil-signin {
+  background: #f8fafc;
+  color: #07111f;
+}
+
+.edsync-emil-icon.premium-icon-button {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.edsync-emil-workflow {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: clamp(0.5rem, 1.2vh, 0.85rem);
+  min-height: 100svh;
+  align-content: stretch;
+  padding-block: clamp(0.7rem, 1.6vh, 1.15rem);
+}
+
+.edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) {
+  height: min(70svh, 43rem);
+  min-height: 0;
+}
+
+.edsync-emil-workflow-screen,
+.edsync-emil-workflow-window {
+  min-height: 0;
+}
+
+.edsync-emil-workflow-screen,
+.edsync-emil-workflow-window,
+.edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) .edsync-emil-workflow-screen {
+  height: 100%;
+}
+
+.edsync-emil-workflow-window {
+  display: flex;
+  flex-direction: column;
+}
+
+.edsync-emil-workflow-visual {
+  flex: 1 1 auto;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.edsync-emil-workflow-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
+  border: 1px solid rgba(8, 19, 34, 0.1);
+  border-radius: 1.3rem;
+  background: rgba(255, 255, 255, 0.62);
+  padding: 0.35rem;
+  overflow: visible;
+  box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+html.dark .edsync-emil-workflow-tabs,
+html[data-theme="dark"] .edsync-emil-workflow-tabs {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(7, 18, 28, 0.72);
+  box-shadow: 0 1rem 2.6rem rgba(0, 0, 0, 0.28);
+}
+
+.edsync-emil-workflow-tabs button {
+  min-width: 0;
+  min-height: 2.8rem;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.95rem;
+  background: transparent;
+  padding: 0.55rem 0.65rem;
+  font-weight: 850;
+}
+
+:root:not(.dark) .edsync-emil-workflow-tabs button {
+  border-color: transparent;
+  background: transparent;
+}
+
+.edsync-emil-workflow-tabs button:hover {
+  background: rgba(8, 19, 34, 0.07);
+}
+
+.edsync-emil-workflow-tabs button[aria-current="true"],
+:root:not(.dark) .edsync-emil-workflow-tabs button[aria-current="true"] {
+  background: #07111f;
+  color: #f8fafc;
+  box-shadow: 0 0.7rem 1.4rem rgba(8, 19, 34, 0.16);
+}
+
+html.dark .edsync-emil-workflow-tabs button:hover,
+html[data-theme="dark"] .edsync-emil-workflow-tabs button:hover {
+  background: rgba(226, 232, 240, 0.1);
+}
+
+html.dark .edsync-emil-workflow-tabs button[aria-current="true"],
+html[data-theme="dark"] .edsync-emil-workflow-tabs button[aria-current="true"] {
+  background: #f8fafc;
+  color: #07111f;
+}
+
+#catalog-results {
+  min-height: 0;
+}
+
+#catalog-results > section:first-child {
+  padding-top: clamp(1.25rem, 3vh, 2.5rem);
+  padding-bottom: clamp(1.25rem, 3vh, 2.5rem);
+}
+
+#catalog-results .premium-panel {
+  box-shadow: 0 1.4rem 3rem rgba(15, 23, 42, 0.1);
+}
+
+@media (max-width: 760px) {
+  .edsync-emil-actions {
+    display: grid;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .edsync-emil-workflow {
+    grid-template-rows: auto auto;
+    align-content: center;
+  }
+
+  .edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) {
+    height: auto;
+  }
+
+  .edsync-emil-workflow-screen,
+  .edsync-emil-workflow-window,
+  .edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) .edsync-emil-workflow-screen {
+    height: auto;
+  }
+
+  .edsync-emil-workflow-visual {
+    flex: none;
+    aspect-ratio: 16 / 10;
+  }
+
+  .edsync-emil-workflow-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.32rem;
+    border-radius: 1.05rem;
+    padding: 0.32rem;
+  }
+
+  .edsync-emil-workflow-tabs button {
+    min-height: 2.35rem;
+    gap: 0.28rem;
+    padding: 0.42rem 0.34rem;
+    font-size: 0.72rem;
+  }
+}
