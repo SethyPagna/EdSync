@@ -384,7 +384,7 @@ function ProtectedPortalsCopy() {
 export default function LoginPage() {
   return (
     <main className="premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_520px]">
-      <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-between">
+      <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-center lg:gap-8">
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
             <GraduationCap className="h-5 w-5 text-white" />
