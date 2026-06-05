@@ -373,18 +373,21 @@ export default function StudentProfile() {
                   className="edsync-input font-display font-bold text-xl"
                   placeholder="Full Name"
                 />
-                <select
-                  value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value)}
-                  className="edsync-input"
-                >
-                  <option value="">Select level</option>
-                  {GRADE_LEVELS.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold text-edsync-subtle">Learning level</span>
+                  <select
+                    value={gradeLevel}
+                    onChange={(e) => setGradeLevel(e.target.value)}
+                    className="edsync-input"
+                  >
+                    <option value="">Select level</option>
+                    {GRADE_LEVELS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             ) : (
               <>
