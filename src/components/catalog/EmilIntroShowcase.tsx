@@ -198,6 +198,8 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   const wheelCooldownRef = useRef(0);
   const sectionTransitionTimerRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const catalogSnapCooldownRef = useRef(0);
+  const lastScrollYRef = useRef(0);
   const [sectionTransition, setSectionTransition] = useState<SectionTransition>("idle");
   const [catalogStageVisible, setCatalogStageVisible] = useState(false);
   const preview = previewSlides[previewIndex];
@@ -264,9 +266,30 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       const catalog = catalogRef.current;
       if (!catalog) return;
       const rect = catalog.getBoundingClientRect();
-      setCatalogStageVisible(rect.top < window.innerHeight * 0.82);
+      const now = Date.now();
+      const scrollY = window.scrollY;
+      const scrollingDown = scrollY >= lastScrollYRef.current;
+      const nextVisible = rect.top < window.innerHeight * 0.82;
+      const shouldSnapToCatalog =
+        nextVisible &&
+        scrollingDown &&
+        rect.top > 24 &&
+        rect.top < window.innerHeight * 0.62 &&
+        now > catalogSnapCooldownRef.current;
+
+      if (shouldSnapToCatalog) {
+        catalogSnapCooldownRef.current = now + 1100;
+        const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+        window.requestAnimationFrame(() => {
+          catalog.scrollIntoView({ behavior, block: "start" });
+        });
+      }
+
+      lastScrollYRef.current = scrollY;
+      setCatalogStageVisible(nextVisible);
     };
 
+    lastScrollYRef.current = window.scrollY;
     updateCatalogStageVisible();
     window.addEventListener("scroll", updateCatalogStageVisible, { passive: true });
     window.addEventListener("resize", updateCatalogStageVisible);
@@ -275,6 +298,21 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       window.removeEventListener("resize", updateCatalogStageVisible);
     };
   }, []);
+
+  useEffect(() => {
+    if (!catalogStageVisible) return;
+    const catalog = catalogRef.current;
+    if (!catalog) return;
+
+    const timer = window.setTimeout(() => {
+      const rect = catalog.getBoundingClientRect();
+      if (rect.top <= 24 || rect.top >= window.innerHeight) return;
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      window.scrollTo({ top: window.scrollY + rect.top, behavior });
+    }, 90);
+
+    return () => window.clearTimeout(timer);
+  }, [catalogStageVisible]);
 
   useEffect(() => {
     const section = workflowRef.current;
