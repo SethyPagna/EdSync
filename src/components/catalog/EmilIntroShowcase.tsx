@@ -411,9 +411,6 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
             >
               {workflowLabel}
             </a>
-            <Link href="/auth/signup" className="edsync-emil-secondary">
-              {labels.start}
-            </Link>
             <ThemeToggle compact className="edsync-emil-icon" />
             <LanguageMenu compact syncCatalogFilter className="edsync-emil-icon" />
             <Link href="/auth/login" className="edsync-emil-signin">
