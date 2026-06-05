@@ -1,6 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#2563eb"/>
-  <path d="M16 23.5 32 15l16 8.5L32 32 16 23.5Z" fill="#fff"/>
-  <path d="M22 31v8.5c0 4 4.6 7.5 10 7.5s10-3.5 10-7.5V31l-10 5.3L22 31Z" fill="#dbe8ff"/>
-  <path d="M48 24v17" stroke="#fff3d6" stroke-width="4" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EdSync">
+  <defs>
+    <linearGradient id="edsync-mark" x1="10" y1="8" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#16c784"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#edsync-mark)"/>
+  <path fill="#fff" d="M18 15h31v8H27v6h18v8H27v6h22v8H18V15Z"/>
+  <path fill="#dffcf0" d="M43 16.5 53 22l-10 5.5L33 22l10-5.5Z"/>
 </svg>
