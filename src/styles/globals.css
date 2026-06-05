@@ -5042,6 +5042,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 .edsync-emil-toolbar,
 .edsync-emil-dots,
 .edsync-emil-workflow-tabs,
+.edsync-emil-price-menu > button,
 .edsync-emil-search form,
 .edsync-emil-search > div:last-child {
   display: flex;
@@ -5096,6 +5097,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 .edsync-emil-jump,
 .edsync-emil-roles a,
 .edsync-emil-workflow-tabs button,
+.edsync-emil-price-menu button,
 .edsync-emil-search a,
 .edsync-emil-search button {
   transition:
@@ -5112,6 +5114,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 .edsync-emil-jump:active,
 .edsync-emil-roles a:active,
 .edsync-emil-workflow-tabs button:active,
+.edsync-emil-price-menu button:active,
 .edsync-emil-search a:active,
 .edsync-emil-search button:active {
   transform: scale(0.97);
@@ -5888,8 +5891,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   background: rgba(248, 250, 252, 0.9);
 }
 
-.edsync-emil-search input,
-.edsync-emil-search select {
+.edsync-emil-search input {
   min-height: 2.8rem;
   border: 0;
   background: transparent;
@@ -5901,11 +5903,71 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   flex: 1 1 22rem;
 }
 
-.edsync-emil-search select {
+.edsync-emil-price-menu {
+  position: relative;
   flex: 0 1 12rem;
+  min-width: min(12rem, 100%);
 }
 
-.edsync-emil-search button {
+.edsync-emil-price-menu > button {
+  width: 100%;
+  min-height: 2.8rem;
+  justify-content: space-between;
+  gap: 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.82rem;
+  background: transparent;
+  color: inherit;
+  padding: 0.7rem 0.78rem;
+  font-weight: 850;
+}
+
+.edsync-emil-price-menu > button:hover,
+.edsync-emil-price-menu > button[aria-expanded="true"] {
+  border-color: rgba(35, 209, 139, 0.28);
+  background: rgba(35, 209, 139, 0.09);
+}
+
+.edsync-emil-price-menu > button svg {
+  flex: 0 0 auto;
+}
+
+.edsync-emil-price-menu > div {
+  position: absolute;
+  z-index: 35;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  display: grid;
+  width: min(13rem, calc(100vw - 2rem));
+  gap: 0.28rem;
+  border: 1px solid rgba(8, 19, 34, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.35rem;
+  color: #081322;
+  box-shadow: 0 1rem 2.4rem rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.edsync-emil-price-menu > div button {
+  min-height: 2.45rem;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0.78rem;
+  background: transparent;
+  color: inherit;
+  padding: 0.58rem 0.7rem;
+  font-weight: 850;
+  text-align: left;
+}
+
+.edsync-emil-price-menu > div button:hover,
+.edsync-emil-price-menu > div button[aria-selected="true"] {
+  background: #e8f6ef;
+  color: #065f46;
+}
+
+.edsync-emil-search form > button[type="submit"] {
   border: 0;
   border-radius: 0.8rem;
   background: #23d18b;
@@ -6268,10 +6330,16 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-emil-search input,
-  .edsync-emil-search select,
+  .edsync-emil-price-menu,
   .edsync-emil-search button {
     width: 100%;
     flex-basis: 100%;
+  }
+
+  .edsync-emil-price-menu > div {
+    position: static;
+    width: 100%;
+    margin-top: 0.45rem;
   }
 }
 
@@ -6548,9 +6616,9 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-emil-workflow {
-    min-height: auto;
-    align-content: start;
-    padding-block: 1.15rem;
+    min-height: 100svh;
+    align-content: center;
+    padding-block: clamp(0.85rem, 2.2vh, 1.35rem);
   }
 
   .edsync-emil-workflow-tabs {
@@ -6559,6 +6627,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     gap: 0.36rem;
     border-top-width: 1px;
     padding-top: 0.48rem;
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
     overflow: visible;
   }
 
