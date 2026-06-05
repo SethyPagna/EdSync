@@ -6510,6 +6510,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-hero {
     min-height: auto;
+    padding: 0.6rem 0.5rem 0.9rem;
   }
 
   .edsync-emil-floating,
@@ -6520,18 +6521,22 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
   }
 
   .edsync-emil-floating {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.55rem;
     padding-top: 0.35rem;
   }
 
   .edsync-emil-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.42rem;
-    overflow: hidden;
-  }
-
-  .edsync-emil-icon {
-    display: none !important;
+    display: flex;
+    width: auto;
+    flex: 0 0 auto;
+    gap: 0.38rem;
+    justify-content: flex-end;
+    margin-left: auto;
+    overflow: visible;
+    padding-bottom: 0;
   }
 
   .edsync-emil-actions > *,
@@ -6545,7 +6550,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     justify-content: center;
     min-width: 0;
     overflow: hidden;
-    padding: 0.66rem 0.42rem;
+    padding: 0.62rem 0.7rem;
     font-size: 0.8rem;
     text-overflow: ellipsis;
   }
@@ -6558,9 +6563,20 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
     display: block;
   }
 
+  .edsync-emil-hero-grid {
+    gap: 0.9rem;
+    padding-block: 0.7rem 0.9rem;
+  }
+
+  .edsync-emil-copy {
+    max-width: none;
+  }
+
   .edsync-emil-copy h1 {
-    max-width: 8.4ch;
-    font-size: clamp(2.45rem, 11vw, 3.8rem);
+    max-width: none;
+    white-space: nowrap;
+    font-size: clamp(1.9rem, 8vw, 2.7rem);
+    line-height: 1;
   }
 
   .edsync-emil-roles {
@@ -6589,12 +6605,15 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-device {
     overflow: hidden;
+    padding: 0.55rem;
+    border-radius: 1.35rem;
   }
 
   .edsync-emil-device-body {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.55rem;
     min-height: auto;
+    padding-top: 0.55rem;
   }
 
   .edsync-emil-toolrail {
@@ -6649,10 +6668,6 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 }
 
 @media (max-width: 430px) {
-  .edsync-emil-hero {
-    padding: 0.5rem;
-  }
-
   .edsync-emil-brand > strong {
     display: block;
   }
@@ -6665,7 +6680,7 @@ html[data-theme="dark"] .edsync-public-launch .edsync-launch-workspace {
 
   .edsync-emil-copy h1 {
     margin-top: 0;
-    font-size: clamp(2.35rem, 10.8vw, 3.45rem);
+    font-size: clamp(1.85rem, 8.1vw, 2.2rem);
   }
 
   .edsync-emil-canvas {
@@ -7184,13 +7199,31 @@ html[data-theme="dark"] .edsync-emil-workflow-tabs button[aria-current="true"] {
 
 @media (max-width: 760px) {
   .edsync-emil-actions {
-    display: grid;
+    display: flex;
+    width: auto;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.34rem;
+    justify-content: flex-end;
+    margin-left: auto;
     border: 0;
     border-radius: 0;
     background: transparent;
     padding: 0;
     box-shadow: none;
     backdrop-filter: none;
+  }
+
+  .edsync-emil-icon.premium-icon-button {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+
+  .edsync-emil-signin {
+    min-height: 2.15rem;
+    padding: 0.54rem 0.72rem;
+    font-size: 0.78rem;
   }
 
   .edsync-emil-workflow {
@@ -7420,9 +7453,18 @@ html[data-theme="dark"] .edsync-emil-signin:hover {
     scroll-snap-type: none;
   }
 
-  .edsync-emil-device,
-  .edsync-emil-shot-frame {
+  .edsync-emil-device {
     min-height: auto;
+  }
+
+  .edsync-emil-shot-frame {
+    min-height: clamp(13.5rem, 57vw, 18rem);
+    aspect-ratio: 16 / 10;
+    border-radius: 1rem;
+  }
+
+  .edsync-emil-shot-frame figcaption {
+    display: none;
   }
 
   .edsync-emil-workflow {
@@ -7433,5 +7475,46 @@ html[data-theme="dark"] .edsync-emil-signin:hover {
   .edsync-emil-workflow-card,
   .edsync-emil-workflow-card:has(.edsync-emil-workflow-visual) {
     height: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .edsync-emil-brand {
+    gap: 0.46rem;
+  }
+
+  .edsync-emil-brand > span {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 0.78rem;
+  }
+
+  .edsync-emil-brand strong {
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+  }
+
+  .edsync-emil-actions {
+    gap: 0.26rem;
+  }
+
+  .edsync-emil-icon.premium-icon-button {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .edsync-emil-signin {
+    min-height: 2rem;
+    padding: 0.5rem 0.62rem;
+    font-size: 0.72rem;
+  }
+
+  .edsync-emil-copy h1 {
+    font-size: clamp(1.62rem, 7.35vw, 1.82rem);
+  }
+
+  .edsync-emil-roles a {
+    padding-inline: 0.35rem;
+    font-size: 0.68rem;
   }
 }
