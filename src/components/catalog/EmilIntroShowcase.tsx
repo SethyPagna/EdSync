@@ -8,6 +8,7 @@ import {
   BarChart3,
   Building2,
   CheckCircle2,
+  ChevronDown,
   GraduationCap,
   Layers3,
   BookOpenCheck,
@@ -59,6 +60,7 @@ type WorkflowSlide = {
 };
 
 type SectionTransition = "idle" | "to-workflow" | "to-catalog" | "to-hero";
+type PriceFilter = "all" | "free" | "paid";
 
 const previewSlides: PreviewSlide[] = [
   {
@@ -175,6 +177,8 @@ const workflowSlides: WorkflowSlide[] = [
 export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [workflowIndex, setWorkflowIndex] = useState(0);
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
+  const [priceMenuOpen, setPriceMenuOpen] = useState(false);
   const heroRef = useRef<HTMLElement | null>(null);
   const workflowRef = useRef<HTMLElement | null>(null);
   const catalogRef = useRef<HTMLElement | null>(null);
@@ -351,6 +355,16 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
     ],
     [labels.courses, labels.free, labels.paid],
   );
+  const priceOptions = useMemo(
+    () =>
+      [
+        { value: "all", label: `${labels.free} + ${labels.paid}` },
+        { value: "free", label: labels.free },
+        { value: "paid", label: labels.paid },
+      ] satisfies { value: PriceFilter; label: string }[],
+    [labels.free, labels.paid],
+  );
+  const selectedPriceLabel = priceOptions.find((option) => option.value === priceFilter)?.label ?? priceOptions[0].label;
 
   return (
     <main className="edsync-emil-intro" data-section-transition={sectionTransition}>
@@ -526,11 +540,36 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
           <form action="/catalog">
             <Search className="h-4 w-4" />
             <input name="q" placeholder="Search courses or portals..." />
-            <select name="price" defaultValue="all">
-              <option value="all">{labels.free} + {labels.paid}</option>
-              <option value="free">{labels.free}</option>
-              <option value="paid">{labels.paid}</option>
-            </select>
+            <input type="hidden" name="price" value={priceFilter} readOnly />
+            <div className="edsync-emil-price-menu">
+              <button
+                type="button"
+                aria-expanded={priceMenuOpen}
+                aria-haspopup="listbox"
+                onClick={() => setPriceMenuOpen((open) => !open)}
+              >
+                <span>{selectedPriceLabel}</span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              {priceMenuOpen && (
+                <div role="listbox" aria-label={labels.filters}>
+                  {priceOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="option"
+                      aria-selected={priceFilter === option.value}
+                      onClick={() => {
+                        setPriceFilter(option.value);
+                        setPriceMenuOpen(false);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button type="submit">{labels.search}</button>
           </form>
           <div>
