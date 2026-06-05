@@ -132,6 +132,12 @@ const INSERT_TOOLS: { id: InsertToolId; label: string; icon: typeof FileText }[]
   { id: "practice", label: "Practice", icon: Timer },
 ];
 
+const studioToolbarButtonClass =
+  "btn btn-sm min-h-9 rounded-xl border-edsync-border bg-edsync-surface px-3 text-edsync-text shadow-sm transition duration-200 ease-out hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edsync-blue";
+
+const studioToolCardClass =
+  "card card-compact rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold shadow-sm transition duration-200 ease-out hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edsync-blue";
+
 const defaultDraft: StudioDraftValue = {
   html: "<h2>New item</h2><p>Start drafting.</p>",
   plainText: "New item",
@@ -727,18 +733,18 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
   };
 
   return (
-    <section className="min-h-[calc(100dvh-1.5rem)] p-2 text-edsync-text sm:p-3 lg:p-0">
-      <div className="grid min-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-3xl border border-edsync-border bg-edsync-surface shadow-sm lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-b border-edsync-border bg-edsync-card p-4 lg:border-b-0 lg:border-r">
-          <Link href="/" className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white">
+    <section className="min-h-[calc(100dvh-1.5rem)] bg-base-200 p-2 text-edsync-text sm:p-3 lg:p-0">
+      <div className="grid min-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-3xl border border-edsync-border bg-base-100 shadow-xl shadow-edsync-blue/10 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="border-b border-edsync-border bg-edsync-card/95 p-3 lg:border-b-0 lg:border-r">
+          <Link href="/" className="mb-4 flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-edsync-surface">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-lg shadow-edsync-blue/20">
               <Layers3 className="h-5 w-5" />
             </div>
             <div>
               <p className="font-display text-lg font-bold">Studio</p>
             </div>
           </Link>
-          <nav className="grid gap-1">
+          <nav className="menu gap-1 p-0">
             {STUDIO_TABS.map((tab) => {
               const Icon = kindIcons[tab.kind] ?? FileText;
               const active = activeKind === tab.kind;
@@ -747,10 +753,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   key={tab.href}
                   type="button"
                   onClick={() => selectKind(tab.kind)}
-                  className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
+                  className={`btn btn-sm h-auto min-h-10 justify-between rounded-2xl px-3 text-left text-sm font-semibold transition duration-200 ease-out ${
                     active
-                      ? "bg-edsync-blue text-white"
-                      : "text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text"
+                      ? "border-edsync-blue bg-edsync-blue text-white shadow-md shadow-edsync-blue/20"
+                      : "btn-ghost border-transparent text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text"
                   }`}
                 >
                   <span className="flex items-center gap-2">
@@ -764,12 +770,14 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               );
             })}
           </nav>
-          <div className="group mt-6 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+          <div className="stats group mt-5 w-full rounded-2xl border border-edsync-border bg-edsync-surface shadow-none">
+            <div className="stat p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-edsync-subtle">Draft</p>
             <p className="mt-1 text-sm font-semibold capitalize">{draftStatus.replace("_", " ")}</p>
             <p className="edsync-hover-detail">Local autosave.</p>
+            </div>
           </div>
-          <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
+          <div className="card mt-4 rounded-2xl border border-edsync-border bg-edsync-surface p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -779,7 +787,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               >
                 {includeArchived ? "All items" : "Saved"}
               </button>
-              <span className="rounded-full bg-edsync-card px-2 py-0.5 text-xs font-bold text-edsync-subtle">
+              <span className="badge rounded-full bg-edsync-card px-2 py-0.5 text-xs font-bold text-edsync-subtle">
                 {serverItems.length}
               </span>
             </div>
@@ -794,7 +802,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   key={item.id}
                   type="button"
                   onClick={() => openServerItem(item)}
-                  className={`w-full rounded-lg border p-2 text-left text-sm transition ${
+                  className={`card w-full rounded-2xl border p-2 text-left text-sm transition duration-200 ease-out hover:-translate-y-0.5 ${
                     currentServerId === item.id
                       ? "border-edsync-blue bg-edsync-blue/10"
                       : "border-edsync-border bg-edsync-card hover:border-edsync-blue/40"
@@ -845,10 +853,10 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
         </aside>
 
         <section className="min-w-0">
-          <header className="border-b border-edsync-border bg-edsync-card px-4 py-4 lg:px-6">
+          <header className="navbar min-h-0 border-b border-edsync-border bg-edsync-card px-4 py-3 lg:px-6">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <p className="text-sm font-semibold text-edsync-blue">Studio</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Studio</p>
                 <input
                   className="mt-1 w-full bg-transparent font-display text-3xl font-bold outline-none"
                   value={itemTitle}
@@ -860,47 +868,47 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   aria-label="Workspace item title"
                 />
               </div>
-              <div className="grid max-w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end">
-                <button type="button" onClick={saveDraft} className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto">
+              <div className="flex max-w-full flex-wrap gap-2 xl:justify-end">
+                <button type="button" onClick={saveDraft} className={studioToolbarButtonClass}>
                   <Save className="h-4 w-4" />
                   Save
                 </button>
-                <button type="button" onClick={publishCurrentItem} className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto">
+                <button type="button" onClick={publishCurrentItem} className={studioToolbarButtonClass}>
                   <CheckCircle2 className="h-4 w-4" />
                   Publish
                 </button>
-                <button type="button" onClick={saveAsContentBlock} className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto">
+                <button type="button" onClick={saveAsContentBlock} className={studioToolbarButtonClass}>
                   <Layers3 className="h-4 w-4" />
                   Block
                 </button>
-                <button type="button" className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto" onClick={() => setStatusMessage("Split ready")}>
+                <button type="button" className={studioToolbarButtonClass} onClick={() => setStatusMessage("Split ready")}>
                   <SplitSquareHorizontal className="h-4 w-4" />
                   Split
                 </button>
-                <button type="button" className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto" onClick={loadHistory}>
+                <button type="button" className={studioToolbarButtonClass} onClick={loadHistory}>
                   <History className="h-4 w-4" />
                   History
                 </button>
-                <button type="button" onClick={exportDraft} className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto">
+                <button type="button" onClick={exportDraft} className={studioToolbarButtonClass}>
                   <Download className="h-4 w-4" />
                   Export
                 </button>
-                <button type="button" onClick={resetDraft} className="btn-secondary w-full justify-center px-3 py-2 text-sm sm:w-auto">
+                <button type="button" onClick={resetDraft} className={studioToolbarButtonClass}>
                   <RotateCcw className="h-4 w-4" />
                   Reset
                 </button>
-                <Link href="/practice?ai=1&task=clean-notes" className="btn-primary w-full justify-center px-3 py-2 text-sm sm:w-auto">
+                <Link href="/practice?ai=1&task=clean-notes" className="btn btn-sm min-h-9 rounded-xl border-0 bg-edsync-blue px-3 text-white shadow-md shadow-edsync-blue/20 transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-edsync-blue/90">
                   <Sparkles className="h-4 w-4" />
                   AI
                 </Link>
               </div>
             </div>
-            <div className="mt-3 inline-flex rounded-full border border-edsync-border bg-edsync-surface px-3 py-1 text-xs font-semibold text-edsync-subtle">
+            <div className="badge mt-3 rounded-full border border-edsync-border bg-edsync-surface px-3 py-1 text-xs font-semibold text-edsync-subtle">
               {statusMessage}
             </div>
           </header>
 
-          <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:p-6">
+          <div className="grid gap-4 p-4 2xl:grid-cols-[minmax(0,1fr)_300px] 2xl:p-6">
             <div className="min-w-0 space-y-4">
               {(activeKind === "lesson" || activeKind === "note" || activeKind === "doc") && (
                 <RichTextStudioEditor
@@ -910,26 +918,26 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               )}
 
               {activeKind === "sheet" && (
-                <div className="rounded-lg border border-edsync-border bg-edsync-card">
+                <div className="card rounded-2xl border border-edsync-border bg-edsync-card shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edsync-border p-3">
                     <div className="group">
                       <p className="font-semibold">Sheet</p>
                       <p className="edsync-hover-detail">Advanced tools {advancedSheetLoaded ? "on" : "ready"}.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={loadUniverEngine}>
+                      <button type="button" className={studioToolbarButtonClass} onClick={loadUniverEngine}>
                         <Grid3X3 className="h-4 w-4" />
                         Advanced
                       </button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => updateDraft({ ...draft, sheet: addSheetRow(draft.sheet) })}>
+                      <button type="button" className={studioToolbarButtonClass} onClick={() => updateDraft({ ...draft, sheet: addSheetRow(draft.sheet) })}>
                         <Plus className="h-4 w-4" />
                         Row
                       </button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => updateDraft({ ...draft, sheet: addSheetColumn(draft.sheet) })}>
+                      <button type="button" className={studioToolbarButtonClass} onClick={() => updateDraft({ ...draft, sheet: addSheetColumn(draft.sheet) })}>
                         <Plus className="h-4 w-4" />
                         Column
                       </button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => csvInputRef.current?.click()}>
+                      <button type="button" className={studioToolbarButtonClass} onClick={() => csvInputRef.current?.click()}>
                         <FileUp className="h-4 w-4" />
                         CSV
                       </button>
@@ -999,7 +1007,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
               {activeKind === "slide" && (
                 <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-semibold text-edsync-subtle">
+                  <div className="breadcrumbs rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-semibold text-edsync-subtle">
                     <span>Modules</span>
                     <ArrowRight className="h-3 w-3" />
                     <span>{itemTitle || "Untitled lesson"}</span>
@@ -1010,9 +1018,9 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     </span>
                   </div>
 
-                  <div className="grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)_260px]">
+                  <div className="grid gap-3 xl:grid-cols-[200px_minmax(0,1fr)]">
                     <div className="space-y-2">
-                      <div className="rounded-lg border border-edsync-border bg-edsync-card p-2">
+                      <div className="card rounded-2xl border border-edsync-border bg-edsync-card p-2 shadow-sm">
                         <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-edsync-subtle">
                           Slides
                         </p>
@@ -1021,7 +1029,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         key={slide.id}
                         type="button"
                         onClick={() => setSelectedSlideId(slide.id)}
-                        className={`mb-2 w-full rounded-lg border p-2 text-left transition ${
+                        className={`card mb-2 w-full rounded-2xl border p-2 text-left transition duration-200 ease-out hover:-translate-y-0.5 ${
                           selectedSlideId === slide.id
                             ? "border-edsync-blue bg-edsync-blue/10"
                             : "border-edsync-border bg-edsync-card hover:border-edsync-blue/40"
@@ -1045,32 +1053,32 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       </button>
                     ))}
                       </div>
-                      <button type="button" onClick={addSlide} className="btn-secondary w-full justify-center py-2 text-sm">
+                      <button type="button" onClick={addSlide} className={`${studioToolbarButtonClass} w-full justify-center`}>
                         <Plus className="h-4 w-4" />
                         Add slide
                       </button>
                       <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={duplicateSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
+                        <button type="button" onClick={duplicateSelectedSlide} className={`${studioToolbarButtonClass} justify-center`}>
                           <Copy className="h-4 w-4" />
                           Copy
                         </button>
-                        <button type="button" onClick={deleteSelectedSlide} className="btn-secondary justify-center py-2 text-sm">
+                        <button type="button" onClick={deleteSelectedSlide} className={`${studioToolbarButtonClass} justify-center`}>
                           <Trash2 className="h-4 w-4" />
                           Delete
                         </button>
-                        <button type="button" onClick={() => moveSelectedSlide("up")} className="btn-secondary justify-center py-2 text-sm">
+                        <button type="button" onClick={() => moveSelectedSlide("up")} className={`${studioToolbarButtonClass} justify-center`}>
                           <ArrowUp className="h-4 w-4" />
                           Up
                         </button>
-                        <button type="button" onClick={() => moveSelectedSlide("down")} className="btn-secondary justify-center py-2 text-sm">
+                        <button type="button" onClick={() => moveSelectedSlide("down")} className={`${studioToolbarButtonClass} justify-center`}>
                           <ArrowDown className="h-4 w-4" />
                           Down
                         </button>
                       </div>
                     </div>
 
-                    <div className="rounded-lg border border-edsync-border bg-edsync-card p-3">
-                      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-2">
+                    <div className="card rounded-2xl border border-edsync-border bg-edsync-card p-3 shadow-sm">
+                      <div className="join mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface p-2">
                         {[
                           { label: "Text", icon: FileText, patch: { layout: "content" as const } },
                           { label: "Image", icon: ImageIcon, patch: { layout: "image_focus" as const } },
@@ -1084,21 +1092,21 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                               key={tool.label}
                               type="button"
                               onClick={() => updateActiveSlide(tool.patch)}
-                              className="inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-bold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
+                              className="btn btn-xs min-h-8 rounded-xl border-0 bg-transparent px-2.5 text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text"
                             >
                               <Icon className="h-4 w-4" />
                               {tool.label}
                             </button>
                           );
                         })}
-                        <button type="button" onClick={() => setPresenting(true)} className="btn-primary ml-auto px-3 py-2 text-sm">
+                        <button type="button" onClick={() => setPresenting(true)} className="btn btn-sm ml-auto min-h-9 rounded-xl border-0 bg-edsync-blue px-3 text-white hover:bg-edsync-blue/90">
                           <MonitorPlay className="h-4 w-4" />
                           Preview
                         </button>
                       </div>
 
                       <div
-                        className="aspect-video rounded-lg border p-8 shadow-inner"
+                        className="aspect-video rounded-2xl border p-8 shadow-inner"
                         style={{
                           backgroundColor: activeSlideTheme.colors.background,
                           color: activeSlideTheme.colors.foreground,
@@ -1135,8 +1143,8 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       />
                     </div>
 
-                    <div className="space-y-3 rounded-lg border border-edsync-border bg-edsync-card p-3">
-                      <div>
+                    <div className="grid gap-3 rounded-2xl border border-edsync-border bg-edsync-card p-3 shadow-sm sm:grid-cols-2 xl:col-span-2 2xl:grid-cols-4">
+                      <div className="min-w-0">
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-edsync-subtle">Type</p>
                         <div className="grid gap-2">
                           {LESSON_SLIDE_KINDS.map((kind) => (
@@ -1144,7 +1152,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                               key={kind.kind}
                               type="button"
                               onClick={() => updateActiveSlide({ kind: kind.kind })}
-                              className={`rounded-lg border px-3 py-2 text-left text-sm ${
+                              className={`btn h-auto justify-start rounded-2xl border px-3 py-2 text-left text-sm ${
                                 activeSlide.kind === kind.kind
                                   ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
                                   : "border-edsync-border bg-edsync-surface text-edsync-subtle"
@@ -1158,7 +1166,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         </div>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-edsync-subtle">Layout</p>
                         <select
                           className="edsync-input"
@@ -1171,7 +1179,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         </select>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-edsync-subtle">Templates</p>
                         <div className="grid gap-2">
                           {LESSON_TEMPLATE_PRESETS.map((preset) => (
@@ -1179,7 +1187,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                               key={preset.id}
                               type="button"
                               onClick={() => applyLessonTemplate(preset.id)}
-                              className="rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-left text-sm hover:border-edsync-blue/40"
+                              className={studioToolCardClass}
                               title={preset.description}
                             >
                               <span className="font-semibold">{preset.label}</span>
@@ -1189,7 +1197,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         </div>
                       </div>
 
-                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                      <div className="grid min-w-0 gap-2 sm:grid-cols-2 2xl:grid-cols-1">
                         <label className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">
                           Transition
                           <select
@@ -1227,7 +1235,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                           </select>
                         </label>
                       </div>
-                      <Link href="/ai?task=create-slide-deck" className="btn-secondary w-full justify-center py-2 text-sm">
+                      <Link href="/ai?task=create-slide-deck" className={`${studioToolbarButtonClass} w-full justify-center`}>
                         <Sparkles className="h-4 w-4" />
                         AI
                       </Link>
@@ -1239,7 +1247,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               {activeKind === "practice" && (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {PRACTICE_MODES.map((mode) => (
-                    <Link key={mode.mode} href={`/practice?mode=${mode.mode}`} title={mode.description} className="rounded-lg border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40">
+                    <Link key={mode.mode} href={`/practice?mode=${mode.mode}`} title={mode.description} className="card rounded-2xl border border-edsync-border bg-edsync-card p-4 shadow-sm transition duration-200 ease-out hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:shadow-md">
                       <Timer className="mb-3 h-6 w-6 text-edsync-blue" />
                       <p className="font-semibold">{mode.label}</p>
                       <span className="edsync-studio-hover-detail">{mode.description}</span>
@@ -1258,7 +1266,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                   {INSERT_TOOLS.map((tool) => {
                     const Icon = tool.icon;
                     return (
-                      <button key={tool.id} type="button" onClick={() => runInsertTool(tool.id)} className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left text-sm font-semibold hover:border-edsync-blue/40">
+                      <button key={tool.id} type="button" onClick={() => runInsertTool(tool.id)} className={studioToolCardClass}>
                         <Icon className="mb-2 h-4 w-4 text-edsync-blue" />
                         {tool.label}
                       </button>
@@ -1274,7 +1282,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       key={template.id}
                       type="button"
                       onClick={() => insertStudioHtml(createDesignTemplateInsert(template))}
-                      className="w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40"
+                      className={`${studioToolCardClass} w-full`}
                       title={template.description}
                     >
                       <p className="text-sm font-semibold">{template.title}</p>
@@ -1293,18 +1301,18 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                     <button
                       type="button"
                       onClick={() => setIncludeArchivedBlocks((value) => !value)}
-                      className="rounded-full bg-edsync-surface px-2 py-1 text-xs font-bold text-edsync-subtle hover:text-edsync-text"
+                      className="btn btn-xs min-h-7 rounded-full border-edsync-border bg-edsync-surface px-2 text-xs font-bold text-edsync-subtle hover:text-edsync-text"
                     >
                       {includeArchivedBlocks ? "Hide archived" : "Show archived"}
                     </button>
                   </div>
                   {visibleContentBlocks.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
+                    <div className="card rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
                       No blocks.
                     </div>
                   )}
                   {visibleLearningBlocks.map(({ block, learningBlock, stateLabel }) => (
-                    <div key={block.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                    <div key={block.id} className="card rounded-2xl border border-edsync-border bg-edsync-surface p-3 shadow-sm">
                       <button
                         type="button"
                         onClick={() => insertContentBlock(block)}
@@ -1319,7 +1327,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         <button
                           type="button"
                           onClick={() => renameLibraryBlock(block)}
-                          className="rounded-full bg-edsync-card px-2 py-1 text-xs font-bold text-edsync-subtle hover:text-edsync-text"
+                          className="btn btn-xs min-h-7 rounded-full border-0 bg-edsync-card px-2 text-xs font-bold text-edsync-subtle hover:text-edsync-text"
                         >
                           Rename
                         </button>
@@ -1327,7 +1335,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                           <button
                             type="button"
                             onClick={() => restoreLibraryBlock(block)}
-                            className="rounded-full bg-edsync-blue/10 px-2 py-1 text-xs font-bold text-edsync-blue"
+                            className="btn btn-xs min-h-7 rounded-full border-0 bg-edsync-blue/10 px-2 text-xs font-bold text-edsync-blue"
                           >
                             Restore
                           </button>
@@ -1336,14 +1344,14 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                             <button
                               type="button"
                               onClick={() => toggleLibraryPublish(block)}
-                              className="rounded-full bg-edsync-emerald/10 px-2 py-1 text-xs font-bold text-edsync-emerald"
+                              className="btn btn-xs min-h-7 rounded-full border-0 bg-edsync-emerald/10 px-2 text-xs font-bold text-edsync-emerald"
                             >
                               {block.status === "published" ? "Unpublish" : "Publish"}
                             </button>
                             <button
                               type="button"
                               onClick={() => archiveLibraryBlock(block)}
-                              className="rounded-full bg-edsync-amber/10 px-2 py-1 text-xs font-bold text-edsync-amber"
+                              className="btn btn-xs min-h-7 rounded-full border-0 bg-edsync-amber/10 px-2 text-xs font-bold text-edsync-amber"
                             >
                               Archive
                             </button>
@@ -1352,7 +1360,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                         <button
                           type="button"
                           onClick={() => hardDeleteLibraryBlock(block)}
-                          className="rounded-full bg-edsync-red/10 px-2 py-1 text-xs font-bold text-edsync-red"
+                          className="btn btn-xs min-h-7 rounded-full border-0 bg-edsync-red/10 px-2 text-xs font-bold text-edsync-red"
                         >
                           Delete
                         </button>
@@ -1364,7 +1372,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                       key={block.id}
                       type="button"
                       onClick={() => insertStudioHtml(createDesignBlockInsert(block))}
-                      className="flex w-full items-start gap-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40"
+                      className={`${studioToolCardClass} flex w-full items-start gap-3`}
                       title={block.description}
                     >
                       <BadgeCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-edsync-emerald" />
@@ -1380,7 +1388,7 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
               <Panel title="AI" icon={Sparkles}>
                 <div className="space-y-2">
                   {AI_PROMPT_CONTRACTS.map((contract) => (
-                    <Link key={contract.id} href={`/ai?task=${contract.id}`} title={contract.description} className="block w-full rounded-lg border border-edsync-border bg-edsync-surface p-3 text-left hover:border-edsync-blue/40">
+                    <Link key={contract.id} href={`/ai?task=${contract.id}`} title={contract.description} className={`${studioToolCardClass} block w-full`}>
                       <p className="text-sm font-semibold">{contract.title}</p>
                       <span className="edsync-studio-hover-detail">{contract.description}</span>
                     </Link>
@@ -1390,16 +1398,16 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
 
               <Panel title="Show" icon={MonitorPlay}>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <button type="button" onClick={() => setPresenting(true)} className="btn-secondary justify-center py-2">Present</button>
-                  <button type="button" onClick={() => setStatusMessage("Fade transition selected")} className="btn-secondary justify-center py-2">Fade</button>
-                  <button type="button" onClick={() => setStatusMessage("Rise animation selected")} className="btn-secondary justify-center py-2">Animation</button>
-                  <button type="button" onClick={() => selectKind("slide")} className="btn-secondary justify-center py-2">Notes</button>
+                  <button type="button" onClick={() => setPresenting(true)} className={`${studioToolbarButtonClass} justify-center`}>Present</button>
+                  <button type="button" onClick={() => setStatusMessage("Fade transition selected")} className={`${studioToolbarButtonClass} justify-center`}>Fade</button>
+                  <button type="button" onClick={() => setStatusMessage("Rise animation selected")} className={`${studioToolbarButtonClass} justify-center`}>Motion</button>
+                  <button type="button" onClick={() => selectKind("slide")} className={`${studioToolbarButtonClass} justify-center`}>Notes</button>
                 </div>
               </Panel>
 
               <Panel title="Inspect" icon={PanelRight}>
                 <div className="space-y-2 text-sm text-edsync-subtle">
-                  <button type="button" onClick={archiveCurrentItem} className="btn-secondary w-full justify-center py-2 text-sm">
+                  <button type="button" onClick={archiveCurrentItem} className={`${studioToolbarButtonClass} w-full justify-center`}>
                     <Trash2 className="h-4 w-4" />
                     Archive
                   </button>
@@ -1410,12 +1418,12 @@ export default function StudioWorkspace({ initialKind = "lesson" }: StudioWorksp
                 <Panel title="History" icon={History}>
                   <div className="space-y-2">
                     {historyEvents.length === 0 && (
-                      <p className="rounded-lg border border-dashed border-edsync-border p-3 text-sm text-edsync-subtle">
+                      <p className="card rounded-2xl border border-dashed border-edsync-border p-3 text-sm text-edsync-subtle">
                         No history.
                       </p>
                     )}
                     {historyEvents.map((event) => (
-                      <div key={event.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
+                      <div key={event.id} className="card rounded-2xl border border-edsync-border bg-edsync-surface p-3">
                         <p className="text-sm font-semibold">{event.eventType.replaceAll(".", " ")}</p>
                         <p className="mt-1 text-xs text-edsync-subtle">
                           {new Date(event.createdAt).toLocaleString()}
@@ -1517,8 +1525,8 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-edsync-border bg-edsync-card p-4">
-      <div className="mb-3 flex items-center gap-2">
+    <section className="card rounded-2xl border border-edsync-border bg-edsync-card p-4 shadow-sm transition duration-200 ease-out hover:shadow-md">
+      <div className="card-title mb-3 flex items-center gap-2 text-base">
         <Icon className="h-4 w-4 text-edsync-blue" />
         <h2 className="font-semibold">{title}</h2>
       </div>
