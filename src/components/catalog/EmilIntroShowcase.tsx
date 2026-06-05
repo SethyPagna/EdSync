@@ -43,6 +43,7 @@ type PreviewSlide = {
   route: string;
   accent: string;
   image: string;
+  darkImage: string;
   summary: string;
   tags: string[];
 };
@@ -55,6 +56,7 @@ type WorkflowSlide = {
   detail: string;
   route: string;
   image: string;
+  darkImage: string;
   panelTitle: string;
   pills: string[];
 };
@@ -70,6 +72,7 @@ const previewSlides: PreviewSlide[] = [
     route: "/auth/login",
     accent: "access",
     image: "/showcase/login-organization.jpg",
+    darkImage: "/showcase/login-organization-dark.png",
     summary: "Individual work or organization portal.",
     tags: ["Individual", "Organization", "Owner"],
   },
@@ -80,6 +83,7 @@ const previewSlides: PreviewSlide[] = [
     route: "/teacher/lessons/create",
     accent: "studio",
     image: "/showcase/teacher-create.jpg",
+    darkImage: "/showcase/teacher-create-dark.png",
     summary: "Create, publish, and improve courses.",
     tags: ["Create", "Publish", "AI"],
   },
@@ -90,6 +94,7 @@ const previewSlides: PreviewSlide[] = [
     route: "/student/dashboard",
     accent: "practice",
     image: "/showcase/student-dashboard.jpg",
+    darkImage: "/showcase/student-dashboard-dark.png",
     summary: "Courses, practice, and progress.",
     tags: ["Courses", "Practice", "Progress"],
   },
@@ -100,6 +105,7 @@ const previewSlides: PreviewSlide[] = [
     route: "/admin/dashboard",
     accent: "admin",
     image: "/showcase/admin-dashboard.jpg",
+    darkImage: "/showcase/admin-dashboard-dark.png",
     summary: "Individual, organization, creator, and learner views.",
     tags: ["Owner", "Portals", "Modes"],
   },
@@ -114,6 +120,7 @@ const workflowSlides: WorkflowSlide[] = [
     detail: "Individual or organization.",
     route: "/auth/signup",
     image: "/showcase/signup-access.png",
+    darkImage: "/showcase/signup-access-dark.png",
     panelTitle: "Workspace setup",
     pills: ["Individual", "Organization", "Owner"],
   },
@@ -125,6 +132,7 @@ const workflowSlides: WorkflowSlide[] = [
     detail: "Personal or portal access.",
     route: "/auth/login",
     image: "/showcase/login-organization.jpg",
+    darkImage: "/showcase/login-organization-dark.png",
     panelTitle: "Workspace access",
     pills: ["Personal", "Portal", "Return"],
   },
@@ -136,6 +144,7 @@ const workflowSlides: WorkflowSlide[] = [
     detail: "AI, pages, practice.",
     route: "/teacher/lessons/create",
     image: "/showcase/teacher-create.jpg",
+    darkImage: "/showcase/teacher-create-dark.png",
     panelTitle: "Course Studio",
     pills: ["AI", "Pages", "Practice"],
   },
@@ -147,6 +156,7 @@ const workflowSlides: WorkflowSlide[] = [
     detail: "Share, sell, or grant access.",
     route: "/teacher/work",
     image: "/showcase/teacher-work.jpg",
+    darkImage: "/showcase/teacher-work-dark.png",
     panelTitle: "Course Work",
     pills: ["Share", "Review", "Improve"],
   },
@@ -158,6 +168,7 @@ const workflowSlides: WorkflowSlide[] = [
     detail: "Focused drills and AI help.",
     route: "/student/dashboard",
     image: "/showcase/student-dashboard.jpg",
+    darkImage: "/showcase/student-dashboard-dark.png",
     panelTitle: "Learner dashboard",
     pills: ["Courses", "Practice", "Progress"],
   },
@@ -169,6 +180,7 @@ const workflowSlides: WorkflowSlide[] = [
     detail: "Progress, feedback, evidence.",
     route: "/admin/dashboard",
     image: "/showcase/admin-dashboard.jpg",
+    darkImage: "/showcase/admin-dashboard-dark.png",
     panelTitle: "Progress dashboard",
     pills: ["Progress", "Feedback", "Evidence"],
   },
@@ -252,7 +264,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
 
     const inViewport = () => {
       const rect = section.getBoundingClientRect();
-      return rect.top < window.innerHeight * 0.55 && rect.bottom > window.innerHeight * 0.45;
+      return rect.top <= window.innerHeight * 0.12 && rect.bottom >= window.innerHeight * 0.82;
     };
 
     const advance = (direction: 1 | -1, prevent?: () => void) => {
@@ -307,7 +319,7 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (prefersReducedMotion.matches) return;
 
-    const sectionIsCentered = (section: HTMLElement, topWeight = 0.22, bottomWeight = 0.78) => {
+    const sectionIsCentered = (section: HTMLElement, topWeight = 0.14, bottomWeight = 0.86) => {
       const rect = section.getBoundingClientRect();
       return rect.top < window.innerHeight * topWeight && rect.bottom > window.innerHeight * bottomWeight;
     };
@@ -318,14 +330,14 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
       const workflow = workflowRef.current;
       const catalog = catalogRef.current;
 
-      if (event.deltaY > 0 && hero && workflow && sectionIsCentered(hero, 0.34, 0.56)) {
+      if (event.deltaY > 0 && hero && workflow && sectionIsCentered(hero, 0.18, 0.76)) {
         event.preventDefault();
         wheelCooldownRef.current = Date.now() + 720;
         moveToSection(workflow, "to-workflow");
         return;
       }
 
-      if (event.deltaY < 0 && catalog && workflow && sectionIsCentered(catalog, 0.42, 0.72)) {
+      if (event.deltaY < 0 && catalog && workflow && sectionIsCentered(catalog, 0.18, 0.82)) {
         event.preventDefault();
         wheelCooldownRef.current = Date.now() + 720;
         setWorkflowSlide(workflowSlides.length - 1);
@@ -440,8 +452,17 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
             <div className="edsync-emil-device-body edsync-emil-shot-body">
               <figure className={`edsync-emil-shot-frame is-${preview.accent}`}>
                 <Image
+                  className="edsync-emil-image-light"
                   src={preview.image}
                   alt={`${preview.title} page preview`}
+                  fill
+                  priority={previewIndex === 0}
+                  sizes="(max-width: 760px) 100vw, 58vw"
+                />
+                <Image
+                  className="edsync-emil-image-dark"
+                  src={preview.darkImage}
+                  alt={`${preview.title} page preview in dark mode`}
                   fill
                   priority={previewIndex === 0}
                   sizes="(max-width: 760px) 100vw, 58vw"
@@ -495,8 +516,17 @@ export default function EmilIntroShowcase({ labels }: EmilIntroShowcaseProps) {
               </header>
               <figure className={`edsync-emil-workflow-visual is-${workflow.id}`}>
                 <Image
+                  className="edsync-emil-image-light"
                   src={workflow.image}
                   alt={`${workflow.panelTitle} actual EdSync page`}
+                  fill
+                  priority={workflowIndex === 0}
+                  sizes="(max-width: 760px) 100vw, 58vw"
+                />
+                <Image
+                  className="edsync-emil-image-dark"
+                  src={workflow.darkImage}
+                  alt={`${workflow.panelTitle} actual EdSync page in dark mode`}
                   fill
                   priority={workflowIndex === 0}
                   sizes="(max-width: 760px) 100vw, 58vw"
