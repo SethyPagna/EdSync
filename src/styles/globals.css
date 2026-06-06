@@ -7597,6 +7597,7 @@ html[data-theme="dark"] .edsync-emil-signin:hover {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 0.55rem 0.45rem;
+    align-items: start;
   }
 
   .edsync-emil-intro .edsync-emil-price-menu {
@@ -7606,6 +7607,21 @@ html[data-theme="dark"] .edsync-emil-signin:hover {
 
   .edsync-emil-intro .edsync-emil-search form > button[type="submit"] {
     grid-column: 2 / 3;
+    align-self: start;
+    height: 2.65rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .edsync-emil-intro .edsync-emil-actions details > div {
+    position: fixed;
+    top: 3.8rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-height: min(28rem, calc(100svh - 4.6rem));
+    overflow-y: auto;
+    border-radius: 1.2rem;
   }
 }
 
