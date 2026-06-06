@@ -10,6 +10,7 @@ import {
   Bold,
   Blocks,
   Download,
+  Eye,
   Film,
   Image as ImageIcon,
   Italic,
@@ -18,9 +19,12 @@ import {
   List,
   Palette,
   Play,
+  Redo2,
+  Save,
   Sparkles,
   Type,
   Underline,
+  Undo2,
   Wand2,
 } from "lucide-react";
 import {
@@ -220,6 +224,8 @@ export default function CreateLesson() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "canvas" | "questions" | "glossary"
   >("overview");
+  const [draftUndoStack, setDraftUndoStack] = useState<Draft[]>([]);
+  const [draftRedoStack, setDraftRedoStack] = useState<Draft[]>([]);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [analysisInfo, setAnalysisInfo] = useState<{
@@ -336,10 +342,10 @@ export default function CreateLesson() {
   };
 
   const addDraftSection = (template: SectionTemplate = SECTION_TEMPLATES[0]) => {
-    setDraft((current) => ({
-      ...current,
+    commitDraftChange({
+      ...draft,
       sections: [
-        ...current.sections,
+        ...draft.sections,
         {
           title: template.title,
           content: normalizeLessonAuthoringContent(template.content),
@@ -347,7 +353,7 @@ export default function CreateLesson() {
           duration_minutes: template.durationMinutes,
         },
       ],
-    }));
+    });
   };
 
   const moveDraftSection = (index: number, direction: -1 | 1) => {
@@ -355,12 +361,12 @@ export default function CreateLesson() {
     if (nextIndex < 0 || nextIndex >= draft.sections.length) return;
     const sections = [...draft.sections];
     [sections[index], sections[nextIndex]] = [sections[nextIndex], sections[index]];
-    setDraft({ ...draft, sections });
+    commitDraftChange({ ...draft, sections });
   };
 
   const duplicateDraftSection = (index: number) => {
     const source = draft.sections[index];
-    setDraft({
+    commitDraftChange({
       ...draft,
       sections: [
         ...draft.sections.slice(0, index + 1),
@@ -388,6 +394,56 @@ export default function CreateLesson() {
     () => lessonTemplateOptions.find((template) => template.id === designTemplateId) ?? lessonTemplateOptions[0],
     [designTemplateId],
   );
+  const canUndoDraft = draftUndoStack.length > 0;
+  const canRedoDraft = draftRedoStack.length > 0;
+
+  const commitDraftChange = (nextDraft: Draft) => {
+    setDraftUndoStack((current) => [...current.slice(-24), draft]);
+    setDraftRedoStack([]);
+    setDraft(normalizeDraftForAuthoring(nextDraft));
+  };
+
+  const undoDraftChange = () => {
+    const previous = draftUndoStack[draftUndoStack.length - 1];
+    if (!previous) return;
+    setDraftRedoStack((current) => [draft, ...current.slice(0, 24)]);
+    setDraftUndoStack((current) => current.slice(0, -1));
+    setDraft(normalizeDraftForAuthoring(previous));
+    toast.success("Undo");
+  };
+
+  const redoDraftChange = () => {
+    const next = draftRedoStack[0];
+    if (!next) return;
+    setDraftUndoStack((current) => [...current.slice(-24), draft]);
+    setDraftRedoStack((current) => current.slice(1));
+    setDraft(normalizeDraftForAuthoring(next));
+    toast.success("Redo");
+  };
+
+  const exportLessonJson = () => {
+    const payload = {
+      title: draft.title || "Untitled lesson",
+      description: draft.description,
+      objectives: draft.objectives.filter(Boolean),
+      estimatedDuration: draft.estimated_duration,
+      subject: draft.subject,
+      difficulty: draft.difficulty,
+      sections: draft.sections,
+      quizQuestions: draft.quiz_questions,
+      glossaryTerms: draft.glossary_terms,
+      design: selectedTemplateOption?.label ?? designTemplateId,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${(draft.title || "edsync-lesson").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "edsync-lesson"}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded lesson JSON");
+  };
 
   const renderStudioPanel = () => {
     if (studioPanel === "templates") {
@@ -693,8 +749,15 @@ export default function CreateLesson() {
   };
 
   const renderCanvasToolbar = () => (
-    <div className="flex flex-wrap items-center justify-center gap-1 rounded-2xl border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
-      <button type="button" onClick={() => setStudioPanel("blocks")} className="btn-secondary h-9 px-3 text-xs">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.35rem] border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
+      <button type="button" onClick={undoDraftChange} disabled={!canUndoDraft} className="btn-secondary h-9 px-3 text-xs disabled:opacity-35" title="Undo" aria-label="Undo">
+        <Undo2 className="h-4 w-4" />
+      </button>
+      <button type="button" onClick={redoDraftChange} disabled={!canRedoDraft} className="btn-secondary h-9 px-3 text-xs disabled:opacity-35" title="Redo" aria-label="Redo">
+        <Redo2 className="h-4 w-4" />
+      </button>
+      <button type="button" onClick={() => setStudioPanel("blocks")} className="btn-secondary h-9 px-3 text-xs" title="Elements" aria-label="Elements">
         <AlignLeft className="h-4 w-4" />
       </button>
       <select
@@ -712,13 +775,13 @@ export default function CreateLesson() {
           </option>
         ))}
       </select>
-      <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className="btn-secondary h-9 px-3 text-xs">
+      <button type="button" onClick={() => commitDraftChange({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className="btn-secondary h-9 px-3 text-xs" aria-label="Reduce duration">
         -
       </button>
       <span className="flex h-9 min-w-14 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-bold text-edsync-text">
         {draft.estimated_duration || 0}m
       </span>
-      <button type="button" onClick={() => setDraft({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className="btn-secondary h-9 px-3 text-xs">
+      <button type="button" onClick={() => commitDraftChange({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className="btn-secondary h-9 px-3 text-xs" aria-label="Increase duration">
         +
       </button>
       {[
@@ -746,10 +809,25 @@ export default function CreateLesson() {
       <button type="button" onClick={() => setStudioPanel("brand")} className="btn-secondary h-9 px-3 text-xs">
         Brand
       </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+      <button type="button" onClick={() => toast.success("Preview ready in the lesson player after saving.")} className="btn-secondary h-9 px-3 text-xs" title="Preview">
+        <Eye className="h-4 w-4" />
+        Preview
+      </button>
+      <button type="button" onClick={() => save("draft")} disabled={saving || !draft.title.trim()} className="btn-secondary h-9 px-3 text-xs disabled:opacity-40" title="Save draft">
+        <Save className="h-4 w-4" />
+        Save
+      </button>
+      <button type="button" onClick={exportLessonJson} className="btn-secondary h-9 px-3 text-xs" title="Download">
+        <Download className="h-4 w-4" />
+        Download
+      </button>
       <button type="button" onClick={() => setStudioPanel("ai")} className="btn-primary h-9 px-3 text-xs">
         <Sparkles className="h-4 w-4" />
         AI
       </button>
+      </div>
     </div>
   );
 
@@ -764,6 +842,8 @@ export default function CreateLesson() {
     setVariants([]);
     setAnalysisInfo(null);
     setDraftSavedAt(null);
+    setDraftUndoStack([]);
+    setDraftRedoStack([]);
     setActiveTab("overview");
     toast.success("Local draft cleared");
   };
