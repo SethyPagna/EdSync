@@ -110,7 +110,7 @@ type Draft = {
 };
 
 const emptyDraft = (): Draft => ({
-  title: "",
+  title: "Untitled course",
   description: "",
   objectives: ["", "", ""],
   estimated_duration: 45,
@@ -224,6 +224,7 @@ export default function CreateLesson() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "canvas" | "questions" | "glossary"
   >("overview");
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [draftUndoStack, setDraftUndoStack] = useState<Draft[]>([]);
   const [draftRedoStack, setDraftRedoStack] = useState<Draft[]>([]);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -342,18 +343,21 @@ export default function CreateLesson() {
   };
 
   const addDraftSection = (template: SectionTemplate = SECTION_TEMPLATES[0]) => {
+    const nextSections = [
+      ...draft.sections,
+      {
+        title: template.title,
+        content: normalizeLessonAuthoringContent(template.content),
+        content_type: template.contentType,
+        duration_minutes: template.durationMinutes,
+      },
+    ];
     commitDraftChange({
       ...draft,
-      sections: [
-        ...draft.sections,
-        {
-          title: template.title,
-          content: normalizeLessonAuthoringContent(template.content),
-          content_type: template.contentType,
-          duration_minutes: template.durationMinutes,
-        },
-      ],
+      sections: nextSections,
     });
+    setActiveTab("canvas");
+    setActiveSectionIndex(nextSections.length - 1);
   };
 
   const moveDraftSection = (index: number, direction: -1 | 1) => {
@@ -362,18 +366,22 @@ export default function CreateLesson() {
     const sections = [...draft.sections];
     [sections[index], sections[nextIndex]] = [sections[nextIndex], sections[index]];
     commitDraftChange({ ...draft, sections });
+    setActiveSectionIndex(nextIndex);
   };
 
   const duplicateDraftSection = (index: number) => {
     const source = draft.sections[index];
+    const nextSections = [
+      ...draft.sections.slice(0, index + 1),
+      { ...source, title: `${source.title} Copy` },
+      ...draft.sections.slice(index + 1),
+    ];
     commitDraftChange({
       ...draft,
-      sections: [
-        ...draft.sections.slice(0, index + 1),
-        { ...source, title: `${source.title} Copy` },
-        ...draft.sections.slice(index + 1),
-      ],
+      sections: nextSections,
     });
+    setActiveTab("canvas");
+    setActiveSectionIndex(index + 1);
   };
 
   const draftSummaryItems = useMemo(
@@ -419,6 +427,15 @@ export default function CreateLesson() {
     setDraftRedoStack((current) => current.slice(1));
     setDraft(normalizeDraftForAuthoring(next));
     toast.success("Redo");
+  };
+
+  const deleteDraftSection = (index: number) => {
+    const nextSections = draft.sections.filter((_, sectionIndex) => sectionIndex !== index);
+    commitDraftChange({
+      ...draft,
+      sections: nextSections.length ? nextSections : emptyDraft().sections,
+    });
+    setActiveSectionIndex(Math.max(0, index - 1));
   };
 
   const exportLessonJson = () => {
@@ -946,6 +963,8 @@ export default function CreateLesson() {
       const ai = generatedVariants[0] || (data.lesson as AILessonDraft);
       setTimeout(() => {
         applyAiDraft(ai);
+        setActiveTab("canvas");
+        setActiveSectionIndex(0);
         setStep("edit");
       }, 400);
     } catch (err) {
@@ -1170,6 +1189,7 @@ export default function CreateLesson() {
           {[
             {
               mode: "ai_collab" as const,
+              icon: Sparkles,
               title: "AI draft",
               desc: "Generate a designed outline, then choose what to keep.",
               badge: "Best",
@@ -1178,6 +1198,7 @@ export default function CreateLesson() {
             },
             {
               mode: "ai_full" as const,
+              icon: Wand2,
               title: "Full AI",
               desc: "Build slides, quiz blocks, rubric, and review prompts.",
               badge: "Fastest",
@@ -1186,48 +1207,57 @@ export default function CreateLesson() {
             },
             {
               mode: "manual" as const,
+              icon: Type,
               title: "Blank lesson",
               desc: "Open the Canva-style lesson canvas with no generated content.",
               badge: "Control",
               badgeColor:
                 "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20",
             },
-          ].map((opt) => (
-            <button
-              key={opt.mode}
-              onClick={() => {
-                setCreationMode(opt.mode);
-                if (opt.mode === "manual") {
-                  setDraft(emptyDraft());
-                  setStep("edit");
-                } else setStep("import");
-              }}
-              title={opt.desc}
-              aria-label={`${opt.title}: ${opt.desc}`}
-              className={`group min-h-44 w-full rounded-[1.5rem] border-2 bg-edsync-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-card-hover ${
-                creationMode === opt.mode
-                  ? "border-edsync-blue bg-edsync-blue/5"
-                  : "border-edsync-border bg-edsync-card hover:border-edsync-muted"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <span className="font-display font-bold text-edsync-text">
-                      {opt.title}
-                    </span>
-                    <span className={`badge text-xs ${opt.badgeColor}`}>
-                      {opt.badge}
-                    </span>
-                  </div>
-                  <p className="edsync-studio-hover-detail">
-                    {opt.desc}
-                  </p>
+          ].map((opt) => {
+            const StartIcon = opt.icon;
+            return (
+              <button
+                key={opt.mode}
+                onClick={() => {
+                  setCreationMode(opt.mode);
+                  if (opt.mode === "manual") {
+                    setDraft(emptyDraft());
+                    setActiveTab("canvas");
+                    setActiveSectionIndex(0);
+                    setStep("edit");
+                  } else setStep("import");
+                }}
+                title={opt.desc}
+                aria-label={`${opt.title}: ${opt.desc}`}
+                className={`group w-full rounded-[1.5rem] border-2 bg-edsync-surface p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-card-hover sm:p-4 ${
+                  creationMode === opt.mode
+                    ? "border-edsync-blue bg-edsync-blue/5"
+                    : "border-edsync-border bg-edsync-card hover:border-edsync-muted"
+                }`}
+              >
+                <div className="mb-3 flex h-16 items-center justify-center rounded-[1.15rem] border border-edsync-border bg-gradient-to-br from-edsync-blue/10 via-white to-edsync-emerald/10 dark:via-slate-950 sm:mb-4 sm:h-24">
+                  <StartIcon className="h-7 w-7 text-edsync-blue transition group-hover:scale-105 sm:h-8 sm:w-8" />
                 </div>
-                <ArrowRight className="h-5 w-5 text-edsync-blue transition group-hover:translate-x-0.5" />
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="font-display font-bold text-edsync-text">
+                        {opt.title}
+                      </span>
+                      <span className={`badge text-xs ${opt.badgeColor}`}>
+                        {opt.badge}
+                      </span>
+                    </div>
+                    <p className="edsync-studio-hover-detail">
+                      {opt.desc}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-edsync-blue transition group-hover:translate-x-0.5" />
+                </div>
+              </button>
+            );
+          })}
           </div>
         </div>
       )}
@@ -1557,8 +1587,8 @@ export default function CreateLesson() {
       {/* Edit */}
       {step === "edit" && (
         <div className="animate-slide-up space-y-4 lg:h-[calc(100dvh-8rem)] lg:min-h-[720px]">
-          <div className="grid gap-4 lg:h-full lg:grid-cols-[76px_300px_minmax(0,1fr)] lg:items-stretch">
-            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-2 shadow-sm lg:order-1 lg:h-full lg:flex-col lg:overflow-y-auto">
+          <div className="grid gap-3 lg:h-full lg:grid-cols-[72px_292px_minmax(0,1fr)] lg:items-stretch">
+            <aside className="order-2 flex gap-2 overflow-x-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card/95 p-2 shadow-sm backdrop-blur lg:order-1 lg:h-full lg:flex-col lg:overflow-y-auto">
               {STUDIO_TOOL_RAIL.map((tool) => {
                 const Icon = tool.icon;
                 return (
@@ -1568,7 +1598,7 @@ export default function CreateLesson() {
                     onClick={() => setStudioPanel(tool.id)}
                     className={`flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-semibold transition ${
                       studioPanel === tool.id
-                        ? "bg-edsync-blue text-white shadow-sm"
+                        ? "bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm"
                         : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
                     }`}
                   >
@@ -1578,11 +1608,11 @@ export default function CreateLesson() {
                 );
               })}
             </aside>
-            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-sm lg:order-2 lg:h-full lg:overflow-y-auto">
+            <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card/95 p-4 shadow-sm backdrop-blur lg:order-2 lg:h-full lg:overflow-y-auto">
               {renderStudioPanel()}
             </aside>
-            <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-edsync-surface p-3 shadow-inner lg:order-3 lg:h-full lg:overflow-hidden">
-              <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg p-3 sm:p-5 lg:h-full lg:overflow-y-auto">
+            <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-gradient-to-br from-edsync-surface to-sky-100/70 p-3 shadow-inner dark:from-slate-950 dark:to-slate-900 lg:order-3 lg:h-full lg:overflow-hidden">
+              <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg/80 p-3 backdrop-blur sm:p-5 lg:h-full lg:overflow-y-auto">
           <div className="sticky top-0 z-10 mx-auto max-w-4xl pb-2">
             {renderCanvasToolbar()}
           </div>
@@ -1660,18 +1690,18 @@ export default function CreateLesson() {
           {/* Tabs */}
           <div className="flex gap-2 border-b border-edsync-border pb-0 overflow-x-auto -mx-1 px-1">
             {[
-              { key: "overview" as const, label: "Overview" },
+              { key: "overview" as const, label: "Info" },
               {
                 key: "canvas" as const,
-                label: `Pages (${draft.sections.length})`,
+                label: `Pages ${draft.sections.length}`,
               },
               {
                 key: "questions" as const,
-                label: `Quiz & Practice (${draft.quiz_questions.length})`,
+                label: `Practice ${draft.quiz_questions.length}`,
               },
               {
                 key: "glossary" as const,
-                label: `Terms (${draft.glossary_terms.length})`,
+                label: `Terms ${draft.glossary_terms.length}`,
               },
             ].map((t) => (
               <button
@@ -1880,7 +1910,12 @@ export default function CreateLesson() {
           {activeTab === "canvas" && (
             <div className="space-y-5">
               {draft.sections.map((sec, i) => (
-                <div key={i} className="overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card">
+                <div
+                  key={i}
+                  className={`overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card ${
+                    activeSectionIndex === i ? "block" : "hidden"
+                  }`}
+                >
                   <div className="flex flex-wrap items-center gap-3 border-b border-edsync-border bg-edsync-surface p-3">
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue/15 text-sm font-bold text-edsync-blue">
                       {i + 1}
@@ -1964,12 +1999,7 @@ export default function CreateLesson() {
                       Duplicate
                     </button>
                     <button
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          sections: draft.sections.filter((_, j) => j !== i),
-                        })
-                      }
+                      onClick={() => deleteDraftSection(i)}
                       className="rounded-xl px-3 py-2 text-sm font-bold text-edsync-subtle hover:bg-edsync-red/10 hover:text-edsync-red sm:ml-auto sm:flex-shrink-0"
                       aria-label="Delete lesson block"
                     >
@@ -2364,8 +2394,15 @@ export default function CreateLesson() {
                 <button
                   key={`${section.title}-${index}`}
                   type="button"
-                  onClick={() => setActiveTab("canvas")}
-                  className="min-w-36 rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left transition hover:border-edsync-blue/40 hover:bg-edsync-card"
+                  onClick={() => {
+                    setActiveTab("canvas");
+                    setActiveSectionIndex(index);
+                  }}
+                  className={`min-w-36 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+                    activeSectionIndex === index
+                      ? "border-edsync-blue bg-edsync-blue/10 shadow-sm"
+                      : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/40 hover:bg-edsync-card"
+                  }`}
                 >
                   <span className="text-xs font-bold text-edsync-blue">{index + 1}</span>
                   <p className="mt-1 line-clamp-1 text-sm font-semibold text-edsync-text">{section.title || "Untitled"}</p>
@@ -2377,7 +2414,7 @@ export default function CreateLesson() {
             </div>
           </div>
 
-          <div className="sticky bottom-3 pt-4 border-t border-edsync-border bg-edsync-bg">
+          <div className="pt-4 border-t border-edsync-border bg-edsync-bg">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button
                 onClick={() => save("draft")}
