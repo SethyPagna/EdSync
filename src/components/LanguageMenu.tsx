@@ -59,6 +59,28 @@ export default function LanguageMenu({
     persistLanguage(language);
   }, [language]);
 
+  useEffect(() => {
+    const closeMenu = () => {
+      detailsRef.current?.removeAttribute("open");
+    };
+    const closeWhenOutside = (event: PointerEvent) => {
+      if (detailsRef.current?.contains(event.target as Node)) return;
+      closeMenu();
+    };
+
+    document.addEventListener("pointerdown", closeWhenOutside);
+    document.addEventListener("click", closeWhenOutside);
+    window.addEventListener("scroll", closeMenu, { passive: true });
+    window.addEventListener("resize", closeMenu);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeWhenOutside);
+      document.removeEventListener("click", closeWhenOutside);
+      window.removeEventListener("scroll", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+    };
+  }, []);
+
   const chooseLanguage = (nextLanguage: PublicLanguageName) => {
     setLanguage(nextLanguage);
     persistLanguage(nextLanguage);
