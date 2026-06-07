@@ -93,7 +93,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260606.1",
+    "@cloudflare/workers-types": "^4.20260607.1",
     "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -103,7 +103,7 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
-    "daisyui": "^5.5.20",
+    "daisyui": "^5.5.23",
     "esbuild": "^0.28.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.6",
