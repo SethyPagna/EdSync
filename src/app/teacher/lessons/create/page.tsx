@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -6,24 +6,25 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   ArrowRight,
-  AlignLeft,
-  Bold,
+  ArrowDown,
+  ArrowUp,
   Blocks,
+  Copy,
   Download,
   Eye,
   Film,
   Image as ImageIcon,
-  Italic,
   Languages,
   LayoutTemplate,
   List,
   Palette,
   Play,
+  Plus,
   Redo2,
   Save,
   Sparkles,
+  Trash2,
   Type,
-  Underline,
   Undo2,
   Wand2,
 } from "lucide-react";
@@ -404,6 +405,10 @@ export default function CreateLesson() {
   );
   const canUndoDraft = draftUndoStack.length > 0;
   const canRedoDraft = draftRedoStack.length > 0;
+  const selectedSectionIndex = Math.min(
+    Math.max(activeSectionIndex, 0),
+    Math.max(draft.sections.length - 1, 0),
+  );
 
   const commitDraftChange = (nextDraft: Draft) => {
     setDraftUndoStack((current) => [...current.slice(-24), draft]);
@@ -765,88 +770,115 @@ export default function CreateLesson() {
     );
   };
 
-  const renderCanvasToolbar = () => (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.35rem] border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
-      <div className="flex min-w-0 flex-wrap items-center gap-1">
-      <button type="button" onClick={undoDraftChange} disabled={!canUndoDraft} className="btn-secondary h-9 px-3 text-xs disabled:opacity-35" title="Undo" aria-label="Undo">
-        <Undo2 className="h-4 w-4" />
-      </button>
-      <button type="button" onClick={redoDraftChange} disabled={!canRedoDraft} className="btn-secondary h-9 px-3 text-xs disabled:opacity-35" title="Redo" aria-label="Redo">
-        <Redo2 className="h-4 w-4" />
-      </button>
-      <button type="button" onClick={() => setStudioPanel("blocks")} className="btn-secondary h-9 px-3 text-xs" title="Elements" aria-label="Elements">
-        <AlignLeft className="h-4 w-4" />
-      </button>
-      <select
-        value={selectedTemplateOption?.label ?? "Inter"}
-        onChange={(event) => {
-          const selected = lessonTemplateOptions.find((template) => template.label === event.target.value);
-          if (selected) setDesignTemplateId(selected.id);
-        }}
-        className="h-9 min-w-32 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-semibold text-edsync-text"
-        aria-label="Lesson template"
-      >
-        {lessonTemplateOptions.map((template) => (
-          <option key={template.id} value={template.label}>
-            {template.label}
-          </option>
-        ))}
-      </select>
-      <button type="button" onClick={() => commitDraftChange({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className="btn-secondary h-9 px-3 text-xs" aria-label="Reduce duration">
-        -
-      </button>
-      <span className="flex h-9 min-w-14 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-bold text-edsync-text">
-        {draft.estimated_duration || 0}m
-      </span>
-      <button type="button" onClick={() => commitDraftChange({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className="btn-secondary h-9 px-3 text-xs" aria-label="Increase duration">
-        +
-      </button>
-      {[
-        { label: "Bold", icon: Bold, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "concept-brief") ?? SECTION_TEMPLATES[0]) },
-        { label: "Italic", icon: Italic, action: () => setActiveTab("canvas") },
-        { label: "Underline", icon: Underline, action: () => setActiveTab("canvas") },
-        { label: "List", icon: List, action: () => addDraftSection(SECTION_TEMPLATES.find((item) => item.id === "guided-notes") ?? SECTION_TEMPLATES[0]) },
-      ].map((item) => {
-        const Icon = item.icon;
-        return (
-          <button
-            key={item.label}
-            type="button"
-            onClick={item.action}
-            title={item.label}
-            className="btn-secondary h-9 px-3 text-xs"
-          >
-            <Icon className="h-4 w-4" />
+  const renderCanvasToolbar = () => {
+    const toolbarButtonClass =
+      "flex h-9 min-w-9 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-2.5 text-xs font-bold text-edsync-text shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edsync-blue disabled:cursor-not-allowed disabled:opacity-35";
+    const sectionShortcuts = [
+      {
+        label: "Brief",
+        icon: Type,
+        action: () =>
+          addDraftSection(
+            SECTION_TEMPLATES.find((item) => item.id === "concept-brief") ?? SECTION_TEMPLATES[0],
+          ),
+      },
+      {
+        label: "Notes",
+        icon: List,
+        action: () =>
+          addDraftSection(
+            SECTION_TEMPLATES.find((item) => item.id === "guided-notes") ?? SECTION_TEMPLATES[0],
+          ),
+      },
+      {
+        label: "Page",
+        icon: Plus,
+        action: () => addDraftSection(),
+      },
+    ];
+
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.35rem] border border-edsync-border bg-edsync-card/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur dark:shadow-black/30">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-bg p-1">
+            <button type="button" onClick={undoDraftChange} disabled={!canUndoDraft} className={toolbarButtonClass} title="Undo" aria-label="Undo">
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={redoDraftChange} disabled={!canRedoDraft} className={toolbarButtonClass} title="Redo" aria-label="Redo">
+              <Redo2 className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-bg p-1">
+            <button type="button" onClick={() => setStudioPanel("templates")} className={toolbarButtonClass} title="Templates" aria-label="Templates">
+              <LayoutTemplate className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => setStudioPanel("blocks")} className={toolbarButtonClass} title="Elements" aria-label="Elements">
+              <Blocks className="h-4 w-4" />
+            </button>
+            {sectionShortcuts.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.action}
+                  title={item.label}
+                  aria-label={item.label}
+                  className={toolbarButtonClass}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-bg p-1">
+            <select
+              value={selectedTemplateOption?.label ?? "Inter"}
+              onChange={(event) => {
+                const selected = lessonTemplateOptions.find((template) => template.label === event.target.value);
+                if (selected) setDesignTemplateId(selected.id);
+              }}
+              className="h-9 max-w-36 rounded-xl border border-edsync-border bg-edsync-surface px-2 text-xs font-bold text-edsync-text sm:max-w-44"
+              aria-label="Lesson template"
+            >
+              {lessonTemplateOptions.map((template) => (
+                <option key={template.id} value={template.label}>
+                  {template.label}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => commitDraftChange({ ...draft, estimated_duration: Math.max(5, draft.estimated_duration - 5) })} className={toolbarButtonClass} aria-label="Reduce duration">
+              -
+            </button>
+            <span className="flex h-9 min-w-12 items-center justify-center rounded-xl border border-edsync-border bg-edsync-surface px-2 text-xs font-bold text-edsync-text">
+              {draft.estimated_duration || 0}m
+            </span>
+            <button type="button" onClick={() => commitDraftChange({ ...draft, estimated_duration: draft.estimated_duration + 5 })} className={toolbarButtonClass} aria-label="Increase duration">
+              +
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={() => toast.success("Preview ready in the lesson player after saving.")} className={toolbarButtonClass} title="Preview" aria-label="Preview">
+            <Eye className="h-4 w-4" />
+            <span className="hidden sm:inline">Preview</span>
           </button>
-        );
-      })}
-      <button type="button" onClick={() => setStudioPanel("animate")} className="btn-secondary h-9 px-3 text-xs">
-        Animate
-      </button>
-      <button type="button" onClick={() => setStudioPanel("brand")} className="btn-secondary h-9 px-3 text-xs">
-        Brand
-      </button>
+          <button type="button" onClick={() => save("draft")} disabled={saving || !draft.title.trim()} className={toolbarButtonClass} title="Save draft" aria-label="Save draft">
+            <Save className="h-4 w-4" />
+            <span className="hidden sm:inline">Save</span>
+          </button>
+          <button type="button" onClick={exportLessonJson} className={toolbarButtonClass} title="Download" aria-label="Download">
+            <Download className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setStudioPanel("ai")} className="btn-primary h-9 px-3 text-xs" title="AI" aria-label="AI">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">AI</span>
+          </button>
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
-      <button type="button" onClick={() => toast.success("Preview ready in the lesson player after saving.")} className="btn-secondary h-9 px-3 text-xs" title="Preview">
-        <Eye className="h-4 w-4" />
-        Preview
-      </button>
-      <button type="button" onClick={() => save("draft")} disabled={saving || !draft.title.trim()} className="btn-secondary h-9 px-3 text-xs disabled:opacity-40" title="Save draft">
-        <Save className="h-4 w-4" />
-        Save
-      </button>
-      <button type="button" onClick={exportLessonJson} className="btn-secondary h-9 px-3 text-xs" title="Download">
-        <Download className="h-4 w-4" />
-        Download
-      </button>
-      <button type="button" onClick={() => setStudioPanel("ai")} className="btn-primary h-9 px-3 text-xs">
-        <Sparkles className="h-4 w-4" />
-        AI
-      </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const clearSavedDraft = () => {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -1111,17 +1143,24 @@ export default function CreateLesson() {
           </p>
         </div>
         {step === "edit" && (
-          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs text-edsync-subtle">
-            <span className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1">
-              {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Draft ready"}
+          <div className="flex w-full flex-wrap items-center gap-1.5 text-xs text-edsync-subtle sm:ml-auto sm:w-auto sm:gap-2">
+            <span className="rounded-full border border-edsync-border bg-edsync-card px-2.5 py-1">
+              {draftSavedAt ? (
+                <>
+                  <span className="hidden sm:inline">Draft </span>
+                  saved {new Date(draftSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </>
+              ) : (
+                "Draft ready"
+              )}
             </span>
-            <Link href="/teacher/lessons" className="btn-secondary px-3 py-1.5 text-xs">
+            <Link href="/teacher/lessons" className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1.5 font-bold text-edsync-text shadow-sm transition hover:border-edsync-blue/40">
               Courses
             </Link>
-            <Link href="/practice?mode=quiz&ai=1&task=generate-practice" className="btn-secondary px-3 py-1.5 text-xs">
+            <Link href="/practice?mode=quiz&ai=1&task=generate-practice" className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1.5 font-bold text-edsync-text shadow-sm transition hover:border-edsync-blue/40">
               Practice
             </Link>
-            <button type="button" onClick={clearSavedDraft} className="btn-secondary px-3 py-1.5 text-xs">
+            <button type="button" onClick={clearSavedDraft} className="rounded-full border border-edsync-border bg-edsync-card px-3 py-1.5 font-bold text-edsync-text shadow-sm transition hover:border-edsync-red/40 hover:text-edsync-red">
               Clear
             </button>
           </div>
@@ -1334,7 +1373,7 @@ export default function CreateLesson() {
                   </p>
                   <p className="text-xs text-edsync-subtle">
                     {(uploadedFile.size / 1024).toFixed(1)} KB
-                    {uploadedKind ? ` • ${uploadedKind}` : ""}
+                    {uploadedKind ? ` - ${uploadedKind}` : ""}
                   </p>
                 </div>
                 <button
@@ -1342,9 +1381,11 @@ export default function CreateLesson() {
                     setUploadedFile(null);
                     setInputText("");
                   }}
-                  className="text-edsync-subtle hover:text-edsync-red text-lg"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-edsync-subtle transition hover:bg-edsync-red/10 hover:text-edsync-red"
+                  title="Remove file"
+                  aria-label="Remove file"
                 >
-                  ×
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             )}
@@ -1565,7 +1606,7 @@ export default function CreateLesson() {
                           : "bg-edsync-card"
                     }`}
                   >
-                    {i < genStep ? "✓" : i === genStep ? "●" : "○"}
+                    {i < genStep ? "OK" : i === genStep ? "..." : "-"}
                   </span>
                   <span className="text-left leading-snug">{s}</span>
                 </div>
@@ -1611,8 +1652,8 @@ export default function CreateLesson() {
             <aside className="order-3 rounded-[1.75rem] border border-edsync-border bg-edsync-card/95 p-4 shadow-sm backdrop-blur lg:order-2 lg:h-full lg:overflow-y-auto">
               {renderStudioPanel()}
             </aside>
-            <div className="order-1 min-w-0 rounded-[2rem] border border-edsync-border bg-gradient-to-br from-edsync-surface to-sky-100/70 p-3 shadow-inner dark:from-slate-950 dark:to-slate-900 lg:order-3 lg:h-full lg:overflow-hidden">
-              <div className="min-w-0 space-y-5 rounded-[1.5rem] bg-edsync-bg/80 p-3 backdrop-blur sm:p-5 lg:h-full lg:overflow-y-auto">
+            <div className="order-1 min-w-0 rounded-[1.5rem] border border-edsync-border bg-gradient-to-br from-edsync-surface to-sky-100/70 p-1.5 shadow-inner dark:from-slate-950 dark:to-slate-900 sm:rounded-[2rem] sm:p-3 lg:order-3 lg:h-full lg:overflow-hidden">
+              <div className="min-w-0 space-y-4 rounded-[1.25rem] bg-edsync-bg/80 p-2 backdrop-blur sm:space-y-5 sm:rounded-[1.5rem] sm:p-5 lg:h-full lg:overflow-y-auto">
           <div className="sticky top-0 z-10 mx-auto max-w-4xl pb-2">
             {renderCanvasToolbar()}
           </div>
@@ -1655,10 +1696,17 @@ export default function CreateLesson() {
             </div>
           )}
           {creationMode !== "manual" && (
-            <div className="p-3 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl text-sm text-edsync-emerald flex items-start gap-2">
-              <div className="flex-1">
-                <span className="font-medium">Lesson generated!</span> Review
-                and customize below, then save or publish.
+            <div
+              className="flex items-center gap-2 rounded-2xl border border-edsync-emerald/20 bg-edsync-emerald/5 px-3 py-2 text-xs font-semibold text-edsync-emerald"
+              title={
+                analysisInfo?.main_topic
+                  ? `Topic: ${analysisInfo.main_topic}${analysisInfo.key_concepts?.length ? `. Key concepts: ${analysisInfo.key_concepts.slice(0, 4).join(", ")}` : ""}`
+                  : "AI draft is ready to review."
+              }
+            >
+              <Sparkles className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">AI draft ready</span>
+              <div className="sr-only">
                 {analysisInfo?.main_topic && (
                   <p className="text-edsync-emerald/70 text-xs mt-1 break-words">
                     Topic detected: <strong>{analysisInfo.main_topic}</strong>
@@ -1670,19 +1718,19 @@ export default function CreateLesson() {
               </div>
             </div>
           )}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {draftSummaryItems.map((item) => (
               <div
                 key={item.label}
-                className="rounded-xl border border-edsync-border bg-edsync-card p-3 shadow-sm"
+                className="flex min-w-28 items-center justify-between gap-3 rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 shadow-sm"
+                title={item.hint}
               >
-                <p className="text-xs font-medium uppercase tracking-wide text-edsync-subtle">
+                <p className="text-xs font-bold text-edsync-subtle">
                   {item.label}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-edsync-text">
+                <p className="text-sm font-black text-edsync-text">
                   {item.value}
                 </p>
-                <p className="text-xs text-edsync-subtle">{item.hint}</p>
               </div>
             ))}
           </div>
@@ -1780,7 +1828,7 @@ export default function CreateLesson() {
                           }
                           className="text-edsync-subtle hover:text-edsync-red text-lg flex-shrink-0"
                         >
-                          ×
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
@@ -1913,10 +1961,10 @@ export default function CreateLesson() {
                 <div
                   key={i}
                   className={`overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-card ${
-                    activeSectionIndex === i ? "block" : "hidden"
+                    selectedSectionIndex === i ? "block" : "hidden"
                   }`}
                 >
-                  <div className="flex flex-wrap items-center gap-3 border-b border-edsync-border bg-edsync-surface p-3">
+                  <div className="flex flex-wrap items-center gap-2 border-b border-edsync-border bg-edsync-surface p-2.5 sm:gap-3 sm:p-3">
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue/15 text-sm font-bold text-edsync-blue">
                       {i + 1}
                     </span>
@@ -1927,7 +1975,7 @@ export default function CreateLesson() {
                         ss[i] = { ...ss[i], title: e.target.value };
                         setDraft({ ...draft, sections: ss });
                       }}
-                      className="min-w-[12rem] flex-1 rounded-2xl border border-edsync-border bg-edsync-card px-4 py-3 font-display text-base font-bold text-edsync-text outline-none transition focus:border-edsync-blue focus:ring-2 focus:ring-edsync-blue/20"
+                      className="min-w-[11rem] flex-1 rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2.5 font-display text-base font-bold text-edsync-text outline-none transition focus:border-edsync-blue focus:ring-2 focus:ring-edsync-blue/20 sm:px-4 sm:py-3"
                       placeholder="Page title..."
                     />
                     <div className="flex rounded-2xl border border-edsync-border bg-edsync-card p-1">
@@ -1979,31 +2027,42 @@ export default function CreateLesson() {
                       </button>
                     </div>
                     <button
+                      type="button"
                       onClick={() => moveDraftSection(i, -1)}
                       disabled={i === 0}
-                      className="btn-secondary px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-edsync-border bg-edsync-card text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Move page up"
+                      aria-label="Move page up"
                     >
-                      Up
+                      <ArrowUp className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => moveDraftSection(i, 1)}
                       disabled={i === draft.sections.length - 1}
-                      className="btn-secondary px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-edsync-border bg-edsync-card text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Move page down"
+                      aria-label="Move page down"
                     >
-                      Down
+                      <ArrowDown className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => duplicateDraftSection(i)}
-                      className="btn-secondary px-3 py-2 text-xs"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-edsync-border bg-edsync-card text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue"
+                      title="Duplicate page"
+                      aria-label="Duplicate page"
                     >
-                      Duplicate
+                      <Copy className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => deleteDraftSection(i)}
-                      className="rounded-xl px-3 py-2 text-sm font-bold text-edsync-subtle hover:bg-edsync-red/10 hover:text-edsync-red sm:ml-auto sm:flex-shrink-0"
-                      aria-label="Delete lesson block"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-edsync-subtle transition hover:bg-edsync-red/10 hover:text-edsync-red sm:ml-auto sm:flex-shrink-0"
+                      title="Delete page"
+                      aria-label="Delete page"
                     >
-                      ×
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                   {/* Smart content editor per type */}
@@ -2016,7 +2075,7 @@ export default function CreateLesson() {
                       return (
                         <div className="space-y-3 p-3">
                           <div className="p-3 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl text-xs text-edsync-blue">
-                            <strong>Image block</strong> — Paste an image URL,
+                            <strong>Image block</strong> - Paste an image URL,
                             or upload an approved image in the editor.
                           </div>
                           <input
@@ -2076,7 +2135,7 @@ export default function CreateLesson() {
                       return (
                         <div className="space-y-3 p-3">
                           <div className="p-3 bg-edsync-purple/5 border border-edsync-purple/20 rounded-xl text-xs text-edsync-purple">
-                            <strong>Video block</strong> — Paste a
+                            <strong>Video block</strong> - Paste a
                             YouTube, Vimeo, or direct HTTPS video URL.
                           </div>
                           <input
@@ -2237,7 +2296,7 @@ export default function CreateLesson() {
                       title="Remove question"
                       className="text-edsync-subtle hover:text-edsync-red text-lg leading-none px-2"
                     >
-                      ×
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                   <p className="font-medium text-edsync-text text-sm mb-3">
@@ -2250,7 +2309,7 @@ export default function CreateLesson() {
                           key={opt.id}
                           className={`text-xs px-3 py-2 rounded-lg break-words ${opt.is_correct ? "bg-edsync-emerald/10 text-edsync-emerald border border-edsync-emerald/20" : "bg-edsync-muted/20 text-edsync-subtle"}`}
                         >
-                          {opt.is_correct && "✓ "}
+                          {opt.is_correct && "Correct: "}
                           {opt.text}
                         </div>
                       ))}
@@ -2333,7 +2392,7 @@ export default function CreateLesson() {
                         }
                         className="text-edsync-subtle hover:text-edsync-red text-lg flex-shrink-0"
                       >
-                        ×
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                     <textarea
@@ -2377,7 +2436,7 @@ export default function CreateLesson() {
             </div>
           )}
 
-          {/* Save Actions — sticky bottom */}
+          {/* Save actions */}
           <div className="rounded-3xl border border-edsync-border bg-edsync-card p-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="group">
@@ -2399,7 +2458,7 @@ export default function CreateLesson() {
                     setActiveSectionIndex(index);
                   }}
                   className={`min-w-36 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
-                    activeSectionIndex === index
+                    selectedSectionIndex === index
                       ? "border-edsync-blue bg-edsync-blue/10 shadow-sm"
                       : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/40 hover:bg-edsync-card"
                   }`}
