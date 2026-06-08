@@ -1,10 +1,10 @@
-import StudioWorkspace from "@/components/studio/StudioWorkspace";
+import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Docs",
-  description: "Write Word-style EdSync documents with reusable learning blocks.",
+  title: "Course Studio",
+  description: "Compatibility route for the unified EdSync course studio.",
 };
 
 export default function DocsPage() {
-  return <StudioWorkspace initialKind="doc" />;
+  redirect("/studio");
 }
