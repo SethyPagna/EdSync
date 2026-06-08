@@ -13,11 +13,11 @@ import {
   Copy,
   Download,
   FileJson,
-  FolderOpen,
   Home,
   Image as ImageIcon,
   LayoutPanelLeft,
   Maximize2,
+  MoreHorizontal,
   MousePointer2,
   Plus,
   Redo2,
@@ -31,6 +31,7 @@ import {
   Trash2,
   Triangle,
   Type,
+  type LucideIcon,
   Undo2,
   UploadCloud,
   ZoomIn,
@@ -521,6 +522,8 @@ export default function FabricLessonStudio() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectQuery, setProjectQuery] = useState("");
   const [projectKindFilter, setProjectKindFilter] = useState<StudioFormatKind | "all">("all");
+  const [openPageMenuId, setOpenPageMenuId] = useState<string | null>(null);
+  const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
   const [customWidth, setCustomWidth] = useState(1280);
   const [customHeight, setCustomHeight] = useState(720);
@@ -635,7 +638,7 @@ export default function FabricLessonStudio() {
       Math.max(0.28, (bounds.width - 24) / canvasWidth),
       Math.max(0.28, (bounds.height - 24) / canvasHeight),
     );
-    const scale = Math.max(0.2, Math.min(2.5, fitScale * (zoomPercent / 100)));
+    const scale = Math.max(0.1, Math.min(5, fitScale * (zoomPercent / 100)));
     canvas.setDimensions({
       width: Math.round(canvasWidth * scale),
       height: Math.round(canvasHeight * scale),
@@ -994,6 +997,7 @@ export default function FabricLessonStudio() {
 
   const returnToHub = async () => {
     syncActivePage();
+    setOpenPageMenuId(null);
     setView("hub");
     setActiveProject(null);
     setSelectedObject(null);
@@ -1005,6 +1009,7 @@ export default function FabricLessonStudio() {
   const switchPage = async (pageId: string) => {
     const nextPage = pages.find((page) => page.id === pageId);
     if (!nextPage || nextPage.id === activePageIdRef.current) return;
+    setOpenPageMenuId(null);
     syncActivePage();
     activePageIdRef.current = nextPage.id;
     setActivePageId(nextPage.id);
@@ -1198,6 +1203,7 @@ export default function FabricLessonStudio() {
       id: crypto.randomUUID(),
       name: `${page.name} copy`,
       snapshot: page.id === activePageIdRef.current ? serializeCanvas() : page.snapshot,
+      previewDataUrl: page.previewDataUrl,
     };
     setPages((current) => {
       const index = current.findIndex((item) => item.id === page.id);
@@ -1206,6 +1212,7 @@ export default function FabricLessonStudio() {
   };
 
   const deletePage = async (page: StudioPage) => {
+    setOpenPageMenuId(null);
     if (pages.length === 1) {
       toast.error("Keep at least one page.");
       return;
@@ -1221,6 +1228,7 @@ export default function FabricLessonStudio() {
   };
 
   const movePage = (page: StudioPage, direction: -1 | 1) => {
+    setOpenPageMenuId(null);
     syncActivePage();
     setPages((current) => {
       const index = current.findIndex((item) => item.id === page.id);
@@ -1228,6 +1236,22 @@ export default function FabricLessonStudio() {
       if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
       const next = [...current];
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const reorderPage = (sourcePageId: string, targetPageId: string) => {
+    if (sourcePageId === targetPageId) return;
+    setOpenPageMenuId(null);
+    syncActivePage();
+    setPages((current) => {
+      const sourceIndex = current.findIndex((page) => page.id === sourcePageId);
+      const targetIndex = current.findIndex((page) => page.id === targetPageId);
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+      const next = [...current];
+      const [sourcePage] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, sourcePage);
+      pagesRef.current = next;
       return next;
     });
   };
@@ -1625,41 +1649,10 @@ export default function FabricLessonStudio() {
 
   if (view !== "editor" || !activeProject) {
     return (
-      <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg p-2 text-edsync-text sm:p-4">
-        <section className="mx-auto grid max-w-[96rem] gap-4 lg:grid-cols-[76px_minmax(0,1fr)]">
-          <nav className="premium-surface hidden rounded-[1.5rem] p-2 lg:flex lg:min-h-[calc(100dvh-2rem)] lg:flex-col lg:items-center lg:gap-2">
-            {[
-              { label: "Create", icon: Plus, active: view === "formats", action: "formats" },
-              { label: "Home", icon: Home, active: view === "hub", action: "hub" },
-              { label: "Lessons", icon: FolderOpen, active: false, action: "hub" },
-              { label: "Formats", icon: LayoutPanelLeft, active: view === "formats", action: "formats" },
-              { label: "Upload", icon: UploadCloud, active: false, action: "upload" },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    if (item.action === "upload") {
-                      projectInputRef.current?.click();
-                      return;
-                    }
-                    setView(item.action === "formats" ? "formats" : "hub");
-                  }}
-                  className={`flex w-full flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-black transition ${
-                    item.active ? "bg-edsync-blue text-white shadow-sm" : "text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text"
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-
+      <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg text-edsync-text">
+        <section className="mx-auto w-full">
           <div className="space-y-5">
-            <header className="premium-panel overflow-hidden rounded-[2rem] p-5 sm:p-7">
+            <header className="premium-panel overflow-hidden rounded-[1.5rem] p-5 sm:p-7">
               <div className="mx-auto max-w-4xl text-center">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-edsync-blue">EdSync Studio</p>
                 <h1 className="mt-3 font-display text-3xl font-black text-edsync-text sm:text-5xl">
@@ -1690,7 +1683,7 @@ export default function FabricLessonStudio() {
                   Import
                 </button>
                 <button type="button" onClick={() => {
-                  setSelectedFormat("design");
+                  setSelectedFormat("slide");
                   setView("formats");
                 }} className="btn-secondary justify-center px-4 py-3">
                   <Maximize2 className="h-4 w-4" />
@@ -2325,65 +2318,113 @@ export default function FabricLessonStudio() {
                 </div>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto border-t border-edsync-border bg-edsync-card px-3 py-2">
-                <div className="hidden shrink-0 items-center gap-4 pr-2 text-xs font-black text-edsync-subtle md:flex">
-                  <span>Notes</span>
-                  <span>Timer</span>
-                </div>
-                {pages.map((page, index) => (
-                  <button
-                    key={page.id}
-                    type="button"
-                    onClick={() => void switchPage(page.id)}
-                    className={`group relative flex min-w-[7rem] items-center gap-2 rounded-xl border p-1.5 text-left text-xs font-black transition ${
-                      page.id === activePageId ? "border-edsync-blue bg-edsync-blue/10 ring-2 ring-edsync-blue/35" : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
-                    }`}
-                    title={`${index + 1}. ${page.name}`}
-                  >
-                    <span className="relative grid h-12 w-[6rem] flex-shrink-0 place-items-center overflow-hidden rounded-lg border border-edsync-border bg-white shadow-sm">
-                      {page.previewDataUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={page.previewDataUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="block h-full w-full bg-white p-2">
-                          <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
-                          <span className="mt-2 block h-2 w-12 rounded-full bg-slate-200" />
-                          <span className="mt-1 block h-2 w-9 rounded-full bg-slate-200" />
-                        </span>
-                      )}
-                      <span className="absolute inset-x-0 bottom-0 hidden bg-edsync-text/75 px-1 py-0.5 text-[10px] font-black text-white group-hover:block">
-                        {index + 1}
-                      </span>
-                      <span className="sr-only">Page {index + 1}</span>
-                    </span>
-                    <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
-                      {page.name}
-                    </span>
+                <div className="hidden shrink-0 items-center gap-1 pr-2 md:flex">
+                  <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-3 py-2 text-xs font-black text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text">
+                    Notes
                   </button>
-                ))}
+                  <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-3 py-2 text-xs font-black text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text">
+                    Timer
+                  </button>
+                </div>
+                {pages.map((page, index) => {
+                  const isActivePage = page.id === activePageId;
+                  const isMenuOpen = openPageMenuId === page.id;
+                  return (
+                    <div
+                      key={page.id}
+                      draggable
+                      onDragStart={() => setDraggingPageId(page.id)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (draggingPageId) reorderPage(draggingPageId, page.id);
+                        setDraggingPageId(null);
+                      }}
+                      onDragEnd={() => setDraggingPageId(null)}
+                      className={`group relative min-w-[7.5rem] rounded-xl border p-1.5 transition ${
+                        isActivePage
+                          ? "border-edsync-blue bg-edsync-blue/10 ring-2 ring-edsync-blue/35"
+                          : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/40"
+                      } ${draggingPageId === page.id ? "opacity-55" : ""}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => void switchPage(page.id)}
+                        className="relative block h-14 w-[6.75rem] overflow-hidden rounded-lg border border-edsync-border bg-white text-left shadow-sm"
+                        aria-label={`Open page ${index + 1}`}
+                      >
+                        {page.previewDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={page.previewDataUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="block h-full w-full bg-white p-2">
+                            <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
+                            <span className="mt-2 block h-2 w-12 rounded-full bg-slate-200" />
+                            <span className="mt-1 block h-2 w-9 rounded-full bg-slate-200" />
+                          </span>
+                        )}
+                        <span className="absolute bottom-1 left-1 rounded-md bg-edsync-text/80 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                          {index + 1}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenPageMenuId((current) => current === page.id ? null : page.id);
+                        }}
+                        className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-edsync-card/95 text-edsync-text opacity-0 shadow-sm transition hover:bg-edsync-muted group-hover:opacity-100 data-[open=true]:opacity-100"
+                        data-open={isMenuOpen}
+                        aria-label={`Page ${index + 1} menu`}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                      {isMenuOpen && (
+                        <div className="absolute bottom-full left-0 z-30 mb-2 w-56 overflow-hidden rounded-2xl border border-edsync-border bg-edsync-card p-1 text-sm font-semibold text-edsync-text shadow-2xl">
+                          <PageMenuRow label="Copy" shortcut="Ctrl+C" icon={Copy} onClick={() => void duplicatePage(page)} />
+                          <PageMenuRow label="Move left" icon={ArrowUp} onClick={() => movePage(page, -1)} />
+                          <PageMenuRow label="Move right" icon={ArrowDown} onClick={() => movePage(page, 1)} />
+                          <PageMenuRow label="Duplicate" shortcut="Ctrl+D" icon={Copy} onClick={() => void duplicatePage(page)} />
+                          <PageMenuRow label="Delete" shortcut="Del" icon={Trash2} tone="danger" onClick={() => void deletePage(page)} />
+                          <PageMenuRow label="Add page" icon={Plus} onClick={() => void addPage()} />
+                          <PageMenuRow label="Download page" icon={Download} onClick={exportPng} />
+                        </div>
+                      )}
+                      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
+                        {page.name}
+                      </span>
+                    </div>
+                  );
+                })}
                 <button type="button" onClick={addPage} className="flex min-w-[8rem] items-center justify-center gap-2 rounded-xl border border-dashed border-edsync-border bg-edsync-surface px-3 py-4 text-xs font-black text-edsync-blue transition hover:border-edsync-blue/40">
                   <Plus className="h-4 w-4" />
                   {t.addPage}
                 </button>
                 <div className="ml-auto hidden shrink-0 items-center gap-3 pl-3 text-xs font-black text-edsync-subtle lg:flex">
-                  <button type="button" onClick={() => setZoomPercent((value) => Math.max(50, value - 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom out">
+                  <button type="button" onClick={() => setZoomPercent((value) => Math.max(10, value - 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom out">
                     <ZoomOut className="h-4 w-4" />
                   </button>
                   <input
                     type="range"
-                    min={50}
-                    max={200}
+                    min={10}
+                    max={500}
                     step={10}
                     value={zoomPercent}
                     onChange={(event) => setZoomPercent(Number(event.target.value))}
                     className="w-28 accent-edsync-blue"
                     aria-label="Canvas zoom"
                   />
-                  <button type="button" onClick={() => setZoomPercent((value) => Math.min(200, value + 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom in">
+                  <button type="button" onClick={() => setZoomPercent((value) => Math.min(500, value + 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom in">
                     <ZoomIn className="h-4 w-4" />
                   </button>
                   <span>{zoomPercent}%</span>
-                  <span>Pages</span>
                   <span>{pages.findIndex((page) => page.id === activePageId) + 1} / {pages.length}</span>
+                  <button type="button" className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Grid view">
+                    <LayoutPanelLeft className="h-4 w-4" />
+                  </button>
+                  <button type="button" onClick={presentProject} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Full screen presentation">
+                    <Maximize2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -2593,6 +2634,38 @@ function IconPill({
     <span role="button" tabIndex={0} onClick={onClick} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-card text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue" title={label}>
       <Icon className="h-3.5 w-3.5" />
     </span>
+  );
+}
+
+function PageMenuRow({
+  icon: Icon,
+  label,
+  shortcut,
+  tone = "default",
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  shortcut?: string;
+  tone?: "default" | "danger";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-edsync-muted ${
+        tone === "danger" ? "text-edsync-red" : "text-edsync-text"
+      }`}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {shortcut && (
+        <span className="rounded-md bg-edsync-muted px-1.5 py-0.5 text-[11px] font-black text-edsync-subtle">
+          {shortcut}
+        </span>
+      )}
+    </button>
   );
 }
 
