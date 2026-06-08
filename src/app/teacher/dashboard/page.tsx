@@ -175,11 +175,11 @@ export default function TeacherDashboard() {
             </h1>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:flex">
-            <Link href="/teacher/lessons/create" className="btn-primary justify-center">
+            <Link href="/studio" className="btn-primary justify-center">
               <Plus className="h-4 w-4" />
               New course
             </Link>
-            <Link href="/teacher/lessons/create" className="btn-secondary justify-center">
+            <Link href="/studio" className="btn-secondary justify-center">
               <Sparkles className="h-4 w-4" />
               Open editor
             </Link>
@@ -296,7 +296,7 @@ export default function TeacherDashboard() {
             <CalendarClock className="h-5 w-5 text-edsync-blue" />
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-            <Link href="/teacher/lessons/create" className="btn-secondary justify-center text-sm">
+            <Link href="/studio" className="btn-secondary justify-center text-sm">
               <Plus className="h-4 w-4" /> Create course
             </Link>
             <Link href="/teacher/gradebook" className="btn-secondary justify-center text-sm">
@@ -334,7 +334,7 @@ export default function TeacherDashboard() {
                 <ClipboardList className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
                 <p className="font-semibold text-edsync-text">No courses yet</p>
                 <Link
-                  href="/teacher/lessons/create"
+                  href="/studio"
                   className="btn-primary mt-5 inline-flex"
                 >
                   Create first course
