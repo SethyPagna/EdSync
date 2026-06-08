@@ -16,6 +16,7 @@ type LanguageMenuProps = {
   compact?: boolean;
   syncCatalogFilter?: boolean;
   align?: "left" | "right";
+  placement?: "top" | "bottom";
   className?: string;
 };
 
@@ -50,6 +51,7 @@ export default function LanguageMenu({
   compact = false,
   syncCatalogFilter = false,
   align = "right",
+  placement = "bottom",
   className = "",
 }: LanguageMenuProps) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -106,9 +108,9 @@ export default function LanguageMenu({
         {!compact && <span>{language}</span>}
       </summary>
       <div
-        className={`premium-overlay animate-overlay-in absolute top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-2xl p-2 ${
+        className={`premium-overlay animate-overlay-in absolute z-50 w-[min(18rem,calc(100vw-2rem))] rounded-2xl p-2 ${
           align === "right" ? "right-0" : "left-0"
-        }`}
+        } ${placement === "top" ? "bottom-full mb-2" : "top-full mt-2"}`}
       >
         <div className="px-2 pb-2 pt-1">
           <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">
