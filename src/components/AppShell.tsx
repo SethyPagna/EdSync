@@ -606,7 +606,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         </div>
       )}
 
-      <nav className="flex-1 space-y-3 overflow-y-auto p-3">
+      <nav className="edsync-scrollbar-none flex-1 space-y-3 overflow-y-auto p-3">
         {isAdminViewMode && (
           <Link
             href="/admin/dashboard"
