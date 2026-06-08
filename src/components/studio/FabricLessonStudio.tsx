@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
@@ -537,6 +538,7 @@ function formatUpdatedAt(value: string | undefined) {
 }
 
 export default function FabricLessonStudio() {
+  const searchParams = useSearchParams();
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const canvasStageRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -548,6 +550,7 @@ export default function FabricLessonStudio() {
   const pagesRef = useRef<StudioPage[]>([]);
   const historyRef = useRef<string[]>([]);
   const futureRef = useRef<string[]>([]);
+  const openedItemIdRef = useRef<string | null>(null);
   const [view, setView] = useState<StudioView>("hub");
   const [projects, setProjects] = useState<StudioServerItem[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
@@ -580,6 +583,7 @@ export default function FabricLessonStudio() {
   const selectedRosterClass = classes.find((classItem) => classItem.id === selectedClassId);
   const resolvedLessonClassName = selectedRosterClass?.name ?? lessonClassName.trim();
   const activeLessonOrderIndex = Math.max(1, Math.round(lessonOrderIndex || 1));
+  const requestedStudioItemId = searchParams.get("item");
   const filteredProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     return projects.filter((project) => {
@@ -964,7 +968,7 @@ export default function FabricLessonStudio() {
     setView("editor");
   };
 
-  const openProject = (item: StudioServerItem) => {
+  const openProject = useCallback((item: StudioServerItem) => {
     const content = item.content;
     const metadata = item.metadata ?? {};
     const kind = studioItemKind(item);
@@ -1001,7 +1005,16 @@ export default function FabricLessonStudio() {
     setLessonClassName(className);
     setLessonOrderIndex(orderIndex);
     setView("editor");
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!requestedStudioItemId || projectsLoading || view === "editor" || openedItemIdRef.current === requestedStudioItemId) return undefined;
+    const item = projects.find((project) => project.id === requestedStudioItemId);
+    if (!item) return undefined;
+    openedItemIdRef.current = requestedStudioItemId;
+    const openTimer = window.setTimeout(() => openProject(item), 0);
+    return () => window.clearTimeout(openTimer);
+  }, [openProject, projects, projectsLoading, requestedStudioItemId, view]);
 
   const returnToHub = async () => {
     syncActivePage();
