@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { CalendarClock, Megaphone, Plus, Send, TimerReset, Trash2 } from "lucide-react";
+import { CalendarClock, Link2, Megaphone, Plus, Send, TimerReset, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
 import { ALL_CLASSES_SCOPE, classScopeFromSearchParams, hasClassScope, scopedClassHref } from "@/lib/classes/class-scope";
 import type { Announcement, Class, ScheduleEvent } from "@/types";
@@ -195,7 +195,7 @@ export default function TeacherPlannerPage() {
 
   const submitPlannerItem = async () => {
     if (!form.classId) {
-      toast.error("Create or select a space first.");
+      toast.error("Choose a class or course first.");
       return;
     }
     if (!form.title.trim()) {
@@ -231,7 +231,7 @@ export default function TeacherPlannerPage() {
                 ? "class"
                 : "announcement",
           startsAt: form.startsAt || null,
-          endsAt: form.endsAt || null,
+          endsAt: form.mode === "announcement" ? null : form.endsAt || null,
           dueAt: form.mode === "deadline" ? form.dueAt : null,
           location: form.location || null,
         }),
@@ -283,15 +283,6 @@ export default function TeacherPlannerPage() {
             Filter by class, view the day/week/month schedule, and keep assessment deadlines linked to real class work.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={submitPlannerItem}
-          disabled={saving}
-          className="btn-primary justify-center"
-        >
-          {form.mode === "announcement" ? <Send className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {saving ? "Saving..." : form.mode === "announcement" ? "Send" : "Add"}
-        </button>
       </header>
 
       <section className="group rounded-xl border border-edsync-border bg-edsync-card p-3">
@@ -305,7 +296,7 @@ export default function TeacherPlannerPage() {
                 : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
             }`}
           >
-            All spaces
+            All classes
           </button>
           {classes.map((classRow) => (
             <button
@@ -342,7 +333,7 @@ export default function TeacherPlannerPage() {
           <div className="mb-4 grid grid-cols-3 gap-2">
             {[
               { mode: "announcement" as const, label: "Notify", icon: Megaphone },
-              { mode: "deadline" as const, label: "Deadline", icon: TimerReset },
+              { mode: "deadline" as const, label: "Due date", icon: TimerReset },
               { mode: "event" as const, label: "Event", icon: CalendarClock },
             ].map((item) => {
               const Icon = item.icon;
@@ -366,14 +357,14 @@ export default function TeacherPlannerPage() {
 
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Space</span>
+              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Class or course</span>
               <select
                 value={form.classId}
                 onChange={(event) => setForm((current) => ({ ...current, classId: event.target.value }))}
                 className="edsync-input"
               >
                 {classes.length === 0 ? (
-                  <option value="">No active spaces</option>
+                  <option value="">No active classes</option>
                 ) : (
                   classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
@@ -413,7 +404,7 @@ export default function TeacherPlannerPage() {
             </label>
 
             {form.mode === "announcement" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3">
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Priority</span>
                   <select
@@ -432,12 +423,15 @@ export default function TeacherPlannerPage() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Expires</span>
+                  <span className="mb-1 flex items-center gap-1 text-xs font-semibold text-edsync-subtle">
+                    <Link2 className="h-3.5 w-3.5" />
+                    Attachment or link
+                  </span>
                   <input
-                    type="datetime-local"
-                    value={form.endsAt}
-                    onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
+                    value={form.location}
+                    onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
                     className="edsync-input"
+                    placeholder="https://..., shared file, image, or resource link"
                   />
                 </label>
               </div>
@@ -476,7 +470,7 @@ export default function TeacherPlannerPage() {
                   </>
                 )}
                 <label className="block sm:col-span-2">
-                  <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Location or link</span>
+                  <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Location, meeting, or link</span>
                   <input
                     value={form.location}
                     onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
@@ -486,6 +480,15 @@ export default function TeacherPlannerPage() {
                 </label>
               </div>
             )}
+            <button
+              type="button"
+              onClick={submitPlannerItem}
+              disabled={saving}
+              className="btn-primary w-full justify-center"
+            >
+              {form.mode === "announcement" ? <Send className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {saving ? "Saving..." : form.mode === "announcement" ? "Send announcement" : "Add to schedule"}
+            </button>
           </div>
         </section>
 
@@ -581,7 +584,7 @@ export default function TeacherPlannerPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="font-semibold text-edsync-text">{item.title}</p>
                       <span className="text-xs text-edsync-subtle">
-                        {item.class_name || "Space"}
+                        {item.class_name || "Class"}
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
