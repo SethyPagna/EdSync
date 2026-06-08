@@ -161,7 +161,7 @@ function pathWithoutQuery(href: string) {
 
 function appendAdminViewMode(href: string, mode: AdminViewMode | null) {
   if (!mode || href.includes("adminView=")) return href;
-  if (href.startsWith("/teacher") || href.startsWith("/student") || href === "/ai" || href === "/practice") {
+  if (href.startsWith("/teacher") || href.startsWith("/student") || href === "/ai" || href === "/practice" || href === "/studio") {
     return `${href}${href.includes("?") ? "&" : "?"}adminView=${mode}`;
   }
   return href;
