@@ -1456,6 +1456,7 @@ export default function FabricLessonStudio() {
     sections?: Array<{ title?: string; content?: string }>;
   }) => {
     const sections = lesson.sections?.length ? lesson.sections : [{ title: lesson.title, content: lesson.description }];
+    const aiTitle = lesson.title?.trim() || sections[0]?.title?.trim() || "AI lesson";
     const nextPages: StudioPage[] = sections.map((section, index) => ({
       id: crypto.randomUUID(),
       name: section.title || `AI page ${index + 1}`,
@@ -1467,8 +1468,18 @@ export default function FabricLessonStudio() {
       snapshot: null,
     }));
     setPages(nextPages);
+    pagesRef.current = nextPages;
     activePageIdRef.current = nextPages[0].id;
     setActivePageId(nextPages[0].id);
+    setActiveProject((current) =>
+      current
+        ? {
+            ...current,
+            title: aiTitle,
+            status: "draft",
+          }
+        : current,
+    );
     await loadPage(nextPages[0]);
   };
 
