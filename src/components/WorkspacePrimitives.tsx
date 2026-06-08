@@ -7,6 +7,7 @@ type MetricTileProps = {
   icon: LucideIcon;
   tone?: string;
   detail?: string;
+  compact?: boolean;
 };
 
 export function MetricTile({
@@ -15,18 +16,34 @@ export function MetricTile({
   icon: Icon,
   tone = "text-edsync-blue",
   detail,
+  compact = false,
 }: MetricTileProps) {
   return (
-    <div className="premium-card group min-w-0 rounded-2xl p-4 transition hover:-translate-y-0.5 sm:p-5" title={detail}>
-      <div className="flex items-start justify-between gap-4">
+    <div
+      className={`premium-card group min-w-0 transition hover:-translate-y-0.5 ${
+        compact ? "rounded-xl p-2.5 sm:p-3" : "rounded-2xl p-4 sm:p-5"
+      }`}
+      title={detail}
+    >
+      <div className={`flex items-start justify-between ${compact ? "gap-2" : "gap-4"}`}>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-edsync-subtle">{label}</p>
-          <p className="mt-3 break-words font-display text-3xl font-bold leading-none text-edsync-text sm:text-4xl">
+          <p className={`${compact ? "text-[11px]" : "text-sm"} truncate font-semibold text-edsync-subtle`}>
+            {label}
+          </p>
+          <p
+            className={`break-words font-display font-bold leading-none text-edsync-text ${
+              compact ? "mt-1 text-xl sm:text-2xl" : "mt-3 text-3xl sm:text-4xl"
+            }`}
+          >
             {value}
           </p>
         </div>
-        <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-current/10 shadow-sm transition group-hover:scale-105 ${tone}`}>
-          <Icon className="h-6 w-6" />
+        <div
+          className={`flex flex-shrink-0 items-center justify-center bg-current/10 shadow-sm transition group-hover:scale-105 ${
+            compact ? "h-8 w-8 rounded-lg" : "h-12 w-12 rounded-2xl"
+          } ${tone}`}
+        >
+          <Icon className={compact ? "h-4 w-4" : "h-6 w-6"} />
         </div>
       </div>
       {detail && <p className="edsync-hover-detail">{detail}</p>}
