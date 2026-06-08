@@ -48,6 +48,7 @@ type ReviewDraft = {
   pointsPossible: string;
   feedback: string;
 };
+type AssessmentSection = "assessments" | "submissions" | "feedback" | "discussions";
 
 const workTypes = ["quiz", "test", "task", "discussion", "activity"];
 const gradingModes: Array<{ value: WorkGradingMode; label: string; description: string }> = [
@@ -72,9 +73,18 @@ function classScopeFromLocation() {
   return classScopeFromSearchParams(new URLSearchParams(window.location.search));
 }
 
+function assessmentSectionFromLocation(): AssessmentSection {
+  if (typeof window === "undefined") return "assessments";
+  const section = new URLSearchParams(window.location.search).get("section");
+  return section === "submissions" || section === "feedback" || section === "discussions"
+    ? section
+    : "assessments";
+}
+
 export default function TeacherWorkPage() {
   const router = useRouter();
   const [requestedClassId, setRequestedClassId] = useState(classScopeFromLocation);
+  const [activeSection, setActiveSection] = useState<AssessmentSection>(assessmentSectionFromLocation);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [items, setItems] = useState<WorkItem[]>([]);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
@@ -169,13 +179,20 @@ export default function TeacherWorkPage() {
     if (classId !== ALL_CLASSES_SCOPE) {
       setForm((current) => ({ ...current, classId }));
     }
-    router.replace(scopedClassHref("/teacher/work", classId), { scroll: false });
+    const href = scopedClassHref("/teacher/work", classId);
+    router.replace(activeSection === "assessments" ? href : `${href}${href.includes("?") ? "&" : "?"}section=${activeSection}`, { scroll: false });
+  };
+
+  const chooseAssessmentSection = (section: AssessmentSection) => {
+    setActiveSection(section);
+    const href = scopedClassHref("/teacher/work", selectedClassId);
+    router.replace(section === "assessments" ? href : `${href}${href.includes("?") ? "&" : "?"}section=${section}`, { scroll: false });
   };
 
   const saveWork = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.classId && !editingId) {
-      toast.error("Choose a space so work, quizzes, and deadlines stay connected.");
+      toast.error("Choose a class so assessments, feedback, and deadlines stay connected.");
       return;
     }
     const method = editingId ? "PATCH" : "POST";
@@ -195,10 +212,10 @@ export default function TeacherWorkPage() {
       }),
     });
     if (!response.ok) {
-      toast.error(`Work item was not ${editingId ? "updated" : "created"}.`);
+      toast.error(`Assessment was not ${editingId ? "updated" : "created"}.`);
       return;
     }
-    toast.success(editingId ? "Work item updated." : "Work item created.");
+    toast.success(editingId ? "Assessment updated." : "Assessment created.");
     resetForm(form.classId);
     load();
   };
@@ -223,7 +240,7 @@ export default function TeacherWorkPage() {
   };
 
   const archiveWork = async (item: WorkItem) => {
-    const confirmed = window.confirm(`Archive "${item.title}"? Learners will no longer see it as open work.`);
+    const confirmed = window.confirm(`Archive "${item.title}"? Learners will no longer see it as an open assessment.`);
     if (!confirmed) return;
     const response = await fetch(`/api/work?id=${encodeURIComponent(item.id)}`, {
       method: "DELETE",
@@ -231,10 +248,10 @@ export default function TeacherWorkPage() {
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || payload?.error) {
-      toast.error(payload?.error || "Work item was not archived.");
+      toast.error(payload?.error || "Assessment was not archived.");
       return;
     }
-    toast.success("Work item archived.");
+    toast.success("Assessment archived.");
     load();
   };
 
@@ -282,6 +299,34 @@ export default function TeacherWorkPage() {
     () => filteredSubmissions.filter((submission) => submission.status !== "graded").length,
     [filteredSubmissions],
   );
+  const discussionCount = useMemo(
+    () => filteredItems.filter((item) => item.work_type === "discussion").length,
+    [filteredItems],
+  );
+  const feedbackCount = useMemo(
+    () => filteredSubmissions.filter((submission) => submission.status === "graded" || Boolean(submission.feedback)).length,
+    [filteredSubmissions],
+  );
+  const visibleAssessmentItems = useMemo(
+    () =>
+      activeSection === "discussions"
+        ? filteredItems.filter((item) => item.work_type === "discussion")
+        : filteredItems,
+    [activeSection, filteredItems],
+  );
+  const visibleReviewSubmissions = useMemo(
+    () =>
+      activeSection === "feedback"
+        ? filteredSubmissions.filter((submission) => submission.status === "graded" || Boolean(submission.feedback))
+        : filteredSubmissions,
+    [activeSection, filteredSubmissions],
+  );
+  const sectionTabs: Array<{ key: AssessmentSection; label: string; count: number }> = [
+    { key: "assessments", label: "Assessments", count: filteredItems.length },
+    { key: "submissions", label: "Submissions", count: filteredSubmissions.length },
+    { key: "feedback", label: "Feedback", count: feedbackCount },
+    { key: "discussions", label: "Discussions", count: discussionCount },
+  ];
 
   return (
     <div className="page-shell space-y-5">
@@ -289,11 +334,11 @@ export default function TeacherWorkPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              Work builder
+              Assessment center
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Work</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">Assessments</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {publishedCount} live / {submissionCount} submissions
+              {publishedCount} live / {submissionCount} submissions / {unreviewedCount} to review
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -316,7 +361,7 @@ export default function TeacherWorkPage() {
               className="btn-primary justify-center"
             >
               <Plus className="h-4 w-4" />
-              Create
+              New
             </button>
           </div>
         </div>
@@ -352,12 +397,34 @@ export default function TeacherWorkPage() {
         </div>
       </section>
 
+      <section className="rounded-xl border border-edsync-border bg-edsync-card p-2">
+        <div className="grid gap-2 sm:grid-cols-4">
+          {sectionTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => chooseAssessmentSection(tab.key)}
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                activeSection === tab.key
+                  ? "border-edsync-blue bg-edsync-blue text-white"
+                  : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/50"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={activeSection === tab.key ? "text-white/80" : "text-edsync-subtle"}>{tab.count}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {formOpen && (
         <form onSubmit={saveWork} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
           <div className="group mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-bold">{editingId ? "Edit work item" : "New work item"}</h2>
-              <p className="edsync-hover-detail">Course work can notify learners and sync due dates.</p>
+              <h2 className="font-display text-xl font-bold">{editingId ? "Edit assessment" : "New assessment"}</h2>
+              <p className="edsync-hover-detail">
+                Choose a class and due date to link the assessment, submissions, feedback, and Planner schedule.
+              </p>
             </div>
             <ClipboardList className="h-5 w-5 text-edsync-blue" />
           </div>
@@ -465,6 +532,11 @@ export default function TeacherWorkPage() {
                   placeholder="Participation criteria"
                 />
               )}
+              {form.workType === "discussion" && (
+                <p className="mt-3 rounded-xl border border-edsync-blue/20 bg-edsync-blue/10 p-3 text-sm text-edsync-blue">
+                  Discussion assessments create a linked discussion thread and can be scored as participation or feedback-only.
+                </p>
+              )}
             </div>
             <textarea
               className="edsync-input min-h-24 lg:col-span-5"
@@ -480,15 +552,20 @@ export default function TeacherWorkPage() {
         </form>
       )}
 
+      {(activeSection === "assessments" || activeSection === "discussions") && (
       <section className="rounded-xl border border-edsync-border bg-edsync-card">
         <div className="border-b border-edsync-border p-4 sm:p-5">
-          <h2 className="font-display text-xl font-bold">Work list</h2>
+          <h2 className="font-display text-xl font-bold">
+            {activeSection === "discussions" ? "Discussion assessments" : "Assessment list"}
+          </h2>
         </div>
         <div className="divide-y divide-edsync-border">
-          {filteredItems.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No work items yet.</p>
+          {visibleAssessmentItems.length === 0 ? (
+            <p className="p-5 text-sm text-edsync-subtle">
+              {activeSection === "discussions" ? "No discussion assessments yet." : "No assessments yet."}
+            </p>
           ) : (
-            filteredItems.map((item) => {
+            visibleAssessmentItems.map((item) => {
               const grading = normalizeWorkGradingSettings(item.settings);
               return (
                 <article key={item.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
@@ -535,24 +612,28 @@ export default function TeacherWorkPage() {
           )}
         </div>
       </section>
+      )}
 
+      {(activeSection === "submissions" || activeSection === "feedback") && (
       <section className="rounded-xl border border-edsync-border bg-edsync-card">
         <div className="border-b border-edsync-border p-4 sm:p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-display text-xl font-bold">Review</h2>
               <p className="text-sm text-edsync-subtle">
-                {filteredSubmissions.length} submitted, {unreviewedCount} waiting for feedback.
+                {visibleReviewSubmissions.length} shown, {unreviewedCount} waiting for feedback.
               </p>
             </div>
             <MessageSquareText className="h-5 w-5 text-edsync-amber" />
           </div>
         </div>
         <div className="divide-y divide-edsync-border">
-          {filteredSubmissions.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No submissions yet.</p>
+          {visibleReviewSubmissions.length === 0 ? (
+            <p className="p-5 text-sm text-edsync-subtle">
+              {activeSection === "feedback" ? "No saved feedback yet." : "No submissions yet."}
+            </p>
           ) : (
-            filteredSubmissions.map((submission) => {
+            visibleReviewSubmissions.map((submission) => {
               const grading = normalizeWorkGradingSettings(submission.work_settings);
               const draft = reviewDrafts[submission.id] ?? {
                 pointsEarned: "",
@@ -647,6 +728,7 @@ export default function TeacherWorkPage() {
           )}
         </div>
       </section>
+      )}
     </div>
   );
 }
