@@ -8,6 +8,8 @@ const ALLOWED_EXTENSIONS = new Set([
   "csv",
   "json",
   "pdf",
+  "ppt",
+  "pptx",
   "doc",
   "docx",
   "png",
@@ -55,6 +57,8 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/json",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/octet-stream",
   "",
 ]);
@@ -81,6 +85,8 @@ const EXTENSION_MIME_FAMILIES: Record<string, string[]> = {
   mp3: ["audio/mpeg", "audio/", "application/octet-stream"],
   mp4: ["video/mp4", "video/", "application/octet-stream"],
   pdf: ["application/pdf", "application/octet-stream"],
+  ppt: ["application/vnd.ms-powerpoint", "application/octet-stream"],
+  pptx: ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/octet-stream"],
   png: ["image/png", "application/octet-stream"],
   txt: ["text/", "application/octet-stream", ""],
   wav: ["audio/wav", "audio/x-wav", "audio/", "application/octet-stream"],
@@ -117,7 +123,8 @@ function inferAssetType(contentType: string, extension: string): SafeUpload["ass
     contentType.startsWith("text/") ||
     contentType.includes("pdf") ||
     contentType.includes("document") ||
-    ["txt", "md", "csv", "json", "pdf", "doc", "docx"].includes(extension)
+    contentType.includes("presentation") ||
+    ["txt", "md", "csv", "json", "pdf", "ppt", "pptx", "doc", "docx"].includes(extension)
   ) {
     return "document";
   }
@@ -128,7 +135,8 @@ function hasAllowedSignature(extension: string, bytes: Uint8Array) {
   if (bytes.length === 0) return false;
   if (["txt", "md", "csv", "json"].includes(extension)) return true;
   if (extension === "pdf") return startsWith(bytes, [0x25, 0x50, 0x44, 0x46]);
-  if (["docx"].includes(extension)) return startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]);
+  if (["docx", "pptx"].includes(extension)) return startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]);
+  if (extension === "ppt") return startsWith(bytes, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
   if (extension === "png") return startsWith(bytes, [0x89, 0x50, 0x4e, 0x47]);
   if (["jpg", "jpeg"].includes(extension)) return startsWith(bytes, [0xff, 0xd8, 0xff]);
   if (extension === "gif") return containsAscii(bytes, "GIF87a") || containsAscii(bytes, "GIF89a");
