@@ -102,11 +102,19 @@ type AiDraftSlide = {
   body?: unknown;
   accent?: unknown;
 };
+type ContentExtractionResponse = {
+  text?: string;
+  fileName?: string;
+  kind?: string;
+  warning?: string | null;
+  error?: string;
+};
 
 const DEFAULT_CANVAS_WIDTH = 960;
 const DEFAULT_CANVAS_HEIGHT = 540;
 const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
+const STUDIO_IMPORT_ACCEPT = "application/json,.json,image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv";
 const STUDIO_FORMATS = [
   {
     id: "doc",
@@ -930,7 +938,11 @@ export default function FabricLessonStudio() {
     setAiStyle("socratic");
     setAiComplexity(55);
     setAiVersions(1);
-    setAiPrompt("Create a concise course outline with editable pages, practice prompts, and proof of progress.");
+    setAiPrompt((current) =>
+      current.trim()
+        ? current
+        : "Create a concise course outline with editable pages, practice prompts, and proof of progress.",
+    );
   };
 
   const applyTemplateSize = (template: StudioTemplate) => {
@@ -1434,9 +1446,21 @@ export default function FabricLessonStudio() {
     }
   };
 
+  const appendAiSource = useCallback((text: string) => {
+    const source = text.trim();
+    if (!source) return;
+    setAiSources((current) => [current.trim(), source].filter(Boolean).join("\n\n"));
+  }, []);
+
   const importProject = async (file: File) => {
-    const text = await file.text();
-    const parsed = JSON.parse(text) as { pages?: StudioPage[]; activePageId?: string; project?: Partial<StudioProject> };
+    let parsed: { pages?: StudioPage[]; activePageId?: string; project?: Partial<StudioProject> };
+    try {
+      const text = await file.text();
+      parsed = JSON.parse(text) as { pages?: StudioPage[]; activePageId?: string; project?: Partial<StudioProject> };
+    } catch {
+      toast.error("This JSON file is not a Studio lesson.");
+      return;
+    }
     if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
       toast.error("Invalid studio lesson.");
       return;
@@ -1468,6 +1492,64 @@ export default function FabricLessonStudio() {
     setView("editor");
     await loadPage(next);
     toast.success("Lesson loaded.");
+  };
+
+  const extractSourceFile = async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const response = await fetch("/api/content/extract", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      const data = (await response.json().catch(() => null)) as ContentExtractionResponse | null;
+      if (!response.ok) {
+        toast.error(data?.error || "Could not import this source.");
+        return;
+      }
+      const sourceText = data?.text?.trim() || `Imported source: ${file.name}`;
+      appendAiSource(sourceText);
+      setAiPrompt((current) =>
+        current.trim()
+          ? current
+          : "Use the imported source to create an editable EdSync lesson with a clear flow, activities, checks, and proof of progress.",
+      );
+      if (!activeProject) {
+        startAiAssistedProject();
+      } else {
+        setPanel("ai");
+      }
+      if (data?.warning) toast(data.warning);
+      toast.success(`${data?.kind ?? "Source"} imported for AI lesson.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Source import failed.");
+    }
+  };
+
+  const handleStudioImport = async (file: File) => {
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".json") || file.type === "application/json") {
+      await importProject(file);
+      return;
+    }
+    if (file.type.startsWith("image/") && activeProject && canvasRef.current) {
+      await uploadImage(file);
+      setPanel("images");
+      toast.success("Image added to canvas.");
+      return;
+    }
+    await extractSourceFile(file);
+  };
+
+  const handleCanvasFileDrop = (files: FileList) => {
+    const file = Array.from(files).find((item) => item.type.startsWith("image/")) ?? Array.from(files)[0];
+    if (file) void handleStudioImport(file);
+  };
+
+  const handleCanvasPaste = (files: FileList | null) => {
+    const image = Array.from(files ?? []).find((file) => file.type.startsWith("image/"));
+    if (image) void uploadImage(image);
   };
 
   const applyAiLesson = async (lesson: {
@@ -1958,9 +2040,9 @@ export default function FabricLessonStudio() {
           </div>
         </section>
 
-        <input ref={projectInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => {
+        <input ref={projectInputRef} type="file" accept={STUDIO_IMPORT_ACCEPT} className="hidden" onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) void importProject(file);
+          if (file) void handleStudioImport(file);
           event.currentTarget.value = "";
         }} />
       </main>
@@ -2185,6 +2267,13 @@ export default function FabricLessonStudio() {
                   <ImageIcon className="h-4 w-4" />
                   {t.upload}
                 </button>
+                <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary w-full justify-center">
+                  <UploadCloud className="h-4 w-4" />
+                  Import source
+                </button>
+                <p className="rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-bold text-edsync-subtle">
+                  Drop or paste images onto the canvas. Import PDF, PPT, Word, or text as AI lesson source.
+                </p>
                 <button type="button" onClick={addImageCard} className="w-full rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-5 text-sm font-bold text-edsync-subtle transition hover:border-edsync-blue/40 hover:text-edsync-blue">
                   {t.image}
                 </button>
@@ -2333,8 +2422,8 @@ export default function FabricLessonStudio() {
                 <ToolRow label={t.save} onClick={() => void persistProject("draft")} />
                 <ToolRow label={t.publish} onClick={() => void persistProject("published")} />
                 <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary w-full justify-center">
-                  <FileJson className="h-4 w-4" />
-                  {t.importProject}
+                  <UploadCloud className="h-4 w-4" />
+                  Import source
                 </button>
               </div>
             )}
@@ -2344,7 +2433,23 @@ export default function FabricLessonStudio() {
 
           <section className="min-h-0 bg-edsync-bg lg:overflow-hidden">
             <div className="flex h-full min-h-[34rem] flex-col bg-edsync-bg">
-              <div ref={canvasStageRef} className="relative grid flex-1 place-items-center overflow-hidden bg-slate-100 p-1 dark:bg-slate-800 sm:p-2">
+              <div
+                ref={canvasStageRef}
+                tabIndex={0}
+                className="relative grid flex-1 place-items-center overflow-hidden bg-slate-100 p-1 outline-none dark:bg-slate-800 sm:p-2"
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  handleCanvasFileDrop(event.dataTransfer.files);
+                }}
+                onPaste={(event) => {
+                  handleCanvasPaste(event.clipboardData.files);
+                }}
+                aria-label="EdSync lesson canvas workspace"
+              >
                 <div className="absolute left-1/2 top-3 z-10 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card/95 p-1.5 shadow-xl shadow-slate-400/20 backdrop-blur">
                   <button type="button" onClick={() => openPanel("ai")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-blue/10">
                     <Sparkles className="h-4 w-4 text-edsync-blue" />
@@ -2417,9 +2522,9 @@ export default function FabricLessonStudio() {
         if (file) void uploadImage(file);
         event.currentTarget.value = "";
       }} />
-      <input ref={projectInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => {
+      <input ref={projectInputRef} type="file" accept={STUDIO_IMPORT_ACCEPT} className="hidden" onChange={(event) => {
         const file = event.target.files?.[0];
-        if (file) void importProject(file);
+        if (file) void handleStudioImport(file);
         event.currentTarget.value = "";
       }} />
     </main>
