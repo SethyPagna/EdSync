@@ -549,7 +549,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${displayCollapsed ? "lg:w-28" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
+      className={`${displayCollapsed ? "lg:w-28" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col overflow-visible border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
     >
       <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
@@ -661,18 +661,19 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </nav>
 
       <div className="border-t border-edsync-border p-3">
-        <div className={`mb-2 flex items-center gap-2 ${displayCollapsed ? "justify-center" : "justify-between px-2 py-1"}`}>
+        <div className={`mb-2 flex gap-2 ${displayCollapsed ? "flex-col items-center" : "items-center justify-between px-2 py-1"}`}>
           {!displayCollapsed && <span className="min-w-0 text-sm font-semibold text-edsync-subtle">Workspace</span>}
-          <div className={`flex min-w-0 items-center gap-1.5 ${displayCollapsed ? "[&_.premium-icon-button]:h-6 [&_.premium-icon-button]:w-6 [&_.premium-icon-button_svg]:h-3.5 [&_.premium-icon-button_svg]:w-3.5" : ""}`}>
-            <NotificationMenu />
+          <div className={`min-w-0 gap-1.5 ${displayCollapsed ? "grid grid-cols-1 [&_.premium-icon-button]:h-9 [&_.premium-icon-button]:w-9 [&_.premium-icon-button_svg]:h-4 [&_.premium-icon-button_svg]:w-4" : "flex items-center"}`}>
+            <NotificationMenu align="left" placement="top" />
             <ThemeToggle compact onThemeChange={handleThemeChange} />
-            <LanguageMenu compact align="left" />
+            <LanguageMenu compact align="left" placement="top" />
           </div>
         </div>
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
-          className="hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:flex"
+          className={`hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:flex ${displayCollapsed ? "justify-center" : ""}`}
+          aria-label={displayCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {displayCollapsed ? (
             <PanelLeftOpen className="h-5 w-5" />
@@ -685,6 +686,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           type="button"
           onClick={handleLogout}
           className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-red hover:bg-edsync-red/10 ${displayCollapsed ? "justify-center" : ""}`}
+          aria-label="Sign out"
         >
           <LogOut className="h-5 w-5" />
           {!displayCollapsed && "Sign out"}
