@@ -34,6 +34,8 @@ import {
   Type,
   Undo2,
   UploadCloud,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
@@ -44,6 +46,7 @@ type StudioView = "hub" | "formats" | "editor";
 type StudioFormatKind = "doc" | "slide" | "design";
 type AiLessonStyle = "direct" | "socratic" | "professional" | "expert";
 type AiLessonType = "lesson" | "slides" | "quiz" | "discussion" | "activity";
+type AiLessonFocus = "flow" | "quiz" | "discussion" | "slides" | "activity";
 type CanvasSnapshot = Record<string, unknown>;
 type PageSeed = {
   title: string;
@@ -55,6 +58,7 @@ type StudioPage = {
   name: string;
   seed: PageSeed;
   snapshot: CanvasSnapshot | null;
+  previewDataUrl?: string;
 };
 type InspectorObject = FabricObject & {
   fill?: string;
@@ -115,6 +119,13 @@ const DEFAULT_CANVAS_HEIGHT = 540;
 const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
 const STUDIO_IMPORT_ACCEPT = "application/json,.json,image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv";
+const AI_FOCUS_OPTIONS = [
+  ["flow", "Flow", "warmup, concept, practice loop, proof check"],
+  ["quiz", "Quiz", "game-style checks, feedback, review cards"],
+  ["discussion", "Discuss", "prompts, roles, rubrics, participation checks"],
+  ["slides", "PPT", "visual slide structure and speaker notes"],
+  ["activity", "Activity", "interactive tasks, Kahoot-style rounds, reflection"],
+] satisfies Array<[AiLessonFocus, string, string]>;
 const STUDIO_FORMATS = [
   {
     id: "doc",
@@ -587,11 +598,14 @@ export default function FabricLessonStudio() {
   const [aiObjectives, setAiObjectives] = useState("");
   const [aiSources, setAiSources] = useState("");
   const [aiLessonType, setAiLessonType] = useState<AiLessonType>("lesson");
+  const [aiFocuses, setAiFocuses] = useState<AiLessonFocus[]>(["flow", "quiz", "slides"]);
   const [aiStyle, setAiStyle] = useState<AiLessonStyle>("socratic");
   const [aiComplexity, setAiComplexity] = useState(55);
   const [aiVersions, setAiVersions] = useState(1);
+  const [aiPageCount, setAiPageCount] = useState(6);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [zoomPercent, setZoomPercent] = useState(100);
   const [savedStudioItemId, setSavedStudioItemId] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState<"draft" | "published" | null>(null);
   const t = copy[language];
@@ -601,6 +615,16 @@ export default function FabricLessonStudio() {
   const selectedRosterClass = classes.find((classItem) => classItem.id === selectedClassId);
   const resolvedLessonClassName = selectedRosterClass?.name ?? lessonClassName.trim();
   const activeLessonOrderIndex = Math.max(1, Math.round(lessonOrderIndex || 1));
+  const activeAiFocusDetails = AI_FOCUS_OPTIONS.filter(([id]) => aiFocuses.includes(id));
+  const aiPromptPreview = [
+    aiPrompt.trim() || "Build a complete EdSync learning experience.",
+    aiLessonName.trim() ? `Lesson: ${aiLessonName.trim()}` : "",
+    aiDescription.trim() ? `Description: ${aiDescription.trim()}` : "",
+    aiObjectives.trim() ? `Objectives: ${aiObjectives.trim()}` : "",
+    `Outputs: ${activeAiFocusDetails.map(([, label]) => label).join(", ") || "Flow"}.`,
+    `Target length: ${Math.max(1, Math.round(aiPageCount || 1))} pages/sections.`,
+    aiSources.trim() ? "Attached source context included." : "",
+  ].filter(Boolean).join("\n");
   const requestedStudioItemId = searchParams.get("item");
   const filteredProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
@@ -664,11 +688,12 @@ export default function FabricLessonStudio() {
     const stage = canvasStageRef.current;
     if (!canvas || !stage) return;
     const bounds = stage.getBoundingClientRect();
-    const scale = Math.min(
+    const fitScale = Math.min(
       1,
       Math.max(0.28, (bounds.width - 24) / canvasWidth),
       Math.max(0.28, (bounds.height - 24) / canvasHeight),
     );
+    const scale = Math.max(0.2, Math.min(2.5, fitScale * (zoomPercent / 100)));
     canvas.setDimensions({
       width: Math.round(canvasWidth * scale),
       height: Math.round(canvasHeight * scale),
@@ -676,7 +701,7 @@ export default function FabricLessonStudio() {
     canvas.setZoom(scale);
     canvas.calcOffset();
     canvas.requestRenderAll();
-  }, [canvasHeight, canvasWidth]);
+  }, [canvasHeight, canvasWidth, zoomPercent]);
 
   const activePage = useMemo(
     () => pages.find((page) => page.id === activePageId) ?? pages[0],
@@ -695,12 +720,20 @@ export default function FabricLessonStudio() {
   }, []);
 
   const syncActivePage = useCallback(() => {
+    const canvas = canvasRef.current;
     const snapshot = serializeCanvas();
     const pageId = activePageIdRef.current;
     if (!snapshot || !pageId) return;
-    setPages((current) =>
-      current.map((page) => (page.id === pageId ? { ...page, snapshot } : page)),
-    );
+    let previewDataUrl: string | undefined;
+    try {
+      previewDataUrl = canvas?.toDataURL({ format: "png", multiplier: 0.35 });
+    } catch {
+      previewDataUrl = undefined;
+    }
+    const updatePage = (page: StudioPage) =>
+      page.id === pageId ? { ...page, snapshot, previewDataUrl: previewDataUrl ?? page.previewDataUrl } : page;
+    pagesRef.current = pagesRef.current.map(updatePage);
+    setPages((current) => current.map(updatePage));
   }, [serializeCanvas]);
 
   const pushHistory = useCallback(() => {
@@ -935,9 +968,11 @@ export default function FabricLessonStudio() {
     startNewProject(templateById("ppt-wide"));
     setPanel("ai");
     setAiLessonType("lesson");
+    setAiFocuses(["flow", "quiz", "slides"]);
     setAiStyle("socratic");
     setAiComplexity(55);
     setAiVersions(1);
+    setAiPageCount(6);
     setAiPrompt((current) =>
       current.trim()
         ? current
@@ -1547,9 +1582,15 @@ export default function FabricLessonStudio() {
     if (file) void handleStudioImport(file);
   };
 
-  const handleCanvasPaste = (files: FileList | null) => {
-    const image = Array.from(files ?? []).find((file) => file.type.startsWith("image/"));
-    if (image) void uploadImage(image);
+  const handleCanvasPaste = (clipboardData: DataTransfer) => {
+    const imageFromFiles = Array.from(clipboardData.files).find((file) => file.type.startsWith("image/"));
+    const imageFromItems = Array.from(clipboardData.items)
+      .find((item) => item.kind === "file" && item.type.startsWith("image/"))
+      ?.getAsFile();
+    const image = imageFromFiles ?? imageFromItems;
+    if (!image) return false;
+    void uploadImage(image);
+    return true;
   };
 
   const applyAiLesson = async (lesson: {
@@ -1591,6 +1632,8 @@ export default function FabricLessonStudio() {
     const description = aiDescription.trim();
     const objectives = aiObjectives.trim();
     const sources = aiSources.trim();
+    const targetPageCount = Math.max(1, Math.round(aiPageCount || 1));
+    const focusSummary = activeAiFocusDetails.map(([, label, detail]) => `${label}: ${detail}`).join("; ") || "Flow: complete lesson sequence";
     if (!prompt && !lessonName && !description && !objectives) {
       toast.error("Add a lesson goal, objective, or AI direction first.");
       return;
@@ -1601,7 +1644,9 @@ export default function FabricLessonStudio() {
       objectives ? `Objectives: ${objectives}.` : null,
       sources ? `Source files, links, or notes: ${sources}.` : null,
       `Lesson type: ${aiLessonType}.`,
+      `Required outputs: ${focusSummary}.`,
       `Teaching style: ${aiStyle}.`,
+      `Target pages or sections: ${targetPageCount}.`,
       resolvedLessonClassName ? `Class or cohort: ${resolvedLessonClassName}.` : "Independent learner or creator workspace.",
       `Lesson order: ${activeLessonOrderIndex}.`,
       `Canvas format: ${activeProject?.kind ?? "slide"} ${canvasWidth} x ${canvasHeight}.`,
@@ -1621,7 +1666,7 @@ export default function FabricLessonStudio() {
           depth: "standard",
           languageStyle: aiStyle === "expert" ? "academic" : aiStyle === "professional" ? "professional" : "student_friendly",
           audienceLanguage: language === "es" ? "Spanish" : language === "fr" ? "French" : "English",
-          versionCount: aiVersions,
+          versionCount: Math.max(aiVersions, targetPageCount),
           designTemplateId: "clear-classroom",
           outputLength: "standard",
         }),
@@ -1645,7 +1690,7 @@ export default function FabricLessonStudio() {
   };
 
   const toolRail = [
-    { id: "design" as const, label: "Templates", icon: LayoutPanelLeft },
+    { id: "design" as const, label: "Format", icon: LayoutPanelLeft },
     { id: "elements" as const, label: t.elements, icon: Shapes },
     { id: "text" as const, label: t.text, icon: Type },
     { id: "images" as const, label: t.images, icon: ImageIcon },
@@ -1672,7 +1717,7 @@ export default function FabricLessonStudio() {
               { label: "Create", icon: Plus, active: view === "formats", action: "formats" },
               { label: "Home", icon: Home, active: view === "hub", action: "hub" },
               { label: "Lessons", icon: FolderOpen, active: false, action: "hub" },
-              { label: "Templates", icon: LayoutPanelLeft, active: view === "formats", action: "formats" },
+              { label: "Formats", icon: LayoutPanelLeft, active: view === "formats", action: "formats" },
               { label: "Upload", icon: UploadCloud, active: false, action: "upload" },
             ].map((item) => {
               const Icon = item.icon;
@@ -1716,21 +1761,24 @@ export default function FabricLessonStudio() {
                 </label>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {STUDIO_TEMPLATES.map((template) => {
-                  const Icon = template.kind === "slide" ? Presentation : template.kind === "design" ? SlidersHorizontal : FileText;
+              <div className="mt-8 grid gap-3 md:grid-cols-3">
+                {STUDIO_FORMATS.map((format) => {
+                  const Icon = format.icon;
                   return (
                     <button
-                      key={template.id}
+                      key={format.id}
                       type="button"
-                      onClick={() => startNewProject(template)}
-                      className="group rounded-2xl border border-edsync-border bg-edsync-card p-3 text-center transition hover:-translate-y-0.5 hover:border-edsync-blue/40"
+                      onClick={() => {
+                        setSelectedFormat(format.id);
+                        setView("formats");
+                      }}
+                      className="group rounded-[1.25rem] border border-edsync-border bg-edsync-card p-4 text-left transition hover:-translate-y-0.5 hover:border-edsync-blue/40"
                     >
-                      <span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm">
+                      <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm">
                         <Icon className="h-5 w-5" />
                       </span>
-                      <span className="mt-2 block truncate text-sm font-black">{template.label}</span>
-                      <span className="block text-xs font-bold text-edsync-subtle">{template.size}</span>
+                      <span className="mt-4 block font-display text-xl font-black">{format.label}</span>
+                      <span className="mt-1 block text-sm font-semibold leading-6 text-edsync-subtle">{format.description}</span>
                     </button>
                   );
                 })}
@@ -1754,7 +1802,7 @@ export default function FabricLessonStudio() {
                   setView("formats");
                 }} className="btn-secondary justify-center px-4 py-3">
                   <Maximize2 className="h-4 w-4" />
-                  Custom size
+                  Format/dimensions
                 </button>
               </div>
             </header>
@@ -2157,7 +2205,7 @@ export default function FabricLessonStudio() {
               <>
             {panel === "design" && (
               <div className="space-y-4">
-                <PanelTitle icon={LayoutPanelLeft} title="Templates" />
+                <PanelTitle icon={LayoutPanelLeft} title="Format/dimensions" />
                 <LessonSetupPanel
                   classes={classes}
                   selectedClassId={selectedClassId}
@@ -2202,6 +2250,35 @@ export default function FabricLessonStudio() {
                       <span className="mt-1 block text-xs font-semibold text-edsync-subtle">{template.size}</span>
                     </button>
                   ))}
+                </div>
+                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="text-sm font-black text-edsync-text">Design templates</p>
+                    <span className="rounded-full bg-edsync-blue/10 px-2 py-1 text-[10px] font-black uppercase text-edsync-blue">Style</span>
+                  </div>
+                  <div className="grid gap-2">
+                    {[
+                      ["Clean lesson", "#2458dc"],
+                      ["Practice check", "#0f9f82"],
+                      ["Activity deck", "#6d28d9"],
+                    ].map(([label, accent]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => {
+                          if (!activePage) return;
+                          const nextPage = { ...activePage, seed: { ...activePage.seed, accent }, snapshot: null };
+                          setPages((current) => current.map((page) => (page.id === nextPage.id ? nextPage : page)));
+                          pagesRef.current = pagesRef.current.map((page) => (page.id === nextPage.id ? nextPage : page));
+                          void loadPage(nextPage);
+                        }}
+                        className="flex items-center gap-3 rounded-xl border border-edsync-border bg-edsync-card px-3 py-2 text-left text-sm font-black transition hover:border-edsync-blue/40"
+                      >
+                        <span className="h-5 w-5 rounded-lg" style={{ backgroundColor: accent }} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
                   <div className="flex items-center gap-2 text-sm font-black">
@@ -2369,6 +2446,19 @@ export default function FabricLessonStudio() {
                       />
                     </label>
                     <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+                      Pages / sections
+                      <input
+                        type="number"
+                        min={1}
+                        max={24}
+                        value={aiPageCount}
+                        onChange={(event) => setAiPageCount(Math.min(24, Math.max(1, Number(event.target.value))))}
+                        className="mt-2 h-9 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
                       Versions
                       <input
                         type="number"
@@ -2379,6 +2469,10 @@ export default function FabricLessonStudio() {
                         className="mt-2 h-9 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
                       />
                     </label>
+                    <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary h-full justify-center px-3 py-2 text-sm">
+                      <UploadCloud className="h-4 w-4" />
+                      Attach
+                    </button>
                   </div>
                   <textarea
                     value={aiSources}
@@ -2389,23 +2483,34 @@ export default function FabricLessonStudio() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    ["Flow", "Build a lesson with a warmup, concept, practice loop, and proof check."],
-                    ["Quiz", "Create game-style quiz questions with feedback and review cards."],
-                    ["Discuss", "Create discussion prompts, rubrics, and participation checks."],
-                    ["PPT", "Draft a slide lesson with visual structure and speaker notes."],
-                  ].map(([label, starter]) => (
+                  {AI_FOCUS_OPTIONS.map(([id, label, detail]) => {
+                    const active = aiFocuses.includes(id);
+                    return (
                     <button
-                      key={label}
+                      key={id}
                       type="button"
-                      onClick={() => setAiPrompt(starter)}
-                      className="rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-left text-xs font-black text-edsync-text transition hover:border-edsync-blue/40 hover:bg-edsync-blue/10"
+                      onClick={() =>
+                        setAiFocuses((current) =>
+                          current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+                        )
+                      }
+                      className={`rounded-2xl border px-3 py-2 text-left text-xs font-black transition ${
+                        active
+                          ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
+                          : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
+                      }`}
                     >
-                      {label}
+                      <span className="block">{label}</span>
+                      <span className="mt-1 block text-[11px] font-semibold leading-4 text-edsync-subtle">{detail}</span>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
                 <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} rows={5} className="edsync-textarea" placeholder={t.aiPrompt} />
+                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-edsync-subtle">Prompt preview</p>
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs font-semibold leading-5 text-edsync-text">{aiPromptPreview}</pre>
+                </div>
                 <button type="button" onClick={generateWithAi} disabled={isGenerating} className="btn-primary w-full justify-center disabled:opacity-50">
                   <Sparkles className="h-4 w-4" />
                   {isGenerating ? "..." : t.generate}
@@ -2436,7 +2541,7 @@ export default function FabricLessonStudio() {
               <div
                 ref={canvasStageRef}
                 tabIndex={0}
-                className="relative grid flex-1 place-items-center overflow-hidden bg-slate-100 p-1 outline-none dark:bg-slate-800 sm:p-2"
+                className="relative grid flex-1 place-items-center overflow-auto bg-[#eef3f8] p-2 outline-none dark:bg-[#dfe8f2] sm:p-3"
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";
@@ -2446,7 +2551,7 @@ export default function FabricLessonStudio() {
                   handleCanvasFileDrop(event.dataTransfer.files);
                 }}
                 onPaste={(event) => {
-                  handleCanvasPaste(event.clipboardData.files);
+                  if (handleCanvasPaste(event.clipboardData)) event.preventDefault();
                 }}
                 aria-label="EdSync lesson canvas workspace"
               >
@@ -2488,17 +2593,29 @@ export default function FabricLessonStudio() {
                     key={page.id}
                     type="button"
                     onClick={() => void switchPage(page.id)}
-                    className={`group flex min-w-[8.5rem] items-center gap-2 rounded-xl border p-1.5 text-left text-xs font-black transition ${
+                    className={`group relative flex min-w-[7rem] items-center gap-2 rounded-xl border p-1.5 text-left text-xs font-black transition ${
                       page.id === activePageId ? "border-edsync-blue bg-edsync-blue/10 ring-2 ring-edsync-blue/35" : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
                     }`}
+                    title={`${index + 1}. ${page.name}`}
                   >
-                    <span className="grid h-12 w-[4.25rem] flex-shrink-0 place-items-center overflow-hidden rounded-lg border border-edsync-border bg-white shadow-sm">
-                      <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
+                    <span className="relative grid h-12 w-[6rem] flex-shrink-0 place-items-center overflow-hidden rounded-lg border border-edsync-border bg-white shadow-sm">
+                      {page.previewDataUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={page.previewDataUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="block h-full w-full bg-white p-2">
+                          <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
+                          <span className="mt-2 block h-2 w-12 rounded-full bg-slate-200" />
+                          <span className="mt-1 block h-2 w-9 rounded-full bg-slate-200" />
+                        </span>
+                      )}
+                      <span className="absolute inset-x-0 bottom-0 hidden bg-edsync-text/75 px-1 py-0.5 text-[10px] font-black text-white group-hover:block">
+                        {index + 1}
+                      </span>
                       <span className="sr-only">Page {index + 1}</span>
                     </span>
-                    <span className="min-w-0">
-                      <span className="block text-[11px] text-edsync-subtle">{index + 1}</span>
-                      <span className="block truncate">{page.name}</span>
+                    <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
+                      {page.name}
                     </span>
                   </button>
                 ))}
@@ -2507,6 +2624,23 @@ export default function FabricLessonStudio() {
                   {t.addPage}
                 </button>
                 <div className="ml-auto hidden shrink-0 items-center gap-3 pl-3 text-xs font-black text-edsync-subtle lg:flex">
+                  <button type="button" onClick={() => setZoomPercent((value) => Math.max(50, value - 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom out">
+                    <ZoomOut className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="range"
+                    min={50}
+                    max={200}
+                    step={10}
+                    value={zoomPercent}
+                    onChange={(event) => setZoomPercent(Number(event.target.value))}
+                    className="w-28 accent-edsync-blue"
+                    aria-label="Canvas zoom"
+                  />
+                  <button type="button" onClick={() => setZoomPercent((value) => Math.min(200, value + 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom in">
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                  <span>{zoomPercent}%</span>
                   <span>Pages</span>
                   <span>{pages.findIndex((page) => page.id === activePageId) + 1} / {pages.length}</span>
                 </div>
@@ -2600,19 +2734,19 @@ function LessonSetupPanel({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-black text-edsync-text">Lesson setup</p>
-          <p className="text-xs font-semibold text-edsync-subtle">Class and order.</p>
+          <p className="text-xs font-semibold text-edsync-subtle">Course, class, and order.</p>
         </div>
         <span className="rounded-full bg-edsync-blue/10 px-2 py-1 text-[11px] font-black text-edsync-blue">EdSync</span>
       </div>
       {classes.length > 0 ? (
         <label className="mt-3 block text-xs font-bold text-edsync-subtle">
-          Attach to class
+          Attach to course / class
           <select
             value={selectedClassId}
             onChange={(event) => onClassIdChange(event.target.value)}
             className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
           >
-            <option value="">Independent lesson</option>
+            <option value="">Independent course lesson</option>
             {classes.map((classItem) => {
               const detail = [classItem.subject, classItem.grade_level].filter(Boolean).join(" / ");
               return (
@@ -2625,11 +2759,11 @@ function LessonSetupPanel({
         </label>
       ) : (
         <label className="mt-3 block text-xs font-bold text-edsync-subtle">
-          Class or cohort
+          Course, class, or cohort
           <input
             value={classNameValue}
             onChange={(event) => onClassNameChange(event.target.value)}
-            placeholder="Independent, cohort, or course group"
+            placeholder="Course, cohort, or independent lesson"
             className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
           />
         </label>
