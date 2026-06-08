@@ -186,7 +186,7 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
           {[
             {
               label: "Learners",
@@ -219,6 +219,7 @@ export default function TeacherDashboard() {
               value={loading ? "..." : item.value}
               icon={item.icon}
               tone={item.tone}
+              compact
             />
           ))}
         </div>
