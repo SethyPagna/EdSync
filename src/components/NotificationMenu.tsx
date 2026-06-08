@@ -9,6 +9,10 @@ type NotificationResponse = {
   data: Notification[];
   error: string | null;
 };
+type NotificationMenuProps = {
+  align?: "left" | "right";
+  placement?: "top" | "bottom";
+};
 
 const NOTIFICATION_REFRESH_MS = 60_000;
 
@@ -39,7 +43,7 @@ function priorityClass(priority: Notification["priority"]) {
   return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200";
 }
 
-export default function NotificationMenu() {
+export default function NotificationMenu({ align = "right", placement = "bottom" }: NotificationMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
@@ -156,7 +160,11 @@ export default function NotificationMenu() {
       </button>
 
       {open && (
-        <div className="premium-overlay animate-overlay-in absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-2xl">
+        <div
+          className={`premium-overlay animate-overlay-in absolute z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-2xl ${
+            align === "right" ? "right-0" : "left-0"
+          } ${placement === "top" ? "bottom-12" : "top-12"}`}
+        >
           <div className="flex items-center justify-between border-b border-edsync-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-edsync-text">Notifications</p>
