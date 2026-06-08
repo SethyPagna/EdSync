@@ -54,6 +54,8 @@ export async function saveStudioItem(input: {
   content: Record<string, unknown>;
   plainText?: string;
   status?: "draft" | "published";
+  sourceType?: string | null;
+  sourceId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
   const data = await fetch("/api/studio", {
@@ -71,6 +73,8 @@ export async function updateStudioItem(input: {
   content?: Record<string, unknown>;
   plainText?: string;
   status?: "draft" | "published" | "archived";
+  sourceType?: string | null;
+  sourceId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
   const data = await fetch("/api/studio", {
