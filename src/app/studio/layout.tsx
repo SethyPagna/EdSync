@@ -1,5 +1,8 @@
-import SharedWorkspaceShell from "@/components/SharedWorkspaceShell";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/auth/session";
 
-export default function StudioLayout({ children }: { children: React.ReactNode }) {
-  return <SharedWorkspaceShell>{children}</SharedWorkspaceShell>;
+export default async function StudioLayout({ children }: { children: React.ReactNode }) {
+  const user = await getSessionUser().catch(() => null);
+  if (!user) redirect("/auth/login");
+  return children;
 }
