@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
+import { saveStudioItem, updateStudioItem } from "@/lib/studio/api";
 import {
   ArrowDown,
   ArrowLeft,
@@ -261,6 +262,8 @@ export default function FabricLessonStudio() {
   const [canRedo, setCanRedo] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [savedStudioItemId, setSavedStudioItemId] = useState<string | null>(null);
+  const [savingStatus, setSavingStatus] = useState<"draft" | "published" | null>(null);
   const t = copy[language];
 
   const fitCanvasToStage = useCallback(() => {
@@ -752,6 +755,16 @@ export default function FabricLessonStudio() {
     };
   };
 
+  const projectTitle = () => {
+    const firstPage = pages[0];
+    return firstPage?.seed.title?.trim() || firstPage?.name?.trim() || "Untitled course";
+  };
+
+  const projectPlainText = () =>
+    pages
+      .map((page, index) => `${index + 1}. ${page.name}\n${page.seed.title}\n${page.seed.body}`)
+      .join("\n\n");
+
   const downloadProject = () => {
     downloadText("edsync-studio-project.json", JSON.stringify(projectPayload(), null, 2));
   };
@@ -759,6 +772,36 @@ export default function FabricLessonStudio() {
   const saveLocal = () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(projectPayload()));
     toast.success(t.saved);
+  };
+
+  const persistProject = async (status: "draft" | "published") => {
+    setSavingStatus(status);
+    try {
+      const payload = projectPayload();
+      const input = {
+        id: savedStudioItemId ?? undefined,
+        kind: "lesson" as const,
+        title: projectTitle(),
+        content: payload,
+        plainText: projectPlainText(),
+        status,
+        metadata: {
+          editor: "fabric",
+          canvasWidth: CANVAS_WIDTH,
+          canvasHeight: CANVAS_HEIGHT,
+          language,
+          pageCount: pages.length,
+        },
+      };
+      const item = savedStudioItemId ? await updateStudioItem({ ...input, id: savedStudioItemId }) : await saveStudioItem(input);
+      setSavedStudioItemId(item.id);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...payload, studioItemId: item.id, status }));
+      toast.success(status === "published" ? "Published to EdSync." : "Saved to EdSync.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save studio project.");
+    } finally {
+      setSavingStatus(null);
+    }
   };
 
   const importProject = async (file: File) => {
@@ -870,9 +913,9 @@ export default function FabricLessonStudio() {
               <Redo2 className="h-4 w-4" />
             </button>
           </div>
-          <button type="button" onClick={saveLocal} className="hidden h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black transition hover:border-edsync-blue/40 sm:inline-flex">
+          <button type="button" onClick={() => void persistProject("draft")} disabled={savingStatus !== null} className="hidden h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black transition hover:border-edsync-blue/40 disabled:opacity-50 sm:inline-flex">
             <Save className="h-4 w-4" />
-            {t.save}
+            {savingStatus === "draft" ? "..." : t.save}
           </button>
           <select value={language} onChange={(event) => setLanguage(event.target.value as StudioLanguage)} className="h-10 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text">
             <option value="en">EN</option>
@@ -880,9 +923,9 @@ export default function FabricLessonStudio() {
             <option value="fr">FR</option>
           </select>
           <ThemeToggle compact />
-          <button type="button" onClick={exportPng} className="btn-primary h-10 px-4 text-sm">
-            <Download className="h-4 w-4" />
-            {t.publish}
+          <button type="button" onClick={() => void persistProject("published")} disabled={savingStatus !== null} className="btn-primary h-10 px-4 text-sm disabled:opacity-50">
+            <Save className="h-4 w-4" />
+            {savingStatus === "published" ? "..." : t.publish}
           </button>
         </header>
 
@@ -987,6 +1030,9 @@ export default function FabricLessonStudio() {
                 <ToolRow label={t.png} onClick={exportPng} />
                 <ToolRow label={t.pdf} onClick={exportPdf} />
                 <ToolRow label={t.project} onClick={downloadProject} />
+                <ToolRow label="Local backup" onClick={saveLocal} />
+                <ToolRow label={t.save} onClick={() => void persistProject("draft")} />
+                <ToolRow label={t.publish} onClick={() => void persistProject("published")} />
                 <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary w-full justify-center">
                   <FileJson className="h-4 w-4" />
                   {t.importProject}
