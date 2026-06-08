@@ -65,7 +65,7 @@ function buildLaunchPreviewSlides({
       label: studio,
       eyebrow: studio,
       title: "Build the course",
-      route: "/teacher/lessons/create",
+      route: "/studio",
       nav: [studio, "Templates", "Media", ai],
       metrics: [["Slides", studio], ["Quiz", practice], ["Draft", start]],
       blocks: [[studio, "Canvas, media, quiz."], [courses, "Share, sell, or publish."]],
