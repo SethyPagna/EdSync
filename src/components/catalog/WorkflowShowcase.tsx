@@ -179,7 +179,7 @@ function buildWorkflowSlides(labels: WorkflowLabels): WorkflowSlide[] {
     shortTitle: labels.studio,
     headline: "Create visually.",
     subtitle: "Pages, media, quizzes, games, and AI share one studio.",
-    route: "/teacher/lessons/create",
+    route: "/studio",
     icon: Presentation,
     accent: "text-edsync-blue",
     tabs: [labels.studio, labels.courses, labels.ai, labels.start],
