@@ -32,7 +32,6 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
   Sparkles,
   ShieldCheck,
   StickyNote,
@@ -255,7 +254,7 @@ function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: stri
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "My Courses", icon: BookOpenCheck },
-  { href: "/studio", label: "Create Course", icon: Plus },
+  { href: "/studio", label: "Lesson Studio", icon: Sparkles },
   { href: "/teacher/work", label: "Work", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Feedback", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
