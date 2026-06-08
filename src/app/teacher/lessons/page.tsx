@@ -120,7 +120,7 @@ export default function TeacherLessons() {
               {lessons.length} course{lessons.length !== 1 ? "s" : ""} total
             </p>
           </div>
-          <Link href="/teacher/lessons/create" className="btn-primary justify-center">
+          <Link href="/studio" className="btn-primary justify-center">
             <Plus className="h-4 w-4" />
             New course
           </Link>
@@ -182,7 +182,7 @@ export default function TeacherLessons() {
             {search ? "Try another search." : "Create your first course."}
           </p>
           {!search && (
-            <Link href="/teacher/lessons/create" className="btn-primary inline-flex">
+            <Link href="/studio" className="btn-primary inline-flex">
               Create first course
             </Link>
           )}
