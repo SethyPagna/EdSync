@@ -1256,9 +1256,9 @@ export default function FabricLessonStudio() {
     });
   };
 
-  const exportPng = () => {
+  const activePageDataUrl = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return null;
     const zoom = canvas.getZoom();
     const width = canvas.getWidth();
     const height = canvas.getHeight();
@@ -1269,6 +1269,12 @@ export default function FabricLessonStudio() {
     canvas.setDimensions({ width, height });
     canvas.setZoom(zoom);
     canvas.renderAll();
+    return dataUrl;
+  };
+
+  const exportPng = () => {
+    const dataUrl = activePageDataUrl();
+    if (!dataUrl) return;
     const link = document.createElement("a");
     link.href = dataUrl;
     link.download = `${activePage?.name ?? "edsync-page"}.png`;
@@ -1276,18 +1282,8 @@ export default function FabricLessonStudio() {
   };
 
   const exportPdf = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const zoom = canvas.getZoom();
-    const width = canvas.getWidth();
-    const height = canvas.getHeight();
-    canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
-    canvas.setZoom(1);
-    canvas.renderAll();
-    const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
-    canvas.setDimensions({ width, height });
-    canvas.setZoom(zoom);
-    canvas.renderAll();
+    const dataUrl = activePageDataUrl();
+    if (!dataUrl) return;
     const printWindow = window.open("", "_blank", "noopener,noreferrer");
     if (!printWindow) {
       toast.error("Allow popups to export PDF.");
@@ -1296,6 +1292,19 @@ export default function FabricLessonStudio() {
     const orientation = canvasWidth >= canvasHeight ? "landscape" : "portrait";
     printWindow.document.write(`<!doctype html><html><head><title>EdSync PDF</title><style>@page{size:${orientation};margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#f4f8fc}img{width:100vw;height:auto;max-height:100vh;object-fit:contain}</style></head><body><img src="${dataUrl}" alt="EdSync studio lesson"/><script>window.onload=()=>{window.print();}</script></body></html>`);
     printWindow.document.close();
+  };
+
+  const presentProject = () => {
+    const dataUrl = activePageDataUrl();
+    if (!dataUrl) return;
+    const presentWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!presentWindow) {
+      exportPng();
+      toast.error("Allow popups to present. Downloaded the current page instead.");
+      return;
+    }
+    presentWindow.document.write(`<!doctype html><html><head><title>${projectTitle()}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#07111f}img{max-width:100vw;max-height:100vh;object-fit:contain}</style></head><body><img src="${dataUrl}" alt="EdSync lesson presentation"/></body></html>`);
+    presentWindow.document.close();
   };
 
   const projectPayload = () => {
@@ -1384,10 +1393,24 @@ export default function FabricLessonStudio() {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...payload, studioItemId: item.id, status }));
       toast.success(status === "published" ? "Published to EdSync." : "Saved to EdSync.");
       void refreshProjects();
+      return item;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save studio lesson.");
+      return null;
     } finally {
       setSavingStatus(null);
+    }
+  };
+
+  const shareProject = async () => {
+    const item = await persistProject("published");
+    if (!item) return;
+    const shareUrl = `${window.location.origin}/studio?item=${encodeURIComponent(item.id)}`;
+    try {
+      await window.navigator.clipboard.writeText(shareUrl);
+      toast.success("Published and copied Studio link.");
+    } catch {
+      toast.success("Published. Open this lesson from Studio or My Courses.");
     }
   };
 
@@ -1904,11 +1927,11 @@ export default function FabricLessonStudio() {
               <option value="fr">FR</option>
             </select>
             <ThemeToggle compact />
-            <button type="button" onClick={() => void persistProject("published")} disabled={savingStatus !== null} className="h-10 rounded-2xl border border-white/20 bg-white/15 px-4 text-sm font-black text-white transition hover:bg-white/20 disabled:opacity-50">
-              {savingStatus === "published" ? "..." : "Present"}
+            <button type="button" onClick={presentProject} className="h-10 rounded-2xl border border-white/20 bg-white/15 px-4 text-sm font-black text-white transition hover:bg-white/20">
+              Present
             </button>
-            <button type="button" onClick={() => void persistProject("published")} disabled={savingStatus !== null} className="h-10 rounded-2xl bg-white px-4 text-sm font-black text-edsync-text shadow-sm transition hover:bg-white/90 disabled:opacity-50">
-              Share
+            <button type="button" onClick={() => void shareProject()} disabled={savingStatus !== null} className="h-10 rounded-2xl bg-white px-4 text-sm font-black text-edsync-text shadow-sm transition hover:bg-white/90 disabled:opacity-50">
+              {savingStatus === "published" ? "..." : "Share"}
             </button>
           </div>
         </header>
@@ -1960,6 +1983,9 @@ export default function FabricLessonStudio() {
               </div>
             ) : (
               <>
+            {panel === "design" && (
+              <div className="space-y-4">
+                <PanelTitle icon={LayoutPanelLeft} title="Templates" />
                 <LessonSetupPanel
                   classes={classes}
                   selectedClassId={selectedClassId}
@@ -1976,9 +2002,6 @@ export default function FabricLessonStudio() {
                   }}
                   onOrderIndexChange={setLessonOrderIndex}
                 />
-            {panel === "design" && (
-              <div className="space-y-4">
-                <PanelTitle icon={LayoutPanelLeft} title="Templates" />
                 <div className="flex rounded-2xl border border-edsync-border bg-edsync-surface p-1">
                   {STUDIO_FORMATS.map((format) => (
                     <button
