@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import AppShell, { adminNavItems, studentNavItems, teacherNavItems } from "@/components/AppShell";
+import { normalizeAdminViewMode, workspaceRoleForAdminViewMode } from "@/lib/admin-view";
 import { getSessionUser } from "@/lib/auth/session";
 
 type SharedWorkspaceShellProps = {
@@ -13,9 +14,10 @@ export default async function SharedWorkspaceShell({ children }: SharedWorkspace
 
   const role = user.user_metadata.role;
   const cookieStore = await cookies();
-  const adminViewMode = cookieStore.get("edsync-admin-view-mode")?.value;
+  const adminViewMode = normalizeAdminViewMode(cookieStore.get("edsync-admin-view-mode")?.value);
+  const adminWorkspaceRole = adminViewMode ? workspaceRoleForAdminViewMode(adminViewMode) : null;
 
-  if (role === "admin" && adminViewMode === "teacher") {
+  if (role === "admin" && adminWorkspaceRole === "teacher") {
     return (
       <AppShell role="teacher" navItems={teacherNavItems}>
         {children}
@@ -23,7 +25,7 @@ export default async function SharedWorkspaceShell({ children }: SharedWorkspace
     );
   }
 
-  if (role === "admin" && adminViewMode === "student") {
+  if (role === "admin" && adminWorkspaceRole === "student") {
     return (
       <AppShell role="student" navItems={studentNavItems}>
         {children}
