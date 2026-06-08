@@ -50,39 +50,37 @@ export function lessonRowsToLearningObject(input: {
   questions?: LegacyQuizQuestion[];
 }): LearningObject {
   const sectionBlocks = (input.sections ?? []).map(lessonSectionToLearningBlock);
-  const quizBlocks = (input.questions ?? []).map((question) => ({
-    ...quizQuestionToLearningBlock(question),
-    orderIndex: 10_000 + (question.order_index ?? 0),
-  }));
+  const quizBlocks = (input.questions ?? []).map((question) => {
+    const block = quizQuestionToLearningBlock(question);
+    block.orderIndex = 10_000 + (question.order_index ?? 0);
+    return block;
+  });
 
-  return {
-    ...createLearningObjectFromLegacy({
-      id: input.lesson.id,
-      tenantId: input.lesson.tenant_id ?? null,
-      ownerId: input.lesson.teacher_id,
-      title: input.lesson.title,
-      sourceType: "lesson",
-      sourceId: input.lesson.id,
-      state: stateFromLessonStatus(input.lesson.status),
-      objectives: input.lesson.objectives,
-      audience: input.lesson.grade_level ?? null,
-      tags: input.lesson.tags,
-      language: null,
-      estimatedMinutes: input.lesson.estimated_duration ?? null,
-      difficulty: input.lesson.difficulty ?? null,
-      blocks: orderBlocks([...sectionBlocks, ...quizBlocks]),
-      metadata: {
-        classId: input.lesson.class_id ?? null,
-        description: input.lesson.description ?? null,
-        subject: input.lesson.subject ?? null,
-        sourceUrl: input.lesson.source_url ?? null,
-        aiGenerated: input.lesson.ai_generated === true || input.lesson.ai_generated === 1,
-      },
-      createdAt: input.lesson.created_at ?? null,
-      updatedAt: input.lesson.updated_at ?? null,
-    }),
-    kind: "lesson_package",
-  };
+  return createLearningObjectFromLegacy({
+    id: input.lesson.id,
+    tenantId: input.lesson.tenant_id ?? null,
+    ownerId: input.lesson.teacher_id,
+    title: input.lesson.title,
+    sourceType: "lesson",
+    sourceId: input.lesson.id,
+    state: stateFromLessonStatus(input.lesson.status),
+    objectives: input.lesson.objectives,
+    audience: input.lesson.grade_level ?? null,
+    tags: input.lesson.tags,
+    language: null,
+    estimatedMinutes: input.lesson.estimated_duration ?? null,
+    difficulty: input.lesson.difficulty ?? null,
+    blocks: orderBlocks([...sectionBlocks, ...quizBlocks]),
+    metadata: {
+      classId: input.lesson.class_id ?? null,
+      description: input.lesson.description ?? null,
+      subject: input.lesson.subject ?? null,
+      sourceUrl: input.lesson.source_url ?? null,
+      aiGenerated: input.lesson.ai_generated === true || input.lesson.ai_generated === 1,
+    },
+    createdAt: input.lesson.created_at ?? null,
+    updatedAt: input.lesson.updated_at ?? null,
+  });
 }
 
 export function summarizeLearningObject(object: LearningObject) {
