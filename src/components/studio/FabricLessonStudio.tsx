@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
-import { saveStudioItem, updateStudioItem } from "@/lib/studio/api";
+import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
 import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
   Circle,
+  FileText,
   Copy,
   Download,
   FileJson,
@@ -20,8 +20,10 @@ import {
   Redo2,
   Save,
   Shapes,
+  SlidersHorizontal,
   Sparkles,
   Square,
+  Presentation,
   Trash2,
   Triangle,
   Type,
@@ -32,6 +34,8 @@ import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 type FabricModule = typeof import("fabric");
 type StudioPanel = "design" | "elements" | "text" | "images" | "pages" | "ai" | "export";
 type StudioLanguage = "en" | "es" | "fr";
+type StudioView = "hub" | "formats" | "editor";
+type StudioFormatKind = "doc" | "slide" | "design";
 type CanvasSnapshot = Record<string, unknown>;
 type PageSeed = {
   title: string;
@@ -50,14 +54,125 @@ type InspectorObject = FabricObject & {
   fontSize?: number;
   text?: string;
 };
+type StudioProject = {
+  id: string;
+  title: string;
+  kind: StudioFormatKind;
+  templateId: string;
+  width: number;
+  height: number;
+  serverItemId: string | null;
+  status: "draft" | "published" | "archived";
+  updatedAt?: string;
+};
+type StudioTemplate = {
+  id: string;
+  kind: StudioFormatKind;
+  label: string;
+  size: string;
+  width: number;
+  height: number;
+  title: string;
+  body: string;
+  accent: string;
+};
 type FabricSelection = FabricObject & {
   forEachObject(callback: (object: FabricObject) => void): void;
 };
 
-const CANVAS_WIDTH = 960;
-const CANVAS_HEIGHT = 540;
+const DEFAULT_CANVAS_WIDTH = 960;
+const DEFAULT_CANVAS_HEIGHT = 540;
 const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
+const STUDIO_FORMATS = [
+  {
+    id: "doc",
+    label: "Docs",
+    description: "Handouts, worksheets, guides, and A4/Letter course documents.",
+    icon: FileText,
+  },
+  {
+    id: "slide",
+    label: "PPT",
+    description: "Slide decks, workshops, and lesson presentations.",
+    icon: Presentation,
+  },
+  {
+    id: "design",
+    label: "Design",
+    description: "Course covers, social assets, and visual learning boards.",
+    icon: SlidersHorizontal,
+  },
+] satisfies Array<{ id: StudioFormatKind; label: string; description: string; icon: typeof FileText }>;
+
+const STUDIO_TEMPLATES = [
+  {
+    id: "doc-a4",
+    kind: "doc",
+    label: "A4 doc",
+    size: "794 x 1123",
+    width: 794,
+    height: 1123,
+    title: "Learning guide",
+    body: "Build a printable course page with examples, prompts, and proof of progress.",
+    accent: "#2458dc",
+  },
+  {
+    id: "doc-letter",
+    kind: "doc",
+    label: "Letter doc",
+    size: "816 x 1056",
+    width: 816,
+    height: 1056,
+    title: "Course worksheet",
+    body: "Create a clean handout for independent learners or organization cohorts.",
+    accent: "#0f9f82",
+  },
+  {
+    id: "ppt-wide",
+    kind: "slide",
+    label: "PPT 16:9",
+    size: "1280 x 720",
+    width: 1280,
+    height: 720,
+    title: "Course presentation",
+    body: "Design a slide deck for teaching, practice, and review.",
+    accent: "#2458dc",
+  },
+  {
+    id: "ppt-standard",
+    kind: "slide",
+    label: "PPT 4:3",
+    size: "1024 x 768",
+    width: 1024,
+    height: 768,
+    title: "Workshop deck",
+    body: "Build a compact lesson deck with activities and progress checks.",
+    accent: "#6d28d9",
+  },
+  {
+    id: "design-cover",
+    kind: "design",
+    label: "Course cover",
+    size: "1200 x 630",
+    width: 1200,
+    height: 630,
+    title: "Course cover",
+    body: "Create a public catalog cover or visual course summary.",
+    accent: "#0f9f82",
+  },
+  {
+    id: "design-square",
+    kind: "design",
+    label: "Square board",
+    size: "1080 x 1080",
+    width: 1080,
+    height: 1080,
+    title: "Practice board",
+    body: "Design a reusable prompt, checklist, or learning visual.",
+    accent: "#a15c07",
+  },
+] satisfies StudioTemplate[];
 
 const copy = {
   en: {
@@ -203,6 +318,54 @@ const copy = {
   },
 } satisfies Record<StudioLanguage, Record<string, string>>;
 
+function templateById(templateId: string | null | undefined) {
+  return STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? STUDIO_TEMPLATES[2];
+}
+
+function studioItemKind(item: StudioServerItem): StudioFormatKind {
+  const originalKind = item.metadata?.originalKind;
+  const kind = typeof originalKind === "string" ? originalKind : item.kind;
+  return kind === "slide" || kind === "design" ? kind : "doc";
+}
+
+function isStudioPage(value: unknown): value is StudioPage {
+  if (!value || typeof value !== "object") return false;
+  const page = value as Partial<StudioPage>;
+  return typeof page.id === "string" && typeof page.name === "string" && !!page.seed;
+}
+
+function readProjectPages(value: unknown) {
+  if (!Array.isArray(value)) return null;
+  const pages = value.filter(isStudioPage);
+  return pages.length > 0 ? pages : null;
+}
+
+function initialPagesForTemplate(template: StudioTemplate, title = template.title): StudioPage[] {
+  const supportTitle = template.kind === "slide" ? "Practice slide" : template.kind === "doc" ? "Practice page" : "Visual board";
+  return [
+    {
+      id: crypto.randomUUID(),
+      name: template.kind === "slide" ? "Cover slide" : "Cover",
+      seed: {
+        title,
+        body: template.body,
+        accent: template.accent,
+      },
+      snapshot: null,
+    },
+    {
+      id: crypto.randomUUID(),
+      name: supportTitle,
+      seed: {
+        title: supportTitle,
+        body: "Add examples, activities, evidence prompts, and learner-friendly checkpoints.",
+        accent: template.kind === "design" ? "#2458dc" : "#0f9f82",
+      },
+      snapshot: null,
+    },
+  ];
+}
+
 const initialPages = (): StudioPage[] => [
   {
     id: crypto.randomUUID(),
@@ -242,6 +405,13 @@ function cssColor(value: unknown, fallback = DEFAULT_ACCENT) {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+function formatUpdatedAt(value: string | undefined) {
+  if (!value) return "Just now";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Updated";
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 export default function FabricLessonStudio() {
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const canvasStageRef = useRef<HTMLDivElement | null>(null);
@@ -251,8 +421,14 @@ export default function FabricLessonStudio() {
   const canvasRef = useRef<FabricCanvas | null>(null);
   const restoringRef = useRef(false);
   const activePageIdRef = useRef<string>("");
+  const pagesRef = useRef<StudioPage[]>([]);
   const historyRef = useRef<string[]>([]);
   const futureRef = useRef<string[]>([]);
+  const [view, setView] = useState<StudioView>("hub");
+  const [projects, setProjects] = useState<StudioServerItem[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
+  const [activeProject, setActiveProject] = useState<StudioProject | null>(null);
   const [pages, setPages] = useState<StudioPage[]>(initialPages);
   const [activePageId, setActivePageId] = useState("");
   const [panel, setPanel] = useState<StudioPanel>("elements");
@@ -265,6 +441,31 @@ export default function FabricLessonStudio() {
   const [savedStudioItemId, setSavedStudioItemId] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState<"draft" | "published" | null>(null);
   const t = copy[language];
+  const canvasWidth = activeProject?.width ?? DEFAULT_CANVAS_WIDTH;
+  const canvasHeight = activeProject?.height ?? DEFAULT_CANVAS_HEIGHT;
+  const selectedTemplates = STUDIO_TEMPLATES.filter((template) => template.kind === selectedFormat);
+
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
+
+  const refreshProjects = useCallback(async () => {
+    setProjectsLoading(true);
+    try {
+      setProjects(await listStudioItems(undefined, false));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load studio projects.");
+    } finally {
+      setProjectsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      void refreshProjects();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [refreshProjects]);
 
   const fitCanvasToStage = useCallback(() => {
     const canvas = canvasRef.current;
@@ -273,17 +474,17 @@ export default function FabricLessonStudio() {
     const bounds = stage.getBoundingClientRect();
     const scale = Math.min(
       1,
-      Math.max(0.28, (bounds.width - 48) / CANVAS_WIDTH),
-      Math.max(0.28, (bounds.height - 48) / CANVAS_HEIGHT),
+      Math.max(0.28, (bounds.width - 48) / canvasWidth),
+      Math.max(0.28, (bounds.height - 48) / canvasHeight),
     );
     canvas.setDimensions({
-      width: Math.round(CANVAS_WIDTH * scale),
-      height: Math.round(CANVAS_HEIGHT * scale),
+      width: Math.round(canvasWidth * scale),
+      height: Math.round(canvasHeight * scale),
     });
     canvas.setZoom(scale);
     canvas.calcOffset();
     canvas.requestRenderAll();
-  }, []);
+  }, [canvasHeight, canvasWidth]);
 
   const activePage = useMemo(
     () => pages.find((page) => page.id === activePageId) ?? pages[0],
@@ -333,6 +534,13 @@ export default function FabricLessonStudio() {
     const fabric = fabricRef.current;
     const canvas = canvasRef.current;
     if (!fabric || !canvas) return;
+    const margin = Math.max(42, Math.round(canvasWidth * 0.055));
+    const titleTop = Math.max(82, Math.round(canvasHeight * 0.16));
+    const bodyTop = Math.min(canvasHeight - 180, titleTop + Math.max(112, Math.round(canvasHeight * 0.17)));
+    const titleSize = Math.max(38, Math.min(72, Math.round(canvasWidth * 0.056)));
+    const bodySize = Math.max(20, Math.min(30, Math.round(canvasWidth * 0.026)));
+    const titleWidth = Math.round(canvasWidth * (canvasWidth > canvasHeight ? 0.62 : 0.82));
+    const bodyWidth = Math.round(canvasWidth * (canvasWidth > canvasHeight ? 0.52 : 0.74));
     canvas.clear();
     canvas.backgroundColor = "#ffffff";
     const accent = page.seed.accent;
@@ -340,8 +548,8 @@ export default function FabricLessonStudio() {
       new fabric.Rect({
         left: 0,
         top: 0,
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
+        width: canvasWidth,
+        height: canvasHeight,
         fill: "#f7fbff",
         selectable: false,
         evented: false,
@@ -349,9 +557,9 @@ export default function FabricLessonStudio() {
     );
     canvas.add(
       new fabric.Rect({
-        left: 54,
-        top: 54,
-        width: 96,
+        left: margin,
+        top: margin,
+        width: Math.max(84, Math.round(canvasWidth * 0.1)),
         height: 10,
         rx: 5,
         ry: 5,
@@ -360,10 +568,10 @@ export default function FabricLessonStudio() {
     );
     canvas.add(
       new fabric.Textbox(page.seed.title, {
-        left: 54,
-        top: 92,
-        width: 680,
-        fontSize: 54,
+        left: margin,
+        top: titleTop,
+        width: titleWidth,
+        fontSize: titleSize,
         fontWeight: "800",
         fill: "#0d1726",
         fontFamily: "Instrument Sans",
@@ -371,27 +579,29 @@ export default function FabricLessonStudio() {
     );
     canvas.add(
       new fabric.Textbox(page.seed.body, {
-        left: 58,
-        top: 238,
-        width: 500,
-        fontSize: 25,
+        left: margin,
+        top: bodyTop,
+        width: bodyWidth,
+        fontSize: bodySize,
         lineHeight: 1.28,
         fill: "#526173",
         fontFamily: "Instrument Sans",
       }),
     );
-    canvas.add(
-      new fabric.Circle({
-        left: 726,
-        top: 154,
-        radius: 86,
-        fill: "rgba(36,88,220,0.16)",
-        stroke: accent,
-        strokeWidth: 2,
-      }),
-    );
+    if (canvasWidth > 700) {
+      canvas.add(
+        new fabric.Circle({
+          left: Math.max(margin, canvasWidth - margin - 180),
+          top: Math.max(margin * 2, Math.round(canvasHeight * 0.28)),
+          radius: Math.max(54, Math.min(116, Math.round(canvasWidth * 0.09))),
+          fill: "rgba(36,88,220,0.16)",
+          stroke: accent,
+          strokeWidth: 2,
+        }),
+      );
+    }
     canvas.renderAll();
-  }, []);
+  }, [canvasHeight, canvasWidth]);
 
   const loadPage = useCallback(
     async (page: StudioPage) => {
@@ -418,21 +628,24 @@ export default function FabricLessonStudio() {
   );
 
   useEffect(() => {
+    if (!activeProject) return undefined;
     let disposed = false;
     async function bootCanvas() {
       const fabric = await import("fabric");
       if (disposed || !canvasElementRef.current) return;
+      canvasRef.current?.dispose();
       fabricRef.current = fabric;
       const canvas = new fabric.Canvas(canvasElementRef.current, {
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
+        width: canvasWidth,
+        height: canvasHeight,
         preserveObjectStacking: true,
         backgroundColor: "#ffffff",
         selectionColor: "rgba(36,88,220,0.12)",
         selectionBorderColor: DEFAULT_ACCENT,
       });
       canvasRef.current = canvas;
-      const firstPageId = pages[0]?.id ?? "";
+      const currentPages = pagesRef.current;
+      const firstPageId = activePageIdRef.current || currentPages[0]?.id || "";
       activePageIdRef.current = firstPageId;
       setActivePageId(firstPageId);
       canvas.on("object:added", pushHistory);
@@ -444,7 +657,7 @@ export default function FabricLessonStudio() {
       canvas.on("mouse:up", (event) => {
         if (event.target) updateSelectedObject();
       });
-      await loadPage(pages[0]);
+      await loadPage(currentPages.find((page) => page.id === firstPageId) ?? currentPages[0]);
       fitCanvasToStage();
     }
     void bootCanvas();
@@ -453,9 +666,7 @@ export default function FabricLessonStudio() {
       canvasRef.current?.dispose();
       canvasRef.current = null;
     };
-    // Run once after initial state creation; event handlers use stable callbacks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeProject, canvasHeight, canvasWidth, fitCanvasToStage, loadPage, pushHistory, updateSelectedObject]);
 
   useEffect(() => {
     const stage = canvasStageRef.current;
@@ -469,6 +680,68 @@ export default function FabricLessonStudio() {
       window.removeEventListener("resize", fitCanvasToStage);
     };
   }, [fitCanvasToStage]);
+
+  const startNewProject = (template: StudioTemplate) => {
+    const nextPages = initialPagesForTemplate(template);
+    const nextProject: StudioProject = {
+      id: crypto.randomUUID(),
+      title: template.title,
+      kind: template.kind,
+      templateId: template.id,
+      width: template.width,
+      height: template.height,
+      serverItemId: null,
+      status: "draft",
+    };
+    setSavedStudioItemId(null);
+    setPages(nextPages);
+    pagesRef.current = nextPages;
+    activePageIdRef.current = nextPages[0]?.id ?? "";
+    setActivePageId(nextPages[0]?.id ?? "");
+    setPanel("elements");
+    setActiveProject(nextProject);
+    setView("editor");
+  };
+
+  const openProject = (item: StudioServerItem) => {
+    const content = item.content;
+    const metadata = item.metadata ?? {};
+    const kind = studioItemKind(item);
+    const template = templateById(typeof metadata.templateId === "string" ? metadata.templateId : null);
+    const width = typeof metadata.canvasWidth === "number" ? metadata.canvasWidth : template.width;
+    const height = typeof metadata.canvasHeight === "number" ? metadata.canvasHeight : template.height;
+    const storedPages = readProjectPages(content.pages);
+    const nextPages = storedPages ?? initialPagesForTemplate(template, item.title);
+    setSavedStudioItemId(item.id);
+    setPages(nextPages);
+    pagesRef.current = nextPages;
+    const activeId = typeof content.activePageId === "string" ? content.activePageId : nextPages[0]?.id;
+    activePageIdRef.current = activeId ?? "";
+    setActivePageId(activeId ?? "");
+    setPanel("pages");
+    setActiveProject({
+      id: item.id,
+      title: item.title,
+      kind,
+      templateId: template.id,
+      width,
+      height,
+      serverItemId: item.id,
+      status: item.status,
+      updatedAt: item.updatedAt,
+    });
+    setView("editor");
+  };
+
+  const returnToHub = async () => {
+    syncActivePage();
+    setView("hub");
+    setActiveProject(null);
+    setSelectedObject(null);
+    activePageIdRef.current = "";
+    setActivePageId("");
+    await refreshProjects();
+  };
 
   const switchPage = async (pageId: string) => {
     const nextPage = pages.find((page) => page.id === pageId);
@@ -706,7 +979,7 @@ export default function FabricLessonStudio() {
     const zoom = canvas.getZoom();
     const width = canvas.getWidth();
     const height = canvas.getHeight();
-    canvas.setDimensions({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+    canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
     canvas.setZoom(1);
     canvas.renderAll();
     const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
@@ -725,7 +998,7 @@ export default function FabricLessonStudio() {
     const zoom = canvas.getZoom();
     const width = canvas.getWidth();
     const height = canvas.getHeight();
-    canvas.setDimensions({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+    canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
     canvas.setZoom(1);
     canvas.renderAll();
     const dataUrl = canvas.toDataURL({ format: "png", multiplier: 2 });
@@ -737,7 +1010,8 @@ export default function FabricLessonStudio() {
       toast.error("Allow popups to export PDF.");
       return;
     }
-    printWindow.document.write(`<!doctype html><html><head><title>EdSync PDF</title><style>@page{size:landscape;margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#f4f8fc}img{width:100vw;height:auto;max-height:100vh;object-fit:contain}</style></head><body><img src="${dataUrl}" alt="EdSync lesson page"/><script>window.onload=()=>{window.print();}</script></body></html>`);
+    const orientation = canvasWidth >= canvasHeight ? "landscape" : "portrait";
+    printWindow.document.write(`<!doctype html><html><head><title>EdSync PDF</title><style>@page{size:${orientation};margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#f4f8fc}img{width:100vw;height:auto;max-height:100vh;object-fit:contain}</style></head><body><img src="${dataUrl}" alt="EdSync studio project"/><script>window.onload=()=>{window.print();}</script></body></html>`);
     printWindow.document.close();
   };
 
@@ -748,6 +1022,7 @@ export default function FabricLessonStudio() {
       version: 1,
       exportedAt: new Date().toISOString(),
       activePageId: activePageIdRef.current,
+      project: activeProject,
       pages: pages.map((page) => ({
         ...page,
         snapshot: page.id === activePageIdRef.current ? serializeCanvas() : page.snapshot,
@@ -757,7 +1032,7 @@ export default function FabricLessonStudio() {
 
   const projectTitle = () => {
     const firstPage = pages[0];
-    return firstPage?.seed.title?.trim() || firstPage?.name?.trim() || "Untitled course";
+    return activeProject?.title || firstPage?.seed.title?.trim() || firstPage?.name?.trim() || "Untitled project";
   };
 
   const projectPlainText = () =>
@@ -780,23 +1055,36 @@ export default function FabricLessonStudio() {
       const payload = projectPayload();
       const input = {
         id: savedStudioItemId ?? undefined,
-        kind: "lesson" as const,
+        kind: activeProject?.kind ?? "doc",
         title: projectTitle(),
         content: payload,
         plainText: projectPlainText(),
         status,
         metadata: {
           editor: "fabric",
-          canvasWidth: CANVAS_WIDTH,
-          canvasHeight: CANVAS_HEIGHT,
+          templateId: activeProject?.templateId ?? "ppt-wide",
+          canvasWidth,
+          canvasHeight,
           language,
           pageCount: pages.length,
         },
       };
       const item = savedStudioItemId ? await updateStudioItem({ ...input, id: savedStudioItemId }) : await saveStudioItem(input);
       setSavedStudioItemId(item.id);
+      setActiveProject((current) =>
+        current
+          ? {
+              ...current,
+              id: item.id,
+              serverItemId: item.id,
+              status,
+              updatedAt: item.updatedAt,
+            }
+          : current,
+      );
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...payload, studioItemId: item.id, status }));
       toast.success(status === "published" ? "Published to EdSync." : "Saved to EdSync.");
+      void refreshProjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save studio project.");
     } finally {
@@ -806,15 +1094,30 @@ export default function FabricLessonStudio() {
 
   const importProject = async (file: File) => {
     const text = await file.text();
-    const parsed = JSON.parse(text) as { pages?: StudioPage[]; activePageId?: string };
+    const parsed = JSON.parse(text) as { pages?: StudioPage[]; activePageId?: string; project?: Partial<StudioProject> };
     if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
       toast.error("Invalid studio project.");
       return;
     }
+    const template = templateById(parsed.project?.templateId);
+    const nextProject: StudioProject = {
+      id: crypto.randomUUID(),
+      title: parsed.project?.title || "Imported project",
+      kind: parsed.project?.kind === "doc" || parsed.project?.kind === "design" || parsed.project?.kind === "slide" ? parsed.project.kind : template.kind,
+      templateId: template.id,
+      width: typeof parsed.project?.width === "number" ? parsed.project.width : template.width,
+      height: typeof parsed.project?.height === "number" ? parsed.project.height : template.height,
+      serverItemId: null,
+      status: "draft",
+    };
     setPages(parsed.pages);
+    pagesRef.current = parsed.pages;
     const next = parsed.pages.find((page) => page.id === parsed.activePageId) ?? parsed.pages[0];
     activePageIdRef.current = next.id;
     setActivePageId(next.id);
+    setSavedStudioItemId(null);
+    setActiveProject(nextProject);
+    setView("editor");
     await loadPage(next);
     toast.success("Project loaded.");
   };
@@ -893,17 +1196,157 @@ export default function FabricLessonStudio() {
     { id: "export" as const, label: t.export, icon: Download },
   ];
 
+  if (view !== "editor" || !activeProject) {
+    return (
+      <main className="min-h-[calc(100dvh-1rem)] bg-edsync-bg p-3 text-edsync-text sm:p-5">
+        <section className="mx-auto max-w-7xl space-y-5">
+          <header className="premium-panel overflow-hidden rounded-[2rem] p-5 sm:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-edsync-blue">EdSync Studio</p>
+                <h1 className="mt-2 font-display text-3xl font-black text-edsync-text sm:text-5xl">
+                  Projects first. Canvas second.
+                </h1>
+                <p className="mt-3 text-sm font-semibold leading-6 text-edsync-subtle sm:text-base">
+                  Choose an existing course asset, or start a Doc, PPT, or design canvas with the right dimensions before editing.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setView("formats")} className="btn-primary justify-center px-4 py-3">
+                  <Plus className="h-4 w-4" />
+                  New project
+                </button>
+                <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary justify-center px-4 py-3">
+                  <FileJson className="h-4 w-4" />
+                  Import
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="premium-surface rounded-[1.5rem] p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-2xl font-black">Your projects</h2>
+                  <p className="text-sm font-semibold text-edsync-subtle">Open a recent studio project or create a new canvas.</p>
+                </div>
+                <button type="button" onClick={() => void refreshProjects()} className="btn-ghost px-3 py-2 text-sm">
+                  Refresh
+                </button>
+              </div>
+
+              {projectsLoading ? (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {[...Array(6)].map((_, index) => (
+                    <div key={index} className="h-40 animate-pulse rounded-2xl bg-edsync-muted" />
+                  ))}
+                </div>
+              ) : projects.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {projects.map((project) => (
+                    <ProjectCard key={project.id} project={project} onOpen={() => openProject(project)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
+                  <Presentation className="mx-auto mb-3 h-9 w-9 text-edsync-blue" />
+                  <p className="font-display text-xl font-black">No studio projects yet</p>
+                  <p className="mt-1 text-sm text-edsync-subtle">Start with a Doc, PPT, or design size.</p>
+                  <button type="button" onClick={() => setView("formats")} className="btn-primary mt-5 inline-flex">
+                    <Plus className="h-4 w-4" />
+                    Add new
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <aside className="premium-surface h-fit rounded-[1.5rem] p-4 sm:p-5">
+              <h2 className="font-display text-xl font-black">New project</h2>
+              <div className="mt-4 grid gap-2">
+                {STUDIO_FORMATS.map((format) => {
+                  const Icon = format.icon;
+                  return (
+                    <button
+                      key={format.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFormat(format.id);
+                        setView("formats");
+                      }}
+                      className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+                        selectedFormat === format.id && view === "formats"
+                          ? "border-edsync-blue bg-edsync-blue/10"
+                          : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/40"
+                      }`}
+                    >
+                      <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-black">{format.label}</span>
+                        <span className="block text-xs font-semibold leading-5 text-edsync-subtle">{format.description}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
+          </section>
+
+          {view === "formats" && (
+            <section className="premium-panel rounded-[1.5rem] p-4 sm:p-5">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-display text-2xl font-black">Choose format and dimensions</h2>
+                  <p className="text-sm font-semibold text-edsync-subtle">The canvas opens with the right aspect ratio and project type.</p>
+                </div>
+                <div className="flex rounded-2xl border border-edsync-border bg-edsync-surface p-1">
+                  {STUDIO_FORMATS.map((format) => (
+                    <button
+                      key={format.id}
+                      type="button"
+                      onClick={() => setSelectedFormat(format.id)}
+                      className={`rounded-xl px-3 py-2 text-sm font-black transition ${
+                        selectedFormat === format.id ? "bg-edsync-text text-edsync-card" : "text-edsync-subtle hover:text-edsync-text"
+                      }`}
+                    >
+                      {format.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {selectedTemplates.map((template) => (
+                  <TemplateCard key={template.id} template={template} onSelect={() => startNewProject(template)} />
+                ))}
+              </div>
+            </section>
+          )}
+        </section>
+
+        <input ref={projectInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void importProject(file);
+          event.currentTarget.value = "";
+        }} />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg p-2 text-edsync-text sm:p-3">
       <section className="flex min-h-[720px] flex-col overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-2xl shadow-slate-300/40 dark:shadow-black/40 lg:h-[calc(100dvh-1.5rem)]">
         <header className="flex flex-wrap items-center gap-2 border-b border-edsync-border bg-edsync-card/95 px-3 py-2 backdrop-blur">
-          <Link href="/teacher/lessons" className="inline-flex h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text transition hover:border-edsync-blue/40">
+          <button type="button" onClick={() => void returnToHub()} className="inline-flex h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text transition hover:border-edsync-blue/40">
             <ArrowLeft className="h-4 w-4" />
             {t.back}
-          </Link>
+          </button>
           <div className="min-w-[12rem] flex-1">
-            <h1 className="font-display text-lg font-black text-edsync-text sm:text-xl">{t.title}</h1>
-            <p className="hidden text-xs font-semibold text-edsync-subtle sm:block">{t.subtitle}</p>
+            <h1 className="font-display text-lg font-black text-edsync-text sm:text-xl">{activeProject.title}</h1>
+            <p className="hidden text-xs font-semibold text-edsync-subtle sm:block">
+              {activeProject.kind.toUpperCase()} · {activeProject.width} x {activeProject.height}
+            </p>
           </div>
           <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-surface p-1">
             <button type="button" onClick={undo} disabled={!canUndo} className="h-9 rounded-xl px-2 text-edsync-text transition hover:bg-edsync-card disabled:opacity-35" title={t.undo} aria-label={t.undo}>
@@ -1105,6 +1548,77 @@ export default function FabricLessonStudio() {
         event.currentTarget.value = "";
       }} />
     </main>
+  );
+}
+
+function ProjectCard({ project, onOpen }: { project: StudioServerItem; onOpen: () => void }) {
+  const kind = studioItemKind(project);
+  const template = templateById(typeof project.metadata?.templateId === "string" ? project.metadata.templateId : null);
+  const FormatIcon = kind === "slide" ? Presentation : kind === "design" ? SlidersHorizontal : FileText;
+  const width = typeof project.metadata?.canvasWidth === "number" ? project.metadata.canvasWidth : template.width;
+  const height = typeof project.metadata?.canvasHeight === "number" ? project.metadata.canvasHeight : template.height;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group min-w-0 rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-left transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card"
+    >
+      <div className="aspect-[1.35] overflow-hidden rounded-xl border border-edsync-border bg-gradient-to-br from-edsync-blue/12 via-edsync-card to-edsync-emerald/10 p-3">
+        <div
+          className="mx-auto h-full rounded-lg border border-edsync-border bg-white shadow-sm transition group-hover:scale-[1.02]"
+          style={{ aspectRatio: `${width} / ${height}`, maxWidth: "100%" }}
+        >
+          <div className="h-2 w-16 rounded-br-lg bg-edsync-blue" />
+          <div className="space-y-2 p-3">
+            <div className="h-3 w-3/4 rounded-full bg-slate-900/20" />
+            <div className="h-2 w-1/2 rounded-full bg-slate-900/12" />
+            <div className="h-2 w-2/3 rounded-full bg-slate-900/12" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 flex items-start gap-3">
+        <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+          <FormatIcon className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-black text-edsync-text">{project.title}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-2 text-xs font-bold text-edsync-subtle">
+            <span>{kind === "slide" ? "PPT" : kind === "design" ? "Design" : "Doc"}</span>
+            <span>{width} x {height}</span>
+            <span>{formatUpdatedAt(project.updatedAt)}</span>
+          </span>
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function TemplateCard({ template, onSelect }: { template: StudioTemplate; onSelect: () => void }) {
+  const Icon = template.kind === "slide" ? Presentation : template.kind === "design" ? SlidersHorizontal : FileText;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="group rounded-2xl border border-edsync-border bg-edsync-surface p-4 text-left transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid h-11 w-11 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="rounded-full border border-edsync-border bg-edsync-card px-2.5 py-1 text-xs font-black text-edsync-subtle">
+          {template.size}
+        </span>
+      </div>
+      <div className="mt-5">
+        <p className="font-display text-xl font-black">{template.label}</p>
+        <p className="mt-2 text-sm font-semibold leading-6 text-edsync-subtle">{template.body}</p>
+      </div>
+      <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-edsync-blue">
+        Create <ArrowDown className="h-4 w-4 -rotate-90 transition group-hover:translate-x-0.5" />
+      </span>
+    </button>
   );
 }
 
