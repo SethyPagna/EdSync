@@ -30,12 +30,12 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
   ShieldCheck,
   StickyNote,
-  MessageSquareText,
   UserRound,
   UsersRound,
   X,
@@ -120,7 +120,8 @@ export function shellNavDisplayLabel({ label, role, workspaceContext }: ShellNav
   if (role === "teacher") {
     const creatorLabels: Record<string, string> = {
       "Create Lesson": "Create Course",
-      Assignments: "Work",
+      Work: "Assessments",
+      Assignments: "Assessments",
       "Gradebook & Feedback": "Feedback",
       Students: "Learners",
       "Analytics & Reports": "Insights",
@@ -132,7 +133,8 @@ export function shellNavDisplayLabel({ label, role, workspaceContext }: ShellNav
     Lessons: "Courses",
     "Teachers & Classes": "Course Access",
     Grades: "Progress",
-    "My Work": "Work",
+    Work: "Assessments",
+    "My Work": "Assessments",
   };
   return learnerLabels[label] ?? label;
 }
@@ -264,10 +266,9 @@ export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "My Courses", icon: BookOpenCheck },
   { href: "/studio", label: "Lesson Studio", icon: Sparkles },
-  { href: "/teacher/work", label: "Work", icon: FileCheck2 },
+  { href: "/teacher/work", label: "Assessments", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Feedback", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
-  { href: "/teacher/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/practice", label: "Practice", icon: Brain },
   { href: "/teacher/students", label: "Learners", icon: UsersRound },
@@ -279,10 +280,9 @@ export const studentNavItems: ShellNavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student/lessons", label: "Courses", icon: BookOpenCheck },
   { href: "/student/classes", label: "Course Access", icon: UsersRound },
-  { href: "/student/work", label: "Work", icon: FileCheck2 },
+  { href: "/student/work", label: "Assessments", icon: FileCheck2 },
   { href: "/student/planner", label: "Planner", icon: CalendarClock },
   { href: "/student/notes", label: "Notes", icon: StickyNote },
-  { href: "/student/discussions", label: "Discussions", icon: MessageSquareText },
   { href: "/practice", label: "Practice", icon: Brain },
   { href: "/student/grades", label: "Progress", icon: ClipboardList },
   { href: "/student/notifications", label: "Notifications", icon: Bell },
@@ -336,7 +336,7 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
       { label: "Create", items: pick(["/teacher/lessons", "/studio"]) },
-      { label: "Course Ops", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
+      { label: "Course Ops", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/planner", "/teacher/students"]) },
       { label: "Support", items: pick(["/practice"]) },
       { label: "Insights", items: pick(["/teacher/analytics"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
@@ -345,7 +345,7 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
 
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
-    { label: "Learning", items: pick(["/student/lessons", "/student/classes", "/student/work", "/student/planner", "/student/notes", "/student/discussions"]) },
+    { label: "Learning", items: pick(["/student/lessons", "/student/classes", "/student/work", "/student/planner", "/student/notes"]) },
     { label: "Support", items: pick(["/practice", "/student/grades"]) },
     { label: "Account", items: pick(["/student/notifications", "/student/profile"]) },
   ];
