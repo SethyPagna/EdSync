@@ -12,6 +12,7 @@ type PlannerData = {
   announcements: (Announcement & { class_name?: string | null })[];
   events: (ScheduleEvent & { class_name?: string | null; lesson_title?: string | null })[];
 };
+type PlannerView = "day" | "week" | "month" | "all";
 
 type PlannerForm = {
   mode: "announcement" | "deadline" | "event";
@@ -36,6 +37,13 @@ const emptyForm: PlannerForm = {
   location: "",
   priority: "normal",
 };
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+const plannerViews: Array<{ key: PlannerView; label: string }> = [
+  { key: "day", label: "Day" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+  { key: "all", label: "All" },
+];
 
 function formatWhen(event: ScheduleEvent) {
   const value = event.due_at || event.starts_at || event.created_at;
@@ -48,6 +56,35 @@ function formatWhen(event: ScheduleEvent) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function eventTime(event: ScheduleEvent) {
+  const value = event.due_at || event.starts_at || event.created_at;
+  const timestamp = value ? new Date(value).getTime() : Number.NaN;
+  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+}
+
+function sameDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function isInPlannerView(event: ScheduleEvent, view: PlannerView, now = new Date()) {
+  if (view === "all") return true;
+  const timestamp = eventTime(event);
+  if (timestamp === Number.MAX_SAFE_INTEGER) return false;
+  const eventDate = new Date(timestamp);
+  if (view === "day") return sameDay(eventDate, now);
+  if (view === "week") return timestamp >= now.getTime() - MILLISECONDS_PER_DAY && timestamp <= now.getTime() + 7 * MILLISECONDS_PER_DAY;
+  return eventDate.getFullYear() === now.getFullYear() && eventDate.getMonth() === now.getMonth();
+}
+
+function eventWorkType(event: ScheduleEvent) {
+  const workType = event.metadata?.workType;
+  return typeof workType === "string" ? workType : null;
 }
 
 function classScopeFromLocation() {
@@ -63,6 +100,7 @@ export default function TeacherPlannerPage() {
   const [planner, setPlanner] = useState<PlannerData>({ announcements: [], events: [] });
   const [form, setForm] = useState<PlannerForm>(emptyForm);
   const [selectedClassId, setSelectedClassId] = useState("all");
+  const [plannerView, setPlannerView] = useState<PlannerView>("week");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -131,14 +169,29 @@ export default function TeacherPlannerPage() {
     () => classes.find((classRow) => classRow.id === selectedClassId) ?? null,
     [classes, selectedClassId],
   );
-  const visibleEvents = useMemo(() => {
+  const classScopedEvents = useMemo(() => {
     if (!selectedClass) return planner.events;
     return planner.events.filter((event) => event.class_name === selectedClass.name);
   }, [planner.events, selectedClass]);
+  const visibleEvents = useMemo(
+    () =>
+      classScopedEvents
+        .filter((event) => isInPlannerView(event, plannerView))
+        .sort((left, right) => eventTime(left) - eventTime(right)),
+    [classScopedEvents, plannerView],
+  );
   const visibleAnnouncements = useMemo(() => {
     if (!selectedClass) return planner.announcements;
     return planner.announcements.filter((announcement) => announcement.class_name === selectedClass.name);
   }, [planner.announcements, selectedClass]);
+  const scheduleStats = useMemo(
+    () => ({
+      day: classScopedEvents.filter((event) => isInPlannerView(event, "day")).length,
+      week: classScopedEvents.filter((event) => isInPlannerView(event, "week")).length,
+      month: classScopedEvents.filter((event) => isInPlannerView(event, "month")).length,
+    }),
+    [classScopedEvents],
+  );
 
   const submitPlannerItem = async () => {
     if (!form.classId) {
@@ -224,10 +277,10 @@ export default function TeacherPlannerPage() {
         <div>
           <p className="text-sm font-semibold text-edsync-blue">Course planner</p>
           <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text">
-            Notifications, deadlines, and schedule
+            Schedule, deadlines, and updates
           </h1>
           <p className="edsync-hover-detail max-w-2xl">
-            Keep learners aligned with space updates, visible work deadlines, and events.
+            Filter by class, view the day/week/month schedule, and keep assessment deadlines linked to real class work.
           </p>
         </div>
         <button
@@ -269,6 +322,19 @@ export default function TeacherPlannerPage() {
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Today", value: scheduleStats.day },
+          { label: "This week", value: scheduleStats.week },
+          { label: "This month", value: scheduleStats.month },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-edsync-border bg-edsync-card p-4">
+            <p className="text-2xl font-bold text-edsync-text">{stat.value}</p>
+            <p className="mt-1 text-sm font-semibold text-edsync-subtle">{stat.label}</p>
+          </div>
+        ))}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
@@ -425,9 +491,24 @@ export default function TeacherPlannerPage() {
 
         <section className="space-y-5">
           <div className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-display text-xl font-bold text-edsync-text">Upcoming schedule</h2>
-              <CalendarClock className="h-5 w-5 text-edsync-blue" />
+              <div className="flex flex-wrap gap-2">
+                {plannerViews.map((view) => (
+                  <button
+                    key={view.key}
+                    type="button"
+                    onClick={() => setPlannerView(view.key)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                      plannerView === view.key
+                        ? "border-edsync-blue bg-edsync-blue text-white"
+                        : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
+                    }`}
+                  >
+                    {view.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="space-y-3">
               {loading ? (
@@ -451,9 +532,16 @@ export default function TeacherPlannerPage() {
                           {event.class_name || "Personal"} - {formatWhen(event)}
                         </p>
                       </div>
-                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                        {event.event_type.replace("_", " ")}
-                      </span>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <span className="badge bg-edsync-blue/10 text-edsync-blue">
+                          {event.event_type.replace("_", " ")}
+                        </span>
+                        {eventWorkType(event) && (
+                          <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
+                            {eventWorkType(event)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {event.description && (
                       <p className="mt-3 text-sm leading-6 text-edsync-subtle">{event.description}</p>
