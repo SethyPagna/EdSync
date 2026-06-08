@@ -29,6 +29,7 @@ const AUTH_ROUTE_PREFIXES = ["/auth/login", "/auth/signup"] as const;
 const TEACHER_ROUTE_PREFIX = "/teacher";
 const STUDENT_ROUTE_PREFIX = "/student";
 const ADMIN_ROUTE_PREFIX = "/admin";
+const ADMIN_VIEW_MODE_HEADER = "x-edsync-admin-view-mode";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -71,8 +72,9 @@ export function middleware(request: NextRequest) {
     role === "admin" &&
     (pathname.startsWith(TEACHER_ROUTE_PREFIX) || pathname.startsWith(STUDENT_ROUTE_PREFIX))
   ) {
-    const response = NextResponse.next();
-    syncAdminViewModeCookie(response, pathname, requestedAdminViewMode);
+    const inferredMode = adminViewModeForPath(pathname, requestedAdminViewMode);
+    const response = nextWithAdminViewMode(request, inferredMode);
+    syncAdminViewModeCookie(response, pathname, inferredMode);
     return withSecurityHeaders(response);
   }
 
@@ -90,7 +92,10 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
   if (hasSession && role === "admin") {
-    syncAdminViewModeCookie(response, pathname, requestedAdminViewMode);
+    const inferredMode = adminViewModeForPath(pathname, requestedAdminViewMode);
+    const nextResponse = nextWithAdminViewMode(request, inferredMode);
+    syncAdminViewModeCookie(nextResponse, pathname, inferredMode);
+    return withSecurityHeaders(nextResponse);
   }
   return withSecurityHeaders(response);
 }
@@ -99,20 +104,34 @@ function startsWithAny(pathname: string, prefixes: readonly string[]) {
   return prefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
-function syncAdminViewModeCookie(response: NextResponse, pathname: string, mode: AdminViewMode | null) {
-  const inferredMode =
+function adminViewModeForPath(pathname: string, mode: AdminViewMode | null) {
+  return (
     mode ??
     (pathname.startsWith(TEACHER_ROUTE_PREFIX)
       ? adminViewModeForWorkspaceRole("teacher")
       : pathname.startsWith(STUDENT_ROUTE_PREFIX)
         ? adminViewModeForWorkspaceRole("student")
-        : null);
+        : null)
+  );
+}
+
+function nextWithAdminViewMode(request: NextRequest, mode: AdminViewMode | null) {
+  const requestHeaders = new Headers(request.headers);
+  if (mode) {
+    requestHeaders.set(ADMIN_VIEW_MODE_HEADER, mode);
+  } else {
+    requestHeaders.delete(ADMIN_VIEW_MODE_HEADER);
+  }
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+function syncAdminViewModeCookie(response: NextResponse, pathname: string, mode: AdminViewMode | null) {
   if (pathname.startsWith(ADMIN_ROUTE_PREFIX)) {
     response.cookies.delete(ADMIN_VIEW_MODE_COOKIE);
     return;
   }
-  if (!inferredMode) return;
-  response.cookies.set(ADMIN_VIEW_MODE_COOKIE, inferredMode, {
+  if (!mode) return;
+  response.cookies.set(ADMIN_VIEW_MODE_COOKIE, mode, {
     maxAge: 60 * 60,
     path: "/",
     sameSite: "lax",
