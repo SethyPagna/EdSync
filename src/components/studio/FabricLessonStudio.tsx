@@ -66,6 +66,8 @@ type StudioProject = {
   templateId: string;
   width: number;
   height: number;
+  className: string;
+  orderIndex: number;
   serverItemId: string | null;
   status: "draft" | "published" | "archived";
   updatedAt?: string;
@@ -278,7 +280,7 @@ const copy = {
     generate: "Generate",
     png: "PNG",
     pdf: "PDF",
-    project: "Project",
+    project: "Lesson",
     importProject: "Import",
     saved: "Saved locally",
   },
@@ -325,7 +327,7 @@ const copy = {
     generate: "Generar",
     png: "PNG",
     pdf: "PDF",
-    project: "Proyecto",
+    project: "Leccion",
     importProject: "Importar",
     saved: "Guardado local",
   },
@@ -372,7 +374,7 @@ const copy = {
     generate: "Generer",
     png: "PNG",
     pdf: "PDF",
-    project: "Projet",
+    project: "Lecon",
     importProject: "Importer",
     saved: "Sauve localement",
   },
@@ -492,6 +494,8 @@ export default function FabricLessonStudio() {
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
   const [customWidth, setCustomWidth] = useState(1280);
   const [customHeight, setCustomHeight] = useState(720);
+  const [lessonClassName, setLessonClassName] = useState("");
+  const [lessonOrderIndex, setLessonOrderIndex] = useState(1);
   const [activeProject, setActiveProject] = useState<StudioProject | null>(null);
   const [pages, setPages] = useState<StudioPage[]>(initialPages);
   const [activePageId, setActivePageId] = useState("");
@@ -536,7 +540,7 @@ export default function FabricLessonStudio() {
     try {
       setProjects(await listStudioItems(undefined, false));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load studio projects.");
+      toast.error(error instanceof Error ? error.message : "Could not load studio lessons.");
     } finally {
       setProjectsLoading(false);
     }
@@ -772,6 +776,8 @@ export default function FabricLessonStudio() {
       templateId: template.id,
       width: template.width,
       height: template.height,
+      className: lessonClassName.trim(),
+      orderIndex: Math.max(1, Math.round(lessonOrderIndex || 1)),
       serverItemId: null,
       status: "draft",
     };
@@ -815,6 +821,8 @@ export default function FabricLessonStudio() {
     const template = templateById(typeof metadata.templateId === "string" ? metadata.templateId : null);
     const width = typeof metadata.canvasWidth === "number" ? metadata.canvasWidth : template.width;
     const height = typeof metadata.canvasHeight === "number" ? metadata.canvasHeight : template.height;
+    const className = typeof metadata.className === "string" ? metadata.className : "";
+    const orderIndex = typeof metadata.orderIndex === "number" ? metadata.orderIndex : 1;
     const storedPages = readProjectPages(content.pages);
     const nextPages = storedPages ?? initialPagesForTemplate(template, item.title);
     setSavedStudioItemId(item.id);
@@ -831,10 +839,14 @@ export default function FabricLessonStudio() {
       templateId: template.id,
       width,
       height,
+      className,
+      orderIndex,
       serverItemId: item.id,
       status: item.status,
       updatedAt: item.updatedAt,
     });
+    setLessonClassName(className);
+    setLessonOrderIndex(orderIndex);
     setView("editor");
   };
 
@@ -1116,7 +1128,7 @@ export default function FabricLessonStudio() {
       return;
     }
     const orientation = canvasWidth >= canvasHeight ? "landscape" : "portrait";
-    printWindow.document.write(`<!doctype html><html><head><title>EdSync PDF</title><style>@page{size:${orientation};margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#f4f8fc}img{width:100vw;height:auto;max-height:100vh;object-fit:contain}</style></head><body><img src="${dataUrl}" alt="EdSync studio project"/><script>window.onload=()=>{window.print();}</script></body></html>`);
+    printWindow.document.write(`<!doctype html><html><head><title>EdSync PDF</title><style>@page{size:${orientation};margin:0}body{margin:0;display:grid;place-items:center;min-height:100vh;background:#f4f8fc}img{width:100vw;height:auto;max-height:100vh;object-fit:contain}</style></head><body><img src="${dataUrl}" alt="EdSync studio lesson"/><script>window.onload=()=>{window.print();}</script></body></html>`);
     printWindow.document.close();
   };
 
@@ -1137,7 +1149,7 @@ export default function FabricLessonStudio() {
 
   const projectTitle = () => {
     const firstPage = pages[0];
-    return activeProject?.title || firstPage?.seed.title?.trim() || firstPage?.name?.trim() || "Untitled project";
+    return activeProject?.title || firstPage?.seed.title?.trim() || firstPage?.name?.trim() || "Untitled lesson";
   };
 
   const projectPlainText = () =>
@@ -1146,7 +1158,7 @@ export default function FabricLessonStudio() {
       .join("\n\n");
 
   const downloadProject = () => {
-    downloadText("edsync-studio-project.json", JSON.stringify(projectPayload(), null, 2));
+    downloadText("edsync-studio-lesson.json", JSON.stringify(projectPayload(), null, 2));
   };
 
   const saveLocal = () => {
@@ -1170,6 +1182,8 @@ export default function FabricLessonStudio() {
           templateId: activeProject?.templateId ?? "ppt-wide",
           canvasWidth,
           canvasHeight,
+          className: activeProject?.className ?? lessonClassName.trim(),
+          orderIndex: activeProject?.orderIndex ?? Math.max(1, Math.round(lessonOrderIndex || 1)),
           language,
           pageCount: pages.length,
         },
@@ -1191,7 +1205,7 @@ export default function FabricLessonStudio() {
       toast.success(status === "published" ? "Published to EdSync." : "Saved to EdSync.");
       void refreshProjects();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save studio project.");
+      toast.error(error instanceof Error ? error.message : "Could not save studio lesson.");
     } finally {
       setSavingStatus(null);
     }
@@ -1201,17 +1215,19 @@ export default function FabricLessonStudio() {
     const text = await file.text();
     const parsed = JSON.parse(text) as { pages?: StudioPage[]; activePageId?: string; project?: Partial<StudioProject> };
     if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
-      toast.error("Invalid studio project.");
+      toast.error("Invalid studio lesson.");
       return;
     }
     const template = templateById(parsed.project?.templateId);
     const nextProject: StudioProject = {
       id: crypto.randomUUID(),
-      title: parsed.project?.title || "Imported project",
+      title: parsed.project?.title || "Imported lesson",
       kind: parsed.project?.kind === "doc" || parsed.project?.kind === "design" || parsed.project?.kind === "slide" ? parsed.project.kind : template.kind,
       templateId: template.id,
       width: typeof parsed.project?.width === "number" ? parsed.project.width : template.width,
       height: typeof parsed.project?.height === "number" ? parsed.project.height : template.height,
+      className: typeof parsed.project?.className === "string" ? parsed.project.className : "",
+      orderIndex: typeof parsed.project?.orderIndex === "number" ? parsed.project.orderIndex : 1,
       serverItemId: null,
       status: "draft",
     };
@@ -1222,9 +1238,11 @@ export default function FabricLessonStudio() {
     setActivePageId(next.id);
     setSavedStudioItemId(null);
     setActiveProject(nextProject);
+    setLessonClassName(nextProject.className);
+    setLessonOrderIndex(nextProject.orderIndex);
     setView("editor");
     await loadPage(next);
-    toast.success("Project loaded.");
+    toast.success("Lesson loaded.");
   };
 
   const applyAiLesson = async (lesson: {
@@ -1301,6 +1319,15 @@ export default function FabricLessonStudio() {
     { id: "export" as const, label: t.export, icon: Download },
   ];
 
+  const openPanel = (nextPanel: StudioPanel) => {
+    setPanel(nextPanel);
+    const canvas = canvasRef.current;
+    if (!canvas?.getActiveObject()) return;
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    updateSelectedObject();
+  };
+
   if (view !== "editor" || !activeProject) {
     return (
       <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg p-2 text-edsync-text sm:p-4">
@@ -1309,7 +1336,7 @@ export default function FabricLessonStudio() {
             {[
               { label: "Create", icon: Plus, active: view === "formats", action: "formats" },
               { label: "Home", icon: Home, active: view === "hub", action: "hub" },
-              { label: "Projects", icon: FolderOpen, active: false, action: "hub" },
+              { label: "Lessons", icon: FolderOpen, active: false, action: "hub" },
               { label: "Templates", icon: LayoutPanelLeft, active: view === "formats", action: "formats" },
               { label: "Upload", icon: UploadCloud, active: false, action: "upload" },
             ].map((item) => {
@@ -1348,7 +1375,7 @@ export default function FabricLessonStudio() {
                   <input
                     value={projectQuery}
                     onChange={(event) => setProjectQuery(event.target.value)}
-                    placeholder="Search projects, formats, and uploads"
+                    placeholder="Search lessons, formats, and uploads"
                     className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-edsync-text outline-none placeholder:text-edsync-subtle sm:text-base"
                   />
                 </label>
@@ -1377,7 +1404,7 @@ export default function FabricLessonStudio() {
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <button type="button" onClick={() => setView("formats")} className="btn-primary justify-center px-4 py-3">
                   <Plus className="h-4 w-4" />
-                  New project
+                  New lesson
                 </button>
                 <button type="button" onClick={startAiAssistedProject} className="btn-secondary justify-center px-4 py-3">
                   <Sparkles className="h-4 w-4" />
@@ -1401,8 +1428,8 @@ export default function FabricLessonStudio() {
             <div className="premium-surface rounded-[1.5rem] p-4 sm:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-display text-2xl font-black">Your projects</h2>
-                  <p className="text-sm font-semibold text-edsync-subtle">Open recent work, or filter by Doc, PPT, and design.</p>
+                  <h2 className="font-display text-2xl font-black">Your lessons</h2>
+                  <p className="text-sm font-semibold text-edsync-subtle">Open recent lessons, or filter by Doc, PPT, and design.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -1445,7 +1472,7 @@ export default function FabricLessonStudio() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
                   <Presentation className="mx-auto mb-3 h-9 w-9 text-edsync-blue" />
-                  <p className="font-display text-xl font-black">{projects.length > 0 ? "No matching projects" : "No studio projects yet"}</p>
+                  <p className="font-display text-xl font-black">{projects.length > 0 ? "No matching lessons" : "No lessons yet"}</p>
                   <p className="mt-1 text-sm text-edsync-subtle">{projects.length > 0 ? "Try another search or filter." : "Start with a Doc, PPT, or design size."}</p>
                   <button type="button" onClick={() => setView("formats")} className="btn-primary mt-5 inline-flex">
                     <Plus className="h-4 w-4" />
@@ -1456,7 +1483,29 @@ export default function FabricLessonStudio() {
             </div>
 
             <aside className="premium-surface h-fit rounded-[1.5rem] p-4 sm:p-5">
-              <h2 className="font-display text-xl font-black">New project</h2>
+              <h2 className="font-display text-xl font-black">New lesson</h2>
+              <div className="mt-4 rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                <div className="text-sm font-black">Class and order</div>
+                <label className="mt-3 block text-xs font-bold text-edsync-subtle">
+                  Attach to class
+                  <input
+                    value={lessonClassName}
+                    onChange={(event) => setLessonClassName(event.target.value)}
+                    placeholder="Class, cohort, or course group"
+                    className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                  />
+                </label>
+                <label className="mt-3 block text-xs font-bold text-edsync-subtle">
+                  Lesson order
+                  <input
+                    type="number"
+                    min={1}
+                    value={lessonOrderIndex}
+                    onChange={(event) => setLessonOrderIndex(Number(event.target.value))}
+                    className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                  />
+                </label>
+              </div>
               <div className="mt-4 grid gap-2">
                 {STUDIO_FORMATS.map((format) => {
                   const Icon = format.icon;
@@ -1526,7 +1575,7 @@ export default function FabricLessonStudio() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="font-display text-2xl font-black">Choose format and dimensions</h2>
-                  <p className="text-sm font-semibold text-edsync-subtle">The canvas opens with the right aspect ratio and project type.</p>
+                  <p className="text-sm font-semibold text-edsync-subtle">The canvas opens with the right aspect ratio and lesson format.</p>
                 </div>
                 <div className="flex rounded-2xl border border-edsync-border bg-edsync-surface p-1">
                   {STUDIO_FORMATS.map((format) => (
@@ -1601,8 +1650,8 @@ export default function FabricLessonStudio() {
   }
 
   return (
-    <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg p-2 text-edsync-text sm:p-3">
-      <section className="flex min-h-[720px] flex-col overflow-hidden rounded-[2rem] border border-edsync-border bg-edsync-card shadow-2xl shadow-slate-300/40 dark:shadow-black/40 lg:h-[calc(100dvh-1.5rem)]">
+    <main className="min-h-dvh overflow-x-clip bg-edsync-bg text-edsync-text">
+      <section className="flex min-h-dvh flex-col overflow-hidden border border-edsync-border bg-edsync-card lg:h-dvh">
         <header className="flex flex-wrap items-center gap-2 border-b border-edsync-border bg-edsync-card/95 px-3 py-2 backdrop-blur">
           <button type="button" onClick={() => void returnToHub()} className="inline-flex h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text transition hover:border-edsync-blue/40">
             <ArrowLeft className="h-4 w-4" />
@@ -1612,6 +1661,8 @@ export default function FabricLessonStudio() {
             <h1 className="font-display text-lg font-black text-edsync-text sm:text-xl">{activeProject.title}</h1>
             <p className="hidden text-xs font-semibold text-edsync-subtle sm:block">
               {activeProject.kind.toUpperCase()} · {activeProject.width} x {activeProject.height}
+              {activeProject.className ? ` · ${activeProject.className}` : ""}
+              {activeProject.orderIndex ? ` · Order ${activeProject.orderIndex}` : ""}
             </p>
           </div>
           <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-surface p-1">
@@ -1638,7 +1689,7 @@ export default function FabricLessonStudio() {
           </button>
         </header>
 
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[76px_300px_minmax(0,1fr)_280px]">
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[76px_320px_minmax(0,1fr)]">
           <nav className="grid grid-cols-3 gap-1 border-b border-edsync-border bg-edsync-card p-2 sm:grid-cols-6 lg:flex lg:flex-col lg:border-b-0 lg:border-r">
             {toolRail.map((tool) => {
               const Icon = tool.icon;
@@ -1646,9 +1697,9 @@ export default function FabricLessonStudio() {
                 <button
                   key={tool.id}
                   type="button"
-                  onClick={() => setPanel(tool.id)}
+                  onClick={() => openPanel(tool.id)}
                   className={`flex min-w-0 flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-black transition ${
-                    panel === tool.id ? "bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm" : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
+                    !selectedObject && panel === tool.id ? "bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm" : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -1659,6 +1710,32 @@ export default function FabricLessonStudio() {
           </nav>
 
           <aside className="min-h-0 border-b border-edsync-border bg-edsync-card p-4 lg:border-b-0 lg:border-r lg:overflow-y-auto">
+            {selectedObject ? (
+              <div className="space-y-4">
+                <PanelTitle icon={MousePointer2} title={t.selected} />
+                <InspectorColor label={t.color} value={cssColor(selectedObject.fill)} onChange={(value) => updateObject({ fill: value })} />
+                <InspectorColor label={t.stroke} value={cssColor(selectedObject.stroke, "#0d1726")} onChange={(value) => updateObject({ stroke: value })} />
+                <InspectorRange label={t.opacity} min={0.1} max={1} step={0.05} value={selectedObject.opacity ?? 1} onChange={(value) => updateObject({ opacity: value })} />
+                {"fontSize" in selectedObject && (
+                  <InspectorRange label={t.size} min={12} max={96} step={1} value={selectedObject.fontSize ?? 24} onChange={(value) => updateObject({ fontSize: value })} />
+                )}
+                <InspectorRange label={t.rotate} min={-180} max={180} step={1} value={selectedObject.angle ?? 0} onChange={(value) => updateObject({ angle: value })} />
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={duplicateSelected} className="btn-secondary justify-center px-3 py-2 text-sm">
+                    <Copy className="h-4 w-4" />
+                    {t.duplicate}
+                  </button>
+                  <button type="button" onClick={removeSelected} className="btn-secondary justify-center px-3 py-2 text-sm text-edsync-red">
+                    <Trash2 className="h-4 w-4" />
+                    {t.delete}
+                  </button>
+                </div>
+                <button type="button" onClick={() => openPanel(panel)} className="btn-ghost w-full justify-center px-3 py-2 text-sm">
+                  Done editing
+                </button>
+              </div>
+            ) : (
+              <>
             {panel === "elements" && (
               <div className="space-y-4">
                 <PanelTitle icon={Shapes} title={t.elements} />
@@ -1748,15 +1825,18 @@ export default function FabricLessonStudio() {
                 </button>
               </div>
             )}
+              </>
+            )}
           </aside>
 
-          <section className="min-h-0 bg-[radial-gradient(circle_at_50%_0%,rgba(36,88,220,0.14),transparent_25rem)] p-3 dark:bg-slate-950 lg:overflow-hidden">
-            <div className="flex h-full min-h-[34rem] flex-col rounded-[1.5rem] border border-edsync-border bg-edsync-bg/75 p-3 backdrop-blur">
+          <section className="min-h-0 bg-[radial-gradient(circle_at_50%_0%,rgba(36,88,220,0.12),transparent_25rem)] lg:overflow-hidden">
+            <div className="flex h-full min-h-[34rem] flex-col bg-edsync-bg/80">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-black text-edsync-subtle">
                   <MousePointer2 className="h-4 w-4 text-edsync-blue" />
                   {activePage?.name}
                 </div>
+                {selectedObject && (
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={duplicateSelected} className="rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-black transition hover:border-edsync-blue/40">
                     <Copy className="inline h-4 w-4" /> {t.duplicate}
@@ -1765,13 +1845,14 @@ export default function FabricLessonStudio() {
                     <Trash2 className="inline h-4 w-4" /> {t.delete}
                   </button>
                 </div>
+                )}
               </div>
-              <div ref={canvasStageRef} className="grid flex-1 place-items-center overflow-hidden rounded-[1.25rem] border border-edsync-border bg-[linear-gradient(45deg,rgba(15,23,42,0.05)_25%,transparent_25%,transparent_75%,rgba(15,23,42,0.05)_75%),linear-gradient(45deg,rgba(15,23,42,0.05)_25%,transparent_25%,transparent_75%,rgba(15,23,42,0.05)_75%)] bg-[length:24px_24px] bg-[position:0_0,12px_12px] p-3 sm:p-6">
-                <div className="rounded-[1.35rem] bg-white p-0 shadow-2xl shadow-slate-400/30">
+              <div ref={canvasStageRef} className="grid flex-1 place-items-center overflow-hidden border-y border-edsync-border bg-[linear-gradient(45deg,rgba(100,116,139,0.12)_25%,transparent_25%,transparent_75%,rgba(100,116,139,0.12)_75%),linear-gradient(45deg,rgba(100,116,139,0.12)_25%,transparent_25%,transparent_75%,rgba(100,116,139,0.12)_75%)] bg-[length:24px_24px] bg-[position:0_0,12px_12px] p-2 sm:p-4">
+                <div className="bg-white shadow-2xl shadow-slate-400/25">
                   <canvas ref={canvasElementRef} aria-label="EdSync lesson canvas" />
                 </div>
               </div>
-              <div className="mt-3 flex items-center gap-2 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card p-2">
+              <div className="flex items-center gap-2 overflow-x-auto border-t border-edsync-border bg-edsync-card p-2">
                 {pages.map((page, index) => (
                   <button
                     key={page.id}
@@ -1795,32 +1876,6 @@ export default function FabricLessonStudio() {
             </div>
           </section>
 
-          <aside className="border-t border-edsync-border bg-edsync-card p-4 lg:border-l lg:border-t-0 lg:overflow-y-auto">
-            <PanelTitle icon={MousePointer2} title={t.selected} />
-            {selectedObject ? (
-              <div className="mt-4 space-y-4">
-                <InspectorColor label={t.color} value={cssColor(selectedObject.fill)} onChange={(value) => updateObject({ fill: value })} />
-                <InspectorColor label={t.stroke} value={cssColor(selectedObject.stroke, "#0d1726")} onChange={(value) => updateObject({ stroke: value })} />
-                <InspectorRange label={t.opacity} min={0.1} max={1} step={0.05} value={selectedObject.opacity ?? 1} onChange={(value) => updateObject({ opacity: value })} />
-                {"fontSize" in selectedObject && (
-                  <InspectorRange label={t.size} min={12} max={96} step={1} value={selectedObject.fontSize ?? 24} onChange={(value) => updateObject({ fontSize: value })} />
-                )}
-                <InspectorRange label={t.rotate} min={-180} max={180} step={1} value={selectedObject.angle ?? 0} onChange={(value) => updateObject({ angle: value })} />
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={duplicateSelected} className="btn-secondary justify-center px-3 py-2 text-sm">
-                    <Copy className="h-4 w-4" />
-                    {t.duplicate}
-                  </button>
-                  <button type="button" onClick={removeSelected} className="btn-secondary justify-center px-3 py-2 text-sm text-edsync-red">
-                    <Trash2 className="h-4 w-4" />
-                    {t.delete}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-4 rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-4 text-sm font-semibold text-edsync-subtle">{t.noSelection}</p>
-            )}
-          </aside>
         </div>
       </section>
 
@@ -1844,6 +1899,8 @@ function ProjectCard({ project, onOpen }: { project: StudioServerItem; onOpen: (
   const FormatIcon = kind === "slide" ? Presentation : kind === "design" ? SlidersHorizontal : FileText;
   const width = typeof project.metadata?.canvasWidth === "number" ? project.metadata.canvasWidth : template.width;
   const height = typeof project.metadata?.canvasHeight === "number" ? project.metadata.canvasHeight : template.height;
+  const className = typeof project.metadata?.className === "string" ? project.metadata.className : "";
+  const orderIndex = typeof project.metadata?.orderIndex === "number" ? project.metadata.orderIndex : null;
 
   return (
     <button
@@ -1873,6 +1930,8 @@ function ProjectCard({ project, onOpen }: { project: StudioServerItem; onOpen: (
           <span className="mt-1 flex flex-wrap items-center gap-2 text-xs font-bold text-edsync-subtle">
             <span>{kind === "slide" ? "PPT" : kind === "design" ? "Design" : "Doc"}</span>
             <span>{width} x {height}</span>
+            {className && <span>{className}</span>}
+            {orderIndex && <span>Order {orderIndex}</span>}
             <span>{formatUpdatedAt(project.updatedAt)}</span>
           </span>
         </span>
