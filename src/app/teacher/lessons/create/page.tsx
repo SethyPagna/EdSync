@@ -1,10 +1,10 @@
-import FabricLessonStudio from "@/components/studio/FabricLessonStudio";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Course Studio",
-  description: "Create EdSync lessons with a canvas-based course studio.",
+  description: "Redirects to the unified EdSync studio.",
 };
 
 export default function CreateLessonPage() {
-  return <FabricLessonStudio />;
+  redirect("/studio");
 }
