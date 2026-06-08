@@ -66,6 +66,7 @@ type StudioProject = {
   templateId: string;
   width: number;
   height: number;
+  classId: string;
   className: string;
   orderIndex: number;
   serverItemId: string | null;
@@ -85,6 +86,12 @@ type StudioTemplate = {
 };
 type FabricSelection = FabricObject & {
   forEachObject(callback: (object: FabricObject) => void): void;
+};
+type StudioRosterClass = {
+  id: string;
+  name: string;
+  subject?: string | null;
+  grade_level?: string | null;
 };
 
 const DEFAULT_CANVAS_WIDTH = 960;
@@ -247,7 +254,7 @@ const copy = {
     text: "Text",
     images: "Images",
     pages: "Pages",
-    ai: "AI",
+    ai: "AI lesson",
     export: "Export",
     undo: "Undo",
     redo: "Redo",
@@ -294,7 +301,7 @@ const copy = {
     text: "Texto",
     images: "Imagenes",
     pages: "Paginas",
-    ai: "IA",
+    ai: "Leccion IA",
     export: "Exportar",
     undo: "Deshacer",
     redo: "Rehacer",
@@ -341,7 +348,7 @@ const copy = {
     text: "Texte",
     images: "Images",
     pages: "Pages",
-    ai: "IA",
+    ai: "Lecon IA",
     export: "Exporter",
     undo: "Annuler",
     redo: "Refaire",
@@ -494,6 +501,8 @@ export default function FabricLessonStudio() {
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
   const [customWidth, setCustomWidth] = useState(1280);
   const [customHeight, setCustomHeight] = useState(720);
+  const [classes, setClasses] = useState<StudioRosterClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [lessonClassName, setLessonClassName] = useState("");
   const [lessonOrderIndex, setLessonOrderIndex] = useState(1);
   const [activeProject, setActiveProject] = useState<StudioProject | null>(null);
@@ -512,12 +521,16 @@ export default function FabricLessonStudio() {
   const canvasWidth = activeProject?.width ?? DEFAULT_CANVAS_WIDTH;
   const canvasHeight = activeProject?.height ?? DEFAULT_CANVAS_HEIGHT;
   const selectedTemplates = STUDIO_TEMPLATES.filter((template) => template.kind === selectedFormat);
+  const selectedRosterClass = classes.find((classItem) => classItem.id === selectedClassId);
+  const resolvedLessonClassName = selectedRosterClass?.name ?? lessonClassName.trim();
+  const activeLessonOrderIndex = Math.max(1, Math.round(lessonOrderIndex || 1));
   const filteredProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     return projects.filter((project) => {
       const kind = studioItemKind(project);
       const matchesKind = projectKindFilter === "all" || kind === projectKindFilter;
-      const matchesQuery = !query || project.title.toLowerCase().includes(query);
+      const className = typeof project.metadata?.className === "string" ? project.metadata.className : "";
+      const matchesQuery = !query || `${project.title} ${className}`.toLowerCase().includes(query);
       return matchesKind && matchesQuery;
     });
   }, [projectKindFilter, projectQuery, projects]);
@@ -546,12 +559,26 @@ export default function FabricLessonStudio() {
     }
   }, []);
 
+  const refreshClasses = useCallback(async () => {
+    try {
+      const response = await fetch("/api/teacher/roster", { credentials: "include" });
+      const payload = (await response.json().catch(() => null)) as {
+        data?: { classes?: StudioRosterClass[] };
+      } | null;
+      if (!response.ok) return;
+      setClasses(payload?.data?.classes ?? []);
+    } catch {
+      setClasses([]);
+    }
+  }, []);
+
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
       void refreshProjects();
+      void refreshClasses();
     }, 0);
     return () => window.clearTimeout(loadTimer);
-  }, [refreshProjects]);
+  }, [refreshClasses, refreshProjects]);
 
   const fitCanvasToStage = useCallback(() => {
     const canvas = canvasRef.current;
@@ -776,8 +803,9 @@ export default function FabricLessonStudio() {
       templateId: template.id,
       width: template.width,
       height: template.height,
-      className: lessonClassName.trim(),
-      orderIndex: Math.max(1, Math.round(lessonOrderIndex || 1)),
+      classId: selectedClassId,
+      className: resolvedLessonClassName,
+      orderIndex: activeLessonOrderIndex,
       serverItemId: null,
       status: "draft",
     };
@@ -821,6 +849,7 @@ export default function FabricLessonStudio() {
     const template = templateById(typeof metadata.templateId === "string" ? metadata.templateId : null);
     const width = typeof metadata.canvasWidth === "number" ? metadata.canvasWidth : template.width;
     const height = typeof metadata.canvasHeight === "number" ? metadata.canvasHeight : template.height;
+    const classId = typeof metadata.classId === "string" ? metadata.classId : "";
     const className = typeof metadata.className === "string" ? metadata.className : "";
     const orderIndex = typeof metadata.orderIndex === "number" ? metadata.orderIndex : 1;
     const storedPages = readProjectPages(content.pages);
@@ -839,12 +868,14 @@ export default function FabricLessonStudio() {
       templateId: template.id,
       width,
       height,
+      classId,
       className,
       orderIndex,
       serverItemId: item.id,
       status: item.status,
       updatedAt: item.updatedAt,
     });
+    setSelectedClassId(classId);
     setLessonClassName(className);
     setLessonOrderIndex(orderIndex);
     setView("editor");
@@ -1134,12 +1165,20 @@ export default function FabricLessonStudio() {
 
   const projectPayload = () => {
     syncActivePage();
+    const project = activeProject
+      ? {
+          ...activeProject,
+          classId: selectedClassId,
+          className: resolvedLessonClassName,
+          orderIndex: activeLessonOrderIndex,
+        }
+      : activeProject;
     return {
       app: "EdSync Studio",
       version: 1,
       exportedAt: new Date().toISOString(),
       activePageId: activePageIdRef.current,
-      project: activeProject,
+      project,
       pages: pages.map((page) => ({
         ...page,
         snapshot: page.id === activePageIdRef.current ? serializeCanvas() : page.snapshot,
@@ -1177,13 +1216,16 @@ export default function FabricLessonStudio() {
         content: payload,
         plainText: projectPlainText(),
         status,
+        sourceType: selectedClassId ? "class" : "studio_lesson",
+        sourceId: selectedClassId || null,
         metadata: {
           editor: "fabric",
           templateId: activeProject?.templateId ?? "ppt-wide",
           canvasWidth,
           canvasHeight,
-          className: activeProject?.className ?? lessonClassName.trim(),
-          orderIndex: activeProject?.orderIndex ?? Math.max(1, Math.round(lessonOrderIndex || 1)),
+          classId: selectedClassId,
+          className: resolvedLessonClassName,
+          orderIndex: activeLessonOrderIndex,
           language,
           pageCount: pages.length,
         },
@@ -1196,6 +1238,9 @@ export default function FabricLessonStudio() {
               ...current,
               id: item.id,
               serverItemId: item.id,
+              classId: selectedClassId,
+              className: resolvedLessonClassName,
+              orderIndex: activeLessonOrderIndex,
               status,
               updatedAt: item.updatedAt,
             }
@@ -1226,6 +1271,7 @@ export default function FabricLessonStudio() {
       templateId: template.id,
       width: typeof parsed.project?.width === "number" ? parsed.project.width : template.width,
       height: typeof parsed.project?.height === "number" ? parsed.project.height : template.height,
+      classId: typeof parsed.project?.classId === "string" ? parsed.project.classId : "",
       className: typeof parsed.project?.className === "string" ? parsed.project.className : "",
       orderIndex: typeof parsed.project?.orderIndex === "number" ? parsed.project.orderIndex : 1,
       serverItemId: null,
@@ -1238,6 +1284,7 @@ export default function FabricLessonStudio() {
     setActivePageId(next.id);
     setSavedStudioItemId(null);
     setActiveProject(nextProject);
+    setSelectedClassId(nextProject.classId);
     setLessonClassName(nextProject.className);
     setLessonOrderIndex(nextProject.orderIndex);
     setView("editor");
@@ -1273,6 +1320,11 @@ export default function FabricLessonStudio() {
       toast.error("Add an AI prompt first.");
       return;
     }
+    const lessonContext = [
+      resolvedLessonClassName ? `Class or cohort: ${resolvedLessonClassName}.` : "Independent learner or creator workspace.",
+      `Lesson order: ${activeLessonOrderIndex}.`,
+      `Canvas format: ${activeProject?.kind ?? "slide"} ${canvasWidth} x ${canvasHeight}.`,
+    ].join("\n");
     setIsGenerating(true);
     try {
       const response = await fetch("/api/ai/create-lesson", {
@@ -1280,7 +1332,7 @@ export default function FabricLessonStudio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "text",
-          content: prompt,
+          content: `${prompt}\n\nEdSync lesson context:\n${lessonContext}`,
           complexity: 55,
           pacing: 50,
           scaffolding: 45,
@@ -1484,28 +1536,22 @@ export default function FabricLessonStudio() {
 
             <aside className="premium-surface h-fit rounded-[1.5rem] p-4 sm:p-5">
               <h2 className="font-display text-xl font-black">New lesson</h2>
-              <div className="mt-4 rounded-2xl border border-edsync-border bg-edsync-surface p-3">
-                <div className="text-sm font-black">Class and order</div>
-                <label className="mt-3 block text-xs font-bold text-edsync-subtle">
-                  Attach to class
-                  <input
-                    value={lessonClassName}
-                    onChange={(event) => setLessonClassName(event.target.value)}
-                    placeholder="Class, cohort, or course group"
-                    className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                  />
-                </label>
-                <label className="mt-3 block text-xs font-bold text-edsync-subtle">
-                  Lesson order
-                  <input
-                    type="number"
-                    min={1}
-                    value={lessonOrderIndex}
-                    onChange={(event) => setLessonOrderIndex(Number(event.target.value))}
-                    className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                  />
-                </label>
-              </div>
+              <LessonSetupPanel
+                classes={classes}
+                selectedClassId={selectedClassId}
+                classNameValue={lessonClassName}
+                orderIndex={lessonOrderIndex}
+                onClassIdChange={(classId) => {
+                  setSelectedClassId(classId);
+                  const nextClass = classes.find((classItem) => classItem.id === classId);
+                  if (nextClass) setLessonClassName(nextClass.name);
+                }}
+                onClassNameChange={(value) => {
+                  setSelectedClassId("");
+                  setLessonClassName(value);
+                }}
+                onOrderIndexChange={setLessonOrderIndex}
+              />
               <div className="mt-4 grid gap-2">
                 {STUDIO_FORMATS.map((format) => {
                   const Icon = format.icon;
@@ -1661,8 +1707,8 @@ export default function FabricLessonStudio() {
             <h1 className="font-display text-lg font-black text-edsync-text sm:text-xl">{activeProject.title}</h1>
             <p className="hidden text-xs font-semibold text-edsync-subtle sm:block">
               {activeProject.kind.toUpperCase()} · {activeProject.width} x {activeProject.height}
-              {activeProject.className ? ` · ${activeProject.className}` : ""}
-              {activeProject.orderIndex ? ` · Order ${activeProject.orderIndex}` : ""}
+              {resolvedLessonClassName ? ` · ${resolvedLessonClassName}` : ""}
+              {activeLessonOrderIndex ? ` · Order ${activeLessonOrderIndex}` : ""}
             </p>
           </div>
           <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-surface p-1">
@@ -1736,6 +1782,22 @@ export default function FabricLessonStudio() {
               </div>
             ) : (
               <>
+                <LessonSetupPanel
+                  classes={classes}
+                  selectedClassId={selectedClassId}
+                  classNameValue={lessonClassName}
+                  orderIndex={lessonOrderIndex}
+                  onClassIdChange={(classId) => {
+                    setSelectedClassId(classId);
+                    const nextClass = classes.find((classItem) => classItem.id === classId);
+                    if (nextClass) setLessonClassName(nextClass.name);
+                  }}
+                  onClassNameChange={(value) => {
+                    setSelectedClassId("");
+                    setLessonClassName(value);
+                  }}
+                  onOrderIndexChange={setLessonOrderIndex}
+                />
             {panel === "elements" && (
               <div className="space-y-4">
                 <PanelTitle icon={Shapes} title={t.elements} />
@@ -1803,6 +1865,22 @@ export default function FabricLessonStudio() {
             {panel === "ai" && (
               <div className="space-y-4">
                 <PanelTitle icon={Sparkles} title={t.ai} />
+                <div className="grid gap-2">
+                  {[
+                    "Build a concise lesson with a warmup, concept, practice, and proof check.",
+                    "Create a printable handout with examples and independent practice.",
+                    "Draft a slide lesson with discussion prompts and a quick quiz.",
+                  ].map((starter, index) => (
+                    <button
+                      key={starter}
+                      type="button"
+                      onClick={() => setAiPrompt(starter)}
+                      className="rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-left text-xs font-black text-edsync-text transition hover:border-edsync-blue/40 hover:bg-edsync-blue/10"
+                    >
+                      {index === 0 ? "Lesson flow" : index === 1 ? "Handout" : "Slides + quiz"}
+                    </button>
+                  ))}
+                </div>
                 <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} rows={8} className="edsync-textarea" placeholder={t.aiPrompt} />
                 <button type="button" onClick={generateWithAi} disabled={isGenerating} className="btn-primary w-full justify-center disabled:opacity-50">
                   <Sparkles className="h-4 w-4" />
@@ -1937,6 +2015,76 @@ function ProjectCard({ project, onOpen }: { project: StudioServerItem; onOpen: (
         </span>
       </div>
     </button>
+  );
+}
+
+function LessonSetupPanel({
+  classes,
+  selectedClassId,
+  classNameValue,
+  orderIndex,
+  onClassIdChange,
+  onClassNameChange,
+  onOrderIndexChange,
+}: {
+  classes: StudioRosterClass[];
+  selectedClassId: string;
+  classNameValue: string;
+  orderIndex: number;
+  onClassIdChange: (value: string) => void;
+  onClassNameChange: (value: string) => void;
+  onOrderIndexChange: (value: number) => void;
+}) {
+  return (
+    <div className="mb-4 mt-4 rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black text-edsync-text">Lesson setup</p>
+          <p className="text-xs font-semibold text-edsync-subtle">Class and order.</p>
+        </div>
+        <span className="rounded-full bg-edsync-blue/10 px-2 py-1 text-[11px] font-black text-edsync-blue">EdSync</span>
+      </div>
+      {classes.length > 0 ? (
+        <label className="mt-3 block text-xs font-bold text-edsync-subtle">
+          Attach to class
+          <select
+            value={selectedClassId}
+            onChange={(event) => onClassIdChange(event.target.value)}
+            className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+          >
+            <option value="">Independent lesson</option>
+            {classes.map((classItem) => {
+              const detail = [classItem.subject, classItem.grade_level].filter(Boolean).join(" / ");
+              return (
+                <option key={classItem.id} value={classItem.id}>
+                  {detail ? `${classItem.name} (${detail})` : classItem.name}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+      ) : (
+        <label className="mt-3 block text-xs font-bold text-edsync-subtle">
+          Class or cohort
+          <input
+            value={classNameValue}
+            onChange={(event) => onClassNameChange(event.target.value)}
+            placeholder="Independent, cohort, or course group"
+            className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+          />
+        </label>
+      )}
+      <label className="mt-3 block text-xs font-bold text-edsync-subtle">
+        Lesson order
+        <input
+          type="number"
+          min={1}
+          value={orderIndex}
+          onChange={(event) => onOrderIndexChange(Number(event.target.value))}
+          className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+        />
+      </label>
+    </div>
   );
 }
 
