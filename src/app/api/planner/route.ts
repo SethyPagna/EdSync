@@ -369,6 +369,7 @@ export async function POST(request: Request) {
     if (!bodyText) return jsonError("Announcement body is required.", 400);
 
     const announcementId = crypto.randomUUID();
+    const announcementBody = location ? `${bodyText}\n\nAttachment: ${location}` : bodyText;
     await d1Query(
       `INSERT INTO announcements (
          id, teacher_id, class_id, title, body, priority, audience,
@@ -379,11 +380,11 @@ export async function POST(request: Request) {
         user.id,
         classRow.id,
         title,
-        bodyText,
+        announcementBody,
         priority,
         startsAt ?? now,
-        endsAt,
-        JSON.stringify({ className: classRow.name, type: "announcement" }),
+        null,
+        JSON.stringify({ className: classRow.name, type: "announcement", attachmentUrl: location }),
       ],
     );
 
@@ -391,10 +392,10 @@ export async function POST(request: Request) {
       students,
       actorId: user.id,
       title,
-      message: bodyText,
+      message: announcementBody,
       actionUrl: "/student/dashboard",
       priority,
-      metadata: { type: "announcement", announcementId, classId: classRow.id },
+      metadata: { type: "announcement", announcementId, classId: classRow.id, attachmentUrl: location },
     });
 
     return NextResponse.json({ data: { id: announcementId, notified: students.length }, error: null });
