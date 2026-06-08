@@ -134,6 +134,28 @@ const STUDIO_TEMPLATES = [
     accent: "#0f9f82",
   },
   {
+    id: "doc-a4-landscape",
+    kind: "doc",
+    label: "A4 landscape",
+    size: "1123 x 794",
+    width: 1123,
+    height: 794,
+    title: "Landscape guide",
+    body: "Build a wide worksheet, comparison chart, or visual learning map.",
+    accent: "#2458dc",
+  },
+  {
+    id: "doc-legal",
+    kind: "doc",
+    label: "Legal doc",
+    size: "816 x 1344",
+    width: 816,
+    height: 1344,
+    title: "Extended guide",
+    body: "Create a longer independent-learning packet with practice and reflection.",
+    accent: "#0f9f82",
+  },
+  {
     id: "ppt-wide",
     kind: "slide",
     label: "PPT 16:9",
@@ -153,6 +175,28 @@ const STUDIO_TEMPLATES = [
     height: 768,
     title: "Workshop deck",
     body: "Build a compact lesson deck with activities and progress checks.",
+    accent: "#6d28d9",
+  },
+  {
+    id: "ppt-vertical",
+    kind: "slide",
+    label: "PPT vertical",
+    size: "720 x 1280",
+    width: 720,
+    height: 1280,
+    title: "Vertical lesson",
+    body: "Design a mobile-friendly micro lesson, story, or guided practice deck.",
+    accent: "#2458dc",
+  },
+  {
+    id: "ppt-ultrawide",
+    kind: "slide",
+    label: "PPT ultrawide",
+    size: "1600 x 900",
+    width: 1600,
+    height: 900,
+    title: "Workshop screen",
+    body: "Create a high-resolution deck for live teaching or large displays.",
     accent: "#6d28d9",
   },
   {
@@ -176,6 +220,17 @@ const STUDIO_TEMPLATES = [
     title: "Practice board",
     body: "Design a reusable prompt, checklist, or learning visual.",
     accent: "#a15c07",
+  },
+  {
+    id: "design-mobile",
+    kind: "design",
+    label: "Mobile card",
+    size: "1080 x 1920",
+    width: 1080,
+    height: 1920,
+    title: "Learning story",
+    body: "Create a vertical learner update, recap, or mobile-first course visual.",
+    accent: "#2458dc",
   },
 ] satisfies StudioTemplate[];
 
@@ -747,6 +802,12 @@ export default function FabricLessonStudio() {
     startNewProject(customTemplate);
   };
 
+  const startAiAssistedProject = () => {
+    startNewProject(templateById("ppt-wide"));
+    setPanel("ai");
+    setAiPrompt("Create a concise course outline with editable pages, practice prompts, and proof of progress.");
+  };
+
   const openProject = (item: StudioServerItem) => {
     const content = item.content;
     const metadata = item.metadata ?? {};
@@ -1248,7 +1309,7 @@ export default function FabricLessonStudio() {
             {[
               { label: "Create", icon: Plus, active: view === "formats", action: "formats" },
               { label: "Home", icon: Home, active: view === "hub", action: "hub" },
-              { label: "Projects", icon: FolderOpen, active: view === "hub", action: "hub" },
+              { label: "Projects", icon: FolderOpen, active: false, action: "hub" },
               { label: "Templates", icon: LayoutPanelLeft, active: view === "formats", action: "formats" },
               { label: "Upload", icon: UploadCloud, active: false, action: "upload" },
             ].map((item) => {
@@ -1317,6 +1378,10 @@ export default function FabricLessonStudio() {
                 <button type="button" onClick={() => setView("formats")} className="btn-primary justify-center px-4 py-3">
                   <Plus className="h-4 w-4" />
                   New project
+                </button>
+                <button type="button" onClick={startAiAssistedProject} className="btn-secondary justify-center px-4 py-3">
+                  <Sparkles className="h-4 w-4" />
+                  AI lesson
                 </button>
                 <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary justify-center px-4 py-3">
                   <FileJson className="h-4 w-4" />
