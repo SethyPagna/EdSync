@@ -3,8 +3,8 @@ import { getSessionUser } from "@/lib/auth/session";
 import { normalizeAdminViewMode, workspaceRoleForAdminViewMode } from "@/lib/admin-view";
 
 export const metadata = {
-  title: "Lesson editor",
-  description: "Compatibility route for EdSync lesson creation and personal notes.",
+  title: "Course Studio",
+  description: "Unified EdSync course studio entry point.",
 };
 
 type StudioPageProps = {
