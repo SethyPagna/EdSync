@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, CheckCircle2, Clock3, Target } from "lucide-react";
+import { ArrowRight, BookOpenCheck, CheckCircle2, Clock3, Search, Target } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
 import type { Lesson, StudentProgress } from "@/types";
 
@@ -14,10 +14,51 @@ type AssignedLesson = Lesson & {
 type EnrollmentRow = { class_id: string };
 type AssignmentRow = { lesson_id: string };
 type SectionLessonRow = { lesson_id: string };
+type ProgressFilter = "all" | "not_started" | "in_progress" | "completed";
+type DurationFilter = "all" | "short" | "medium" | "long";
+type SemesterFilter = "all" | "spring" | "summer" | "fall";
+
+const PROGRESS_FILTERS: Array<{ value: ProgressFilter; label: string }> = [
+  { value: "all", label: "Any progress" },
+  { value: "not_started", label: "Not started" },
+  { value: "in_progress", label: "In progress" },
+  { value: "completed", label: "Completed" },
+];
+const SEMESTER_FILTERS: Array<{ value: SemesterFilter; label: string }> = [
+  { value: "all", label: "Any term" },
+  { value: "spring", label: "Spring" },
+  { value: "summer", label: "Summer" },
+  { value: "fall", label: "Fall" },
+];
+
+function courseYear(value: string) {
+  const year = new Date(value).getFullYear();
+  return Number.isNaN(year) ? null : String(year);
+}
+
+function courseSemester(value: string): Exclude<SemesterFilter, "all"> | null {
+  const month = new Date(value).getMonth();
+  if (Number.isNaN(month)) return null;
+  if (month <= 4) return "spring";
+  if (month <= 7) return "summer";
+  return "fall";
+}
+
+function matchesDuration(lesson: AssignedLesson, durationFilter: DurationFilter) {
+  if (durationFilter === "short") return lesson.estimated_duration <= 20;
+  if (durationFilter === "medium") return lesson.estimated_duration >= 21 && lesson.estimated_duration <= 60;
+  if (durationFilter === "long") return lesson.estimated_duration >= 61;
+  return true;
+}
 
 export default function StudentLessonsPage() {
   const edsync = useMemo(() => createClient(), []);
   const [lessons, setLessons] = useState<AssignedLesson[]>([]);
+  const [search, setSearch] = useState("");
+  const [progressFilter, setProgressFilter] = useState<ProgressFilter>("all");
+  const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
+  const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>("all");
+  const [yearFilter, setYearFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const loadLessons = useCallback(async () => {
@@ -96,6 +137,26 @@ export default function StudentLessonsPage() {
   }, [loadLessons]);
 
   const completedCount = lessons.filter((lesson) => lesson.progress?.status === "completed").length;
+  const yearOptions = useMemo(() => {
+    const years = new Set<string>();
+    lessons.forEach((lesson) => {
+      const year = courseYear(lesson.created_at);
+      if (year) years.add(year);
+    });
+    return ["all", ...Array.from(years).sort((left, right) => Number(right) - Number(left))];
+  }, [lessons]);
+  const filteredLessons = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    return lessons.filter((lesson) => {
+      const progress = lesson.progress?.status ?? "not_started";
+      if (progressFilter !== "all" && progress !== progressFilter) return false;
+      if (!matchesDuration(lesson, durationFilter)) return false;
+      if (semesterFilter !== "all" && courseSemester(lesson.created_at) !== semesterFilter) return false;
+      if (yearFilter !== "all" && courseYear(lesson.created_at) !== yearFilter) return false;
+      if (normalizedSearch && !`${lesson.title} ${lesson.subject ?? ""}`.toLowerCase().includes(normalizedSearch)) return false;
+      return true;
+    });
+  }, [durationFilter, lessons, progressFilter, search, semesterFilter, yearFilter]);
 
   return (
     <div className="page-shell space-y-5">
@@ -112,6 +173,67 @@ export default function StudentLessonsPage() {
         </div>
       </header>
 
+      <section className="rounded-2xl border border-edsync-border bg-edsync-card p-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_repeat(4,auto)]">
+          <label className="relative min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search courses..."
+              className="edsync-input py-2 pl-10"
+            />
+          </label>
+          <select
+            value={progressFilter}
+            onChange={(event) => setProgressFilter(event.target.value as ProgressFilter)}
+            className="edsync-input w-full py-2 text-sm sm:w-40"
+            aria-label="Filter by progress"
+          >
+            {PROGRESS_FILTERS.map((filter) => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={durationFilter}
+            onChange={(event) => setDurationFilter(event.target.value as DurationFilter)}
+            className="edsync-input w-full py-2 text-sm sm:w-44"
+            aria-label="Filter by duration"
+          >
+            <option value="all">Any duration</option>
+            <option value="short">Short, 1-20 min</option>
+            <option value="medium">Medium, 21-60 min</option>
+            <option value="long">Long, 61+ min</option>
+          </select>
+          <select
+            value={semesterFilter}
+            onChange={(event) => setSemesterFilter(event.target.value as SemesterFilter)}
+            className="edsync-input w-full py-2 text-sm sm:w-36"
+            aria-label="Filter by semester"
+          >
+            {SEMESTER_FILTERS.map((semester) => (
+              <option key={semester.value} value={semester.value}>
+                {semester.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={yearFilter}
+            onChange={(event) => setYearFilter(event.target.value)}
+            className="edsync-input w-full py-2 text-sm sm:w-32"
+            aria-label="Filter by year"
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year === "all" ? "Any year" : year}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
+
       {loading ? (
         <div className="grid gap-3">
           {[...Array(4)].map((_, index) => (
@@ -127,9 +249,15 @@ export default function StudentLessonsPage() {
             Back to dashboard
           </Link>
         </section>
+      ) : filteredLessons.length === 0 ? (
+        <section className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-10 text-center">
+          <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
+          <h2 className="font-display text-xl font-bold">No matching courses</h2>
+          <p className="mt-1 text-sm text-edsync-subtle">Adjust the filters to see more courses.</p>
+        </section>
       ) : (
         <section className="grid gap-3">
-          {lessons.map((lesson) => {
+          {filteredLessons.map((lesson) => {
             const totalSections = Math.max(1, lesson.sectionCount || 1);
             const pct =
               lesson.progress?.status === "completed"
