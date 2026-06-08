@@ -187,6 +187,15 @@ function adminViewModeFromLocation() {
   return normalizeAdminViewMode(new URLSearchParams(window.location.search).get("adminView"));
 }
 
+function adminViewModeFromCookie() {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split(";")
+    .map((value) => value.trim())
+    .find((value) => value.startsWith("edsync-admin-view-mode="));
+  return normalizeAdminViewMode(match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null);
+}
+
 function sidebarCollapsedFromStorage() {
   if (typeof window === "undefined") return false;
   return window.localStorage.getItem("edsync-sidebar-collapsed") === "true";
@@ -353,12 +362,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
   const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
-  const requestedAdminViewMode = adminViewModeFromLocation();
+  const requestedAdminViewMode = adminViewModeFromLocation() ?? adminViewModeFromCookie();
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const copy = roleCopy[role];
   const studioCompactSidebar = shouldStartWithCompactSidebar(pathname);
   const displayCollapsed = studioCompactSidebar || collapsed;
-  const isAdminViewMode = sessionRole === "admin" && role !== "admin";
+  const isAdminViewMode = role !== "admin" && (sessionRole === "admin" || requestedAdminViewMode !== null);
   const adminViewMode = isAdminViewMode
     ? requestedAdminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student")
     : null;
