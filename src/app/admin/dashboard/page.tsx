@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
         </section>
       </header>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-4 gap-2 sm:gap-3">
         {platformMetrics.map(([key, label, Icon, tone, detail]) => (
           <MetricTile
             key={key}
@@ -135,34 +135,35 @@ export default function AdminDashboardPage() {
             icon={Icon}
             tone={tone}
             detail={detail}
+            compact
           />
         ))}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-4">
-          <section className="grid gap-3 md:grid-cols-2">
+          <section className="edsync-scrollbar-none grid auto-cols-[minmax(11rem,1fr)] grid-flow-col gap-2 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-4 sm:overflow-visible sm:pb-0">
             {ownerViewActions.map((action) => {
               const Icon = action.icon;
               return (
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="premium-card group flex items-start gap-4 rounded-2xl p-4 transition hover:-translate-y-0.5"
+                  className="premium-card group flex min-w-0 items-center gap-3 rounded-xl p-3 transition hover:-translate-y-0.5"
                 >
-                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
-                    <Icon className="h-5 w-5" />
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+                    <Icon className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-semibold text-edsync-text">{action.title}</span>
-                    <span className="mt-1 block text-sm leading-5 text-edsync-subtle">{action.detail}</span>
+                    <span className="block truncate text-sm font-semibold text-edsync-text">{action.title}</span>
+                    <span className="edsync-hover-detail">{action.detail}</span>
                   </span>
                 </Link>
               );
             })}
           </section>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {systemMetrics.map(([key, label, Icon, tone, detail]) => (
               <MetricTile
                 key={key}
@@ -171,6 +172,7 @@ export default function AdminDashboardPage() {
                 icon={Icon}
                 tone={tone}
                 detail={detail}
+                compact
               />
             ))}
           </div>
