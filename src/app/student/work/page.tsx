@@ -21,12 +21,14 @@ type WorkItem = {
   submission_feedback: string | null;
 };
 
-type WorkFilter = "open" | "dueSoon" | "submitted" | "all";
+type WorkFilter = "open" | "dueSoon" | "submitted" | "feedback" | "discussions" | "all";
 
 const FILTERS: Array<{ key: WorkFilter; label: string }> = [
   { key: "open", label: "To do" },
   { key: "dueSoon", label: "Due soon" },
   { key: "submitted", label: "Submitted" },
+  { key: "feedback", label: "Feedback" },
+  { key: "discussions", label: "Discuss" },
   { key: "all", label: "All" },
 ];
 
@@ -108,6 +110,8 @@ export default function StudentWorkPage() {
     if (filter === "submitted") return items.filter(isSubmitted);
     if (filter === "dueSoon") return items.filter((item) => !isSubmitted(item) && dueState(item.due_at).urgent);
     if (filter === "open") return items.filter((item) => !isSubmitted(item));
+    if (filter === "feedback") return items.filter((item) => Boolean(item.submission_feedback));
+    if (filter === "discussions") return items.filter((item) => item.work_type === "discussion");
     return [...items].sort((left, right) => {
       const leftTime = left.due_at ? new Date(left.due_at).getTime() : Number.MAX_SAFE_INTEGER;
       const rightTime = right.due_at ? new Date(right.due_at).getTime() : Number.MAX_SAFE_INTEGER;
@@ -124,15 +128,15 @@ export default function StudentWorkPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-              Work
+              Assessments
             </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">My work</h1>
+            <h1 className="mt-1 font-display text-3xl font-bold">My assessments</h1>
             <p className="mt-1 text-sm text-edsync-subtle">
               {openCount} to do, {submittedCount} submitted
               {requestedClassId !== ALL_CLASSES_SCOPE ? " in this space" : ""}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-[repeat(6,minmax(0,1fr))_auto]">
             {FILTERS.map((item) => (
               <button
                 key={item.key}
@@ -148,8 +152,8 @@ export default function StudentWorkPage() {
               </button>
             ))}
             {requestedClassId !== ALL_CLASSES_SCOPE && (
-              <Link href="/student/work" className="btn-secondary col-span-2 justify-center px-3 py-2 text-sm sm:col-span-4 lg:col-span-1">
-                All work
+              <Link href="/student/work" className="btn-secondary col-span-2 justify-center px-3 py-2 text-sm sm:col-span-3 lg:col-span-1">
+                All assessments
               </Link>
             )}
           </div>
@@ -166,9 +170,9 @@ export default function StudentWorkPage() {
         <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card p-10 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-edsync-emerald" />
           <p className="font-semibold text-edsync-text">
-            {filter === "open" ? "Nothing due right now" : "No work in this view"}
+            {filter === "open" ? "Nothing due right now" : "No assessments in this view"}
           </p>
-          <p className="mt-2 text-sm text-edsync-subtle">No new work.</p>
+          <p className="mt-2 text-sm text-edsync-subtle">No new assessments.</p>
         </div>
       ) : (
         <div className="grid gap-3">
