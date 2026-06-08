@@ -42,6 +42,8 @@ type StudioPanel = "design" | "elements" | "text" | "images" | "pages" | "ai" | 
 type StudioLanguage = "en" | "es" | "fr";
 type StudioView = "hub" | "formats" | "editor";
 type StudioFormatKind = "doc" | "slide" | "design";
+type AiLessonStyle = "direct" | "socratic" | "professional" | "expert";
+type AiLessonType = "lesson" | "slides" | "quiz" | "discussion" | "activity";
 type CanvasSnapshot = Record<string, unknown>;
 type PageSeed = {
   title: string;
@@ -572,6 +574,14 @@ export default function FabricLessonStudio() {
   const [selectedObject, setSelectedObject] = useState<InspectorObject | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [aiLessonName, setAiLessonName] = useState("");
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiObjectives, setAiObjectives] = useState("");
+  const [aiSources, setAiSources] = useState("");
+  const [aiLessonType, setAiLessonType] = useState<AiLessonType>("lesson");
+  const [aiStyle, setAiStyle] = useState<AiLessonStyle>("socratic");
+  const [aiComplexity, setAiComplexity] = useState(55);
+  const [aiVersions, setAiVersions] = useState(1);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [savedStudioItemId, setSavedStudioItemId] = useState<string | null>(null);
@@ -916,6 +926,10 @@ export default function FabricLessonStudio() {
   const startAiAssistedProject = () => {
     startNewProject(templateById("ppt-wide"));
     setPanel("ai");
+    setAiLessonType("lesson");
+    setAiStyle("socratic");
+    setAiComplexity(55);
+    setAiVersions(1);
     setAiPrompt("Create a concise course outline with editable pages, practice prompts, and proof of progress.");
   };
 
@@ -1372,6 +1386,12 @@ export default function FabricLessonStudio() {
           orderIndex: activeLessonOrderIndex,
           language,
           pageCount: pages.length,
+          lessonName: aiLessonName.trim(),
+          lessonDescription: aiDescription.trim(),
+          objectives: aiObjectives.trim(),
+          lessonType: aiLessonType,
+          teachingStyle: aiStyle,
+          sourceNotes: aiSources.trim(),
         },
       };
       const item = savedStudioItemId ? await updateStudioItem({ ...input, id: savedStudioItemId }) : await saveStudioItem(input);
@@ -1485,15 +1505,26 @@ export default function FabricLessonStudio() {
 
   const generateWithAi = async () => {
     const prompt = aiPrompt.trim();
-    if (!prompt) {
-      toast.error("Add an AI prompt first.");
+    const lessonName = aiLessonName.trim();
+    const description = aiDescription.trim();
+    const objectives = aiObjectives.trim();
+    const sources = aiSources.trim();
+    if (!prompt && !lessonName && !description && !objectives) {
+      toast.error("Add a lesson goal, objective, or AI direction first.");
       return;
     }
     const lessonContext = [
+      lessonName ? `Lesson name: ${lessonName}.` : null,
+      description ? `Description: ${description}.` : null,
+      objectives ? `Objectives: ${objectives}.` : null,
+      sources ? `Source files, links, or notes: ${sources}.` : null,
+      `Lesson type: ${aiLessonType}.`,
+      `Teaching style: ${aiStyle}.`,
       resolvedLessonClassName ? `Class or cohort: ${resolvedLessonClassName}.` : "Independent learner or creator workspace.",
       `Lesson order: ${activeLessonOrderIndex}.`,
       `Canvas format: ${activeProject?.kind ?? "slide"} ${canvasWidth} x ${canvasHeight}.`,
-    ].join("\n");
+      `Include EdSync activities where useful: quiz checks, discussion prompts, practice loops, review cards, proof of progress, and game-style questions.`,
+    ].filter(Boolean).join("\n");
     setIsGenerating(true);
     try {
       const response = await fetch("/api/ai/create-lesson", {
@@ -1501,14 +1532,14 @@ export default function FabricLessonStudio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "text",
-          content: `${prompt}\n\nEdSync lesson context:\n${lessonContext}`,
-          complexity: 55,
+          content: `${prompt || "Build a complete EdSync learning experience."}\n\nEdSync lesson context:\n${lessonContext}`,
+          complexity: aiComplexity,
           pacing: 50,
           scaffolding: 45,
           depth: "standard",
-          languageStyle: "student_friendly",
+          languageStyle: aiStyle === "expert" ? "academic" : aiStyle === "professional" ? "professional" : "student_friendly",
           audienceLanguage: language === "es" ? "Spanish" : language === "fr" ? "French" : "English",
-          versionCount: 1,
+          versionCount: aiVersions,
           designTemplateId: "clear-classroom",
           outputLength: "standard",
         }),
@@ -1722,6 +1753,54 @@ export default function FabricLessonStudio() {
                 }}
                 onOrderIndexChange={setLessonOrderIndex}
               />
+              <div className="mt-4 rounded-2xl border border-edsync-blue/20 bg-edsync-blue/10 p-3">
+                <div className="flex items-center gap-2 text-sm font-black text-edsync-blue">
+                  <Sparkles className="h-4 w-4" />
+                  AI lesson builder
+                </div>
+                <div className="mt-3 grid gap-2">
+                  <input
+                    value={aiLessonName}
+                    onChange={(event) => setAiLessonName(event.target.value)}
+                    placeholder="Lesson name"
+                    className="h-10 rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={aiLessonType}
+                      onChange={(event) => setAiLessonType(event.target.value as AiLessonType)}
+                      className="h-10 rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                    >
+                      <option value="lesson">Lesson</option>
+                      <option value="slides">PPT</option>
+                      <option value="quiz">Quiz</option>
+                      <option value="discussion">Discussion</option>
+                      <option value="activity">Activity</option>
+                    </select>
+                    <select
+                      value={aiStyle}
+                      onChange={(event) => setAiStyle(event.target.value as AiLessonStyle)}
+                      className="h-10 rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                    >
+                      <option value="socratic">Socratic</option>
+                      <option value="direct">Direct</option>
+                      <option value="professional">Professional</option>
+                      <option value="expert">Expert</option>
+                    </select>
+                  </div>
+                  <textarea
+                    value={aiObjectives}
+                    onChange={(event) => setAiObjectives(event.target.value)}
+                    rows={3}
+                    placeholder="Objectives, quiz goals, or activity directions"
+                    className="edsync-textarea text-sm"
+                  />
+                  <button type="button" onClick={startAiAssistedProject} className="btn-primary w-full justify-center">
+                    <Sparkles className="h-4 w-4" />
+                    Design with AI
+                  </button>
+                </div>
+              </div>
               {localDrafts.length > 0 && (
                 <div className="mt-4 rounded-2xl border border-edsync-blue/20 bg-edsync-blue/10 p-3">
                   <div className="flex items-center gap-2 text-sm font-black text-edsync-blue">
@@ -2144,23 +2223,100 @@ export default function FabricLessonStudio() {
             {panel === "ai" && (
               <div className="space-y-4">
                 <PanelTitle icon={Sparkles} title={t.ai} />
-                <div className="grid gap-2">
+                <div className="grid gap-3">
+                  <input
+                    value={aiLessonName}
+                    onChange={(event) => setAiLessonName(event.target.value)}
+                    placeholder="Lesson name"
+                    className="h-10 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
+                  />
+                  <textarea
+                    value={aiDescription}
+                    onChange={(event) => setAiDescription(event.target.value)}
+                    rows={2}
+                    className="edsync-textarea text-sm"
+                    placeholder="Short description"
+                  />
+                  <textarea
+                    value={aiObjectives}
+                    onChange={(event) => setAiObjectives(event.target.value)}
+                    rows={3}
+                    className="edsync-textarea text-sm"
+                    placeholder="Objectives, success criteria, or quiz targets"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={aiLessonType}
+                      onChange={(event) => setAiLessonType(event.target.value as AiLessonType)}
+                      className="h-10 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
+                    >
+                      <option value="lesson">Lesson flow</option>
+                      <option value="slides">PPT / slides</option>
+                      <option value="quiz">Quiz check</option>
+                      <option value="discussion">Discussion</option>
+                      <option value="activity">Activity</option>
+                    </select>
+                    <select
+                      value={aiStyle}
+                      onChange={(event) => setAiStyle(event.target.value as AiLessonStyle)}
+                      className="h-10 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
+                    >
+                      <option value="socratic">Socratic</option>
+                      <option value="direct">Direct</option>
+                      <option value="professional">Professional</option>
+                      <option value="expert">Expert</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+                      Complexity {aiComplexity}
+                      <input
+                        type="range"
+                        min={10}
+                        max={100}
+                        value={aiComplexity}
+                        onChange={(event) => setAiComplexity(Number(event.target.value))}
+                        className="mt-2 w-full accent-edsync-blue"
+                      />
+                    </label>
+                    <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+                      Versions
+                      <input
+                        type="number"
+                        min={1}
+                        max={4}
+                        value={aiVersions}
+                        onChange={(event) => setAiVersions(Math.min(4, Math.max(1, Number(event.target.value))))}
+                        className="mt-2 h-9 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                  </div>
+                  <textarea
+                    value={aiSources}
+                    onChange={(event) => setAiSources(event.target.value)}
+                    rows={3}
+                    className="edsync-textarea text-sm"
+                    placeholder="Paste links, file notes, source text, or constraints"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    "Build a concise lesson with a warmup, concept, practice, and proof check.",
-                    "Create a printable handout with examples and independent practice.",
-                    "Draft a slide lesson with discussion prompts and a quick quiz.",
-                  ].map((starter, index) => (
+                    ["Flow", "Build a lesson with a warmup, concept, practice loop, and proof check."],
+                    ["Quiz", "Create game-style quiz questions with feedback and review cards."],
+                    ["Discuss", "Create discussion prompts, rubrics, and participation checks."],
+                    ["PPT", "Draft a slide lesson with visual structure and speaker notes."],
+                  ].map(([label, starter]) => (
                     <button
-                      key={starter}
+                      key={label}
                       type="button"
                       onClick={() => setAiPrompt(starter)}
                       className="rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-left text-xs font-black text-edsync-text transition hover:border-edsync-blue/40 hover:bg-edsync-blue/10"
                     >
-                      {index === 0 ? "Lesson flow" : index === 1 ? "Handout" : "Slides + quiz"}
+                      {label}
                     </button>
                   ))}
                 </div>
-                <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} rows={8} className="edsync-textarea" placeholder={t.aiPrompt} />
+                <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} rows={5} className="edsync-textarea" placeholder={t.aiPrompt} />
                 <button type="button" onClick={generateWithAi} disabled={isGenerating} className="btn-primary w-full justify-center disabled:opacity-50">
                   <Sparkles className="h-4 w-4" />
                   {isGenerating ? "..." : t.generate}
@@ -2188,22 +2344,6 @@ export default function FabricLessonStudio() {
 
           <section className="min-h-0 bg-edsync-bg lg:overflow-hidden">
             <div className="flex h-full min-h-[34rem] flex-col bg-edsync-bg">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edsync-border bg-edsync-card px-3 py-2">
-                <div className="flex items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-black text-edsync-subtle">
-                  <MousePointer2 className="h-4 w-4 text-edsync-blue" />
-                  {activePage?.name}
-                </div>
-                {selectedObject && (
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={duplicateSelected} className="rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-black transition hover:border-edsync-blue/40">
-                    <Copy className="inline h-4 w-4" /> {t.duplicate}
-                  </button>
-                  <button type="button" onClick={removeSelected} className="rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-black text-edsync-red transition hover:border-edsync-red/40">
-                    <Trash2 className="inline h-4 w-4" /> {t.delete}
-                  </button>
-                </div>
-                )}
-              </div>
               <div ref={canvasStageRef} className="relative grid flex-1 place-items-center overflow-hidden bg-slate-100 p-1 dark:bg-slate-800 sm:p-2">
                 <div className="absolute left-1/2 top-3 z-10 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card/95 p-1.5 shadow-xl shadow-slate-400/20 backdrop-blur">
                   <button type="button" onClick={() => openPanel("ai")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-blue/10">
