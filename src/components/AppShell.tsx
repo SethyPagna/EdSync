@@ -203,6 +203,14 @@ function sidebarCollapsedFromStorage() {
   return window.localStorage.getItem("edsync-sidebar-collapsed") === "true";
 }
 
+function sidebarWidthClass(isCollapsed: boolean) {
+  return isCollapsed ? "lg:w-20" : "lg:w-72";
+}
+
+function sidebarMarginClass(isCollapsed: boolean) {
+  return isCollapsed ? "lg:ml-20" : "lg:ml-72";
+}
+
 function shouldStartWithCompactSidebar(pathname: string | null) {
   return pathname === "/studio" || pathname?.startsWith("/studio/");
 }
@@ -535,7 +543,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           isActive
             ? "premium-active"
             : "border-transparent text-edsync-subtle hover:border-edsync-border hover:bg-edsync-card hover:text-edsync-text"
-        } ${displayCollapsed ? "justify-center" : ""}`}
+        } ${displayCollapsed ? "mx-auto h-11 w-11 justify-center px-0 py-0" : ""}`}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
         {!displayCollapsed && (
@@ -547,31 +555,31 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${displayCollapsed ? "lg:w-28" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col overflow-visible border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
+      className={`${sidebarWidthClass(displayCollapsed)} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col overflow-visible border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
     >
-      <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
-        <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          {!displayCollapsed && (
+      {!displayCollapsed && (
+        <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
+          <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
+              <GraduationCap className="h-5 w-5 text-white" />
+            </div>
             <div className="min-w-0">
               <p className="font-display text-lg font-bold text-edsync-text">
                 EdSync
               </p>
               <p className="text-xs text-edsync-subtle">{shellLabel}</p>
             </div>
-          )}
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMobileOpen(false)}
-          className="rounded-lg p-2 text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:hidden"
-          aria-label="Close menu"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="rounded-lg p-2 text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {!displayCollapsed && (
         <div className="premium-surface mx-4 mt-4 rounded-2xl p-3">
@@ -618,7 +626,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         </div>
       )}
 
-      <nav className="edsync-scrollbar-none flex-1 space-y-3 overflow-y-auto p-3">
+      <nav className={`edsync-scrollbar-none flex-1 space-y-3 overflow-y-auto ${displayCollapsed ? "px-2 py-3" : "p-3"}`}>
         {isAdminViewMode && (
           <Link
             href="/admin/dashboard"
@@ -658,7 +666,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         })}
       </nav>
 
-      <div className="border-t border-edsync-border p-3">
+      <div className={`border-t border-edsync-border ${displayCollapsed ? "p-2" : "p-3"}`}>
         <div className={`mb-2 flex gap-2 ${displayCollapsed ? "flex-col items-center" : "items-center justify-between px-2 py-1"}`}>
           {!displayCollapsed && <span className="min-w-0 text-sm font-semibold text-edsync-subtle">Workspace</span>}
           <div className={`min-w-0 gap-1.5 ${displayCollapsed ? "grid grid-cols-1 [&_.premium-icon-button]:h-9 [&_.premium-icon-button]:w-9 [&_.premium-icon-button_svg]:h-4 [&_.premium-icon-button_svg]:w-4" : "flex items-center"}`}>
@@ -716,9 +724,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </div>
 
       <div>
-        <div
-          className={`${displayCollapsed ? "lg:w-28" : "lg:w-72"} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}
-        >
+        <div className={`${sidebarWidthClass(displayCollapsed)} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}>
           {sidebar}
         </div>
         {mobileOpen && (
@@ -733,7 +739,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </div>
         )}
         <main
-          className={`${displayCollapsed ? "lg:ml-28" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
+          className={`${sidebarMarginClass(displayCollapsed)} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
         >
           {isAdminViewMode && (
             <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-0 lg:px-6">
