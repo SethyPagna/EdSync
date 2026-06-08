@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { BookOpenCheck, CalendarClock, CheckCircle2, Send, TimerReset } from "lucide-react";
 import { ALL_CLASSES_SCOPE, classScopeFromSearchParams } from "@/lib/classes/class-scope";
@@ -37,6 +38,12 @@ function classScopeFromLocation() {
   return classScopeFromSearchParams(new URLSearchParams(window.location.search));
 }
 
+function assessmentFilterFromLocation(): WorkFilter {
+  if (typeof window === "undefined") return "open";
+  const filter = new URLSearchParams(window.location.search).get("filter");
+  return FILTERS.some((item) => item.key === filter) ? (filter as WorkFilter) : "open";
+}
+
 function dueLabel(value: string | null) {
   if (!value) return "No due date";
   return new Date(value).toLocaleString([], {
@@ -63,9 +70,10 @@ function dueState(value: string | null) {
 }
 
 export default function StudentWorkPage() {
+  const router = useRouter();
   const [items, setItems] = useState<WorkItem[]>([]);
   const [responses, setResponses] = useState<Record<string, string>>({});
-  const [filter, setFilter] = useState<WorkFilter>("open");
+  const [filter, setFilter] = useState<WorkFilter>(assessmentFilterFromLocation);
   const [loading, setLoading] = useState(true);
   const [requestedClassId] = useState(classScopeFromLocation);
 
@@ -106,6 +114,18 @@ export default function StudentWorkPage() {
     load();
   };
 
+  const chooseFilter = (nextFilter: WorkFilter) => {
+    setFilter(nextFilter);
+    const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+    if (nextFilter === "open") {
+      params.delete("filter");
+    } else {
+      params.set("filter", nextFilter);
+    }
+    const query = params.toString();
+    router.replace(query ? `/student/work?${query}` : "/student/work", { scroll: false });
+  };
+
   const filteredItems = useMemo(() => {
     if (filter === "submitted") return items.filter(isSubmitted);
     if (filter === "dueSoon") return items.filter((item) => !isSubmitted(item) && dueState(item.due_at).urgent);
@@ -141,7 +161,7 @@ export default function StudentWorkPage() {
               <button
                 key={item.key}
                 type="button"
-                onClick={() => setFilter(item.key)}
+                onClick={() => chooseFilter(item.key)}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                   filter === item.key
                     ? "bg-edsync-emerald text-white"
