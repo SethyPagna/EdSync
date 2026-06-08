@@ -356,6 +356,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const requestedAdminViewMode = adminViewModeFromLocation();
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const copy = roleCopy[role];
+  const studioCompactSidebar = shouldStartWithCompactSidebar(pathname);
+  const displayCollapsed = studioCompactSidebar || collapsed;
   const isAdminViewMode = sessionRole === "admin" && role !== "admin";
   const adminViewMode = isAdminViewMode
     ? requestedAdminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student")
@@ -375,7 +377,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const useDark = stored === "dark";
     document.documentElement.classList.toggle("dark", useDark);
     queueMicrotask(() => {
-      setCollapsed(shouldStartWithCompactSidebar(pathname) || sidebarCollapsedFromStorage());
+      setCollapsed(sidebarCollapsedFromStorage());
       setSessionRole(sessionRoleFromCookie());
       setWorkspaceContext(workspaceContextFromStorage());
       setSectionOrder(readSectionOrder(sectionOrderStorageKey(role)));
@@ -521,15 +523,15 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         key={item.href}
         href={href}
         onClick={() => setMobileOpen(false)}
-        title={collapsed ? displayLabel : undefined}
+        title={displayCollapsed ? displayLabel : undefined}
         className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
           isActive
             ? "premium-active"
             : "border-transparent text-edsync-subtle hover:border-edsync-border hover:bg-edsync-card hover:text-edsync-text"
-        } ${collapsed ? "justify-center" : ""}`}
+        } ${displayCollapsed ? "justify-center" : ""}`}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
-        {!collapsed && (
+        {!displayCollapsed && (
           <span className="min-w-0 flex-1 truncate">{displayLabel}</span>
         )}
       </Link>
@@ -538,14 +540,14 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const sidebar = (
     <aside
-      className={`${collapsed ? "lg:w-28" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
+      className={`${displayCollapsed ? "lg:w-28" : "lg:w-72"} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
     >
       <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
-          {!collapsed && (
+          {!displayCollapsed && (
             <div className="min-w-0">
               <p className="font-display text-lg font-bold text-edsync-text">
                 EdSync
@@ -564,7 +566,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         </button>
       </div>
 
-      {!collapsed && (
+      {!displayCollapsed && (
         <div className="premium-surface mx-4 mt-4 rounded-2xl p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-surface text-sm font-bold text-edsync-text shadow-sm">
@@ -617,13 +619,13 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
               document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
               setMobileOpen(false);
             }}
-            title={collapsed ? "Back to Admin" : undefined}
+            title={displayCollapsed ? "Back to Admin" : undefined}
             className={`mb-2 flex items-center gap-3 rounded-xl border border-edsync-blue/25 bg-edsync-blue/10 px-3 py-3 text-sm font-bold text-edsync-blue shadow-sm transition-all hover:bg-edsync-blue/15 ${
-              collapsed ? "justify-center" : ""
+              displayCollapsed ? "justify-center" : ""
             }`}
           >
             <ShieldCheck className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span>Back to Admin</span>}
+            {!displayCollapsed && <span>Back to Admin</span>}
           </Link>
         )}
         {visibleNavGroups.map((group) => {
@@ -633,8 +635,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
           });
           return (
-            <div key={group.label} className={collapsed ? "space-y-1" : "space-y-1.5"}>
-              {!collapsed && (
+            <div key={group.label} className={displayCollapsed ? "space-y-1" : "space-y-1.5"}>
+              {!displayCollapsed && (
                 <div
                   className={`px-3 pt-2 text-xs font-bold uppercase tracking-wide ${
                     groupActive ? "text-edsync-blue" : "text-edsync-subtle"
@@ -650,9 +652,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       </nav>
 
       <div className="border-t border-edsync-border p-3">
-        <div className={`mb-2 flex items-center gap-2 ${collapsed ? "justify-center" : "justify-between px-2 py-1"}`}>
-          {!collapsed && <span className="min-w-0 text-sm font-semibold text-edsync-subtle">Workspace</span>}
-          <div className={`flex min-w-0 items-center gap-1.5 ${collapsed ? "[&_.premium-icon-button]:h-6 [&_.premium-icon-button]:w-6 [&_.premium-icon-button_svg]:h-3.5 [&_.premium-icon-button_svg]:w-3.5" : ""}`}>
+        <div className={`mb-2 flex items-center gap-2 ${displayCollapsed ? "justify-center" : "justify-between px-2 py-1"}`}>
+          {!displayCollapsed && <span className="min-w-0 text-sm font-semibold text-edsync-subtle">Workspace</span>}
+          <div className={`flex min-w-0 items-center gap-1.5 ${displayCollapsed ? "[&_.premium-icon-button]:h-6 [&_.premium-icon-button]:w-6 [&_.premium-icon-button_svg]:h-3.5 [&_.premium-icon-button_svg]:w-3.5" : ""}`}>
             <NotificationMenu />
             <ThemeToggle compact onThemeChange={handleThemeChange} />
             <LanguageMenu compact align="left" />
@@ -663,20 +665,20 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           onClick={() => setCollapsed((value) => !value)}
           className="hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:flex"
         >
-          {collapsed ? (
+          {displayCollapsed ? (
             <PanelLeftOpen className="h-5 w-5" />
           ) : (
             <PanelLeftClose className="h-5 w-5" />
           )}
-          {!collapsed && "Collapse sidebar"}
+          {!displayCollapsed && "Collapse sidebar"}
         </button>
         <button
           type="button"
           onClick={handleLogout}
-          className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-red hover:bg-edsync-red/10 ${collapsed ? "justify-center" : ""}`}
+          className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-red hover:bg-edsync-red/10 ${displayCollapsed ? "justify-center" : ""}`}
         >
           <LogOut className="h-5 w-5" />
-          {!collapsed && "Sign out"}
+          {!displayCollapsed && "Sign out"}
         </button>
       </div>
     </aside>
@@ -706,7 +708,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
       <div>
         <div
-          className={`${collapsed ? "lg:w-28" : "lg:w-72"} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}
+          className={`${displayCollapsed ? "lg:w-28" : "lg:w-72"} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}
         >
           {sidebar}
         </div>
@@ -722,7 +724,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           </div>
         )}
         <main
-          className={`${collapsed ? "lg:ml-28" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
+          className={`${displayCollapsed ? "lg:ml-28" : "lg:ml-72"} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
         >
           {isAdminViewMode && (
             <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-0 lg:px-6">
