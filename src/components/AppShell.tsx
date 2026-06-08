@@ -193,6 +193,10 @@ function sidebarCollapsedFromStorage() {
   return window.localStorage.getItem("edsync-sidebar-collapsed") === "true";
 }
 
+function shouldStartWithCompactSidebar(pathname: string | null) {
+  return pathname === "/studio" || pathname?.startsWith("/studio/");
+}
+
 function sectionOrderStorageKey(role: AppShellProps["role"]) {
   if (role === "admin") return "edsync-admin-settings-section-order";
   if (role === "teacher") return "edsync-teacher-profile-section-order";
@@ -251,7 +255,7 @@ function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: stri
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "My Courses", icon: BookOpenCheck },
-  { href: "/teacher/lessons/create", label: "Create Course", icon: Plus },
+  { href: "/studio", label: "Create Course", icon: Plus },
   { href: "/teacher/work", label: "Work", icon: FileCheck2 },
   { href: "/teacher/gradebook", label: "Feedback", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
@@ -323,7 +327,7 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
   if (role === "teacher") {
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
-      { label: "Create", items: pick(["/teacher/lessons", "/teacher/lessons/create"]) },
+      { label: "Create", items: pick(["/teacher/lessons", "/studio"]) },
       { label: "Course Ops", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/discussions", "/teacher/planner", "/teacher/students"]) },
       { label: "Support", items: pick(["/practice"]) },
       { label: "Insights", items: pick(["/teacher/analytics"]) },
@@ -372,12 +376,12 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     const useDark = stored === "dark";
     document.documentElement.classList.toggle("dark", useDark);
     queueMicrotask(() => {
-      setCollapsed(sidebarCollapsedFromStorage());
+      setCollapsed(shouldStartWithCompactSidebar(pathname) || sidebarCollapsedFromStorage());
       setSessionRole(sessionRoleFromCookie());
       setWorkspaceContext(workspaceContextFromStorage());
       setSectionOrder(readSectionOrder(sectionOrderStorageKey(role)));
     });
-  }, [role]);
+  }, [pathname, role]);
 
   useEffect(() => {
     window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
@@ -493,7 +497,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
-          if (item.href === "/studio" || item.href === "/ai" || hiddenLegacyNavLabels.has(item.label)) {
+          if (item.href === "/ai" || hiddenLegacyNavLabels.has(item.label)) {
             return false;
           }
           if (role === "admin") return true;
