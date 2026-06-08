@@ -16,8 +16,15 @@ import {
 
 type LessonStatusFilter = "all" | "draft" | "published" | "archived";
 type DurationFilter = "all" | "short" | "medium" | "long";
+type SemesterFilter = "all" | "spring" | "summer" | "fall";
 
 const STATUS_FILTERS: LessonStatusFilter[] = ["all", "published", "draft", "archived"];
+const SEMESTER_FILTERS: Array<{ value: SemesterFilter; label: string }> = [
+  { value: "all", label: "Any term" },
+  { value: "spring", label: "Spring" },
+  { value: "summer", label: "Summer" },
+  { value: "fall", label: "Fall" },
+];
 const STUDIO_LESSON_KINDS = new Set(["doc", "slide", "design", "lesson"]);
 
 function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
@@ -25,6 +32,27 @@ function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
   if (durationFilter === "medium") return lesson.estimated_duration >= 21 && lesson.estimated_duration <= 60;
   if (durationFilter === "long") return lesson.estimated_duration >= 61;
   return true;
+}
+
+function courseYear(value: string) {
+  const year = new Date(value).getFullYear();
+  return Number.isNaN(year) ? null : String(year);
+}
+
+function courseSemester(value: string): Exclude<SemesterFilter, "all"> | null {
+  const month = new Date(value).getMonth();
+  if (Number.isNaN(month)) return null;
+  if (month <= 4) return "spring";
+  if (month <= 7) return "summer";
+  return "fall";
+}
+
+function matchesYear(createdAt: string, yearFilter: string) {
+  return yearFilter === "all" || courseYear(createdAt) === yearFilter;
+}
+
+function matchesSemester(createdAt: string, semesterFilter: SemesterFilter) {
+  return semesterFilter === "all" || courseSemester(createdAt) === semesterFilter;
 }
 
 function studioOriginalKind(item: StudioServerItem) {
@@ -51,6 +79,8 @@ export default function TeacherLessons() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<LessonStatusFilter>("all");
   const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
+  const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>("all");
+  const [yearFilter, setYearFilter] = useState("all");
   const [search, setSearch] = useState("");
   const edsync = useMemo(() => createClient(), []);
 
@@ -127,10 +157,12 @@ export default function TeacherLessons() {
     return lessons.filter((lesson) => {
       if (filter !== "all" && lesson.status !== filter) return false;
       if (!matchesDuration(lesson, durationFilter)) return false;
+      if (!matchesSemester(lesson.created_at, semesterFilter)) return false;
+      if (!matchesYear(lesson.created_at, yearFilter)) return false;
       if (normalizedSearch && !lesson.title.toLowerCase().includes(normalizedSearch)) return false;
       return true;
     });
-  }, [durationFilter, filter, lessons, search]);
+  }, [durationFilter, filter, lessons, search, semesterFilter, yearFilter]);
 
   const filteredStudioItems = useMemo(() => {
     if (durationFilter !== "all") return [];
@@ -138,14 +170,28 @@ export default function TeacherLessons() {
 
     return studioItems.filter((item) => {
       if (filter !== "all" && item.status !== filter) return false;
+      if (!matchesSemester(item.createdAt, semesterFilter)) return false;
+      if (!matchesYear(item.createdAt, yearFilter)) return false;
       const searchableText = `${item.title} ${studioClassName(item)} ${studioOriginalKind(item)}`.toLowerCase();
       if (normalizedSearch && !searchableText.includes(normalizedSearch)) return false;
       return true;
     });
-  }, [durationFilter, filter, search, studioItems]);
+  }, [durationFilter, filter, search, semesterFilter, studioItems, yearFilter]);
 
   const totalItems = lessons.length + studioItems.length;
   const hasResults = filtered.length > 0 || filteredStudioItems.length > 0;
+  const yearOptions = useMemo(() => {
+    const years = new Set<string>();
+    lessons.forEach((lesson) => {
+      const year = courseYear(lesson.created_at);
+      if (year) years.add(year);
+    });
+    studioItems.forEach((item) => {
+      const year = courseYear(item.createdAt);
+      if (year) years.add(year);
+    });
+    return ["all", ...Array.from(years).sort((left, right) => Number(right) - Number(left))];
+  }, [lessons, studioItems]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
@@ -168,7 +214,7 @@ export default function TeacherLessons() {
           </Link>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
           <label className="relative min-w-0">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
             <input
@@ -204,6 +250,30 @@ export default function TeacherLessons() {
             <option value="short">Short, 1-20 min</option>
             <option value="medium">Medium, 21-60 min</option>
             <option value="long">Long, 61+ min</option>
+          </select>
+          <select
+            value={semesterFilter}
+            onChange={(event) => setSemesterFilter(event.target.value as SemesterFilter)}
+            className="edsync-input w-full py-2 text-sm sm:w-40"
+            aria-label="Filter by semester"
+          >
+            {SEMESTER_FILTERS.map((semester) => (
+              <option key={semester.value} value={semester.value}>
+                {semester.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={yearFilter}
+            onChange={(event) => setYearFilter(event.target.value)}
+            className="edsync-input w-full py-2 text-sm sm:w-32"
+            aria-label="Filter by year"
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year === "all" ? "Any year" : year}
+              </option>
+            ))}
           </select>
         </div>
       </section>
