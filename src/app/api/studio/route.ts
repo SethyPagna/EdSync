@@ -282,6 +282,8 @@ export async function PATCH(request: Request) {
     content?: Record<string, unknown>;
     plainText?: string;
     status?: "draft" | "published" | "archived";
+    sourceType?: string | null;
+    sourceId?: string | null;
     metadata?: Record<string, unknown>;
   };
   if (!body.id) return errorResponse("Workspace item id is required.", 400);
@@ -323,6 +325,14 @@ export async function PATCH(request: Request) {
   if (status) {
     updates.push("status = ?");
     values.push(status);
+  }
+  if ("sourceType" in body) {
+    updates.push("source_type = ?");
+    values.push(body.sourceType ?? null);
+  }
+  if ("sourceId" in body) {
+    updates.push("source_id = ?");
+    values.push(body.sourceId ?? null);
   }
   if (body.metadata) {
     updates.push("metadata = ?");
