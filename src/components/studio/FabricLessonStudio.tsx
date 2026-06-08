@@ -13,12 +13,16 @@ import {
   Copy,
   Download,
   FileJson,
+  FolderOpen,
+  Home,
   Image as ImageIcon,
   LayoutPanelLeft,
+  Maximize2,
   MousePointer2,
   Plus,
   Redo2,
   Save,
+  Search,
   Shapes,
   SlidersHorizontal,
   Sparkles,
@@ -28,6 +32,7 @@ import {
   Triangle,
   Type,
   Undo2,
+  UploadCloud,
 } from "lucide-react";
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
@@ -427,7 +432,11 @@ export default function FabricLessonStudio() {
   const [view, setView] = useState<StudioView>("hub");
   const [projects, setProjects] = useState<StudioServerItem[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectQuery, setProjectQuery] = useState("");
+  const [projectKindFilter, setProjectKindFilter] = useState<StudioFormatKind | "all">("all");
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
+  const [customWidth, setCustomWidth] = useState(1280);
+  const [customHeight, setCustomHeight] = useState(720);
   const [activeProject, setActiveProject] = useState<StudioProject | null>(null);
   const [pages, setPages] = useState<StudioPage[]>(initialPages);
   const [activePageId, setActivePageId] = useState("");
@@ -444,6 +453,24 @@ export default function FabricLessonStudio() {
   const canvasWidth = activeProject?.width ?? DEFAULT_CANVAS_WIDTH;
   const canvasHeight = activeProject?.height ?? DEFAULT_CANVAS_HEIGHT;
   const selectedTemplates = STUDIO_TEMPLATES.filter((template) => template.kind === selectedFormat);
+  const filteredProjects = useMemo(() => {
+    const query = projectQuery.trim().toLowerCase();
+    return projects.filter((project) => {
+      const kind = studioItemKind(project);
+      const matchesKind = projectKindFilter === "all" || kind === projectKindFilter;
+      const matchesQuery = !query || project.title.toLowerCase().includes(query);
+      return matchesKind && matchesQuery;
+    });
+  }, [projectKindFilter, projectQuery, projects]);
+  const projectCounts = useMemo(
+    () => ({
+      all: projects.length,
+      doc: projects.filter((project) => studioItemKind(project) === "doc").length,
+      slide: projects.filter((project) => studioItemKind(project) === "slide").length,
+      design: projects.filter((project) => studioItemKind(project) === "design").length,
+    }),
+    [projects],
+  );
 
   useEffect(() => {
     pagesRef.current = pages;
@@ -701,6 +728,23 @@ export default function FabricLessonStudio() {
     setPanel("elements");
     setActiveProject(nextProject);
     setView("editor");
+  };
+
+  const startCustomProject = () => {
+    const width = Math.min(3840, Math.max(320, Math.round(customWidth || DEFAULT_CANVAS_WIDTH)));
+    const height = Math.min(3840, Math.max(320, Math.round(customHeight || DEFAULT_CANVAS_HEIGHT)));
+    const customTemplate: StudioTemplate = {
+      id: `custom-${selectedFormat}-${width}x${height}`,
+      kind: selectedFormat,
+      label: "Custom size",
+      size: `${width} x ${height}`,
+      width,
+      height,
+      title: selectedFormat === "doc" ? "Custom document" : selectedFormat === "slide" ? "Custom presentation" : "Custom design",
+      body: "Start with your own dimensions, then add text, elements, images, pages, and AI content.",
+      accent: DEFAULT_ACCENT,
+    };
+    startNewProject(customTemplate);
   };
 
   const openProject = (item: StudioServerItem) => {
@@ -1198,20 +1242,78 @@ export default function FabricLessonStudio() {
 
   if (view !== "editor" || !activeProject) {
     return (
-      <main className="min-h-[calc(100dvh-1rem)] bg-edsync-bg p-3 text-edsync-text sm:p-5">
-        <section className="mx-auto max-w-7xl space-y-5">
-          <header className="premium-panel overflow-hidden rounded-[2rem] p-5 sm:p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-2xl">
+      <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg p-2 text-edsync-text sm:p-4">
+        <section className="mx-auto grid max-w-[96rem] gap-4 lg:grid-cols-[76px_minmax(0,1fr)]">
+          <nav className="premium-surface hidden rounded-[1.5rem] p-2 lg:flex lg:min-h-[calc(100dvh-2rem)] lg:flex-col lg:items-center lg:gap-2">
+            {[
+              { label: "Create", icon: Plus, active: view === "formats", action: "formats" },
+              { label: "Home", icon: Home, active: view === "hub", action: "hub" },
+              { label: "Projects", icon: FolderOpen, active: view === "hub", action: "hub" },
+              { label: "Templates", icon: LayoutPanelLeft, active: view === "formats", action: "formats" },
+              { label: "Upload", icon: UploadCloud, active: false, action: "upload" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => {
+                    if (item.action === "upload") {
+                      projectInputRef.current?.click();
+                      return;
+                    }
+                    setView(item.action === "formats" ? "formats" : "hub");
+                  }}
+                  className={`flex w-full flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-black transition ${
+                    item.active ? "bg-edsync-blue text-white shadow-sm" : "text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="space-y-5">
+            <header className="premium-panel overflow-hidden rounded-[2rem] p-5 sm:p-7">
+              <div className="mx-auto max-w-4xl text-center">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-edsync-blue">EdSync Studio</p>
-                <h1 className="mt-2 font-display text-3xl font-black text-edsync-text sm:text-5xl">
-                  Projects first. Canvas second.
+                <h1 className="mt-3 font-display text-3xl font-black text-edsync-text sm:text-5xl">
+                  What will you create today?
                 </h1>
-                <p className="mt-3 text-sm font-semibold leading-6 text-edsync-subtle sm:text-base">
-                  Choose an existing course asset, or start a Doc, PPT, or design canvas with the right dimensions before editing.
-                </p>
+                <label className="mx-auto mt-5 flex max-w-3xl items-center gap-3 rounded-[1.35rem] border border-edsync-border bg-edsync-card px-4 py-3 shadow-lg shadow-slate-300/20 dark:shadow-black/25">
+                  <Search className="h-5 w-5 flex-shrink-0 text-edsync-subtle" />
+                  <input
+                    value={projectQuery}
+                    onChange={(event) => setProjectQuery(event.target.value)}
+                    placeholder="Search projects, formats, and uploads"
+                    className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-edsync-text outline-none placeholder:text-edsync-subtle sm:text-base"
+                  />
+                </label>
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {STUDIO_TEMPLATES.map((template) => {
+                  const Icon = template.kind === "slide" ? Presentation : template.kind === "design" ? SlidersHorizontal : FileText;
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => startNewProject(template)}
+                      className="group rounded-2xl border border-edsync-border bg-edsync-card p-3 text-center transition hover:-translate-y-0.5 hover:border-edsync-blue/40"
+                    >
+                      <span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="mt-2 block truncate text-sm font-black">{template.label}</span>
+                      <span className="block text-xs font-bold text-edsync-subtle">{template.size}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <button type="button" onClick={() => setView("formats")} className="btn-primary justify-center px-4 py-3">
                   <Plus className="h-4 w-4" />
                   New project
@@ -1220,16 +1322,43 @@ export default function FabricLessonStudio() {
                   <FileJson className="h-4 w-4" />
                   Import
                 </button>
+                <button type="button" onClick={() => {
+                  setSelectedFormat("design");
+                  setView("formats");
+                }} className="btn-secondary justify-center px-4 py-3">
+                  <Maximize2 className="h-4 w-4" />
+                  Custom size
+                </button>
               </div>
-            </div>
-          </header>
+            </header>
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="premium-surface rounded-[1.5rem] p-4 sm:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="font-display text-2xl font-black">Your projects</h2>
-                  <p className="text-sm font-semibold text-edsync-subtle">Open a recent studio project or create a new canvas.</p>
+                  <p className="text-sm font-semibold text-edsync-subtle">Open recent work, or filter by Doc, PPT, and design.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "all" as const, label: "All", count: projectCounts.all },
+                    { id: "slide" as const, label: "PPT", count: projectCounts.slide },
+                    { id: "doc" as const, label: "Docs", count: projectCounts.doc },
+                    { id: "design" as const, label: "Design", count: projectCounts.design },
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      onClick={() => setProjectKindFilter(filter.id)}
+                      className={`rounded-full border px-3 py-2 text-xs font-black transition ${
+                        projectKindFilter === filter.id
+                          ? "border-edsync-blue bg-edsync-blue text-white"
+                          : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/40 hover:text-edsync-text"
+                      }`}
+                    >
+                      {filter.label} {filter.count}
+                    </button>
+                  ))}
                 </div>
                 <button type="button" onClick={() => void refreshProjects()} className="btn-ghost px-3 py-2 text-sm">
                   Refresh
@@ -1242,17 +1371,17 @@ export default function FabricLessonStudio() {
                     <div key={index} className="h-40 animate-pulse rounded-2xl bg-edsync-muted" />
                   ))}
                 </div>
-              ) : projects.length > 0 ? (
+              ) : filteredProjects.length > 0 ? (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {projects.map((project) => (
+                  {filteredProjects.map((project) => (
                     <ProjectCard key={project.id} project={project} onOpen={() => openProject(project)} />
                   ))}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
                   <Presentation className="mx-auto mb-3 h-9 w-9 text-edsync-blue" />
-                  <p className="font-display text-xl font-black">No studio projects yet</p>
-                  <p className="mt-1 text-sm text-edsync-subtle">Start with a Doc, PPT, or design size.</p>
+                  <p className="font-display text-xl font-black">{projects.length > 0 ? "No matching projects" : "No studio projects yet"}</p>
+                  <p className="mt-1 text-sm text-edsync-subtle">{projects.length > 0 ? "Try another search or filter." : "Start with a Doc, PPT, or design size."}</p>
                   <button type="button" onClick={() => setView("formats")} className="btn-primary mt-5 inline-flex">
                     <Plus className="h-4 w-4" />
                     Add new
@@ -1291,6 +1420,39 @@ export default function FabricLessonStudio() {
                   );
                 })}
               </div>
+              <div className="mt-4 rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                <div className="flex items-center gap-2 text-sm font-black">
+                  <Maximize2 className="h-4 w-4 text-edsync-blue" />
+                  Custom size
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="text-xs font-bold text-edsync-subtle">
+                    Width
+                    <input
+                      type="number"
+                      min={320}
+                      max={3840}
+                      value={customWidth}
+                      onChange={(event) => setCustomWidth(Number(event.target.value))}
+                      className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                    />
+                  </label>
+                  <label className="text-xs font-bold text-edsync-subtle">
+                    Height
+                    <input
+                      type="number"
+                      min={320}
+                      max={3840}
+                      value={customHeight}
+                      onChange={(event) => setCustomHeight(Number(event.target.value))}
+                      className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                    />
+                  </label>
+                </div>
+                <button type="button" onClick={startCustomProject} className="btn-secondary mt-3 w-full justify-center">
+                  Create custom
+                </button>
+              </div>
             </aside>
           </section>
 
@@ -1320,9 +1482,48 @@ export default function FabricLessonStudio() {
                 {selectedTemplates.map((template) => (
                   <TemplateCard key={template.id} template={template} onSelect={() => startNewProject(template)} />
                 ))}
+                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                      <Maximize2 className="h-5 w-5" />
+                    </span>
+                    <span className="rounded-full border border-edsync-border bg-edsync-card px-2.5 py-1 text-xs font-black text-edsync-subtle">
+                      Custom
+                    </span>
+                  </div>
+                  <p className="mt-5 font-display text-xl font-black">Custom dimensions</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="text-xs font-bold text-edsync-subtle">
+                      Width
+                      <input
+                        type="number"
+                        min={320}
+                        max={3840}
+                        value={customWidth}
+                        onChange={(event) => setCustomWidth(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-edsync-subtle">
+                      Height
+                      <input
+                        type="number"
+                        min={320}
+                        max={3840}
+                        value={customHeight}
+                        onChange={(event) => setCustomHeight(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                  </div>
+                  <button type="button" onClick={startCustomProject} className="btn-primary mt-4 w-full justify-center">
+                    Create custom
+                  </button>
+                </div>
               </div>
             </section>
           )}
+          </div>
         </section>
 
         <input ref={projectInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => {
@@ -1504,6 +1705,27 @@ export default function FabricLessonStudio() {
                 <div className="rounded-[1.35rem] bg-white p-0 shadow-2xl shadow-slate-400/30">
                   <canvas ref={canvasElementRef} aria-label="EdSync lesson canvas" />
                 </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card p-2">
+                {pages.map((page, index) => (
+                  <button
+                    key={page.id}
+                    type="button"
+                    onClick={() => void switchPage(page.id)}
+                    className={`flex min-w-[7rem] items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
+                      page.id === activePageId ? "border-edsync-blue bg-edsync-blue text-white" : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
+                    }`}
+                  >
+                    <span className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg ${page.id === activePageId ? "bg-white/18" : "bg-edsync-blue/10 text-edsync-blue"}`}>
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 truncate">{page.name}</span>
+                  </button>
+                ))}
+                <button type="button" onClick={addPage} className="flex min-w-[7rem] items-center justify-center gap-2 rounded-xl border border-dashed border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-black text-edsync-blue transition hover:border-edsync-blue/40">
+                  <Plus className="h-4 w-4" />
+                  {t.addPage}
+                </button>
               </div>
             </div>
           </section>
