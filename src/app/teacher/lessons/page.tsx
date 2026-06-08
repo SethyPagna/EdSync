@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { BookOpenCheck, Clock3, Copy, Plus, Search, Trash2 } from "lucide-react";
+import { BookOpenCheck, Clock3, Copy, FileText, Plus, Presentation, Search, Sparkles, Trash2 } from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
 import { createClient } from "@/lib/edsync/client";
+import { listStudioItems, type StudioServerItem } from "@/lib/studio/api";
 import type { Lesson } from "@/types";
 import {
   formatRelativeTime,
@@ -17,6 +18,7 @@ type LessonStatusFilter = "all" | "draft" | "published" | "archived";
 type DurationFilter = "all" | "short" | "medium" | "long";
 
 const STATUS_FILTERS: LessonStatusFilter[] = ["all", "published", "draft", "archived"];
+const STUDIO_LESSON_KINDS = new Set(["doc", "slide", "design", "lesson"]);
 
 function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
   if (durationFilter === "short") return lesson.estimated_duration <= 20;
@@ -25,8 +27,27 @@ function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
   return true;
 }
 
+function studioOriginalKind(item: StudioServerItem) {
+  const originalKind = item.metadata?.originalKind;
+  const kind = typeof originalKind === "string" ? originalKind : item.kind;
+  return STUDIO_LESSON_KINDS.has(kind) ? kind : "design";
+}
+
+function studioClassName(item: StudioServerItem) {
+  return typeof item.metadata?.className === "string" ? item.metadata.className : "";
+}
+
+function studioOrderIndex(item: StudioServerItem) {
+  return typeof item.metadata?.orderIndex === "number" ? item.metadata.orderIndex : null;
+}
+
+function studioPageCount(item: StudioServerItem) {
+  return typeof item.metadata?.pageCount === "number" ? item.metadata.pageCount : null;
+}
+
 export default function TeacherLessons() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [studioItems, setStudioItems] = useState<StudioServerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<LessonStatusFilter>("all");
   const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
@@ -40,15 +61,21 @@ export default function TeacherLessons() {
     } = await edsync.auth.getUser();
     if (!user) {
       setLessons([]);
+      setStudioItems([]);
       setLoading(false);
       return;
     }
-    const { data } = await edsync
-      .from("lessons")
-      .select("*")
-      .eq("teacher_id", user.id)
-      .order("updated_at", { ascending: false });
+    const [lessonResult, studioResult] = await Promise.all([
+      edsync
+        .from("lessons")
+        .select("*")
+        .eq("teacher_id", user.id)
+        .order("updated_at", { ascending: false }),
+      listStudioItems(undefined, false).catch(() => []),
+    ]);
+    const { data } = lessonResult;
     setLessons(data || []);
+    setStudioItems(studioResult.filter((item) => STUDIO_LESSON_KINDS.has(studioOriginalKind(item))));
     setLoading(false);
   }, [edsync]);
 
@@ -105,6 +132,21 @@ export default function TeacherLessons() {
     });
   }, [durationFilter, filter, lessons, search]);
 
+  const filteredStudioItems = useMemo(() => {
+    if (durationFilter !== "all") return [];
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return studioItems.filter((item) => {
+      if (filter !== "all" && item.status !== filter) return false;
+      const searchableText = `${item.title} ${studioClassName(item)} ${studioOriginalKind(item)}`.toLowerCase();
+      if (normalizedSearch && !searchableText.includes(normalizedSearch)) return false;
+      return true;
+    });
+  }, [durationFilter, filter, search, studioItems]);
+
+  const totalItems = lessons.length + studioItems.length;
+  const hasResults = filtered.length > 0 || filteredStudioItems.length > 0;
+
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
@@ -117,7 +159,7 @@ export default function TeacherLessons() {
               Courses
             </h1>
             <p className="mt-1 text-sm text-edsync-subtle">
-              {lessons.length} course{lessons.length !== 1 ? "s" : ""} total
+              {totalItems} lesson{totalItems !== 1 ? "s" : ""} total
             </p>
           </div>
           <Link href="/studio" className="btn-primary justify-center">
@@ -172,23 +214,26 @@ export default function TeacherLessons() {
             <div key={index} className="h-24 rounded-xl bg-edsync-card shimmer" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : !hasResults ? (
         <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card py-16 text-center">
           <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
           <h3 className="mb-2 font-display text-xl font-bold text-edsync-text">
-            {search ? "No courses match your search" : "No courses yet"}
+            {search ? "No lessons match your search" : "No lessons yet"}
           </h3>
           <p className="mb-6 text-sm text-edsync-subtle">
-            {search ? "Try another search." : "Create your first course."}
+            {search ? "Try another search." : "Create your first lesson."}
           </p>
           {!search && (
             <Link href="/studio" className="btn-primary inline-flex">
-              Create first course
+              Create first lesson
             </Link>
           )}
         </div>
       ) : (
         <div className="grid gap-3">
+          {filteredStudioItems.map((item) => (
+            <StudioLessonRow key={item.id} item={item} />
+          ))}
           {filtered.map((lesson) => (
             <LessonRow
               key={lesson.id}
@@ -200,6 +245,57 @@ export default function TeacherLessons() {
         </div>
       )}
     </div>
+  );
+}
+
+function StudioLessonRow({ item }: { item: StudioServerItem }) {
+  const badge = getStatusBadge(item.status);
+  const kind = studioOriginalKind(item);
+  const Icon = kind === "slide" ? Presentation : kind === "doc" ? FileText : Sparkles;
+  const className = studioClassName(item);
+  const orderIndex = studioOrderIndex(item);
+  const pageCount = studioPageCount(item);
+
+  return (
+    <article className="rounded-xl border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40 hover:shadow-card-hover">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="flex min-w-0 gap-3">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`badge ${badge.className}`}>{badge.label}</span>
+              <span className="badge border border-edsync-blue/20 bg-edsync-blue/10 text-edsync-blue">
+                Studio
+              </span>
+            </div>
+            <h3 className="mt-2 truncate font-display text-lg font-bold text-edsync-text">
+              {item.title}
+            </h3>
+            <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
+              Editable lesson canvas for course materials, documents, and presentations.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
+              {className && <span className="badge bg-edsync-muted/30">{className}</span>}
+              <span className="capitalize">{kind === "slide" ? "PPT" : kind}</span>
+              {pageCount && <span>{pageCount} page{pageCount !== 1 ? "s" : ""}</span>}
+              {orderIndex && <span>Order {orderIndex}</span>}
+              <span>Updated {formatRelativeTime(item.updatedAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/studio?item=${encodeURIComponent(item.id)}`}
+            className="btn-primary min-w-0 flex-1 justify-center py-2 text-sm"
+          >
+            Edit in Studio
+          </Link>
+        </div>
+      </div>
+    </article>
   );
 }
 
