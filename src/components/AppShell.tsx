@@ -264,10 +264,8 @@ function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: stri
 
 export const teacherNavItems: ShellNavItem[] = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/teacher/lessons", label: "My Courses", icon: BookOpenCheck },
-  { href: "/studio", label: "Lesson Studio", icon: Sparkles },
+  { href: "/studio", label: "Courses Studio", icon: Sparkles },
   { href: "/teacher/work", label: "Assessments", icon: FileCheck2 },
-  { href: "/teacher/gradebook", label: "Feedback", icon: ClipboardList },
   { href: "/teacher/notes", label: "Notes", icon: StickyNote },
   { href: "/teacher/planner", label: "Planner", icon: CalendarClock },
   { href: "/practice", label: "Practice", icon: Brain },
@@ -335,8 +333,8 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
   if (role === "teacher") {
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
-      { label: "Create", items: pick(["/teacher/lessons", "/studio"]) },
-      { label: "Course Ops", items: pick(["/teacher/work", "/teacher/gradebook", "/teacher/notes", "/teacher/planner", "/teacher/students"]) },
+      { label: "Create", items: pick(["/studio"]) },
+      { label: "Course Ops", items: pick(["/teacher/work", "/teacher/notes", "/teacher/planner", "/teacher/students"]) },
       { label: "Support", items: pick(["/practice"]) },
       { label: "Insights", items: pick(["/teacher/analytics"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
