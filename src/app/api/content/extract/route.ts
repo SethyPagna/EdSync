@@ -16,6 +16,9 @@ function fileKind(file: File) {
   if (file.type.startsWith("text/") || /\.(txt|md|csv)$/i.test(file.name)) return "text";
   if (/\.pdf$/i.test(file.name) || file.type.includes("pdf")) return "pdf";
   if (/\.docx?$/i.test(file.name) || file.type.includes("word")) return "word";
+  if (/\.pptx?$/i.test(file.name) || file.type.includes("powerpoint") || file.type.includes("presentation")) {
+    return "powerpoint";
+  }
   return "document";
 }
 
@@ -193,7 +196,7 @@ export async function POST(request: NextRequest) {
   const warning =
     extraction.quality === "none"
       ? "No reliable text was found. Use the generated outline as a starting point and review carefully before publishing."
-      : "PDF and Word extraction uses a safe sampled-text fallback in this deployment. Review generated lessons before publishing.";
+      : "PDF, Word, and PowerPoint extraction uses a safe sampled-text fallback in this deployment. Review generated lessons before publishing.";
   await saveExtraction({
     tenantId: context.tenant.id,
     portalId: context.portal?.id,
