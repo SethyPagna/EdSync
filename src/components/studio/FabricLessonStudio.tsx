@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
-import { listStudioDrafts, type StudioDraftRecord } from "@/lib/studio/drafts";
 import {
   ArrowDown,
   ArrowUp,
@@ -99,12 +98,6 @@ type StudioRosterClass = {
   name: string;
   subject?: string | null;
   grade_level?: string | null;
-};
-type AiDraftSlide = {
-  title?: unknown;
-  notes?: unknown;
-  body?: unknown;
-  accent?: unknown;
 };
 type ContentExtractionResponse = {
   text?: string;
@@ -437,55 +430,6 @@ function readProjectPages(value: unknown) {
   return pages.length > 0 ? pages : null;
 }
 
-function getDraftRecord(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
-function plainDraftText(value: unknown) {
-  if (typeof value === "string") return value;
-  const record = getDraftRecord(value);
-  const source = record?.plainText ?? record?.html ?? value;
-  return typeof source === "string"
-    ? source.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-    : JSON.stringify(source, null, 2);
-}
-
-function studioFormatFromDraft(draft: StudioDraftRecord): StudioFormatKind {
-  if (draft.kind === "slide") return "slide";
-  if (draft.kind === "design") return "design";
-  return "doc";
-}
-
-function pagesFromAiDraft(draft: StudioDraftRecord): StudioPage[] {
-  const record = getDraftRecord(draft.value);
-  const slides = Array.isArray(record?.slides) ? (record.slides as AiDraftSlide[]) : [];
-  if (slides.length > 0) {
-    return slides.slice(0, 12).map((slide, index) => ({
-      id: crypto.randomUUID(),
-      name: String(slide.title ?? `AI page ${index + 1}`).slice(0, 64),
-      seed: {
-        title: String(slide.title ?? draft.title ?? `AI page ${index + 1}`),
-        body: String(slide.notes ?? slide.body ?? "Review and refine this AI lesson page."),
-        accent: typeof slide.accent === "string" ? slide.accent : index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82",
-      },
-      snapshot: null,
-    }));
-  }
-
-  const text = plainDraftText(draft.value);
-  const chunks = text.match(/.{1,520}(\s|$)/g) ?? [text || "Review and refine this AI lesson draft."];
-  return chunks.slice(0, 6).map((chunk, index) => ({
-    id: crypto.randomUUID(),
-    name: index === 0 ? "AI draft" : `AI draft ${index + 1}`,
-    seed: {
-      title: index === 0 ? draft.title : `Continue ${index + 1}`,
-      body: chunk.trim(),
-      accent: index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82",
-    },
-    snapshot: null,
-  }));
-}
-
 function initialPagesForTemplate(template: StudioTemplate, title = template.title): StudioPage[] {
   const supportTitle = template.kind === "slide" ? "Practice slide" : template.kind === "doc" ? "Practice page" : "Visual board";
   return [
@@ -577,7 +521,6 @@ export default function FabricLessonStudio() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectQuery, setProjectQuery] = useState("");
   const [projectKindFilter, setProjectKindFilter] = useState<StudioFormatKind | "all">("all");
-  const [localDrafts, setLocalDrafts] = useState<StudioDraftRecord[]>([]);
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
   const [customWidth, setCustomWidth] = useState(1280);
   const [customHeight, setCustomHeight] = useState(720);
@@ -678,7 +621,6 @@ export default function FabricLessonStudio() {
     const loadTimer = window.setTimeout(() => {
       void refreshProjects();
       void refreshClasses();
-      setLocalDrafts(listStudioDrafts().filter((draft) => ["lesson", "doc", "slide", "design"].includes(draft.kind)).slice(0, 4));
     }, 0);
     return () => window.clearTimeout(loadTimer);
   }, [refreshClasses, refreshProjects]);
@@ -1000,33 +942,6 @@ export default function FabricLessonStudio() {
         : current,
     );
     toast.success("Canvas size updated.");
-  };
-
-  const openAiDraft = (draft: StudioDraftRecord) => {
-    const kind = studioFormatFromDraft(draft);
-    const template = templateById(kind === "slide" ? "ppt-wide" : kind === "design" ? "design-cover" : "doc-a4");
-    const nextPages = pagesFromAiDraft(draft);
-    const nextProject: StudioProject = {
-      id: crypto.randomUUID(),
-      title: draft.title || "AI lesson draft",
-      kind,
-      templateId: template.id,
-      width: template.width,
-      height: template.height,
-      classId: selectedClassId,
-      className: resolvedLessonClassName,
-      orderIndex: activeLessonOrderIndex,
-      serverItemId: null,
-      status: "draft",
-    };
-    setSavedStudioItemId(null);
-    setPages(nextPages);
-    pagesRef.current = nextPages;
-    activePageIdRef.current = nextPages[0]?.id ?? "";
-    setActivePageId(nextPages[0]?.id ?? "");
-    setPanel("pages");
-    setActiveProject(nextProject);
-    setView("editor");
   };
 
   const openProject = useCallback((item: StudioServerItem) => {
@@ -1761,30 +1676,7 @@ export default function FabricLessonStudio() {
                 </label>
               </div>
 
-              <div className="mt-8 grid gap-3 md:grid-cols-3">
-                {STUDIO_FORMATS.map((format) => {
-                  const Icon = format.icon;
-                  return (
-                    <button
-                      key={format.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedFormat(format.id);
-                        setView("formats");
-                      }}
-                      className="group rounded-[1.25rem] border border-edsync-border bg-edsync-card p-4 text-left transition hover:-translate-y-0.5 hover:border-edsync-blue/40"
-                    >
-                      <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span className="mt-4 block font-display text-xl font-black">{format.label}</span>
-                      <span className="mt-1 block text-sm font-semibold leading-6 text-edsync-subtle">{format.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
                 <button type="button" onClick={() => setView("formats")} className="btn-primary justify-center px-4 py-3">
                   <Plus className="h-4 w-4" />
                   New lesson
@@ -1807,7 +1699,7 @@ export default function FabricLessonStudio() {
               </div>
             </header>
 
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="grid gap-5">
             <div className="premium-surface rounded-[1.5rem] p-4 sm:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1865,157 +1757,6 @@ export default function FabricLessonStudio() {
               )}
             </div>
 
-            <aside className="premium-surface h-fit rounded-[1.5rem] p-4 sm:p-5">
-              <h2 className="font-display text-xl font-black">New lesson</h2>
-              <LessonSetupPanel
-                classes={classes}
-                selectedClassId={selectedClassId}
-                classNameValue={lessonClassName}
-                orderIndex={lessonOrderIndex}
-                onClassIdChange={(classId) => {
-                  setSelectedClassId(classId);
-                  const nextClass = classes.find((classItem) => classItem.id === classId);
-                  if (nextClass) setLessonClassName(nextClass.name);
-                }}
-                onClassNameChange={(value) => {
-                  setSelectedClassId("");
-                  setLessonClassName(value);
-                }}
-                onOrderIndexChange={setLessonOrderIndex}
-              />
-              <div className="mt-4 rounded-2xl border border-edsync-blue/20 bg-edsync-blue/10 p-3">
-                <div className="flex items-center gap-2 text-sm font-black text-edsync-blue">
-                  <Sparkles className="h-4 w-4" />
-                  AI lesson builder
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <input
-                    value={aiLessonName}
-                    onChange={(event) => setAiLessonName(event.target.value)}
-                    placeholder="Lesson name"
-                    className="h-10 rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={aiLessonType}
-                      onChange={(event) => setAiLessonType(event.target.value as AiLessonType)}
-                      className="h-10 rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                    >
-                      <option value="lesson">Lesson</option>
-                      <option value="slides">PPT</option>
-                      <option value="quiz">Quiz</option>
-                      <option value="discussion">Discussion</option>
-                      <option value="activity">Activity</option>
-                    </select>
-                    <select
-                      value={aiStyle}
-                      onChange={(event) => setAiStyle(event.target.value as AiLessonStyle)}
-                      className="h-10 rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                    >
-                      <option value="socratic">Socratic</option>
-                      <option value="direct">Direct</option>
-                      <option value="professional">Professional</option>
-                      <option value="expert">Expert</option>
-                    </select>
-                  </div>
-                  <textarea
-                    value={aiObjectives}
-                    onChange={(event) => setAiObjectives(event.target.value)}
-                    rows={3}
-                    placeholder="Objectives, quiz goals, or activity directions"
-                    className="edsync-textarea text-sm"
-                  />
-                  <button type="button" onClick={startAiAssistedProject} className="btn-primary w-full justify-center">
-                    <Sparkles className="h-4 w-4" />
-                    Design with AI
-                  </button>
-                </div>
-              </div>
-              {localDrafts.length > 0 && (
-                <div className="mt-4 rounded-2xl border border-edsync-blue/20 bg-edsync-blue/10 p-3">
-                  <div className="flex items-center gap-2 text-sm font-black text-edsync-blue">
-                    <Sparkles className="h-4 w-4" />
-                    AI drafts
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    {localDrafts.map((draft) => (
-                      <button
-                        key={draft.key}
-                        type="button"
-                        onClick={() => openAiDraft(draft)}
-                        className="rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-left transition hover:border-edsync-blue/40"
-                      >
-                        <span className="block truncate text-sm font-black text-edsync-text">{draft.title}</span>
-                        <span className="text-xs font-semibold text-edsync-subtle">
-                          {studioFormatFromDraft(draft).toUpperCase()} / {formatUpdatedAt(draft.updatedAt)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="mt-4 grid gap-2">
-                {STUDIO_FORMATS.map((format) => {
-                  const Icon = format.icon;
-                  return (
-                    <button
-                      key={format.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedFormat(format.id);
-                        setView("formats");
-                      }}
-                      className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
-                        selectedFormat === format.id && view === "formats"
-                          ? "border-edsync-blue bg-edsync-blue/10"
-                          : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/40"
-                      }`}
-                    >
-                      <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-black">{format.label}</span>
-                        <span className="block text-xs font-semibold leading-5 text-edsync-subtle">{format.description}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-4 rounded-2xl border border-edsync-border bg-edsync-surface p-3">
-                <div className="flex items-center gap-2 text-sm font-black">
-                  <Maximize2 className="h-4 w-4 text-edsync-blue" />
-                  Custom size
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <label className="text-xs font-bold text-edsync-subtle">
-                    Width
-                    <input
-                      type="number"
-                      min={320}
-                      max={3840}
-                      value={customWidth}
-                      onChange={(event) => setCustomWidth(Number(event.target.value))}
-                      className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                    />
-                  </label>
-                  <label className="text-xs font-bold text-edsync-subtle">
-                    Height
-                    <input
-                      type="number"
-                      min={320}
-                      max={3840}
-                      value={customHeight}
-                      onChange={(event) => setCustomHeight(Number(event.target.value))}
-                      className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                    />
-                  </label>
-                </div>
-                <button type="button" onClick={startCustomProject} className="btn-secondary mt-3 w-full justify-center">
-                  Create custom
-                </button>
-              </div>
-            </aside>
           </section>
 
           {view === "formats" && (
