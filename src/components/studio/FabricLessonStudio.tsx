@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
+import { listStudioDrafts, type StudioDraftRecord } from "@/lib/studio/drafts";
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   Circle,
   FileText,
@@ -92,6 +92,12 @@ type StudioRosterClass = {
   name: string;
   subject?: string | null;
   grade_level?: string | null;
+};
+type AiDraftSlide = {
+  title?: unknown;
+  notes?: unknown;
+  body?: unknown;
+  accent?: unknown;
 };
 
 const DEFAULT_CANVAS_WIDTH = 960;
@@ -409,6 +415,55 @@ function readProjectPages(value: unknown) {
   return pages.length > 0 ? pages : null;
 }
 
+function getDraftRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function plainDraftText(value: unknown) {
+  if (typeof value === "string") return value;
+  const record = getDraftRecord(value);
+  const source = record?.plainText ?? record?.html ?? value;
+  return typeof source === "string"
+    ? source.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    : JSON.stringify(source, null, 2);
+}
+
+function studioFormatFromDraft(draft: StudioDraftRecord): StudioFormatKind {
+  if (draft.kind === "slide") return "slide";
+  if (draft.kind === "design") return "design";
+  return "doc";
+}
+
+function pagesFromAiDraft(draft: StudioDraftRecord): StudioPage[] {
+  const record = getDraftRecord(draft.value);
+  const slides = Array.isArray(record?.slides) ? (record.slides as AiDraftSlide[]) : [];
+  if (slides.length > 0) {
+    return slides.slice(0, 12).map((slide, index) => ({
+      id: crypto.randomUUID(),
+      name: String(slide.title ?? `AI page ${index + 1}`).slice(0, 64),
+      seed: {
+        title: String(slide.title ?? draft.title ?? `AI page ${index + 1}`),
+        body: String(slide.notes ?? slide.body ?? "Review and refine this AI lesson page."),
+        accent: typeof slide.accent === "string" ? slide.accent : index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82",
+      },
+      snapshot: null,
+    }));
+  }
+
+  const text = plainDraftText(draft.value);
+  const chunks = text.match(/.{1,520}(\s|$)/g) ?? [text || "Review and refine this AI lesson draft."];
+  return chunks.slice(0, 6).map((chunk, index) => ({
+    id: crypto.randomUUID(),
+    name: index === 0 ? "AI draft" : `AI draft ${index + 1}`,
+    seed: {
+      title: index === 0 ? draft.title : `Continue ${index + 1}`,
+      body: chunk.trim(),
+      accent: index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82",
+    },
+    snapshot: null,
+  }));
+}
+
 function initialPagesForTemplate(template: StudioTemplate, title = template.title): StudioPage[] {
   const supportTitle = template.kind === "slide" ? "Practice slide" : template.kind === "doc" ? "Practice page" : "Visual board";
   return [
@@ -498,6 +553,7 @@ export default function FabricLessonStudio() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectQuery, setProjectQuery] = useState("");
   const [projectKindFilter, setProjectKindFilter] = useState<StudioFormatKind | "all">("all");
+  const [localDrafts, setLocalDrafts] = useState<StudioDraftRecord[]>([]);
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
   const [customWidth, setCustomWidth] = useState(1280);
   const [customHeight, setCustomHeight] = useState(720);
@@ -576,6 +632,7 @@ export default function FabricLessonStudio() {
     const loadTimer = window.setTimeout(() => {
       void refreshProjects();
       void refreshClasses();
+      setLocalDrafts(listStudioDrafts().filter((draft) => ["lesson", "doc", "slide", "design"].includes(draft.kind)).slice(0, 4));
     }, 0);
     return () => window.clearTimeout(loadTimer);
   }, [refreshClasses, refreshProjects]);
@@ -587,8 +644,8 @@ export default function FabricLessonStudio() {
     const bounds = stage.getBoundingClientRect();
     const scale = Math.min(
       1,
-      Math.max(0.28, (bounds.width - 48) / canvasWidth),
-      Math.max(0.28, (bounds.height - 48) / canvasHeight),
+      Math.max(0.28, (bounds.width - 24) / canvasWidth),
+      Math.max(0.28, (bounds.height - 24) / canvasHeight),
     );
     canvas.setDimensions({
       width: Math.round(canvasWidth * scale),
@@ -836,10 +893,75 @@ export default function FabricLessonStudio() {
     startNewProject(customTemplate);
   };
 
+  const applyCustomSize = () => {
+    const width = Math.min(3840, Math.max(320, Math.round(customWidth || DEFAULT_CANVAS_WIDTH)));
+    const height = Math.min(3840, Math.max(320, Math.round(customHeight || DEFAULT_CANVAS_HEIGHT)));
+    applyTemplateSize({
+      id: `custom-${selectedFormat}-${width}x${height}`,
+      kind: selectedFormat,
+      label: "Custom size",
+      size: `${width} x ${height}`,
+      width,
+      height,
+      title: activeProject?.title || "Custom lesson",
+      body: "Custom EdSync lesson canvas.",
+      accent: DEFAULT_ACCENT,
+    });
+  };
+
   const startAiAssistedProject = () => {
     startNewProject(templateById("ppt-wide"));
     setPanel("ai");
     setAiPrompt("Create a concise course outline with editable pages, practice prompts, and proof of progress.");
+  };
+
+  const applyTemplateSize = (template: StudioTemplate) => {
+    if (!activeProject) {
+      startNewProject(template);
+      return;
+    }
+    syncActivePage();
+    setCustomWidth(template.width);
+    setCustomHeight(template.height);
+    setActiveProject((current) =>
+      current
+        ? {
+            ...current,
+            kind: template.kind,
+            templateId: template.id,
+            width: template.width,
+            height: template.height,
+          }
+        : current,
+    );
+    toast.success("Canvas size updated.");
+  };
+
+  const openAiDraft = (draft: StudioDraftRecord) => {
+    const kind = studioFormatFromDraft(draft);
+    const template = templateById(kind === "slide" ? "ppt-wide" : kind === "design" ? "design-cover" : "doc-a4");
+    const nextPages = pagesFromAiDraft(draft);
+    const nextProject: StudioProject = {
+      id: crypto.randomUUID(),
+      title: draft.title || "AI lesson draft",
+      kind,
+      templateId: template.id,
+      width: template.width,
+      height: template.height,
+      classId: selectedClassId,
+      className: resolvedLessonClassName,
+      orderIndex: activeLessonOrderIndex,
+      serverItemId: null,
+      status: "draft",
+    };
+    setSavedStudioItemId(null);
+    setPages(nextPages);
+    pagesRef.current = nextPages;
+    activePageIdRef.current = nextPages[0]?.id ?? "";
+    setActivePageId(nextPages[0]?.id ?? "");
+    setPanel("pages");
+    setActiveProject(nextProject);
+    setView("editor");
   };
 
   const openProject = (item: StudioServerItem) => {
@@ -1363,6 +1485,7 @@ export default function FabricLessonStudio() {
   };
 
   const toolRail = [
+    { id: "design" as const, label: "Templates", icon: LayoutPanelLeft },
     { id: "elements" as const, label: t.elements, icon: Shapes },
     { id: "text" as const, label: t.text, icon: Type },
     { id: "images" as const, label: t.images, icon: ImageIcon },
@@ -1552,6 +1675,29 @@ export default function FabricLessonStudio() {
                 }}
                 onOrderIndexChange={setLessonOrderIndex}
               />
+              {localDrafts.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-edsync-blue/20 bg-edsync-blue/10 p-3">
+                  <div className="flex items-center gap-2 text-sm font-black text-edsync-blue">
+                    <Sparkles className="h-4 w-4" />
+                    AI drafts
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {localDrafts.map((draft) => (
+                      <button
+                        key={draft.key}
+                        type="button"
+                        onClick={() => openAiDraft(draft)}
+                        className="rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-left transition hover:border-edsync-blue/40"
+                      >
+                        <span className="block truncate text-sm font-black text-edsync-text">{draft.title}</span>
+                        <span className="text-xs font-semibold text-edsync-subtle">
+                          {studioFormatFromDraft(draft).toUpperCase()} / {formatUpdatedAt(draft.updatedAt)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="mt-4 grid gap-2">
                 {STUDIO_FORMATS.map((format) => {
                   const Icon = format.icon;
@@ -1697,45 +1843,64 @@ export default function FabricLessonStudio() {
 
   return (
     <main className="min-h-dvh overflow-x-clip bg-edsync-bg text-edsync-text">
-      <section className="flex min-h-dvh flex-col overflow-hidden border border-edsync-border bg-edsync-card lg:h-dvh">
-        <header className="flex flex-wrap items-center gap-2 border-b border-edsync-border bg-edsync-card/95 px-3 py-2 backdrop-blur">
-          <button type="button" onClick={() => void returnToHub()} className="inline-flex h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text transition hover:border-edsync-blue/40">
-            <ArrowLeft className="h-4 w-4" />
-            {t.back}
-          </button>
-          <div className="min-w-[12rem] flex-1">
-            <h1 className="font-display text-lg font-black text-edsync-text sm:text-xl">{activeProject.title}</h1>
-            <p className="hidden text-xs font-semibold text-edsync-subtle sm:block">
-              {activeProject.kind.toUpperCase()} · {activeProject.width} x {activeProject.height}
-              {resolvedLessonClassName ? ` · ${resolvedLessonClassName}` : ""}
-              {activeLessonOrderIndex ? ` · Order ${activeLessonOrderIndex}` : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 rounded-2xl border border-edsync-border bg-edsync-surface p-1">
-            <button type="button" onClick={undo} disabled={!canUndo} className="h-9 rounded-xl px-2 text-edsync-text transition hover:bg-edsync-card disabled:opacity-35" title={t.undo} aria-label={t.undo}>
+      <section className="flex min-h-dvh flex-col overflow-hidden bg-edsync-card lg:h-[calc(100dvh-1.5rem)] lg:rounded-[1.25rem] lg:border lg:border-edsync-border">
+        <header className="flex min-h-14 flex-wrap items-center gap-2 bg-gradient-to-r from-edsync-emerald via-edsync-blue to-violet-700 px-3 py-2 text-white shadow-lg shadow-edsync-blue/20">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <button type="button" onClick={() => void returnToHub()} className="inline-flex h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15" title={t.back}>
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">Home</span>
+            </button>
+            <button type="button" onClick={() => setPanel("export")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 sm:inline-flex">
+              <FileText className="h-4 w-4" />
+              File
+            </button>
+            <button type="button" onClick={() => setPanel("design")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 sm:inline-flex">
+              <Maximize2 className="h-4 w-4" />
+              Resize
+            </button>
+            <button type="button" onClick={() => openPanel(selectedObject ? "text" : "elements")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 md:inline-flex">
+              <MousePointer2 className="h-4 w-4" />
+              Editing
+            </button>
+            <span className="mx-1 hidden h-7 w-px bg-white/25 md:block" />
+            <button type="button" onClick={undo} disabled={!canUndo} className="grid h-10 w-10 place-items-center rounded-2xl transition hover:bg-white/15 disabled:opacity-35" title={t.undo} aria-label={t.undo}>
               <Undo2 className="h-4 w-4" />
             </button>
-            <button type="button" onClick={redo} disabled={!canRedo} className="h-9 rounded-xl px-2 text-edsync-text transition hover:bg-edsync-card disabled:opacity-35" title={t.redo} aria-label={t.redo}>
+            <button type="button" onClick={redo} disabled={!canRedo} className="grid h-10 w-10 place-items-center rounded-2xl transition hover:bg-white/15 disabled:opacity-35" title={t.redo} aria-label={t.redo}>
               <Redo2 className="h-4 w-4" />
             </button>
           </div>
-          <button type="button" onClick={() => void persistProject("draft")} disabled={savingStatus !== null} className="hidden h-10 items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black transition hover:border-edsync-blue/40 disabled:opacity-50 sm:inline-flex">
-            <Save className="h-4 w-4" />
-            {savingStatus === "draft" ? "..." : t.save}
-          </button>
-          <select value={language} onChange={(event) => setLanguage(event.target.value as StudioLanguage)} className="h-10 rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text">
-            <option value="en">EN</option>
-            <option value="es">ES</option>
-            <option value="fr">FR</option>
-          </select>
-          <ThemeToggle compact />
-          <button type="button" onClick={() => void persistProject("published")} disabled={savingStatus !== null} className="btn-primary h-10 px-4 text-sm disabled:opacity-50">
-            <Save className="h-4 w-4" />
-            {savingStatus === "published" ? "..." : t.publish}
-          </button>
+
+          <div className="min-w-0 flex-[1.4] text-center">
+            <h1 className="truncate text-sm font-black sm:text-base">{activeProject.title}</h1>
+            <p className="hidden truncate text-[11px] font-semibold text-white/75 sm:block">
+              {[activeProject.kind.toUpperCase(), `${activeProject.width} x ${activeProject.height}`, resolvedLessonClassName, `Order ${activeLessonOrderIndex}`]
+                .filter(Boolean)
+                .join(" / ")}
+            </p>
+          </div>
+
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+            <button type="button" onClick={() => void persistProject("draft")} disabled={savingStatus !== null} className="hidden h-10 items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-3 text-sm font-black transition hover:bg-white/15 disabled:opacity-50 lg:inline-flex">
+              <Save className="h-4 w-4" />
+              {savingStatus === "draft" ? "..." : t.save}
+            </button>
+            <select value={language} onChange={(event) => setLanguage(event.target.value as StudioLanguage)} className="h-10 rounded-2xl border border-white/25 bg-white px-3 text-sm font-black text-edsync-text">
+              <option value="en">EN</option>
+              <option value="es">ES</option>
+              <option value="fr">FR</option>
+            </select>
+            <ThemeToggle compact />
+            <button type="button" onClick={() => void persistProject("published")} disabled={savingStatus !== null} className="h-10 rounded-2xl border border-white/20 bg-white/15 px-4 text-sm font-black text-white transition hover:bg-white/20 disabled:opacity-50">
+              {savingStatus === "published" ? "..." : "Present"}
+            </button>
+            <button type="button" onClick={() => void persistProject("published")} disabled={savingStatus !== null} className="h-10 rounded-2xl bg-white px-4 text-sm font-black text-edsync-text shadow-sm transition hover:bg-white/90 disabled:opacity-50">
+              Share
+            </button>
+          </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[76px_320px_minmax(0,1fr)]">
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[72px_304px_minmax(0,1fr)]">
           <nav className="grid grid-cols-3 gap-1 border-b border-edsync-border bg-edsync-card p-2 sm:grid-cols-6 lg:flex lg:flex-col lg:border-b-0 lg:border-r">
             {toolRail.map((tool) => {
               const Icon = tool.icon;
@@ -1755,7 +1920,7 @@ export default function FabricLessonStudio() {
             })}
           </nav>
 
-          <aside className="min-h-0 border-b border-edsync-border bg-edsync-card p-4 lg:border-b-0 lg:border-r lg:overflow-y-auto">
+          <aside className="edsync-scrollbar-none min-h-0 border-b border-edsync-border bg-edsync-card p-3 lg:border-b-0 lg:border-r lg:overflow-y-auto">
             {selectedObject ? (
               <div className="space-y-4">
                 <PanelTitle icon={MousePointer2} title={t.selected} />
@@ -1798,6 +1963,73 @@ export default function FabricLessonStudio() {
                   }}
                   onOrderIndexChange={setLessonOrderIndex}
                 />
+            {panel === "design" && (
+              <div className="space-y-4">
+                <PanelTitle icon={LayoutPanelLeft} title="Templates" />
+                <div className="flex rounded-2xl border border-edsync-border bg-edsync-surface p-1">
+                  {STUDIO_FORMATS.map((format) => (
+                    <button
+                      key={format.id}
+                      type="button"
+                      onClick={() => setSelectedFormat(format.id)}
+                      className={`flex-1 rounded-xl px-2 py-2 text-xs font-black transition ${
+                        selectedFormat === format.id ? "bg-edsync-text text-edsync-card" : "text-edsync-subtle hover:text-edsync-text"
+                      }`}
+                    >
+                      {format.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid gap-2">
+                  {selectedTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => applyTemplateSize(template)}
+                      className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:border-edsync-blue/40 ${
+                        activeProject.templateId === template.id ? "border-edsync-blue bg-edsync-blue/10" : "border-edsync-border bg-edsync-surface"
+                      }`}
+                    >
+                      <span className="block text-sm font-black text-edsync-text">{template.label}</span>
+                      <span className="mt-1 block text-xs font-semibold text-edsync-subtle">{template.size}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
+                  <div className="flex items-center gap-2 text-sm font-black">
+                    <Maximize2 className="h-4 w-4 text-edsync-blue" />
+                    Custom
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="text-xs font-bold text-edsync-subtle">
+                      Width
+                      <input
+                        type="number"
+                        min={320}
+                        max={3840}
+                        value={customWidth}
+                        onChange={(event) => setCustomWidth(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-edsync-subtle">
+                      Height
+                      <input
+                        type="number"
+                        min={320}
+                        max={3840}
+                        value={customHeight}
+                        onChange={(event) => setCustomHeight(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                  </div>
+                  <button type="button" onClick={applyCustomSize} className="btn-secondary mt-3 w-full justify-center">
+                    Apply custom
+                  </button>
+                </div>
+              </div>
+            )}
             {panel === "elements" && (
               <div className="space-y-4">
                 <PanelTitle icon={Shapes} title={t.elements} />
@@ -1907,10 +2139,10 @@ export default function FabricLessonStudio() {
             )}
           </aside>
 
-          <section className="min-h-0 bg-[radial-gradient(circle_at_50%_0%,rgba(36,88,220,0.12),transparent_25rem)] lg:overflow-hidden">
-            <div className="flex h-full min-h-[34rem] flex-col bg-edsync-bg/80">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-card px-3 py-2 text-xs font-black text-edsync-subtle">
+          <section className="min-h-0 bg-edsync-bg lg:overflow-hidden">
+            <div className="flex h-full min-h-[34rem] flex-col bg-edsync-bg">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edsync-border bg-edsync-card px-3 py-2">
+                <div className="flex items-center gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-black text-edsync-subtle">
                   <MousePointer2 className="h-4 w-4 text-edsync-blue" />
                   {activePage?.name}
                 </div>
@@ -1925,31 +2157,67 @@ export default function FabricLessonStudio() {
                 </div>
                 )}
               </div>
-              <div ref={canvasStageRef} className="grid flex-1 place-items-center overflow-hidden border-y border-edsync-border bg-[linear-gradient(45deg,rgba(100,116,139,0.12)_25%,transparent_25%,transparent_75%,rgba(100,116,139,0.12)_75%),linear-gradient(45deg,rgba(100,116,139,0.12)_25%,transparent_25%,transparent_75%,rgba(100,116,139,0.12)_75%)] bg-[length:24px_24px] bg-[position:0_0,12px_12px] p-2 sm:p-4">
-                <div className="bg-white shadow-2xl shadow-slate-400/25">
+              <div ref={canvasStageRef} className="relative grid flex-1 place-items-center overflow-hidden bg-slate-100 p-1 dark:bg-slate-800 sm:p-2">
+                <div className="absolute left-1/2 top-3 z-10 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card/95 p-1.5 shadow-xl shadow-slate-400/20 backdrop-blur">
+                  <button type="button" onClick={() => openPanel("ai")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-blue/10">
+                    <Sparkles className="h-4 w-4 text-edsync-blue" />
+                    Ask EdSync
+                  </button>
+                  <button type="button" onClick={() => openPanel(selectedObject ? "text" : "elements")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-muted">
+                    <MousePointer2 className="h-4 w-4" />
+                    Edit
+                  </button>
+                  {selectedObject && (
+                    <label className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-muted">
+                      <span className="h-4 w-4 rounded-full border border-edsync-border" style={{ backgroundColor: cssColor(selectedObject.fill) }} />
+                      Style
+                      <input type="color" value={cssColor(selectedObject.fill)} onChange={(event) => updateObject({ fill: event.target.value })} className="sr-only" />
+                    </label>
+                  )}
+                  <span className="h-5 w-px shrink-0 bg-edsync-border" />
+                  <button type="button" onClick={duplicateSelected} disabled={!selectedObject} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-edsync-text transition hover:bg-edsync-muted disabled:opacity-35" title={t.duplicate} aria-label={t.duplicate}>
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button type="button" onClick={removeSelected} disabled={!selectedObject} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-edsync-red transition hover:bg-edsync-red/10 disabled:opacity-35" title={t.delete} aria-label={t.delete}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="bg-white shadow-xl shadow-slate-400/25">
                   <canvas ref={canvasElementRef} aria-label="EdSync lesson canvas" />
                 </div>
               </div>
-              <div className="flex items-center gap-2 overflow-x-auto border-t border-edsync-border bg-edsync-card p-2">
+              <div className="flex items-center gap-2 overflow-x-auto border-t border-edsync-border bg-edsync-card px-3 py-2">
+                <div className="hidden shrink-0 items-center gap-4 pr-2 text-xs font-black text-edsync-subtle md:flex">
+                  <span>Notes</span>
+                  <span>Timer</span>
+                </div>
                 {pages.map((page, index) => (
                   <button
                     key={page.id}
                     type="button"
                     onClick={() => void switchPage(page.id)}
-                    className={`flex min-w-[7rem] items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
-                      page.id === activePageId ? "border-edsync-blue bg-edsync-blue text-white" : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
+                    className={`group flex min-w-[8.5rem] items-center gap-2 rounded-xl border p-1.5 text-left text-xs font-black transition ${
+                      page.id === activePageId ? "border-edsync-blue bg-edsync-blue/10 ring-2 ring-edsync-blue/35" : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
                     }`}
                   >
-                    <span className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg ${page.id === activePageId ? "bg-white/18" : "bg-edsync-blue/10 text-edsync-blue"}`}>
-                      {index + 1}
+                    <span className="grid h-12 w-[4.25rem] flex-shrink-0 place-items-center overflow-hidden rounded-lg border border-edsync-border bg-white shadow-sm">
+                      <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
+                      <span className="sr-only">Page {index + 1}</span>
                     </span>
-                    <span className="min-w-0 truncate">{page.name}</span>
+                    <span className="min-w-0">
+                      <span className="block text-[11px] text-edsync-subtle">{index + 1}</span>
+                      <span className="block truncate">{page.name}</span>
+                    </span>
                   </button>
                 ))}
-                <button type="button" onClick={addPage} className="flex min-w-[7rem] items-center justify-center gap-2 rounded-xl border border-dashed border-edsync-border bg-edsync-surface px-3 py-2 text-xs font-black text-edsync-blue transition hover:border-edsync-blue/40">
+                <button type="button" onClick={addPage} className="flex min-w-[8rem] items-center justify-center gap-2 rounded-xl border border-dashed border-edsync-border bg-edsync-surface px-3 py-4 text-xs font-black text-edsync-blue transition hover:border-edsync-blue/40">
                   <Plus className="h-4 w-4" />
                   {t.addPage}
                 </button>
+                <div className="ml-auto hidden shrink-0 items-center gap-3 pl-3 text-xs font-black text-edsync-subtle lg:flex">
+                  <span>Pages</span>
+                  <span>{pages.findIndex((page) => page.id === activePageId) + 1} / {pages.length}</span>
+                </div>
               </div>
             </div>
           </section>
