@@ -582,7 +582,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       )}
 
       {!displayCollapsed && (
-        <div className="premium-surface mx-4 mt-4 rounded-2xl p-3">
+        <div className="mx-4 mt-4 p-2">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-surface text-sm font-bold text-edsync-text shadow-sm">
               {generateInitials(profile?.full_name || profile?.email || role)}
@@ -592,37 +592,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
                 {profile?.full_name || "Getting ready"}
               </p>
               <p className="truncate text-xs text-edsync-subtle">
-                {profile?.email || "Connect edsync to personalize"}
+                {profile?.email || shellLabel}
               </p>
             </div>
           </div>
-          {role === "admin" && (
-            <div className="group mt-3 rounded-xl border border-edsync-blue/20 bg-edsync-blue/10 px-3 py-2 text-xs font-semibold text-edsync-blue">
-              Owner preview
-              <span className="edsync-hover-detail text-edsync-blue">Read-only view mode is audited.</span>
-            </div>
-          )}
-          {workspaceContext && (
-            <div className="group mt-3 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-xs text-edsync-subtle">
-              <p className="font-semibold text-edsync-text">
-                {workspaceContext.type === "organization" ? "Organization" : "Individual"}
-              </p>
-              {workspaceContext.type === "organization" && (
-                <p className="mt-0.5 truncate" title={workspaceContext.organizationName || workspaceContext.organizationCode || "Organization"}>
-                  {workspaceContext.organizationName || workspaceContext.organizationCode || "Organization context"}
-                </p>
-              )}
-              <span className="edsync-hover-detail">
-                {workspaceContext.type === "organization" ? "Owner-managed workspace" : "Create and learn independently"}
-              </span>
-            </div>
-          )}
-          {role === "student" && (
-            <div className="group mt-3 rounded-xl border border-edsync-emerald/20 bg-edsync-emerald/10 px-3 py-2 text-xs font-semibold text-edsync-emerald">
-              {workspaceContext?.type === "organization" ? "Org learner tools" : "Learner tools"}
-              <span className="edsync-hover-detail text-edsync-emerald">Courses, practice, progress, and notes.</span>
-            </div>
-          )}
         </div>
       )}
 
