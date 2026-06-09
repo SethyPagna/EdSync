@@ -451,7 +451,7 @@ export default function TeacherStudents() {
         </div>
       )}
 
-      {/* Spaces grid */}
+      {/* Classes grid */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
@@ -460,7 +460,7 @@ export default function TeacherStudents() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          {/* All spaces card */}
+          {/* All classes card */}
           <div
             onClick={() => selectClass("all")}
             className={`edsync-card cursor-pointer transition-all border-dashed ${selectedClass === "all" ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
@@ -469,7 +469,7 @@ export default function TeacherStudents() {
               <UsersRound className="h-5 w-5" />
             </div>
             <h3 className="font-display font-bold text-edsync-text">
-              All spaces
+              All classes
             </h3>
             <p className="text-xs text-edsync-subtle">
               {allStudents.length} learners total
@@ -513,7 +513,7 @@ export default function TeacherStudents() {
                   deleteClass(cls.id);
                 }}
                 className="absolute right-3 top-3 rounded-lg p-1.5 text-[0] text-edsync-subtle opacity-0 transition-opacity hover:bg-edsync-red/10 hover:text-edsync-red group-hover:opacity-100"
-                title="Delete space"
+                title="Delete class"
                 aria-label={`Delete ${cls.name}`}
               >
                 <Trash2 className="h-4 w-4" />
@@ -530,7 +530,7 @@ export default function TeacherStudents() {
             <h2 className="font-display font-semibold text-lg text-edsync-text">
               {selectedClass === "all"
                 ? "All Learners"
-                : activeClass?.name || "Space"}
+                : activeClass?.name || "Class"}
             </h2>
             <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20">
               {students.length} learners
@@ -636,11 +636,11 @@ export default function TeacherStudents() {
         <div className="space-y-4">
           {selectedClass !== "all" ? (
             <>
-              {/* Space info */}
+              {/* Class info */}
               {activeClass && (
                 <div className="edsync-card">
                   <h3 className="font-semibold text-edsync-text mb-3">
-                    Space info
+                    Class info
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -729,9 +729,9 @@ export default function TeacherStudents() {
             </>
           ) : (
             <div className="edsync-card text-center py-8">
-              <p className="font-medium text-edsync-text mb-1">Select a space</p>
+              <p className="font-medium text-edsync-text mb-1">Select a class</p>
               <p className="text-edsync-subtle text-sm">
-                Select a space to manage learners and courses.
+                Select a class to manage learners and courses.
               </p>
             </div>
           )}
