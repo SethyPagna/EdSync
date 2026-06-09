@@ -368,7 +368,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
   const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
   const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
-  const requestedAdminViewMode = adminViewModeFromLocation() ?? adminViewModeFromCookie();
+  const [requestedAdminViewMode, setRequestedAdminViewMode] = useState<AdminViewMode | null>(null);
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const copy = roleCopy[role];
   const studioCompactSidebar = shouldStartWithCompactSidebar(pathname);
@@ -395,6 +395,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       setCollapsed(sidebarCollapsedFromStorage());
       setSessionRole(sessionRoleFromCookie());
       setWorkspaceContext(workspaceContextFromStorage());
+      setRequestedAdminViewMode(adminViewModeFromLocation() ?? adminViewModeFromCookie());
       setSectionOrder(readSectionOrder(sectionOrderStorageKey(role)));
     });
   }, [pathname, role]);
