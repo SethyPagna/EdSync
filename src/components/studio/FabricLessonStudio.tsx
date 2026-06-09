@@ -111,6 +111,18 @@ type ContentExtractionResponse = {
   warning?: string | null;
   error?: string;
 };
+type AiLessonSlide = {
+  slideNumber: number;
+  title: string;
+  type: "title" | "objectives" | "content" | "example" | "socratic" | "activity" | "summary" | "assessment";
+  onScreenText: string[];
+  speakerNotes: string;
+  visualSuggestion: string;
+  navigation: {
+    previous: string | null;
+    next: string | null;
+  };
+};
 
 const DEFAULT_CANVAS_WIDTH = 960;
 const DEFAULT_CANVAS_HEIGHT = 540;
@@ -501,6 +513,10 @@ function downloadText(filename: string, content: string, type = "application/jso
 
 function cssColor(value: unknown, fallback = DEFAULT_ACCENT) {
   return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function cleanSlideText(line: string) {
+  return line.replace(/\*\*(.*?)\*\*/g, "$1").trim();
 }
 
 function formatUpdatedAt(value: string | undefined) {
@@ -1616,6 +1632,45 @@ export default function FabricLessonStudio() {
     await loadPage(nextPages[0]);
   };
 
+  const applyAiSlideDeck = async (slides: AiLessonSlide[]) => {
+    const validSlides = slides.filter((slide) => slide.title.trim() && slide.onScreenText.length > 0);
+    if (validSlides.length === 0) {
+      toast.error("AI returned no usable slides.");
+      return;
+    }
+
+    const nextPages: StudioPage[] = validSlides.map((slide, index) => {
+      const bodyLines = slide.onScreenText
+        .map(cleanSlideText)
+        .filter((line) => line && line.toLowerCase() !== slide.title.toLowerCase());
+      return {
+        id: crypto.randomUUID(),
+        name: slide.title,
+        seed: {
+          title: slide.title,
+          body: bodyLines.join("\n") || slide.visualSuggestion || "Review and edit this generated slide.",
+          accent: index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82",
+        },
+        snapshot: null,
+      };
+    });
+
+    setPages(nextPages);
+    pagesRef.current = nextPages;
+    activePageIdRef.current = nextPages[0].id;
+    setActivePageId(nextPages[0].id);
+    setActiveProject((current) =>
+      current
+        ? {
+            ...current,
+            title: validSlides[0].title || current.title,
+            status: "draft",
+          }
+        : current,
+    );
+    await loadPage(nextPages[0]);
+  };
+
   const generateWithAi = async () => {
     const prompt = aiPrompt.trim();
     const lessonName = aiLessonName.trim();
@@ -1656,20 +1711,27 @@ export default function FabricLessonStudio() {
           depth: "standard",
           languageStyle: aiStyle === "expert" ? "academic" : aiStyle === "professional" ? "professional" : "student_friendly",
           audienceLanguage: language === "es" ? "Spanish" : language === "fr" ? "French" : "English",
-          versionCount: Math.max(aiVersions, targetPageCount),
+          versionCount: Math.max(1, Math.min(3, aiVersions)),
           designTemplateId: "clear-classroom",
           outputLength: "standard",
+          outputFormat: "slide_deck",
+          slideCount: targetPageCount,
         }),
       });
       const data = (await response.json()) as {
         lesson?: { title?: string; description?: string; sections?: Array<{ title?: string; content?: string }> };
+        slides?: AiLessonSlide[];
         error?: string;
       };
-      if (!response.ok || !data.lesson) {
+      if (!response.ok || (!data.lesson && !data.slides?.length)) {
         toast.error(data.error || "AI generation is unavailable.");
         return;
       }
-      await applyAiLesson(data.lesson);
+      if (data.slides?.length) {
+        await applyAiSlideDeck(data.slides);
+      } else if (data.lesson) {
+        await applyAiLesson(data.lesson);
+      }
       setPanel("pages");
       toast.success("AI lesson added to the canvas.");
     } catch (error) {
