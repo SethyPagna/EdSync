@@ -14,6 +14,29 @@ export const preferredRegion = ["hkg1", "sin1"];
 
 const MAX_SOURCE_CHARS = 5000;
 
+type AiLessonSlideType =
+  | "title"
+  | "objectives"
+  | "content"
+  | "example"
+  | "socratic"
+  | "activity"
+  | "summary"
+  | "assessment";
+
+type AiLessonSlide = {
+  slideNumber: number;
+  title: string;
+  type: AiLessonSlideType;
+  onScreenText: string[];
+  speakerNotes: string;
+  visualSuggestion: string;
+  navigation: {
+    previous: string | null;
+    next: string | null;
+  };
+};
+
 const FIXED_LESSON_SYSTEM_PROMPT = `You are EdSync AI, an expert educational content designer.
 Return ONLY one valid JSON object with the exact schema below. Do not use markdown, code fences, preamble, or trailing text.
 
@@ -48,6 +71,56 @@ Length constraints to avoid truncation:
 - description: 1-2 sentences.
 - section content: 70-130 words each.
 - quiz explanation: 1 sentence each that clearly states why the correct answer is correct.`;
+
+const SLIDE_DECK_SYSTEM_PROMPT = `You are the EdSync AI Lesson Creator Engine, a text-generation model that produces structured, ready-to-render lesson content for an automated slide builder.
+Return ONLY a valid JSON array. Do not use markdown, code fences, preamble, comments, or trailing text.
+
+Core defaults unless the user overrides:
+- Lesson type: slide deck.
+- Complexity: intermediate.
+- Include Socratic questioning: yes.
+- Include speaker notes: yes.
+- Default audience: adult learners.
+
+If the request is ambiguous enough that no topic can be inferred, return:
+[{ "clarification": "Please specify the topic, audience, and desired number of slides." }]
+
+Every non-clarification lesson must contain these slide types in order:
+1. Title slide: topic, subtitle, audience, estimated time.
+2. Learning objectives: 3-5 objectives starting with "By the end...".
+3. Key concept slides: concept name, 2-4 full-sentence bullets, and one simple example or analogy.
+4. Example / walkthrough: step-by-step demonstration.
+5. Socratic questions: at least 2 slides, each with a bold main question, 2-3 follow-up questions, and expected student responses in speaker notes.
+6. Interactive activity: a short task or thought exercise.
+7. Summary: 3-5 main takeaways.
+8. Assessment / exit ticket: 2-3 quick questions with answer key in speaker notes.
+
+Complexity adaptation:
+- Beginner: simple language, concrete analogies, everyday examples.
+- Intermediate: some technical terms, applied examples, moderate depth.
+- Advanced: in-depth analysis, abstract concepts, challenging questions.
+
+Each slide object must use this exact schema:
+{
+  "slideNumber": number,
+  "title": string,
+  "type": "title" | "objectives" | "content" | "example" | "socratic" | "activity" | "summary" | "assessment",
+  "onScreenText": string[],
+  "speakerNotes": string,
+  "visualSuggestion": string,
+  "navigation": {
+    "previous": string | null,
+    "next": string | null
+  }
+}
+
+Critical UI-less environment rules:
+- The navigation field is required on every slide.
+- The first slide's previous must be null.
+- The last slide's next must be null.
+- onScreenText must be crisp, scannable, and slide-ready.
+- speakerNotes can contain full instructor guidance, anticipated answers, and transition cues.
+- visualSuggestion must be concrete and implementable.`;
 
 function shouldRetryForTruncation(error: unknown) {
   const msg = error instanceof Error ? error.message.toLowerCase() : "";
@@ -111,11 +184,150 @@ ${safeContent}
 ${truncationNote}`.trim();
 }
 
+function buildSlideDeckUserPrompt({
+  mode,
+  safeContent,
+  complexityDesc,
+  wasTruncated,
+  profilePrompt,
+  stylePrompt,
+  designInstruction,
+  audienceLanguage,
+  slideCount,
+}: {
+  mode: string;
+  safeContent: string;
+  complexityDesc: string;
+  wasTruncated: boolean;
+  profilePrompt: string;
+  stylePrompt: string;
+  designInstruction: string;
+  audienceLanguage: string;
+  slideCount: number;
+}) {
+  const sourceType =
+    mode === "url" ? "url" : mode === "text" ? "text" : "objectives";
+  const truncationNote = wasTruncated
+    ? "Note: source input was truncated to stay within model limits. Prioritize the most central concepts."
+    : "";
+
+  return `Generate a complete EdSync slide lesson from the user input below.
+
+Settings:
+- Complexity: ${complexityDesc}
+- Number of slides: ${slideCount}
+- Audience language: ${audienceLanguage}
+- Include Socratic questions, speaker notes, visual suggestions, and linear navigation on every slide.
+- Output must be the JSON array only.
+
+Personalization:
+${profilePrompt}
+
+Generation style:
+${stylePrompt}
+${designInstruction ? `\n${designInstruction}` : ""}
+
+Input type: ${sourceType}
+Source input:
+${safeContent}
+
+${truncationNote}`.trim();
+}
+
 type FallbackLessonDraft = Omit<AILessonDraft, "quiz_questions"> & {
   quiz_questions: (AILessonDraft["quiz_questions"][number] & {
     correct_answer: "a" | "b" | "c" | "d";
   })[];
 };
+
+function parseJsonArrayResponse(raw: string): unknown[] {
+  let clean = raw.trim();
+  clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const start = clean.indexOf("[");
+  const end = clean.lastIndexOf("]");
+  if (start !== -1 && end !== -1) {
+    clean = clean.slice(start, end + 1);
+  }
+  const parsed = JSON.parse(clean) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error("Model returned JSON that was not an array.");
+  }
+  return parsed;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function asStringArray(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return fallback;
+  const lines = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return lines.length > 0 ? lines : fallback;
+}
+
+function normalizeSlideType(value: unknown, index: number): AiLessonSlideType {
+  const allowed = new Set<AiLessonSlideType>([
+    "title",
+    "objectives",
+    "content",
+    "example",
+    "socratic",
+    "activity",
+    "summary",
+    "assessment",
+  ]);
+  if (typeof value === "string" && allowed.has(value as AiLessonSlideType)) {
+    return value as AiLessonSlideType;
+  }
+  if (index === 0) return "title";
+  if (index === 1) return "objectives";
+  return "content";
+}
+
+function withLinearNavigation(slides: Omit<AiLessonSlide, "navigation">[]): AiLessonSlide[] {
+  return slides.map((slide, index) => ({
+    ...slide,
+    navigation: {
+      previous: index === 0 ? null : slides[index - 1].title,
+      next: index === slides.length - 1 ? null : slides[index + 1].title,
+    },
+  }));
+}
+
+function normalizeSlideDeck(rawSlides: unknown[], topic: string): AiLessonSlide[] {
+  const slides = rawSlides
+    .map((value, index) => {
+      const item = asRecord(value);
+      if ("clarification" in item) {
+        throw new Error(String(item.clarification || "Lesson request needs clarification."));
+      }
+      const title = typeof item.title === "string" && item.title.trim()
+        ? item.title.trim()
+        : index === 0
+          ? topic
+          : `Slide ${index + 1}`;
+      return {
+        slideNumber: index + 1,
+        title,
+        type: normalizeSlideType(item.type, index),
+        onScreenText: asStringArray(item.onScreenText, [title]),
+        speakerNotes: typeof item.speakerNotes === "string" ? item.speakerNotes.trim() : "",
+        visualSuggestion: typeof item.visualSuggestion === "string" ? item.visualSuggestion.trim() : "Use a clean EdSync layout with one visual focus.",
+      };
+    })
+    .filter((slide) => slide.title && slide.onScreenText.length > 0);
+
+  if (slides.length < 8) {
+    throw new Error("Model returned too few slides for the required lesson flow.");
+  }
+
+  return withLinearNavigation(slides);
+}
 
 function truncateSourceInput(source: string, maxChars = MAX_SOURCE_CHARS) {
   if (source.length <= maxChars) {
@@ -325,6 +537,181 @@ function buildLocalFallbackLesson(topic: string): FallbackLessonDraft {
   };
 }
 
+function buildLocalFallbackSlideDeck(topic: string, requestedSlides: number): AiLessonSlide[] {
+  const slideCount = Math.max(10, requestedSlides);
+  const baseSlides: Omit<AiLessonSlide, "navigation">[] = [
+    {
+      slideNumber: 1,
+      title: topic,
+      type: "title",
+      onScreenText: [
+        topic,
+        "A practical EdSync lesson for adult learners.",
+        "Estimated time: 45 minutes.",
+      ],
+      speakerNotes: "Welcome learners, connect the topic to their goals, and preview the lesson flow.",
+      visualSuggestion: "Use a clear title layout with one course-relevant image or icon.",
+    },
+    {
+      slideNumber: 2,
+      title: "Learning Objectives",
+      type: "objectives",
+      onScreenText: [
+        `By the end, learners can explain the core idea of ${topic}.`,
+        `By the end, learners can apply ${topic} to a realistic scenario.`,
+        `By the end, learners can evaluate their progress with a quick check.`,
+      ],
+      speakerNotes: "Read the objectives and ask learners which objective feels most useful to them.",
+      visualSuggestion: "Use three compact objective cards with check icons.",
+    },
+    {
+      slideNumber: 3,
+      title: "Key Concept: Foundation",
+      type: "content",
+      onScreenText: [
+        `${topic} starts with one clear foundation.`,
+        "A strong definition makes later practice easier.",
+        "Example: treat the first idea as the anchor for every task that follows.",
+      ],
+      speakerNotes: "Explain the foundation in plain language. Ask learners to restate it in their own words.",
+      visualSuggestion: "Use an anchor or foundation diagram.",
+    },
+    {
+      slideNumber: 4,
+      title: "Key Concept: Application",
+      type: "content",
+      onScreenText: [
+        "Application means using the idea in context.",
+        "Good practice includes a decision, action, and feedback.",
+        "Analogy: like learning a route by walking it, not only reading the map.",
+      ],
+      speakerNotes: "Move from definition to action. Ask learners where they might use this idea this week.",
+      visualSuggestion: "Use a simple map or workflow visual.",
+    },
+    {
+      slideNumber: 5,
+      title: "Walkthrough",
+      type: "example",
+      onScreenText: [
+        "Step 1: Identify the situation.",
+        "Step 2: Choose the relevant concept.",
+        "Step 3: Apply it and check the result.",
+      ],
+      speakerNotes: "Model one worked example aloud, then pause after each step for learner predictions.",
+      visualSuggestion: "Use a three-step horizontal process.",
+    },
+    {
+      slideNumber: 6,
+      title: "Socratic: What Changes First?",
+      type: "socratic",
+      onScreenText: [
+        "**What changes first when we apply this idea?**",
+        "What evidence would show progress?",
+        "What would make the first attempt fail?",
+      ],
+      speakerNotes: "Expected responses: learners name a concrete action, a visible result, and one risk or misconception.",
+      visualSuggestion: "Use a question bubble and evidence icon.",
+    },
+    {
+      slideNumber: 7,
+      title: "Socratic: Why This Approach?",
+      type: "socratic",
+      onScreenText: [
+        "**Why is this approach better than guessing?**",
+        "What assumption are we making?",
+        "How could we test that assumption?",
+      ],
+      speakerNotes: "Expected responses: learners compare structured reasoning with guessing and propose a small test.",
+      visualSuggestion: "Use a split comparison: guessing versus structured check.",
+    },
+    {
+      slideNumber: 8,
+      title: "Interactive Activity",
+      type: "activity",
+      onScreenText: [
+        "Choose one real scenario.",
+        "Apply the three-step walkthrough.",
+        "Share one decision and one piece of evidence.",
+      ],
+      speakerNotes: "Give learners 5-7 minutes. Invite pairs to compare decisions before sharing.",
+      visualSuggestion: "Use a worksheet-style activity panel.",
+    },
+    {
+      slideNumber: 9,
+      title: "Summary",
+      type: "summary",
+      onScreenText: [
+        "Start with a clear foundation.",
+        "Apply the idea in context.",
+        "Use evidence to check progress.",
+      ],
+      speakerNotes: "Summarize the lesson and connect each takeaway back to the objectives.",
+      visualSuggestion: "Use three takeaway cards.",
+    },
+    {
+      slideNumber: 10,
+      title: "Exit Ticket",
+      type: "assessment",
+      onScreenText: [
+        `What is the core idea of ${topic}?`,
+        "How would you apply it in one real situation?",
+        "What evidence would prove progress?",
+      ],
+      speakerNotes: "Answer key: accurate definition, realistic application, and observable evidence of progress.",
+      visualSuggestion: "Use a compact quiz or ticket layout.",
+    },
+  ];
+
+  while (baseSlides.length < slideCount) {
+    const nextNumber = baseSlides.length + 1;
+    baseSlides.splice(baseSlides.length - 3, 0, {
+      slideNumber: nextNumber,
+      title: `Key Concept ${nextNumber - 2}`,
+      type: "content",
+      onScreenText: [
+        `Extend ${topic} with one additional practical idea.`,
+        "Connect the idea to a concrete learner task.",
+        "Use a quick example before moving on.",
+      ],
+      speakerNotes: "Use this extension only if the class is ready for more depth.",
+      visualSuggestion: "Use a small concept card with a practice prompt.",
+    });
+  }
+
+  return withLinearNavigation(
+    baseSlides.map((slide, index) => ({ ...slide, slideNumber: index + 1 })),
+  );
+}
+
+function slideDeckToLessonDraft(slides: AiLessonSlide[], topic: string): FallbackLessonDraft {
+  const fallback = buildLocalFallbackLesson(topic);
+  const titleSlide = slides[0];
+  const objectiveSlide = slides.find((slide) => slide.type === "objectives");
+  const objectives = objectiveSlide?.onScreenText.filter((line) => line.toLowerCase().startsWith("by the end"));
+
+  return {
+    ...fallback,
+    title: titleSlide?.title || fallback.title,
+    description: titleSlide?.onScreenText.slice(1).join(" ") || fallback.description,
+    objectives: objectives?.length ? objectives : fallback.objectives,
+    estimated_duration: Math.max(30, slides.length * 5),
+    tags: Array.from(new Set([...fallback.tags, "ai-slide-deck", "studio-ready"])),
+    sections: slides
+      .filter((slide) => slide.type !== "title" && slide.type !== "objectives")
+      .slice(0, 6)
+      .map((slide, index) => ({
+        title: slide.title,
+        content: [
+          ...slide.onScreenText,
+          slide.visualSuggestion ? `Visual: ${slide.visualSuggestion}` : "",
+          slide.speakerNotes ? `Teacher notes: ${slide.speakerNotes}` : "",
+        ].filter(Boolean).join("\n"),
+        content_type: slide.type === "activity" ? "activity" : "text",
+        duration_minutes: index === 0 ? 8 : 7,
+      })),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { user } = await getAuthenticatedUser();
@@ -358,6 +745,8 @@ export async function POST(request: NextRequest) {
       audienceLanguage = "English",
       designTemplateId = "corporate",
       outputLength,
+      outputFormat = "lesson",
+      slideCount = 10,
     } = await request.json();
 
     const normalizedContent = typeof content === "string" ? content.trim() : "";
@@ -410,6 +799,58 @@ export async function POST(request: NextRequest) {
       depth,
     });
     const requestedVersions = Math.min(3, Math.max(1, Number(versionCount || 1)));
+    const requestedSlideCount = Math.min(24, Math.max(10, Number(slideCount || 10)));
+
+    if (outputFormat === "slide_deck") {
+      const topic = deriveTopicLabel(normalizedContent);
+      const slidePrompt = buildSlideDeckUserPrompt({
+        mode,
+        safeContent,
+        complexityDesc,
+        wasTruncated,
+        profilePrompt: aiContext.prompt,
+        stylePrompt,
+        designInstruction,
+        audienceLanguage,
+        slideCount: requestedSlideCount,
+      });
+
+      let slides: AiLessonSlide[];
+      let warning: string | undefined;
+
+      try {
+        const rawSlides = await generateAIChat({
+          messages: [
+            { role: "system" as const, content: SLIDE_DECK_SYSTEM_PROMPT },
+            { role: "user" as const, content: slidePrompt },
+          ],
+          maxTokens: 4200,
+          temperature: 0.25,
+          feature: "lesson-slide-deck",
+        });
+        slides = normalizeSlideDeck(parseJsonArrayResponse(rawSlides), topic);
+      } catch (slideError) {
+        warning =
+          slideError instanceof Error
+            ? `AI slide output was not usable (${slideError.message}). Returned a local slide draft.`
+            : "AI slide output was not usable. Returned a local slide draft.";
+        slides = buildLocalFallbackSlideDeck(topic, requestedSlideCount);
+      }
+
+      const lesson = slideDeckToLessonDraft(slides, topic);
+
+      return NextResponse.json({
+        lesson,
+        slides,
+        variants: [
+          {
+            ...lesson,
+            tags: Array.from(new Set([...(lesson.tags || []), "version-1"])),
+          },
+        ],
+        warning,
+      });
+    }
 
     const makeUserPrompt = (versionInstruction?: string) =>
       buildLessonUserPrompt({
