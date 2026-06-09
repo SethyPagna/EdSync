@@ -378,7 +378,7 @@ export default function TeacherWorkPage() {
                 : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
             }`}
           >
-            All spaces
+            All courses
           </button>
           {classes.map((classRow) => (
             <button
@@ -453,7 +453,7 @@ export default function TeacherWorkPage() {
               onChange={(event) => setForm({ ...form, classId: event.target.value })}
               disabled={Boolean(editingId)}
             >
-              <option value="">Choose space</option>
+              <option value="">Choose course / class</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -582,7 +582,7 @@ export default function TeacherWorkPage() {
                     <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-edsync-subtle">
                       <span className="inline-flex items-center gap-1.5">
                         <UsersRound className="h-4 w-4" />
-                        {item.class_name || "All spaces"}
+                        {item.class_name || "All courses"}
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <CalendarClock className="h-4 w-4" />
