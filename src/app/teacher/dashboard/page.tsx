@@ -249,9 +249,9 @@ export default function TeacherDashboard() {
               },
               {
                 href: "/teacher/students",
-                title: "Spaces",
+                title: "Classes",
                 value: `${classes.length}`,
-                copy: "active spaces",
+                copy: "active classes",
                 icon: UsersRound,
                 tone: "text-edsync-blue",
               },
@@ -434,14 +434,14 @@ export default function TeacherDashboard() {
           </section>
 
           <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-            <h2 className="font-display text-xl font-bold">Course spaces</h2>
+            <h2 className="font-display text-xl font-bold">Course classes</h2>
             <p className="edsync-hover-detail">
               Share access codes with learners.
             </p>
             <div className="mt-4 space-y-3">
               {classes.length === 0 ? (
                 <Link href="/teacher/students" className="btn-secondary w-full justify-center">
-                  Create space
+                  Create class
                 </Link>
               ) : (
                 classes.slice(0, 4).map((cls) => (
