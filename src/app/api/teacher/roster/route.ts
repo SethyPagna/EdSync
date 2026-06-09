@@ -43,7 +43,7 @@ function scopeParams(scope: TeacherRosterScope) {
 
 function listClasses(scope: TeacherRosterScope) {
   return d1Query(
-    `SELECT id, name, subject, grade_level, teacher_id
+    `SELECT c.id, c.name, c.subject, c.grade_level, c.teacher_id
        FROM classes c
        ${tenantObjectJoin({ objectTable: "classes", objectAlias: "c", linkAlias: "tol" })}
       WHERE ${tenantObjectPredicate({ linkAlias: "tol" })}
