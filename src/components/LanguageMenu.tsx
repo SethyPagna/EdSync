@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Check, Languages } from "lucide-react";
 import {
   DEFAULT_PUBLIC_LANGUAGE,
@@ -39,6 +39,15 @@ function readInitialLanguage() {
   return normalizePublicLanguage(stored);
 }
 
+function subscribeLanguagePreference(onStoreChange: () => void) {
+  window.addEventListener("edsync-language-change", onStoreChange);
+  return () => window.removeEventListener("edsync-language-change", onStoreChange);
+}
+
+function readServerLanguagePreference() {
+  return DEFAULT_PUBLIC_LANGUAGE;
+}
+
 function persistLanguage(language: PublicLanguageName) {
   const code = languageCodeFor(language);
   window.localStorage.setItem("edsync-language", language);
@@ -55,11 +64,11 @@ export default function LanguageMenu({
   className = "",
 }: LanguageMenuProps) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const [language, setLanguage] = useState<PublicLanguageName>(readInitialLanguage);
-
-  useEffect(() => {
-    persistLanguage(language);
-  }, [language]);
+  const language = useSyncExternalStore(
+    subscribeLanguagePreference,
+    readInitialLanguage,
+    readServerLanguagePreference,
+  );
 
   useEffect(() => {
     const closeMenu = () => {
@@ -84,7 +93,6 @@ export default function LanguageMenu({
   }, []);
 
   const chooseLanguage = (nextLanguage: PublicLanguageName) => {
-    setLanguage(nextLanguage);
     persistLanguage(nextLanguage);
     window.dispatchEvent(new CustomEvent("edsync-language-change", { detail: { language: nextLanguage } }));
     detailsRef.current?.removeAttribute("open");
