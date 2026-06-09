@@ -1,12 +1,8 @@
-const SERVICE_WORKER_CACHE_NAME = "edsync-core-2026-05-24";
+const SERVICE_WORKER_CACHE_NAME = "edsync-core-2026-06-10";
 
 const SERVICE_WORKER_CORE_URLS = [
   "/",
   "/auth/login",
-  "/student/dashboard",
-  "/student/work",
-  "/teacher/dashboard",
-  "/teacher/lessons",
   "/favicon.svg",
   "/manifest.webmanifest",
 ] as const;
@@ -42,8 +38,12 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/_next/") || request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(request).then((cached) => cached || caches.match("/"))));
+  if (url.pathname.startsWith("/_next/")) {
+    event.respondWith(fetch(request));
+    return;
+  }
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(() => caches.match("/")));
     return;
   }
 
