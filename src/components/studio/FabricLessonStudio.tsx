@@ -34,8 +34,6 @@ import {
   type LucideIcon,
   Undo2,
   UploadCloud,
-  ZoomIn,
-  ZoomOut,
 } from "lucide-react";
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
@@ -1647,6 +1645,194 @@ export default function FabricLessonStudio() {
     updateSelectedObject();
   };
 
+  const aiLessonBuilder = (
+    <div className="space-y-4">
+      <PanelTitle icon={Sparkles} title={t.ai} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="block text-xs font-bold text-edsync-subtle">
+          Lesson name <RequiredMark />
+          <input
+            value={aiLessonName}
+            onChange={(event) => setAiLessonName(event.target.value)}
+            placeholder="Example: Logic proofs for beginners"
+            className="mt-1 h-11 w-full rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
+          />
+        </label>
+        <label className="block text-xs font-bold text-edsync-subtle">
+          Lesson type
+          <select
+            value={aiLessonType}
+            onChange={(event) => setAiLessonType(event.target.value as AiLessonType)}
+            className="mt-1 h-11 w-full rounded-2xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
+          >
+            <option value="lesson">Lesson flow</option>
+            <option value="slides">PPT / slides</option>
+            <option value="quiz">Quiz check</option>
+            <option value="discussion">Discussion</option>
+            <option value="activity">Activity</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="block text-xs font-bold text-edsync-subtle">
+          Description
+          <textarea
+            value={aiDescription}
+            onChange={(event) => setAiDescription(event.target.value)}
+            rows={3}
+            className="edsync-textarea mt-1 text-sm"
+            placeholder="Audience, topic, and expected learning outcome"
+          />
+        </label>
+        <label className="block text-xs font-bold text-edsync-subtle">
+          Objectives <RequiredMark />
+          <textarea
+            value={aiObjectives}
+            onChange={(event) => setAiObjectives(event.target.value)}
+            rows={3}
+            className="edsync-textarea mt-1 text-sm"
+            placeholder="Success criteria, quiz targets, practice goals"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="block rounded-2xl bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+          Style
+          <select
+            value={aiStyle}
+            onChange={(event) => setAiStyle(event.target.value as AiLessonStyle)}
+            className="mt-2 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+          >
+            <option value="socratic">Socratic</option>
+            <option value="direct">Direct</option>
+            <option value="professional">Professional</option>
+            <option value="expert">Expert</option>
+          </select>
+        </label>
+        <label className="block rounded-2xl bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+          Complexity {aiComplexity}
+          <input
+            type="range"
+            min={10}
+            max={100}
+            value={aiComplexity}
+            onChange={(event) => setAiComplexity(Number(event.target.value))}
+            className="mt-3 w-full accent-edsync-blue"
+          />
+        </label>
+        <label className="block rounded-2xl bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+          Pages / sections
+          <input
+            type="number"
+            min={1}
+            max={24}
+            value={aiPageCount}
+            onChange={(event) => setAiPageCount(Math.min(24, Math.max(1, Number(event.target.value))))}
+            className="mt-2 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+          />
+        </label>
+        <label className="block rounded-2xl bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
+          Versions
+          <input
+            type="number"
+            min={1}
+            max={4}
+            value={aiVersions}
+            onChange={(event) => setAiVersions(Math.min(4, Math.max(1, Number(event.target.value))))}
+            className="mt-2 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+          />
+        </label>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-edsync-subtle">
+            Include
+          </p>
+          <button
+            type="button"
+            onClick={() => projectInputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs font-black text-edsync-blue transition hover:bg-edsync-blue/10"
+          >
+            <UploadCloud className="h-4 w-4" />
+            Attach
+          </button>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {AI_FOCUS_OPTIONS.map(([id, label, detail]) => {
+            const active = aiFocuses.includes(id);
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() =>
+                  setAiFocuses((current) =>
+                    current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+                  )
+                }
+                className={`rounded-2xl px-3 py-2 text-left text-xs font-black transition ${
+                  active
+                    ? "bg-edsync-blue/10 text-edsync-blue ring-1 ring-edsync-blue/30"
+                    : "bg-edsync-surface text-edsync-text hover:bg-edsync-muted"
+                }`}
+              >
+                <span className="block">{label}</span>
+                <span className="mt-1 block text-[11px] font-semibold leading-4 text-edsync-subtle">
+                  {detail}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+        <div className="space-y-3">
+          <label className="block text-xs font-bold text-edsync-subtle">
+            AI direction <RequiredMark />
+            <textarea
+              value={aiPrompt}
+              onChange={(event) => setAiPrompt(event.target.value)}
+              rows={5}
+              className="edsync-textarea mt-1"
+              placeholder={t.aiPrompt}
+            />
+          </label>
+          <label className="block text-xs font-bold text-edsync-subtle">
+            Sources, links, constraints
+            <textarea
+              value={aiSources}
+              onChange={(event) => setAiSources(event.target.value)}
+              rows={4}
+              className="edsync-textarea mt-1 text-sm"
+              placeholder="Paste links, file notes, source text, or constraints"
+            />
+          </label>
+        </div>
+        <div className="rounded-2xl bg-edsync-surface p-3">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-edsync-subtle">
+            Prompt preview
+          </p>
+          <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl bg-edsync-card p-3 text-xs font-semibold leading-5 text-edsync-text">
+            {aiPromptPreview}
+          </pre>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={generateWithAi}
+        disabled={isGenerating}
+        className="btn-primary w-full justify-center disabled:opacity-50"
+      >
+        <Sparkles className="h-4 w-4" />
+        {isGenerating ? "Generating..." : t.generate}
+      </button>
+    </div>
+  );
+
   if (view !== "editor" || !activeProject) {
     return (
       <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg text-edsync-text">
@@ -1871,7 +2057,7 @@ export default function FabricLessonStudio() {
           </div>
 
           <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-            <button type="button" onClick={() => void persistProject("draft")} disabled={savingStatus !== null} className="hidden h-10 items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-3 text-sm font-black transition hover:bg-white/15 disabled:opacity-50 lg:inline-flex">
+            <button type="button" onClick={() => void persistProject("draft")} disabled={savingStatus !== null} className="hidden h-10 items-center gap-2 rounded-xl px-2 text-sm font-black transition hover:bg-white/15 disabled:opacity-50 lg:inline-flex">
               <Save className="h-4 w-4" />
               {savingStatus === "draft" ? "..." : t.save}
             </button>
@@ -1881,17 +2067,23 @@ export default function FabricLessonStudio() {
               <option value="fr">FR</option>
             </select>
             <ThemeToggle compact />
-            <button type="button" onClick={presentProject} className="h-10 rounded-2xl border border-white/20 bg-white/15 px-4 text-sm font-black text-white transition hover:bg-white/20">
+            <button type="button" onClick={presentProject} className="h-10 rounded-xl px-2 text-sm font-black text-white transition hover:bg-white/15 sm:px-3">
               Present
             </button>
-            <button type="button" onClick={() => void shareProject()} disabled={savingStatus !== null} className="h-10 rounded-2xl bg-white px-4 text-sm font-black text-edsync-text shadow-sm transition hover:bg-white/90 disabled:opacity-50">
+            <button type="button" onClick={() => void shareProject()} disabled={savingStatus !== null} className="h-10 rounded-xl px-2 text-sm font-black text-white transition hover:bg-white/15 disabled:opacity-50 sm:px-3">
               {savingStatus === "published" ? "..." : "Share"}
             </button>
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[72px_304px_minmax(0,1fr)]">
-          <nav className="grid grid-cols-3 gap-1 border-b border-edsync-border bg-edsync-card p-2 sm:grid-cols-6 lg:flex lg:flex-col lg:border-b-0 lg:border-r">
+        <div
+          className={`grid min-h-0 flex-1 ${
+            panel === "ai" && !selectedObject
+              ? "lg:grid-cols-[72px_minmax(0,1fr)]"
+              : "lg:grid-cols-[72px_304px_minmax(0,1fr)]"
+          }`}
+        >
+          <nav className="flex gap-1 overflow-x-auto border-b border-edsync-border bg-edsync-card p-2 lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r">
             {toolRail.map((tool) => {
               const Icon = tool.icon;
               return (
@@ -1899,7 +2091,7 @@ export default function FabricLessonStudio() {
                   key={tool.id}
                   type="button"
                   onClick={() => openPanel(tool.id)}
-                  className={`flex min-w-0 flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-black transition ${
+                  className={`flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-black transition lg:min-w-0 ${
                     !selectedObject && panel === tool.id ? "bg-gradient-to-br from-edsync-blue to-edsync-emerald text-white shadow-sm" : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
                   }`}
                 >
@@ -1910,7 +2102,11 @@ export default function FabricLessonStudio() {
             })}
           </nav>
 
-          <aside className="edsync-scrollbar-none min-h-0 border-b border-edsync-border bg-edsync-card p-3 lg:border-b-0 lg:border-r lg:overflow-y-auto">
+          <aside
+            className={`edsync-scrollbar-none min-h-0 border-b border-edsync-border bg-edsync-card p-3 lg:border-b-0 lg:border-r lg:overflow-y-auto ${
+              panel === "ai" && !selectedObject ? "hidden" : "block"
+            }`}
+          >
             {selectedObject ? (
               <div className="space-y-4">
                 <PanelTitle icon={MousePointer2} title={t.selected} />
@@ -2121,133 +2317,18 @@ export default function FabricLessonStudio() {
               </div>
             )}
             {panel === "ai" && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <PanelTitle icon={Sparkles} title={t.ai} />
-                <div className="grid gap-3">
-                  <input
-                    value={aiLessonName}
-                    onChange={(event) => setAiLessonName(event.target.value)}
-                    placeholder="Lesson name"
-                    className="h-10 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
-                  />
-                  <textarea
-                    value={aiDescription}
-                    onChange={(event) => setAiDescription(event.target.value)}
-                    rows={2}
-                    className="edsync-textarea text-sm"
-                    placeholder="Short description"
-                  />
-                  <textarea
-                    value={aiObjectives}
-                    onChange={(event) => setAiObjectives(event.target.value)}
-                    rows={3}
-                    className="edsync-textarea text-sm"
-                    placeholder="Objectives, success criteria, or quiz targets"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={aiLessonType}
-                      onChange={(event) => setAiLessonType(event.target.value as AiLessonType)}
-                      className="h-10 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
-                    >
-                      <option value="lesson">Lesson flow</option>
-                      <option value="slides">PPT / slides</option>
-                      <option value="quiz">Quiz check</option>
-                      <option value="discussion">Discussion</option>
-                      <option value="activity">Activity</option>
-                    </select>
-                    <select
-                      value={aiStyle}
-                      onChange={(event) => setAiStyle(event.target.value as AiLessonStyle)}
-                      className="h-10 rounded-xl border border-edsync-border bg-edsync-surface px-3 text-sm font-black text-edsync-text"
-                    >
-                      <option value="socratic">Socratic</option>
-                      <option value="direct">Direct</option>
-                      <option value="professional">Professional</option>
-                      <option value="expert">Expert</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
-                      Complexity {aiComplexity}
-                      <input
-                        type="range"
-                        min={10}
-                        max={100}
-                        value={aiComplexity}
-                        onChange={(event) => setAiComplexity(Number(event.target.value))}
-                        className="mt-2 w-full accent-edsync-blue"
-                      />
-                    </label>
-                    <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
-                      Pages / sections
-                      <input
-                        type="number"
-                        min={1}
-                        max={24}
-                        value={aiPageCount}
-                        onChange={(event) => setAiPageCount(Math.min(24, Math.max(1, Number(event.target.value))))}
-                        className="mt-2 h-9 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                      />
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
-                      Versions
-                      <input
-                        type="number"
-                        min={1}
-                        max={4}
-                        value={aiVersions}
-                        onChange={(event) => setAiVersions(Math.min(4, Math.max(1, Number(event.target.value))))}
-                        className="mt-2 h-9 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                      />
-                    </label>
-                    <button type="button" onClick={() => projectInputRef.current?.click()} className="btn-secondary h-full justify-center px-3 py-2 text-sm">
-                      <UploadCloud className="h-4 w-4" />
-                      Attach
-                    </button>
-                  </div>
-                  <textarea
-                    value={aiSources}
-                    onChange={(event) => setAiSources(event.target.value)}
-                    rows={3}
-                    className="edsync-textarea text-sm"
-                    placeholder="Paste links, file notes, source text, or constraints"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {AI_FOCUS_OPTIONS.map(([id, label, detail]) => {
-                    const active = aiFocuses.includes(id);
-                    return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() =>
-                        setAiFocuses((current) =>
-                          current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-                        )
-                      }
-                      className={`rounded-2xl border px-3 py-2 text-left text-xs font-black transition ${
-                        active
-                          ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
-                          : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/40"
-                      }`}
-                    >
-                      <span className="block">{label}</span>
-                      <span className="mt-1 block text-[11px] font-semibold leading-4 text-edsync-subtle">{detail}</span>
-                    </button>
-                    );
-                  })}
-                </div>
-                <textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} rows={5} className="edsync-textarea" placeholder={t.aiPrompt} />
-                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
-                  <p className="text-xs font-black uppercase tracking-[0.12em] text-edsync-subtle">Prompt preview</p>
-                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs font-semibold leading-5 text-edsync-text">{aiPromptPreview}</pre>
-                </div>
-                <button type="button" onClick={generateWithAi} disabled={isGenerating} className="btn-primary w-full justify-center disabled:opacity-50">
+                <p className="rounded-2xl bg-edsync-surface px-3 py-2 text-sm font-semibold text-edsync-subtle">
+                  AI lesson opens as a larger canvas panel so prompts, files, and output choices stay readable.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPanel("ai")}
+                  className="btn-primary w-full justify-center"
+                >
                   <Sparkles className="h-4 w-4" />
-                  {isGenerating ? "..." : t.generate}
+                  Open AI builder
                 </button>
               </div>
             )}
@@ -2271,7 +2352,7 @@ export default function FabricLessonStudio() {
           </aside>
 
           <section className="min-h-0 bg-edsync-bg lg:overflow-hidden">
-            <div className="flex h-full min-h-[34rem] flex-col bg-edsync-bg">
+            <div className="flex h-full min-h-[24rem] flex-col bg-edsync-bg sm:min-h-[34rem]">
               <div
                 ref={canvasStageRef}
                 tabIndex={0}
@@ -2289,6 +2370,11 @@ export default function FabricLessonStudio() {
                 }}
                 aria-label="EdSync lesson canvas workspace"
               >
+                {panel === "ai" && !selectedObject && (
+                  <div className="absolute inset-x-2 top-3 z-20 mx-auto max-h-[calc(100%-1.5rem)] max-w-5xl overflow-y-auto rounded-[1.5rem] bg-edsync-card/98 p-4 shadow-2xl shadow-slate-500/25 ring-1 ring-edsync-border backdrop-blur sm:inset-x-4 sm:p-5">
+                    {aiLessonBuilder}
+                  </div>
+                )}
                 <div className="absolute left-1/2 top-3 z-10 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card/95 p-1.5 shadow-xl shadow-slate-400/20 backdrop-blur">
                   <button type="button" onClick={() => openPanel("ai")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-blue/10">
                     <Sparkles className="h-4 w-4 text-edsync-blue" />
@@ -2317,114 +2403,115 @@ export default function FabricLessonStudio() {
                   <canvas ref={canvasElementRef} aria-label="EdSync lesson canvas" />
                 </div>
               </div>
-              <div className="flex items-center gap-2 overflow-x-auto border-t border-edsync-border bg-edsync-card px-3 py-2">
-                <div className="hidden shrink-0 items-center gap-1 pr-2 md:flex">
-                  <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-3 py-2 text-xs font-black text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text">
-                    Notes
-                  </button>
-                  <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-3 py-2 text-xs font-black text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text">
-                    Timer
+              <div className="border-t border-edsync-border bg-edsync-card">
+                <div className="flex gap-2 overflow-x-auto px-3 py-2">
+                  {pages.map((page, index) => {
+                    const isActivePage = page.id === activePageId;
+                    const isMenuOpen = openPageMenuId === page.id;
+                    return (
+                      <div
+                        key={page.id}
+                        draggable
+                        onDragStart={() => setDraggingPageId(page.id)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (draggingPageId) reorderPage(draggingPageId, page.id);
+                          setDraggingPageId(null);
+                        }}
+                        onDragEnd={() => setDraggingPageId(null)}
+                        className={`group relative min-w-[7.25rem] rounded-xl p-1.5 transition ${
+                          isActivePage ? "bg-edsync-blue/10 ring-2 ring-edsync-blue/35" : "hover:bg-edsync-muted"
+                        } ${draggingPageId === page.id ? "opacity-55" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void switchPage(page.id)}
+                          className="relative block h-14 w-[6.5rem] overflow-hidden rounded-lg bg-white text-left shadow-sm"
+                          aria-label={`Open page ${index + 1}`}
+                        >
+                          {page.previewDataUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={page.previewDataUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="block h-full w-full bg-white p-2">
+                              <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
+                              <span className="mt-2 block h-2 w-12 rounded-full bg-slate-200" />
+                              <span className="mt-1 block h-2 w-9 rounded-full bg-slate-200" />
+                            </span>
+                          )}
+                          <span className="absolute bottom-1 left-1 rounded-md bg-edsync-text/80 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                            {index + 1}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenPageMenuId((current) => current === page.id ? null : page.id);
+                          }}
+                          className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-edsync-card/95 text-edsync-text opacity-0 shadow-sm transition hover:bg-edsync-muted group-hover:opacity-100 data-[open=true]:opacity-100"
+                          data-open={isMenuOpen}
+                          aria-label={`Page ${index + 1} menu`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                        {isMenuOpen && (
+                          <div className="absolute bottom-full left-0 z-30 mb-2 w-56 overflow-hidden rounded-3xl bg-edsync-card p-1 text-sm font-semibold text-edsync-text shadow-2xl ring-1 ring-edsync-border">
+                            <PageMenuRow label="Copy" shortcut="Ctrl+C" icon={Copy} onClick={() => void duplicatePage(page)} />
+                            <PageMenuRow label="Move left" icon={ArrowUp} onClick={() => movePage(page, -1)} />
+                            <PageMenuRow label="Move right" icon={ArrowDown} onClick={() => movePage(page, 1)} />
+                            <PageMenuRow label="Duplicate" shortcut="Ctrl+D" icon={Copy} onClick={() => void duplicatePage(page)} />
+                            <PageMenuRow label="Delete" shortcut="Del" icon={Trash2} tone="danger" onClick={() => void deletePage(page)} />
+                            <PageMenuRow label="Add page" icon={Plus} onClick={() => void addPage()} />
+                            <PageMenuRow label="Download page" icon={Download} onClick={exportPng} />
+                          </div>
+                        )}
+                        <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
+                          {page.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <button type="button" onClick={addPage} className="flex min-w-[7.5rem] items-center justify-center gap-2 rounded-xl px-3 py-4 text-xs font-black text-edsync-blue transition hover:bg-edsync-blue/10">
+                    <Plus className="h-4 w-4" />
+                    {t.addPage}
                   </button>
                 </div>
-                {pages.map((page, index) => {
-                  const isActivePage = page.id === activePageId;
-                  const isMenuOpen = openPageMenuId === page.id;
-                  return (
-                    <div
-                      key={page.id}
-                      draggable
-                      onDragStart={() => setDraggingPageId(page.id)}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        if (draggingPageId) reorderPage(draggingPageId, page.id);
-                        setDraggingPageId(null);
-                      }}
-                      onDragEnd={() => setDraggingPageId(null)}
-                      className={`group relative min-w-[7.5rem] rounded-xl border p-1.5 transition ${
-                        isActivePage
-                          ? "border-edsync-blue bg-edsync-blue/10 ring-2 ring-edsync-blue/35"
-                          : "border-edsync-border bg-edsync-surface hover:border-edsync-blue/40"
-                      } ${draggingPageId === page.id ? "opacity-55" : ""}`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => void switchPage(page.id)}
-                        className="relative block h-14 w-[6.75rem] overflow-hidden rounded-lg border border-edsync-border bg-white text-left shadow-sm"
-                        aria-label={`Open page ${index + 1}`}
-                      >
-                        {page.previewDataUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={page.previewDataUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="block h-full w-full bg-white p-2">
-                            <span className="block h-1.5 w-8 rounded-full" style={{ backgroundColor: page.seed.accent }} />
-                            <span className="mt-2 block h-2 w-12 rounded-full bg-slate-200" />
-                            <span className="mt-1 block h-2 w-9 rounded-full bg-slate-200" />
-                          </span>
-                        )}
-                        <span className="absolute bottom-1 left-1 rounded-md bg-edsync-text/80 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
-                          {index + 1}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setOpenPageMenuId((current) => current === page.id ? null : page.id);
-                        }}
-                        className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-edsync-card/95 text-edsync-text opacity-0 shadow-sm transition hover:bg-edsync-muted group-hover:opacity-100 data-[open=true]:opacity-100"
-                        data-open={isMenuOpen}
-                        aria-label={`Page ${index + 1} menu`}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                      {isMenuOpen && (
-                        <div className="absolute bottom-full left-0 z-30 mb-2 w-56 overflow-hidden rounded-2xl border border-edsync-border bg-edsync-card p-1 text-sm font-semibold text-edsync-text shadow-2xl">
-                          <PageMenuRow label="Copy" shortcut="Ctrl+C" icon={Copy} onClick={() => void duplicatePage(page)} />
-                          <PageMenuRow label="Move left" icon={ArrowUp} onClick={() => movePage(page, -1)} />
-                          <PageMenuRow label="Move right" icon={ArrowDown} onClick={() => movePage(page, 1)} />
-                          <PageMenuRow label="Duplicate" shortcut="Ctrl+D" icon={Copy} onClick={() => void duplicatePage(page)} />
-                          <PageMenuRow label="Delete" shortcut="Del" icon={Trash2} tone="danger" onClick={() => void deletePage(page)} />
-                          <PageMenuRow label="Add page" icon={Plus} onClick={() => void addPage()} />
-                          <PageMenuRow label="Download page" icon={Download} onClick={exportPng} />
-                        </div>
-                      )}
-                      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
-                        {page.name}
-                      </span>
-                    </div>
-                  );
-                })}
-                <button type="button" onClick={addPage} className="flex min-w-[8rem] items-center justify-center gap-2 rounded-xl border border-dashed border-edsync-border bg-edsync-surface px-3 py-4 text-xs font-black text-edsync-blue transition hover:border-edsync-blue/40">
-                  <Plus className="h-4 w-4" />
-                  {t.addPage}
-                </button>
-                <div className="ml-auto hidden shrink-0 items-center gap-3 pl-3 text-xs font-black text-edsync-subtle lg:flex">
-                  <button type="button" onClick={() => setZoomPercent((value) => Math.max(10, value - 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom out">
-                    <ZoomOut className="h-4 w-4" />
-                  </button>
-                  <input
-                    type="range"
-                    min={10}
-                    max={500}
-                    step={10}
-                    value={zoomPercent}
-                    onChange={(event) => setZoomPercent(Number(event.target.value))}
-                    className="w-28 accent-edsync-blue"
-                    aria-label="Canvas zoom"
-                  />
-                  <button type="button" onClick={() => setZoomPercent((value) => Math.min(500, value + 10))} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Zoom in">
-                    <ZoomIn className="h-4 w-4" />
-                  </button>
-                  <span>{zoomPercent}%</span>
-                  <span>{pages.findIndex((page) => page.id === activePageId) + 1} / {pages.length}</span>
-                  <button type="button" className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Grid view">
-                    <LayoutPanelLeft className="h-4 w-4" />
-                  </button>
-                  <button type="button" onClick={presentProject} className="grid h-8 w-8 place-items-center rounded-xl border border-edsync-border bg-edsync-surface text-edsync-text" aria-label="Full screen presentation">
-                    <Maximize2 className="h-4 w-4" />
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-edsync-border/70 px-3 py-2 text-xs font-black text-edsync-subtle">
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-2 py-1.5 transition hover:bg-edsync-muted hover:text-edsync-text">
+                      Notes
+                    </button>
+                    <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-2 py-1.5 transition hover:bg-edsync-muted hover:text-edsync-text">
+                      Timer
+                    </button>
+                  </div>
+                  <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+                    <label className="flex items-center gap-2">
+                      <span className="sr-only">Canvas zoom</span>
+                      <input
+                        type="range"
+                        min={10}
+                        max={500}
+                        step={10}
+                        value={zoomPercent}
+                        onChange={(event) => setZoomPercent(Number(event.target.value))}
+                        className="w-24 accent-edsync-blue sm:w-32"
+                        aria-label="Canvas zoom"
+                      />
+                      <span className="min-w-10 text-edsync-text">{zoomPercent}%</span>
+                    </label>
+                    <span className="whitespace-nowrap text-edsync-text">
+                      {pages.findIndex((page) => page.id === activePageId) + 1} / {pages.length}
+                    </span>
+                    <button type="button" className="grid h-8 w-8 place-items-center rounded-xl text-edsync-text transition hover:bg-edsync-muted" aria-label="Grid view">
+                      <LayoutPanelLeft className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={presentProject} className="grid h-8 w-8 place-items-center rounded-xl text-edsync-text transition hover:bg-edsync-muted" aria-label="Full screen presentation">
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2601,6 +2688,10 @@ function PanelTitle({ icon: Icon, title }: { icon: typeof Shapes; title: string 
       <h2 className="font-display text-lg font-black text-edsync-text">{title}</h2>
     </div>
   );
+}
+
+function RequiredMark() {
+  return <span className="text-edsync-red" aria-label="required">*</span>;
 }
 
 function ToolButton({ icon: Icon, label, onClick }: { icon: typeof Square; label: string; onClick: () => void }) {
