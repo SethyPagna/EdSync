@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
@@ -78,6 +79,11 @@ type StudioProject = {
   status: "draft" | "published" | "archived";
   updatedAt?: string;
 };
+type PageMenuPlacement = {
+  pageId: string;
+  left: number;
+  top: number;
+};
 type StudioTemplate = {
   id: string;
   kind: StudioFormatKind;
@@ -111,6 +117,9 @@ const DEFAULT_CANVAS_HEIGHT = 540;
 const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
 const STUDIO_IMPORT_ACCEPT = "application/json,.json,image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv";
+const PAGE_MENU_WIDTH = 224;
+const PAGE_MENU_HEIGHT = 316;
+const PAGE_MENU_MARGIN = 12;
 const AI_FOCUS_OPTIONS = [
   ["flow", "Flow", "warmup, concept, practice loop, proof check"],
   ["quiz", "Quiz", "game-style checks, feedback, review cards"],
@@ -501,6 +510,18 @@ function formatUpdatedAt(value: string | undefined) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function getPageMenuPlacement(rect: DOMRect) {
+  const maxLeft = window.innerWidth - PAGE_MENU_WIDTH - PAGE_MENU_MARGIN;
+  const preferredTop = rect.top - PAGE_MENU_HEIGHT - 8;
+  const fallbackTop = rect.bottom + 8;
+  const top = preferredTop >= PAGE_MENU_MARGIN ? preferredTop : Math.min(fallbackTop, window.innerHeight - PAGE_MENU_HEIGHT - PAGE_MENU_MARGIN);
+
+  return {
+    left: Math.max(PAGE_MENU_MARGIN, Math.min(rect.left, maxLeft)),
+    top: Math.max(PAGE_MENU_MARGIN, top),
+  };
+}
+
 export default function FabricLessonStudio() {
   const searchParams = useSearchParams();
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
@@ -520,7 +541,7 @@ export default function FabricLessonStudio() {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectQuery, setProjectQuery] = useState("");
   const [projectKindFilter, setProjectKindFilter] = useState<StudioFormatKind | "all">("all");
-  const [openPageMenuId, setOpenPageMenuId] = useState<string | null>(null);
+  const [openPageMenu, setOpenPageMenu] = useState<PageMenuPlacement | null>(null);
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<StudioFormatKind>("slide");
   const [customWidth, setCustomWidth] = useState(1280);
@@ -849,6 +870,38 @@ export default function FabricLessonStudio() {
     };
   }, [fitCanvasToStage]);
 
+  useEffect(() => {
+    if (!openPageMenu) return undefined;
+
+    const closeMenu = () => setOpenPageMenu(null);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMenu();
+    };
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-page-menu-root]")) return;
+      closeMenu();
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("pointerdown", closeOnOutsidePointer);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("pointerdown", closeOnOutsidePointer);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
+    };
+  }, [openPageMenu]);
+
+  const togglePageMenu = useCallback((pageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const placement = getPageMenuPlacement(event.currentTarget.getBoundingClientRect());
+    setOpenPageMenu((current) => (current?.pageId === pageId ? null : { pageId, ...placement }));
+  }, []);
+
   const startNewProject = (template: StudioTemplate) => {
     const nextPages = initialPagesForTemplate(template);
     const nextProject: StudioProject = {
@@ -995,7 +1048,7 @@ export default function FabricLessonStudio() {
 
   const returnToHub = async () => {
     syncActivePage();
-    setOpenPageMenuId(null);
+    setOpenPageMenu(null);
     setView("hub");
     setActiveProject(null);
     setSelectedObject(null);
@@ -1007,7 +1060,7 @@ export default function FabricLessonStudio() {
   const switchPage = async (pageId: string) => {
     const nextPage = pages.find((page) => page.id === pageId);
     if (!nextPage || nextPage.id === activePageIdRef.current) return;
-    setOpenPageMenuId(null);
+    setOpenPageMenu(null);
     syncActivePage();
     activePageIdRef.current = nextPage.id;
     setActivePageId(nextPage.id);
@@ -1210,7 +1263,7 @@ export default function FabricLessonStudio() {
   };
 
   const deletePage = async (page: StudioPage) => {
-    setOpenPageMenuId(null);
+    setOpenPageMenu(null);
     if (pages.length === 1) {
       toast.error("Keep at least one page.");
       return;
@@ -1226,7 +1279,7 @@ export default function FabricLessonStudio() {
   };
 
   const movePage = (page: StudioPage, direction: -1 | 1) => {
-    setOpenPageMenuId(null);
+    setOpenPageMenu(null);
     syncActivePage();
     setPages((current) => {
       const index = current.findIndex((item) => item.id === page.id);
@@ -1240,7 +1293,7 @@ export default function FabricLessonStudio() {
 
   const reorderPage = (sourcePageId: string, targetPageId: string) => {
     if (sourcePageId === targetPageId) return;
-    setOpenPageMenuId(null);
+    setOpenPageMenu(null);
     syncActivePage();
     setPages((current) => {
       const sourceIndex = current.findIndex((page) => page.id === sourcePageId);
@@ -1833,6 +1886,32 @@ export default function FabricLessonStudio() {
     </div>
   );
 
+  const openPageMenuPage = openPageMenu ? pages.find((page) => page.id === openPageMenu.pageId) : undefined;
+  const runPageMenuAction = (action: () => void | Promise<void>) => {
+    setOpenPageMenu(null);
+    void action();
+  };
+  const pageMenuPortal =
+    openPageMenu && openPageMenuPage && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            data-page-menu-root
+            className="fixed z-[1000] w-56 overflow-hidden rounded-3xl bg-edsync-card p-1 text-sm font-semibold text-edsync-text shadow-2xl ring-1 ring-edsync-border"
+            style={{ left: openPageMenu.left, top: openPageMenu.top }}
+            role="menu"
+          >
+            <PageMenuRow label="Copy" shortcut="Ctrl+C" icon={Copy} onClick={() => runPageMenuAction(() => duplicatePage(openPageMenuPage))} />
+            <PageMenuRow label="Move left" icon={ArrowUp} onClick={() => runPageMenuAction(() => movePage(openPageMenuPage, -1))} />
+            <PageMenuRow label="Move right" icon={ArrowDown} onClick={() => runPageMenuAction(() => movePage(openPageMenuPage, 1))} />
+            <PageMenuRow label="Duplicate" shortcut="Ctrl+D" icon={Copy} onClick={() => runPageMenuAction(() => duplicatePage(openPageMenuPage))} />
+            <PageMenuRow label="Delete" shortcut="Del" icon={Trash2} tone="danger" onClick={() => runPageMenuAction(() => deletePage(openPageMenuPage))} />
+            <PageMenuRow label="Add page" icon={Plus} onClick={() => runPageMenuAction(addPage)} />
+            <PageMenuRow label="Download page" icon={Download} onClick={() => runPageMenuAction(exportPng)} />
+          </div>,
+          document.body,
+        )
+      : null;
+
   if (view !== "editor" || !activeProject) {
     return (
       <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg text-edsync-text">
@@ -2018,6 +2097,7 @@ export default function FabricLessonStudio() {
   }
 
   return (
+    <>
     <main className="min-h-dvh overflow-x-clip bg-edsync-bg text-edsync-text">
       <section className="flex min-h-dvh flex-col overflow-hidden bg-edsync-card lg:h-[calc(100dvh-1.5rem)] lg:rounded-[1.25rem] lg:border lg:border-edsync-border">
         <header className="flex min-h-14 flex-wrap items-center gap-2 bg-gradient-to-r from-edsync-emerald via-edsync-blue to-violet-700 px-3 py-2 text-white shadow-lg shadow-edsync-blue/20">
@@ -2407,7 +2487,7 @@ export default function FabricLessonStudio() {
                 <div className="flex gap-2 overflow-x-auto px-3 py-2">
                   {pages.map((page, index) => {
                     const isActivePage = page.id === activePageId;
-                    const isMenuOpen = openPageMenuId === page.id;
+                    const isMenuOpen = openPageMenu?.pageId === page.id;
                     return (
                       <div
                         key={page.id}
@@ -2446,27 +2526,14 @@ export default function FabricLessonStudio() {
                         </button>
                         <button
                           type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenPageMenuId((current) => current === page.id ? null : page.id);
-                          }}
+                          onClick={(event) => togglePageMenu(page.id, event)}
                           className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-edsync-card/95 text-edsync-text opacity-0 shadow-sm transition hover:bg-edsync-muted group-hover:opacity-100 data-[open=true]:opacity-100"
                           data-open={isMenuOpen}
+                          data-page-menu-root
                           aria-label={`Page ${index + 1} menu`}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
-                        {isMenuOpen && (
-                          <div className="absolute bottom-full left-0 z-30 mb-2 w-56 overflow-hidden rounded-3xl bg-edsync-card p-1 text-sm font-semibold text-edsync-text shadow-2xl ring-1 ring-edsync-border">
-                            <PageMenuRow label="Copy" shortcut="Ctrl+C" icon={Copy} onClick={() => void duplicatePage(page)} />
-                            <PageMenuRow label="Move left" icon={ArrowUp} onClick={() => movePage(page, -1)} />
-                            <PageMenuRow label="Move right" icon={ArrowDown} onClick={() => movePage(page, 1)} />
-                            <PageMenuRow label="Duplicate" shortcut="Ctrl+D" icon={Copy} onClick={() => void duplicatePage(page)} />
-                            <PageMenuRow label="Delete" shortcut="Del" icon={Trash2} tone="danger" onClick={() => void deletePage(page)} />
-                            <PageMenuRow label="Add page" icon={Plus} onClick={() => void addPage()} />
-                            <PageMenuRow label="Download page" icon={Download} onClick={exportPng} />
-                          </div>
-                        )}
                         <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
                           {page.name}
                         </span>
@@ -2531,6 +2598,8 @@ export default function FabricLessonStudio() {
         event.currentTarget.value = "";
       }} />
     </main>
+    {pageMenuPortal}
+    </>
   );
 }
 
