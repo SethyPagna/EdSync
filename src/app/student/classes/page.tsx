@@ -169,7 +169,7 @@ export default function StudentClassesPage() {
         <div className="metric-card">
           <UsersRound className="h-5 w-5 text-edsync-blue" />
           <span>{classes.length}</span>
-          <p>Active spaces</p>
+          <p>Active courses</p>
         </div>
         <div className="metric-card">
           <BookOpenCheck className="h-5 w-5 text-edsync-emerald" />
@@ -187,7 +187,7 @@ export default function StudentClassesPage() {
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="font-display text-xl font-bold">Your access</h2>
-            <p className="edsync-hover-detail">Organization spaces, creator context, and linked work.</p>
+            <p className="edsync-hover-detail">Courses, creator context, and linked work.</p>
           </div>
           <Link href="/student/lessons" className="btn-secondary px-3 py-2 text-sm">
             Courses <ArrowRight className="h-4 w-4" />
@@ -220,7 +220,7 @@ export default function StudentClassesPage() {
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-display text-xl font-bold text-edsync-text">{classItem.name}</h3>
                     <p className="edsync-hover-detail">
-                      {classItem.description || `${classItem.subject || "Course"} learning space`}
+                      {classItem.description || `${classItem.subject || "Course"} access`}
                     </p>
                   </div>
                 </div>
