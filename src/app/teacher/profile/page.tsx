@@ -126,107 +126,167 @@ export default function TeacherProfile() {
   };
 
   return (
-    <div className="page-shell max-w-4xl space-y-6">
-      <div className="group">
-        <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Account</p>
-        <h1 className="font-display text-3xl font-bold text-edsync-text">Profile & Settings</h1>
-        <p className="edsync-hover-detail">Identity, course context, and notifications.</p>
+    <div className="page-shell max-w-5xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
+            Account
+          </p>
+          <h1 className="font-display text-3xl font-bold text-edsync-text">
+            Profile & Settings
+          </h1>
+        </div>
+        <button type="button" onClick={save} disabled={saving} className="btn-primary">
+          {saving ? "Saving..." : "Save changes"}
+        </button>
       </div>
 
       <div className="edsync-card">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-amber to-edsync-blue text-3xl font-bold text-white">
+        <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+          <div className="flex flex-col gap-4 sm:flex-row lg:flex-col">
+            <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-edsync-amber to-edsync-blue text-3xl font-bold text-white">
               {profile?.avatar_url ? (
-                <Image src={profile.avatar_url} alt="" fill sizes="96px" className="object-cover" />
+                <Image
+                  src={profile.avatar_url}
+                  alt=""
+                  fill
+                  sizes="96px"
+                  className="object-cover"
+                />
               ) : (
                 generateInitials(fullName || profile?.email || "Creator")
               )}
             </div>
-            <label className="btn-secondary cursor-pointer py-2 text-xs">
-              {uploading ? "Uploading..." : "Upload photo"}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(event) => uploadAvatar(event.target.files?.[0])}
-              />
-            </label>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-edsync-text">
+                {profile?.email || "Creator account"}
+              </p>
+              <label className="btn-secondary mt-3 inline-flex cursor-pointer py-2 text-xs">
+                {uploading ? "Uploading..." : "Upload photo"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(event) => uploadAvatar(event.target.files?.[0])}
+                />
+              </label>
+            </div>
           </div>
 
-          <div className="grid flex-1 gap-4 sm:grid-cols-2">
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-edsync-subtle">Full name</span>
-              <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="edsync-input" />
-            </label>
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-edsync-subtle">Organization or brand</span>
-              <input value={school} onChange={(event) => setSchool(event.target.value)} className="edsync-input" />
-            </label>
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-edsync-subtle">Audience level</span>
-              <select value={gradeLevel} onChange={(event) => setGradeLevel(event.target.value)} className="edsync-input">
-                <option value="">Select audience</option>
-                {GRADE_LEVELS.map((grade) => (
-                  <option key={grade} value={grade}>
-                    {grade}
-                  </option>
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs font-semibold text-edsync-subtle">
+                  Full name
+                </span>
+                <input
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  className="edsync-input"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold text-edsync-subtle">
+                  Organization or brand
+                </span>
+                <input
+                  value={school}
+                  onChange={(event) => setSchool(event.target.value)}
+                  className="edsync-input"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold text-edsync-subtle">
+                  Audience level
+                </span>
+                <select
+                  value={gradeLevel}
+                  onChange={(event) => setGradeLevel(event.target.value)}
+                  className="edsync-input"
+                >
+                  <option value="">Select audience</option>
+                  {GRADE_LEVELS.map((grade) => (
+                    <option key={grade} value={grade}>
+                      {grade}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold text-edsync-subtle">
+                  Theme
+                </span>
+                <select
+                  value={preferences.theme}
+                  onChange={(event) =>
+                    setPreferences({
+                      ...preferences,
+                      theme: event.target.value as UserPreferences["theme"],
+                    })
+                  }
+                  className="edsync-input"
+                >
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="system">System</option>
+                </select>
+              </label>
+            </div>
+
+            <div>
+              <h2 className="font-display text-lg font-bold text-edsync-text">
+                Course topics
+              </h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {SUBJECT_AREAS.map((subject) => (
+                  <button
+                    key={subject}
+                    type="button"
+                    onClick={() => toggleSubject(subject)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                      subjects.includes(subject)
+                        ? "border-edsync-blue bg-edsync-blue text-white"
+                        : "border-edsync-border text-edsync-subtle hover:text-edsync-text"
+                    }`}
+                  >
+                    {subject}
+                  </button>
                 ))}
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-edsync-subtle">Theme</span>
-              <select
-                value={preferences.theme}
-                onChange={(event) => setPreferences({ ...preferences, theme: event.target.value as UserPreferences["theme"] })}
-                className="edsync-input"
-              >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="system">System</option>
-              </select>
-            </label>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="font-display text-lg font-bold text-edsync-text">
+                Notifications
+              </h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {[
+                  ["email_notifications", "Email"],
+                  ["assignment_notifications", "Work"],
+                  ["weekly_digest", "Digest"],
+                ].map(([key, label]) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2.5"
+                  >
+                    <span className="text-sm font-semibold text-edsync-text">
+                      {label}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(preferences[key as keyof UserPreferences])}
+                      onChange={(event) =>
+                        setPreferences({
+                          ...preferences,
+                          [key]: event.target.checked,
+                        })
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div className="edsync-card">
-        <h2 className="font-display text-lg font-bold text-edsync-text">Course topics</h2>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {SUBJECT_AREAS.map((subject) => (
-            <button
-              key={subject}
-              type="button"
-              onClick={() => toggleSubject(subject)}
-              className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
-                subjects.includes(subject)
-                  ? "border-edsync-blue bg-edsync-blue text-white"
-                  : "border-edsync-border text-edsync-subtle hover:text-edsync-text"
-              }`}
-            >
-              {subject}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="edsync-card">
-        <h2 className="font-display text-lg font-bold text-edsync-text">Notifications</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {[
-            ["email_notifications", "Email updates"],
-            ["assignment_notifications", "Work notices"],
-            ["weekly_digest", "Weekly digest"],
-          ].map(([key, label]) => (
-            <label key={key} className="flex items-center justify-between rounded-lg border border-edsync-border p-3">
-              <span className="text-sm font-semibold text-edsync-text">{label}</span>
-              <input
-                type="checkbox"
-                checked={Boolean(preferences[key as keyof UserPreferences])}
-                onChange={(event) => setPreferences({ ...preferences, [key]: event.target.checked })}
-              />
-            </label>
-          ))}
         </div>
       </div>
 
@@ -245,9 +305,6 @@ export default function TeacherProfile() {
         ]}
       />
 
-      <button type="button" onClick={save} disabled={saving} className="btn-primary">
-        {saving ? "Saving..." : "Save profile"}
-      </button>
     </div>
   );
 }
