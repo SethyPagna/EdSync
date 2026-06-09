@@ -43,14 +43,17 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 
 - [x] Identified that the studio page-preview three-dot menu was clipped by the scrollable preview tray.
 - [x] Moved the page-preview menu into a viewport-level portal so it is no longer blocked by the tray overflow.
-- [ ] Add a slide-deck output mode to `/api/ai/create-lesson`.
-- [ ] Normalize AI output into the exact slide-array contract.
-- [ ] Convert slide-array output back into EdSync's existing lesson object for compatibility.
-- [ ] Wire the studio AI lesson builder to request slide-deck output.
-- [ ] Render generated slide objects as editable studio pages with live previews.
-- [ ] Verify generation fallback returns valid slides when the AI provider truncates or malforms JSON.
+- [x] Add a slide-deck output mode to `/api/ai/create-lesson`.
+- [x] Normalize AI output into the exact slide-array contract.
+- [x] Convert slide-array output back into EdSync's existing lesson object for compatibility.
+- [x] Wire the studio AI lesson builder to request slide-deck output.
+- [x] Render generated slide objects as editable studio pages with live previews.
+- [x] Verify generation fallback returns valid slides when the AI provider truncates or malforms JSON.
 
 ## Verification Log
 
 - `npm.cmd run typecheck`: passed after the page-preview menu fix.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after the page-preview menu fix.
+- `npm.cmd run typecheck`: passed after adding slide-deck output and studio AI wiring.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.ts`: passed after adding slide-deck output.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after studio AI wiring.
