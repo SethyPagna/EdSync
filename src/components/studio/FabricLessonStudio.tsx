@@ -11,6 +11,7 @@ import {
   type AiSlideMetadata,
 } from "@/lib/studio/ai-slide-design";
 import { buildAiSlideStudioPages } from "@/lib/studio/ai-slide-pages";
+import { getPageMenuPlacement } from "@/lib/studio/page-menu-placement";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
 import {
   ArrowDown,
@@ -126,9 +127,6 @@ const DEFAULT_CANVAS_HEIGHT = 540;
 const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
 const STUDIO_IMPORT_ACCEPT = "application/json,.json,image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv";
-const PAGE_MENU_WIDTH = 224;
-const PAGE_MENU_HEIGHT = 260;
-const PAGE_MENU_MARGIN = 12;
 const AI_FOCUS_OPTIONS = [
   ["flow", "Flow", "warmup, concept, practice loop, proof check"],
   ["quiz", "Quiz", "game-style checks, feedback, review cards"],
@@ -517,18 +515,6 @@ function formatUpdatedAt(value: string | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Updated";
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
-function getPageMenuPlacement(rect: DOMRect) {
-  const maxLeft = window.innerWidth - PAGE_MENU_WIDTH - PAGE_MENU_MARGIN;
-  const preferredTop = rect.top - PAGE_MENU_HEIGHT - 8;
-  const fallbackTop = rect.bottom + 8;
-  const top = preferredTop >= PAGE_MENU_MARGIN ? preferredTop : Math.min(fallbackTop, window.innerHeight - PAGE_MENU_HEIGHT - PAGE_MENU_MARGIN);
-
-  return {
-    left: Math.max(PAGE_MENU_MARGIN, Math.min(rect.left + rect.width / 2 - PAGE_MENU_WIDTH / 2, maxLeft)),
-    top: Math.max(PAGE_MENU_MARGIN, top),
-  };
 }
 
 export default function FabricLessonStudio() {
@@ -1094,7 +1080,10 @@ export default function FabricLessonStudio() {
   const togglePageMenu = useCallback((pageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     const tile = event.currentTarget.closest("[data-page-preview-tile]");
-    const placement = getPageMenuPlacement((tile ?? event.currentTarget).getBoundingClientRect());
+    const placement = getPageMenuPlacement((tile ?? event.currentTarget).getBoundingClientRect(), {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
     setOpenPageMenu((current) => (current?.pageId === pageId ? null : { pageId, ...placement }));
   }, []);
 
