@@ -51,6 +51,12 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Verify generation fallback returns valid slides when the AI provider truncates or malforms JSON.
 - [x] Add route coverage for slide-deck output normalization and lesson compatibility.
 - [x] Add route coverage for local fallback slide-deck generation.
+- [ ] Preserve AI slide metadata on studio pages so notes, visuals, navigation, and slide type survive editing.
+- [ ] Add a deterministic EdSync template resolver that maps slide `type` and `visualSuggestion` into render-ready layouts.
+- [ ] Render AI slides with distinct template recipes instead of one generic title/body layout.
+- [ ] Keep the model output schema exact by computing design choices inside EdSync, not in the AI JSON contract.
+- [ ] Add focused tests for template selection, navigation normalization, and slide metadata preservation.
+- [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
 
@@ -62,3 +68,21 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed after adding slide-deck route coverage.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.test.ts`: passed after adding slide-deck route coverage.
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed with 2 tests after fallback coverage.
+
+## Current Implementation Pass
+
+### Files
+
+- `src/lib/studio/ai-slide-design.ts`: shared template resolver and metadata helpers for AI slide rendering.
+- `src/lib/studio/ai-slide-design.test.ts`: focused coverage for layout selection and navigation repair.
+- `src/components/studio/FabricLessonStudio.tsx`: studio integration that stores AI slide metadata and renders type-aware layouts.
+- `src/app/api/ai/create-lesson/route.ts`: strict AI lesson prompt and response handling, if the existing route needs contract tightening.
+- `src/app/api/ai/create-lesson/route.test.ts`: route coverage for clarification and exact schema behavior, if the route contract changes.
+
+### Acceptance Checks
+
+- AI output remains a JSON array using only `slideNumber`, `title`, `type`, `onScreenText`, `speakerNotes`, `visualSuggestion`, and `navigation`.
+- Title, objectives, content, example, Socratic, activity, summary, and assessment slides render with visibly different EdSync layouts.
+- Studio page previews use actual generated page content.
+- Speaker notes and linear previous/next navigation remain attached to each page for presentation/export flows.
+- `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run typecheck`, and `npm.cmd run build` pass before deployment.
