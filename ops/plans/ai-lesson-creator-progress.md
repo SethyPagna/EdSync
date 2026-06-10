@@ -51,11 +51,11 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Verify generation fallback returns valid slides when the AI provider truncates or malforms JSON.
 - [x] Add route coverage for slide-deck output normalization and lesson compatibility.
 - [x] Add route coverage for local fallback slide-deck generation.
-- [ ] Preserve AI slide metadata on studio pages so notes, visuals, navigation, and slide type survive editing.
-- [ ] Add a deterministic EdSync template resolver that maps slide `type` and `visualSuggestion` into render-ready layouts.
-- [ ] Render AI slides with distinct template recipes instead of one generic title/body layout.
-- [ ] Keep the model output schema exact by computing design choices inside EdSync, not in the AI JSON contract.
-- [ ] Add focused tests for template selection, navigation normalization, and slide metadata preservation.
+- [x] Preserve AI slide metadata on studio pages so notes, visuals, navigation, and slide type survive editing.
+- [x] Add a deterministic EdSync template resolver that maps slide `type` and `visualSuggestion` into render-ready layouts.
+- [x] Render AI slides with distinct template recipes instead of one generic title/body layout.
+- [x] Keep the model output schema exact by computing design choices inside EdSync, not in the AI JSON contract.
+- [x] Add focused tests for template selection, navigation normalization, and slide metadata preservation.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -68,6 +68,10 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed after adding slide-deck route coverage.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.test.ts`: passed after adding slide-deck route coverage.
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed with 2 tests after fallback coverage.
+- `npm.cmd test -- src/lib/studio/ai-slide-design.test.ts`: passed with 4 tests after adding the deterministic template resolver.
+- `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts src/lib/studio/ai-slide-design.test.ts`: passed with 7 tests after clarification handling and studio template wiring.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.ts src/app/api/ai/create-lesson/route.test.ts src/components/studio/FabricLessonStudio.tsx src/lib/studio/ai-slide-design.ts src/lib/studio/ai-slide-design.test.ts`: passed after route and studio integration.
+- `npm.cmd run typecheck`: passed after route and studio integration.
 
 ## Current Implementation Pass
 
