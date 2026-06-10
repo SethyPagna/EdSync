@@ -50,6 +50,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Render generated slide objects as editable studio pages with live previews.
 - [x] Verify generation fallback returns valid slides when the AI provider truncates or malforms JSON.
 - [x] Add route coverage for slide-deck output normalization and lesson compatibility.
+- [x] Add route coverage for local fallback slide-deck generation.
 
 ## Verification Log
 
@@ -60,3 +61,4 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after studio AI wiring.
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed after adding slide-deck route coverage.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.test.ts`: passed after adding slide-deck route coverage.
+- `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed with 2 tests after fallback coverage.
