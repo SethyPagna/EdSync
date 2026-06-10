@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { BookOpenCheck, CalendarClock, CheckCircle2, Send, TimerReset } from "lucide-react";
+import { BookOpenCheck, CalendarClock, CheckCircle2, MessageSquareText, Send, TimerReset, type LucideIcon } from "lucide-react";
 import { ALL_CLASSES_SCOPE, classScopeFromSearchParams } from "@/lib/classes/class-scope";
 import { normalizeWorkGradingSettings, workGradingLabel } from "@/lib/work/grading";
 
@@ -24,13 +24,13 @@ type WorkItem = {
 
 type WorkFilter = "open" | "dueSoon" | "submitted" | "feedback" | "discussions" | "all";
 
-const FILTERS: Array<{ key: WorkFilter; label: string }> = [
-  { key: "open", label: "To do" },
-  { key: "dueSoon", label: "Due soon" },
-  { key: "submitted", label: "Submitted" },
-  { key: "feedback", label: "Feedback" },
-  { key: "discussions", label: "Discuss" },
-  { key: "all", label: "All" },
+const FILTERS: Array<{ key: WorkFilter; label: string; icon: LucideIcon }> = [
+  { key: "open", label: "To do", icon: TimerReset },
+  { key: "dueSoon", label: "Due soon", icon: CalendarClock },
+  { key: "submitted", label: "Submitted", icon: CheckCircle2 },
+  { key: "feedback", label: "Feedback", icon: MessageSquareText },
+  { key: "discussions", label: "Discuss", icon: BookOpenCheck },
+  { key: "all", label: "All", icon: CheckCircle2 },
 ];
 
 function classScopeFromLocation() {
@@ -141,6 +141,17 @@ export default function StudentWorkPage() {
 
   const openCount = items.filter((item) => !isSubmitted(item)).length;
   const submittedCount = items.length - openCount;
+  const filterCounts = useMemo<Record<WorkFilter, number>>(
+    () => ({
+      open: items.filter((item) => !isSubmitted(item)).length,
+      dueSoon: items.filter((item) => !isSubmitted(item) && dueState(item.due_at).urgent).length,
+      submitted: items.filter(isSubmitted).length,
+      feedback: items.filter((item) => Boolean(item.submission_feedback)).length,
+      discussions: items.filter((item) => item.work_type === "discussion").length,
+      all: items.length,
+    }),
+    [items],
+  );
 
   return (
     <div className="page-shell max-w-6xl space-y-5">
@@ -156,30 +167,40 @@ export default function StudentWorkPage() {
               {requestedClassId !== ALL_CLASSES_SCOPE ? " in this space" : ""}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-[repeat(6,minmax(0,1fr))_auto]">
-            {FILTERS.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => chooseFilter(item.key)}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  filter === item.key
-                    ? "bg-edsync-emerald text-white"
-                    : "border border-edsync-border bg-edsync-surface text-edsync-subtle hover:text-edsync-text"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-            {requestedClassId !== ALL_CLASSES_SCOPE && (
-              <Link href="/student/work" className="btn-secondary col-span-2 justify-center px-3 py-2 text-sm sm:col-span-3 lg:col-span-1">
-                All assessments
-              </Link>
-            )}
-          </div>
         </div>
       </section>
 
+      <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <aside className="edsync-scrollbar-none overflow-x-auto rounded-xl border border-edsync-border bg-edsync-card p-2 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
+          <div className="flex gap-2 lg:flex-col">
+            {FILTERS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => chooseFilter(item.key)}
+                  className={`flex min-w-40 items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black transition lg:min-w-0 ${
+                    filter === item.key
+                      ? "bg-edsync-emerald text-white shadow-sm"
+                      : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <span className={filter === item.key ? "text-white/80" : "text-edsync-subtle"}>{filterCounts[item.key]}</span>
+                </button>
+              );
+            })}
+          </div>
+          {requestedClassId !== ALL_CLASSES_SCOPE && (
+            <Link href="/student/work" className="btn-secondary mt-2 w-full justify-center px-3 py-2 text-sm">
+              All assessments
+            </Link>
+          )}
+        </aside>
+
+        <div className="min-w-0">
       {loading ? (
         <div className="grid gap-3">
           {[...Array(4)].map((_, index) => (
@@ -231,7 +252,7 @@ export default function StudentWorkPage() {
                       </div>
                       <h2 className="truncate font-display text-xl font-bold">{item.title}</h2>
                       <p className="mt-1 text-sm text-edsync-subtle">
-                        {item.class_name || "Space"}
+                        {item.class_name || "Independent course"}
                       </p>
                       {item.instructions && (
                         <p className="mt-3 line-clamp-2 text-sm leading-6 text-edsync-text">
@@ -292,6 +313,8 @@ export default function StudentWorkPage() {
           })}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
