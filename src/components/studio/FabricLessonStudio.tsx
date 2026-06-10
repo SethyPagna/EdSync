@@ -5,6 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
+import {
+  linesForAiSlide,
+  normalizeAiSlideNavigation,
+  resolveAiSlideDesign,
+  type AiSlideMetadata,
+} from "@/lib/studio/ai-slide-design";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
 import {
   ArrowDown,
@@ -59,6 +65,7 @@ type StudioPage = {
   seed: PageSeed;
   snapshot: CanvasSnapshot | null;
   previewDataUrl?: string;
+  aiSlide?: AiSlideMetadata;
 };
 type InspectorObject = FabricObject & {
   fill?: string;
@@ -112,18 +119,7 @@ type ContentExtractionResponse = {
   warning?: string | null;
   error?: string;
 };
-type AiLessonSlide = {
-  slideNumber: number;
-  title: string;
-  type: "title" | "objectives" | "content" | "example" | "socratic" | "activity" | "summary" | "assessment";
-  onScreenText: string[];
-  speakerNotes: string;
-  visualSuggestion: string;
-  navigation: {
-    previous: string | null;
-    next: string | null;
-  };
-};
+type AiLessonSlide = AiSlideMetadata;
 
 const DEFAULT_CANVAS_WIDTH = 960;
 const DEFAULT_CANVAS_HEIGHT = 540;
@@ -750,6 +746,181 @@ export default function FabricLessonStudio() {
     canvas.clear();
     canvas.backgroundColor = "#ffffff";
     const accent = page.seed.accent;
+
+    if (page.aiSlide) {
+      const slide = page.aiSlide;
+      const design = resolveAiSlideDesign(slide);
+      const lines = linesForAiSlide(slide).slice(0, 6);
+      const compact = canvasWidth < 900 || canvasHeight > canvasWidth;
+      const titleFont = design.titleSize === "large"
+        ? Math.max(42, Math.min(82, Math.round(canvasWidth * 0.06)))
+        : Math.max(34, Math.min(58, Math.round(canvasWidth * 0.045)));
+      const bodyFont = Math.max(18, Math.min(28, Math.round(canvasWidth * 0.022)));
+      const addText = (
+        text: string,
+        left: number,
+        top: number,
+        width: number,
+        fontSize: number,
+        options: Partial<ConstructorParameters<typeof fabric.Textbox>[1]> = {},
+      ) => {
+        const object = new fabric.Textbox(text, {
+          left,
+          top,
+          width,
+          fontSize,
+          lineHeight: 1.16,
+          fontFamily: "Instrument Sans",
+          fill: design.foreground,
+          ...options,
+        });
+        canvas.add(object);
+        return object;
+      };
+      const addCard = (left: number, top: number, width: number, height: number, fill = "#ffffff") => {
+        const object = new fabric.Rect({
+          left,
+          top,
+          width,
+          height,
+          rx: 24,
+          ry: 24,
+          fill,
+          stroke: "rgba(13,23,38,0.12)",
+          strokeWidth: 1,
+        });
+        canvas.add(object);
+        return object;
+      };
+
+      canvas.add(
+        new fabric.Rect({
+          left: 0,
+          top: 0,
+          width: canvasWidth,
+          height: canvasHeight,
+          fill: design.background,
+          selectable: false,
+          evented: false,
+        }),
+      );
+      canvas.add(
+        new fabric.Rect({
+          left: margin,
+          top: margin,
+          width: Math.max(92, Math.round(canvasWidth * 0.1)),
+          height: 10,
+          rx: 5,
+          ry: 5,
+          fill: design.accent,
+        }),
+      );
+      addText(slide.title, margin, titleTop, compact ? canvasWidth - margin * 2 : Math.round(canvasWidth * 0.58), titleFont, {
+        fontWeight: "900",
+      });
+
+      if (design.variant === "hero") {
+        addText(lines.join("\n"), margin, bodyTop, compact ? canvasWidth - margin * 2 : bodyWidth, bodyFont, {
+          fill: design.muted,
+          lineHeight: 1.28,
+        });
+        if (!compact) {
+          addCard(canvasWidth - margin - 280, Math.round(canvasHeight * 0.28), 220, 150, "#ffffff");
+          canvas.add(new fabric.Circle({
+            left: canvasWidth - margin - 230,
+            top: Math.round(canvasHeight * 0.34),
+            radius: 48,
+            fill: `${design.accent}22`,
+            stroke: design.accent,
+            strokeWidth: 4,
+          }));
+          canvas.add(new fabric.Circle({
+            left: canvasWidth - margin - 136,
+            top: Math.round(canvasHeight * 0.31),
+            radius: 28,
+            fill: `${design.secondaryAccent}cc`,
+          }));
+        }
+      } else if (design.variant === "cards" || design.variant === "recap") {
+        const cardTop = bodyTop - 10;
+        const gap = 18;
+        const columns = compact ? 1 : Math.min(3, Math.max(2, lines.length));
+        const cardWidth = Math.floor((canvasWidth - margin * 2 - gap * (columns - 1)) / columns);
+        lines.slice(0, 5).forEach((line, index) => {
+          const column = compact ? 0 : index % columns;
+          const row = compact ? index : Math.floor(index / columns);
+          const left = margin + column * (cardWidth + gap);
+          const top = cardTop + row * 116;
+          addCard(left, top, cardWidth, 92, "#ffffff");
+          canvas.add(new fabric.Circle({ left: left + 20, top: top + 24, radius: 13, fill: design.accent }));
+          addText(line, left + 54, top + 21, cardWidth - 76, Math.max(16, bodyFont - 4), { fontWeight: "700" });
+        });
+      } else if (design.variant === "steps") {
+        const stepWidth = compact ? canvasWidth - margin * 2 : Math.floor((canvasWidth - margin * 2 - 36) / 3);
+        lines.slice(0, compact ? 4 : 3).forEach((line, index) => {
+          const left = compact ? margin : margin + index * (stepWidth + 18);
+          const top = bodyTop + (compact ? index * 96 : 0);
+          addCard(left, top, stepWidth, 78, "#ffffff");
+          canvas.add(new fabric.Circle({ left: left + 18, top: top + 19, radius: 20, fill: design.accent }));
+          addText(String(index + 1), left + 30, top + 28, 24, 16, { fill: "#ffffff", fontWeight: "900" });
+          addText(line, left + 64, top + 19, stepWidth - 84, Math.max(15, bodyFont - 5), { fontWeight: "700" });
+        });
+      } else if (design.variant === "question") {
+        const mainQuestion = lines[0] ?? slide.title;
+        addCard(margin, bodyTop - 8, compact ? canvasWidth - margin * 2 : Math.round(canvasWidth * 0.58), 130, "#ffffff");
+        addText(mainQuestion, margin + 28, bodyTop + 24, compact ? canvasWidth - margin * 2 - 56 : Math.round(canvasWidth * 0.52), Math.max(24, bodyFont + 4), {
+          fontWeight: "900",
+        });
+        lines.slice(1, 4).forEach((line, index) => {
+          const chipTop = bodyTop + 150 + index * 52;
+          addCard(margin, chipTop, compact ? canvasWidth - margin * 2 : Math.round(canvasWidth * 0.48), 38, `${design.accent}11`);
+          addText(line, margin + 18, chipTop + 10, compact ? canvasWidth - margin * 2 - 36 : Math.round(canvasWidth * 0.44), 15, {
+            fill: design.muted,
+            fontWeight: "700",
+          });
+        });
+      } else if (design.variant === "workshop" || design.variant === "ticket") {
+        const panelWidth = compact ? canvasWidth - margin * 2 : Math.round(canvasWidth * 0.66);
+        addCard(margin, bodyTop - 8, panelWidth, Math.min(260, canvasHeight - bodyTop - margin), "#ffffff");
+        lines.slice(0, 5).forEach((line, index) => {
+          const top = bodyTop + 24 + index * 44;
+          canvas.add(new fabric.Rect({ left: margin + 28, top: top + 8, width: 20, height: 20, rx: 6, ry: 6, fill: `${design.accent}22`, stroke: design.accent }));
+          addText(line, margin + 64, top, panelWidth - 92, Math.max(16, bodyFont - 4), { fontWeight: "700" });
+        });
+        if (!compact) {
+          addCard(margin + panelWidth + 28, bodyTop - 8, canvasWidth - margin * 2 - panelWidth - 28, 170, `${design.secondaryAccent}11`);
+          addText(slide.visualSuggestion, margin + panelWidth + 52, bodyTop + 24, canvasWidth - margin * 2 - panelWidth - 76, 17, {
+            fill: design.muted,
+            fontWeight: "700",
+          });
+        }
+      } else {
+        addText(lines.join("\n"), margin, bodyTop, bodyWidth, bodyFont, { fill: design.muted, lineHeight: 1.3 });
+        if (!compact) {
+          canvas.add(new fabric.Circle({
+            left: canvasWidth - margin - 210,
+            top: Math.round(canvasHeight * 0.32),
+            radius: 82,
+            fill: `${design.accent}1f`,
+            stroke: design.accent,
+            strokeWidth: 4,
+          }));
+          canvas.add(new fabric.Rect({
+            left: canvasWidth - margin - 280,
+            top: Math.round(canvasHeight * 0.45),
+            width: 180,
+            height: 24,
+            rx: 12,
+            ry: 12,
+            fill: design.secondaryAccent,
+          }));
+        }
+      }
+
+      canvas.renderAll();
+      return;
+    }
+
     canvas.add(
       new fabric.Rect({
         left: 0,
@@ -1650,25 +1821,28 @@ export default function FabricLessonStudio() {
   };
 
   const applyAiSlideDeck = async (slides: AiLessonSlide[]) => {
-    const validSlides = slides.filter((slide) => slide.title.trim() && slide.onScreenText.length > 0);
+    const validSlides = normalizeAiSlideNavigation(slides.filter((slide) => slide.title.trim() && slide.onScreenText.length > 0));
     if (validSlides.length === 0) {
       toast.error("AI returned no usable slides.");
       return;
     }
 
     const nextPages: StudioPage[] = validSlides.map((slide, index) => {
-      const bodyLines = slide.onScreenText
-        .map(cleanSlideText)
-        .filter((line) => line && line.toLowerCase() !== slide.title.toLowerCase());
+      const bodyLines = linesForAiSlide(slide).map(cleanSlideText).filter(Boolean);
+      const design = resolveAiSlideDesign(slide);
       return {
         id: crypto.randomUUID(),
         name: slide.title,
         seed: {
           title: slide.title,
           body: bodyLines.join("\n") || slide.visualSuggestion || "Review and edit this generated slide.",
-          accent: index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82",
+          accent: design.accent || (index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82"),
         },
         snapshot: null,
+        aiSlide: {
+          ...slide,
+          onScreenText: slide.onScreenText.map(cleanSlideText).filter(Boolean),
+        },
       };
     });
 
@@ -1738,8 +1912,13 @@ export default function FabricLessonStudio() {
       const data = (await response.json()) as {
         lesson?: { title?: string; description?: string; sections?: Array<{ title?: string; content?: string }> };
         slides?: AiLessonSlide[];
+        clarification?: string;
         error?: string;
       };
+      if (data.clarification) {
+        toast.error(data.clarification);
+        return;
+      }
       if (!response.ok || (!data.lesson && !data.slides?.length)) {
         toast.error(data.error || "AI generation is unavailable.");
         return;
