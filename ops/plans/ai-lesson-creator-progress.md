@@ -57,6 +57,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Keep the model output schema exact by computing design choices inside EdSync, not in the AI JSON contract.
 - [x] Add focused tests for template selection, navigation normalization, and slide metadata preservation.
 - [x] Add focused tests that convert AI slides into editable studio pages with preview seed text and preserved notes/navigation metadata.
+- [x] Add focused tests for slide preview three-dot menu placement so it stays anchored to the preview and inside the viewport.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -88,6 +89,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after the tested slide-to-studio-page conversion; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `a45a00cf-b87a-4ca7-953c-3bf811389f13`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200, and headless Chrome rendered the unauthenticated sign-in page without 503 or the minified React error.
+- `npm.cmd test -- src/lib/studio/page-menu-placement.test.ts src/lib/studio/ai-slide-pages.test.ts`: passed with 6 tests after extracting page preview menu placement.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/page-menu-placement.ts src/lib/studio/page-menu-placement.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after extracting page preview menu placement.
+- `npm.cmd run typecheck`: passed after extracting page preview menu placement.
 
 ## Current Implementation Pass
 
