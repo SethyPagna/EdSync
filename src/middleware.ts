@@ -31,7 +31,7 @@ const STUDENT_ROUTE_PREFIX = "/student";
 const ADMIN_ROUTE_PREFIX = "/admin";
 const ADMIN_VIEW_MODE_HEADER = "x-edsync-admin-view-mode";
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestedAdminViewMode = normalizeAdminViewMode(request.nextUrl.searchParams.get("adminView"));
   const isProtected = startsWithAny(pathname, PROTECTED_ROUTE_PREFIXES);
