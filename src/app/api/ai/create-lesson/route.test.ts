@@ -199,4 +199,30 @@ describe("create lesson AI route", () => {
     );
     expect(payload.lesson.tags).toEqual(expect.arrayContaining(["ai-slide-deck", "studio-ready"]));
   });
+
+  it("returns clarification instead of fallback slides when the model requests a topic", async () => {
+    generateAIChatMock.mockResolvedValue(JSON.stringify([
+      { clarification: "Please specify the grade level and desired number of slides." },
+    ]));
+
+    const response = await POST(jsonRequest({
+      mode: "text",
+      content: "Build me something useful",
+      outputFormat: "slide_deck",
+      slideCount: 10,
+    }));
+
+    const payload = await response.json() as {
+      clarification?: string;
+      slides?: unknown[];
+      lesson?: unknown;
+      warning?: string;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.clarification).toBe("Please specify the grade level and desired number of slides.");
+    expect(payload.slides).toEqual([]);
+    expect(payload.lesson).toBeUndefined();
+    expect(payload.warning).toBeUndefined();
+  });
 });
