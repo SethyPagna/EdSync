@@ -56,6 +56,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Render AI slides with distinct template recipes instead of one generic title/body layout.
 - [x] Keep the model output schema exact by computing design choices inside EdSync, not in the AI JSON contract.
 - [x] Add focused tests for template selection, navigation normalization, and slide metadata preservation.
+- [x] Add focused tests that convert AI slides into editable studio pages with preview seed text and preserved notes/navigation metadata.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -78,6 +79,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after AI lesson template wiring; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `76b0d8af-8b7f-41ec-ba87-49b24a445ab5`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 instead of 503, and headless Chrome rendered the unauthenticated sign-in page without the previous minified React error.
+- `npm.cmd test -- src/lib/studio/ai-slide-pages.test.ts src/lib/studio/ai-slide-design.test.ts src/app/api/ai/create-lesson/route.test.ts`: passed with 9 tests after extracting the AI slide-to-studio-page conversion.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-slide-pages.ts src/lib/studio/ai-slide-pages.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after extracting the AI slide-to-studio-page conversion.
+- `npm.cmd run typecheck`: passed after extracting the AI slide-to-studio-page conversion.
 
 ## Current Implementation Pass
 
