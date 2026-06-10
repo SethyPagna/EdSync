@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Archive, CalendarClock, ClipboardList, Edit3, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound, X } from "lucide-react";
+import { Archive, CalendarClock, ClipboardList, Edit3, FileCheck2, MessageSquareText, Plus, Save, Send, UsersRound, X, type LucideIcon } from "lucide-react";
 import {
   normalizeWorkGradingSettings,
   workGradeContribution,
@@ -321,11 +321,11 @@ export default function TeacherWorkPage() {
         : filteredSubmissions,
     [activeSection, filteredSubmissions],
   );
-  const sectionTabs: Array<{ key: AssessmentSection; label: string; count: number }> = [
-    { key: "assessments", label: "Assessments", count: filteredItems.length },
-    { key: "submissions", label: "Submissions", count: filteredSubmissions.length },
-    { key: "feedback", label: "Feedback", count: feedbackCount },
-    { key: "discussions", label: "Discussions", count: discussionCount },
+  const sectionTabs: Array<{ key: AssessmentSection; label: string; count: number; icon: LucideIcon }> = [
+    { key: "assessments", label: "Assessments", count: filteredItems.length, icon: ClipboardList },
+    { key: "submissions", label: "Submissions", count: filteredSubmissions.length, icon: FileCheck2 },
+    { key: "feedback", label: "Feedback", count: feedbackCount, icon: MessageSquareText },
+    { key: "discussions", label: "Discussions", count: discussionCount, icon: UsersRound },
   ];
 
   return (
@@ -340,29 +340,6 @@ export default function TeacherWorkPage() {
             <p className="mt-1 text-sm text-edsync-subtle">
               {publishedCount} live / {submissionCount} submissions / {unreviewedCount} to review
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/teacher/planner" className="btn-secondary justify-center">
-              <CalendarClock className="h-4 w-4" />
-              Planner
-            </Link>
-            {formOpen && (
-              <button type="button" onClick={() => resetForm()} className="btn-secondary justify-center">
-                <X className="h-4 w-4" />
-                Cancel
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedClass) setForm((current) => ({ ...current, classId: selectedClass.id }));
-                setFormOpen(true);
-              }}
-              className="btn-primary justify-center"
-            >
-              <Plus className="h-4 w-4" />
-              New
-            </button>
           </div>
         </div>
       </section>
@@ -397,26 +374,55 @@ export default function TeacherWorkPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-2">
-        <div className="grid gap-2 sm:grid-cols-4">
-          {sectionTabs.map((tab) => (
+      <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <aside className="edsync-scrollbar-none overflow-x-auto rounded-xl border border-edsync-border bg-edsync-card p-2 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
+          <div className="flex gap-2 lg:flex-col">
+            {sectionTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => chooseAssessmentSection(tab.key)}
+                  className={`flex min-w-40 items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black transition lg:min-w-0 ${
+                    activeSection === tab.key
+                      ? "bg-edsync-blue text-white shadow-sm"
+                      : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{tab.label}</span>
+                  <span className={activeSection === tab.key ? "text-white/80" : "text-edsync-subtle"}>{tab.count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-edsync-border pt-2 lg:grid-cols-1">
             <button
-              key={tab.key}
               type="button"
-              onClick={() => chooseAssessmentSection(tab.key)}
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                activeSection === tab.key
-                  ? "border-edsync-blue bg-edsync-blue text-white"
-                  : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/50"
-              }`}
+              onClick={() => {
+                if (selectedClass) setForm((current) => ({ ...current, classId: selectedClass.id }));
+                setFormOpen(true);
+              }}
+              className="btn-primary justify-center px-3 py-2 text-sm"
             >
-              <span>{tab.label}</span>
-              <span className={activeSection === tab.key ? "text-white/80" : "text-edsync-subtle"}>{tab.count}</span>
+              <Plus className="h-4 w-4" />
+              New
             </button>
-          ))}
-        </div>
-      </section>
+            <Link href="/teacher/planner" className="btn-secondary justify-center px-3 py-2 text-sm">
+              <CalendarClock className="h-4 w-4" />
+              Planner
+            </Link>
+            {formOpen && (
+              <button type="button" onClick={() => resetForm()} className="btn-secondary col-span-2 justify-center px-3 py-2 text-sm lg:col-span-1">
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            )}
+          </div>
+        </aside>
 
+        <div className="min-w-0 space-y-5">
       {formOpen && (
         <form onSubmit={saveWork} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
           <div className="group mb-4 flex items-center justify-between gap-3">
@@ -729,6 +735,8 @@ export default function TeacherWorkPage() {
         </div>
       </section>
       )}
+        </div>
+      </div>
     </div>
   );
 }
