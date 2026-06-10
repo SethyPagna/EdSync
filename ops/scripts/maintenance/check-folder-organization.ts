@@ -20,7 +20,7 @@ const folderRules: FolderRule[] = [
     root: "infra",
   },
   {
-    allowedChildren: new Set(["scripts"]),
+    allowedChildren: new Set(["plans", "scripts"]),
     root: "ops",
   },
   {
