@@ -50,7 +50,7 @@
     }
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1064.0",
+    "@aws-sdk/client-s3": "^3.1065.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -85,7 +85,7 @@
     "framer-motion": "^12.40.0",
     "idb": "^8.0.3",
     "lucide-react": "^1.17.0",
-    "next": "^16.2.6",
+    "next": "^16.2.9",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -94,7 +94,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260609.1",
+    "@cloudflare/workers-types": "^4.20260610.1",
     "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -107,14 +107,14 @@
     "daisyui": "^5.5.23",
     "esbuild": "^0.28.0",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.6",
+    "eslint-config-next": "^16.2.9",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7",
-    "wrangler": "^4.95.0"
+    "wrangler": "^4.99.0"
   },
   "overrides": {
     "postcss": "$postcss"
