@@ -35,6 +35,7 @@ import {
   type LucideIcon,
   Undo2,
   UploadCloud,
+  X,
 } from "lucide-react";
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
@@ -533,7 +534,7 @@ function getPageMenuPlacement(rect: DOMRect) {
   const top = preferredTop >= PAGE_MENU_MARGIN ? preferredTop : Math.min(fallbackTop, window.innerHeight - PAGE_MENU_HEIGHT - PAGE_MENU_MARGIN);
 
   return {
-    left: Math.max(PAGE_MENU_MARGIN, Math.min(rect.left, maxLeft)),
+    left: Math.max(PAGE_MENU_MARGIN, Math.min(rect.left + rect.width / 2 - PAGE_MENU_WIDTH / 2, maxLeft)),
     top: Math.max(PAGE_MENU_MARGIN, top),
   };
 }
@@ -845,9 +846,20 @@ export default function FabricLessonStudio() {
         height: canvasHeight,
         preserveObjectStacking: true,
         backgroundColor: "#ffffff",
-        selectionColor: "rgba(36,88,220,0.12)",
-        selectionBorderColor: DEFAULT_ACCENT,
+        selectionColor: "rgba(0,197,167,0.12)",
+        selectionBorderColor: "#00c5a7",
       });
+      fabric.FabricObject.ownDefaults = {
+        ...fabric.FabricObject.ownDefaults,
+        borderColor: "#00c5a7",
+        borderDashArray: [6, 4],
+        borderScaleFactor: 1.5,
+        cornerColor: "#ffffff",
+        cornerSize: 10,
+        cornerStrokeColor: "#00c5a7",
+        cornerStyle: "circle",
+        transparentCorners: false,
+      };
       canvasRef.current = canvas;
       const currentPages = pagesRef.current;
       const firstPageId = activePageIdRef.current || currentPages[0]?.id || "";
@@ -914,7 +926,8 @@ export default function FabricLessonStudio() {
 
   const togglePageMenu = useCallback((pageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    const placement = getPageMenuPlacement(event.currentTarget.getBoundingClientRect());
+    const tile = event.currentTarget.closest("[data-page-preview-tile]");
+    const placement = getPageMenuPlacement((tile ?? event.currentTarget).getBoundingClientRect());
     setOpenPageMenu((current) => (current?.pageId === pageId ? null : { pageId, ...placement }));
   }, []);
 
@@ -1087,9 +1100,13 @@ export default function FabricLessonStudio() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     object.set({
-      cornerColor: DEFAULT_ACCENT,
-      cornerStrokeColor: "#ffffff",
-      borderColor: DEFAULT_ACCENT,
+      borderColor: "#00c5a7",
+      borderDashArray: [6, 4],
+      borderScaleFactor: 1.5,
+      cornerColor: "#ffffff",
+      cornerSize: 10,
+      cornerStrokeColor: "#00c5a7",
+      cornerStyle: "circle",
       transparentCorners: false,
     });
     canvas.add(object);
@@ -1973,9 +1990,94 @@ export default function FabricLessonStudio() {
           document.body,
         )
       : null;
+  const formatChooserPortal =
+    view === "formats" && typeof document !== "undefined"
+      ? createPortal(
+          <div className="fixed inset-0 z-[900] grid place-items-center bg-slate-950/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Choose lesson format">
+            <section className="max-h-[min(42rem,calc(100dvh-2rem))] w-full max-w-5xl overflow-y-auto rounded-[1.75rem] border border-edsync-border bg-edsync-card p-4 shadow-2xl shadow-slate-900/25 sm:p-5">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-edsync-blue">Format</p>
+                  <h2 className="font-display text-2xl font-black">Choose dimensions</h2>
+                  <p className="text-sm font-semibold text-edsync-subtle">Pick the lesson canvas size before editing.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-2xl border border-edsync-border bg-edsync-surface p-1">
+                    {STUDIO_FORMATS.map((format) => (
+                      <button
+                        key={format.id}
+                        type="button"
+                        onClick={() => setSelectedFormat(format.id)}
+                        className={`rounded-xl px-3 py-2 text-sm font-black transition ${
+                          selectedFormat === format.id ? "bg-edsync-text text-edsync-card" : "text-edsync-subtle hover:text-edsync-text"
+                        }`}
+                      >
+                        {format.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setView("hub")}
+                    className="grid h-10 w-10 place-items-center rounded-2xl text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text"
+                    aria-label="Close format chooser"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {selectedTemplates.map((template) => (
+                  <TemplateCard key={template.id} template={template} onSelect={() => startNewProject(template)} />
+                ))}
+                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
+                      <Maximize2 className="h-5 w-5" />
+                    </span>
+                    <span className="rounded-full border border-edsync-border bg-edsync-card px-2.5 py-1 text-xs font-black text-edsync-subtle">
+                      Custom
+                    </span>
+                  </div>
+                  <p className="mt-5 font-display text-xl font-black">Custom dimensions</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="text-xs font-bold text-edsync-subtle">
+                      Width
+                      <input
+                        type="number"
+                        min={320}
+                        max={3840}
+                        value={customWidth}
+                        onChange={(event) => setCustomWidth(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                    <label className="text-xs font-bold text-edsync-subtle">
+                      Height
+                      <input
+                        type="number"
+                        min={320}
+                        max={3840}
+                        value={customHeight}
+                        onChange={(event) => setCustomHeight(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
+                      />
+                    </label>
+                  </div>
+                  <button type="button" onClick={startCustomProject} className="btn-primary mt-4 w-full justify-center">
+                    Create custom
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>,
+          document.body,
+        )
+      : null;
 
   if (view !== "editor" || !activeProject) {
     return (
+      <>
       <main className="min-h-[calc(100dvh-1rem)] overflow-x-clip bg-edsync-bg text-edsync-text">
         <section className="mx-auto w-full">
           <div className="space-y-5">
@@ -2079,73 +2181,6 @@ export default function FabricLessonStudio() {
 
           </section>
 
-          {view === "formats" && (
-            <section className="premium-panel rounded-[1.5rem] p-4 sm:p-5">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="font-display text-2xl font-black">Choose format and dimensions</h2>
-                  <p className="text-sm font-semibold text-edsync-subtle">The canvas opens with the right aspect ratio and lesson format.</p>
-                </div>
-                <div className="flex rounded-2xl border border-edsync-border bg-edsync-surface p-1">
-                  {STUDIO_FORMATS.map((format) => (
-                    <button
-                      key={format.id}
-                      type="button"
-                      onClick={() => setSelectedFormat(format.id)}
-                      className={`rounded-xl px-3 py-2 text-sm font-black transition ${
-                        selectedFormat === format.id ? "bg-edsync-text text-edsync-card" : "text-edsync-subtle hover:text-edsync-text"
-                      }`}
-                    >
-                      {format.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {selectedTemplates.map((template) => (
-                  <TemplateCard key={template.id} template={template} onSelect={() => startNewProject(template)} />
-                ))}
-                <div className="rounded-2xl border border-edsync-border bg-edsync-surface p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
-                      <Maximize2 className="h-5 w-5" />
-                    </span>
-                    <span className="rounded-full border border-edsync-border bg-edsync-card px-2.5 py-1 text-xs font-black text-edsync-subtle">
-                      Custom
-                    </span>
-                  </div>
-                  <p className="mt-5 font-display text-xl font-black">Custom dimensions</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <label className="text-xs font-bold text-edsync-subtle">
-                      Width
-                      <input
-                        type="number"
-                        min={320}
-                        max={3840}
-                        value={customWidth}
-                        onChange={(event) => setCustomWidth(Number(event.target.value))}
-                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                      />
-                    </label>
-                    <label className="text-xs font-bold text-edsync-subtle">
-                      Height
-                      <input
-                        type="number"
-                        min={320}
-                        max={3840}
-                        value={customHeight}
-                        onChange={(event) => setCustomHeight(Number(event.target.value))}
-                        className="mt-1 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
-                      />
-                    </label>
-                  </div>
-                  <button type="button" onClick={startCustomProject} className="btn-primary mt-4 w-full justify-center">
-                    Create custom
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
           </div>
         </section>
 
@@ -2155,6 +2190,8 @@ export default function FabricLessonStudio() {
           event.currentTarget.value = "";
         }} />
       </main>
+      {formatChooserPortal}
+      </>
     );
   }
 
@@ -2498,7 +2535,7 @@ export default function FabricLessonStudio() {
               <div
                 ref={canvasStageRef}
                 tabIndex={0}
-                className="relative grid flex-1 place-items-center overflow-auto bg-[#eef3f8] p-2 outline-none dark:bg-[#dfe8f2] sm:p-3"
+                className="relative grid flex-1 place-items-center overflow-auto bg-[#eef3f8] p-10 outline-none dark:bg-[#dfe8f2] sm:p-16"
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";
@@ -2541,7 +2578,7 @@ export default function FabricLessonStudio() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="bg-white shadow-xl shadow-slate-400/25">
+                <div className="my-14 bg-white shadow-xl shadow-slate-400/25">
                   <canvas ref={canvasElementRef} aria-label="EdSync lesson canvas" />
                 </div>
               </div>
@@ -2553,6 +2590,7 @@ export default function FabricLessonStudio() {
                     return (
                       <div
                         key={page.id}
+                        data-page-preview-tile
                         draggable
                         onDragStart={() => setDraggingPageId(page.id)}
                         onDragOver={(event) => event.preventDefault()}
