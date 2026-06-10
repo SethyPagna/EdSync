@@ -7,10 +7,10 @@ import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   linesForAiSlide,
-  normalizeAiSlideNavigation,
   resolveAiSlideDesign,
   type AiSlideMetadata,
 } from "@/lib/studio/ai-slide-design";
+import { buildAiSlideStudioPages } from "@/lib/studio/ai-slide-pages";
 import { listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
 import {
   ArrowDown,
@@ -512,10 +512,6 @@ function cssColor(value: unknown, fallback = DEFAULT_ACCENT) {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
-function cleanSlideText(line: string) {
-  return line.replace(/\*\*(.*?)\*\*/g, "$1").trim();
-}
-
 function formatUpdatedAt(value: string | undefined) {
   if (!value) return "Just now";
   const date = new Date(value);
@@ -580,7 +576,7 @@ export default function FabricLessonStudio() {
   const [aiStyle, setAiStyle] = useState<AiLessonStyle>("socratic");
   const [aiComplexity, setAiComplexity] = useState(55);
   const [aiVersions, setAiVersions] = useState(1);
-  const [aiPageCount, setAiPageCount] = useState(6);
+  const [aiPageCount, setAiPageCount] = useState(10);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
@@ -1821,30 +1817,11 @@ export default function FabricLessonStudio() {
   };
 
   const applyAiSlideDeck = async (slides: AiLessonSlide[]) => {
-    const validSlides = normalizeAiSlideNavigation(slides.filter((slide) => slide.title.trim() && slide.onScreenText.length > 0));
-    if (validSlides.length === 0) {
+    const nextPages: StudioPage[] = buildAiSlideStudioPages(slides);
+    if (nextPages.length === 0) {
       toast.error("AI returned no usable slides.");
       return;
     }
-
-    const nextPages: StudioPage[] = validSlides.map((slide, index) => {
-      const bodyLines = linesForAiSlide(slide).map(cleanSlideText).filter(Boolean);
-      const design = resolveAiSlideDesign(slide);
-      return {
-        id: crypto.randomUUID(),
-        name: slide.title,
-        seed: {
-          title: slide.title,
-          body: bodyLines.join("\n") || slide.visualSuggestion || "Review and edit this generated slide.",
-          accent: design.accent || (index % 2 === 0 ? DEFAULT_ACCENT : "#0f9f82"),
-        },
-        snapshot: null,
-        aiSlide: {
-          ...slide,
-          onScreenText: slide.onScreenText.map(cleanSlideText).filter(Boolean),
-        },
-      };
-    });
 
     setPages(nextPages);
     pagesRef.current = nextPages;
@@ -1853,8 +1830,8 @@ export default function FabricLessonStudio() {
     setActiveProject((current) =>
       current
         ? {
-            ...current,
-            title: validSlides[0].title || current.title,
+          ...current,
+            title: nextPages[0].seed.title || current.title,
             status: "draft",
           }
         : current,
@@ -2034,13 +2011,13 @@ export default function FabricLessonStudio() {
           />
         </label>
         <label className="block rounded-2xl bg-edsync-surface p-3 text-xs font-bold text-edsync-subtle">
-          Pages / sections
+          Slides / sections
           <input
             type="number"
-            min={1}
+            min={10}
             max={24}
             value={aiPageCount}
-            onChange={(event) => setAiPageCount(Math.min(24, Math.max(1, Number(event.target.value))))}
+            onChange={(event) => setAiPageCount(Math.min(24, Math.max(10, Number(event.target.value))))}
             className="mt-2 h-10 w-full rounded-xl border border-edsync-border bg-edsync-card px-3 text-sm font-black text-edsync-text"
           />
         </label>
