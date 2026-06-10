@@ -28,7 +28,7 @@ const folderRules: FolderRule[] = [
     root: "public",
   },
   {
-    allowedChildren: new Set(["app", "components", "lib", "proxy.test.ts", "proxy.ts", "styles", "test", "types"]),
+    allowedChildren: new Set(["app", "components", "lib", "middleware.test.ts", "middleware.ts", "styles", "test", "types"]),
     root: "src",
   },
 ];
