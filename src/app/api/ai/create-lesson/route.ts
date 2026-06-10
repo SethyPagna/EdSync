@@ -299,6 +299,15 @@ function withLinearNavigation(slides: Omit<AiLessonSlide, "navigation">[]): AiLe
   }));
 }
 
+function extractSlideDeckClarification(rawSlides: unknown[]) {
+  if (rawSlides.length !== 1) return null;
+  const item = asRecord(rawSlides[0]);
+  const clarification = item.clarification;
+  return typeof clarification === "string" && clarification.trim()
+    ? clarification.trim()
+    : null;
+}
+
 function normalizeSlideDeck(rawSlides: unknown[], topic: string): AiLessonSlide[] {
   const slides = rawSlides
     .map((value, index) => {
@@ -828,7 +837,12 @@ export async function POST(request: NextRequest) {
           temperature: 0.25,
           feature: "lesson-slide-deck",
         });
-        slides = normalizeSlideDeck(parseJsonArrayResponse(rawSlides), topic);
+        const parsedSlides = parseJsonArrayResponse(rawSlides);
+        const clarification = extractSlideDeckClarification(parsedSlides);
+        if (clarification) {
+          return NextResponse.json({ clarification, slides: [] });
+        }
+        slides = normalizeSlideDeck(parsedSlides, topic);
       } catch (slideError) {
         warning =
           slideError instanceof Error
