@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
 import { generateAIChat } from "@/lib/ai/chat";
@@ -144,6 +144,10 @@ function jsonRequest(body: unknown) {
 }
 
 describe("create lesson AI route", () => {
+  beforeEach(() => {
+    generateAIChatMock.mockReset();
+  });
+
   it("returns normalized slide deck output with lesson compatibility", async () => {
     generateAIChatMock.mockResolvedValue(JSON.stringify(slideDeckResponse));
 
@@ -167,5 +171,32 @@ describe("create lesson AI route", () => {
     expect(payload.lesson.title).toBe("Photosynthesis");
     expect(payload.lesson.sections[0].content).toContain("Visual:");
     expect(generateAIChatMock.mock.calls[0]?.[0].feature).toBe("lesson-slide-deck");
+  });
+
+  it("falls back to a complete linear slide deck when provider JSON is unusable", async () => {
+    generateAIChatMock.mockResolvedValue(JSON.stringify([{ title: "Too short", onScreenText: ["Only one slide"] }]));
+
+    const response = await POST(jsonRequest({
+      mode: "text",
+      content: "Basic budgeting for freelance course creators",
+      outputFormat: "slide_deck",
+      slideCount: 10,
+    }));
+
+    const payload = await response.json() as {
+      lesson: { tags: string[] };
+      slides: Array<{ type: string; navigation: { previous: string | null; next: string | null } }>;
+      warning?: string;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.warning).toContain("Returned a local slide draft");
+    expect(payload.slides).toHaveLength(10);
+    expect(payload.slides[0].navigation.previous).toBeNull();
+    expect(payload.slides.at(-1)?.navigation.next).toBeNull();
+    expect(payload.slides.map((slide) => slide.type)).toEqual(
+      expect.arrayContaining(["socratic", "activity", "summary", "assessment"]),
+    );
+    expect(payload.lesson.tags).toEqual(expect.arrayContaining(["ai-slide-deck", "studio-ready"]));
   });
 });
