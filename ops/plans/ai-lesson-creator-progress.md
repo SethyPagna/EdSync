@@ -72,6 +72,12 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts src/lib/studio/ai-slide-design.test.ts`: passed with 7 tests after clarification handling and studio template wiring.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.ts src/app/api/ai/create-lesson/route.test.ts src/components/studio/FabricLessonStudio.tsx src/lib/studio/ai-slide-design.ts src/lib/studio/ai-slide-design.test.ts`: passed after route and studio integration.
 - `npm.cmd run typecheck`: passed after route and studio integration.
+- `npm.cmd test`: passed with 62 files and 260 tests after AI lesson template wiring.
+- `npm.cmd run lint`: passed after AI lesson template wiring.
+- `npm.cmd run typecheck`: passed after AI lesson template wiring.
+- `npm.cmd run build`: passed after AI lesson template wiring; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `76b0d8af-8b7f-41ec-ba87-49b24a445ab5`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 instead of 503, and headless Chrome rendered the unauthenticated sign-in page without the previous minified React error.
 
 ## Current Implementation Pass
 
