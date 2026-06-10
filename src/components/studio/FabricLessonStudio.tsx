@@ -131,7 +131,7 @@ const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
 const STUDIO_IMPORT_ACCEPT = "application/json,.json,image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv";
 const PAGE_MENU_WIDTH = 224;
-const PAGE_MENU_HEIGHT = 316;
+const PAGE_MENU_HEIGHT = 260;
 const PAGE_MENU_MARGIN = 12;
 const AI_FOCUS_OPTIONS = [
   ["flow", "Flow", "warmup, concept, practice loop, proof check"],
