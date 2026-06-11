@@ -100,6 +100,8 @@ EdSync interaction requirements:
 - The activity slide must name its interaction format in onScreenText or speakerNotes.
 - The assessment slide must include a clear quick-check format such as multiple choice, short answer, fill-in-the-blank, or exit ticket, with answer key in speakerNotes.
 - If the user asks for quiz, tests, discussion, activities, or fill-in-the-blank, make those formats explicit in the relevant slide titles, onScreenText, or speakerNotes.
+- Template-ready wording: start activity/assessment lines with one of these labels when applicable: "Discussion:", "Practice activity:", "Matching:", "Poll:", "Reflection:", "Quiz:", "Test:", "Fill-in-the-blank:", or "Exit ticket:".
+- visualSuggestion must name the intended layout, for example "discussion board layout", "matching pairs layout", "poll check layout", "practice workshop layout", "fill-in-the-blank ticket layout", or "quiz ticket layout".
 
 Complexity adaptation:
 - Beginner: simple language, concrete analogies, everyday examples.
@@ -225,6 +227,8 @@ Settings:
 - Audience language: ${audienceLanguage}
 - Include Socratic questions, speaker notes, visual suggestions, and linear navigation on every slide.
 - Include EdSync interaction formats where useful: discussion, practice activity, matching, poll, reflection, quiz/test, and fill-in-the-blank.
+- Make every activity and assessment template-ready by using explicit labels such as "Discussion:", "Practice activity:", "Matching:", "Poll:", "Reflection:", "Quiz:", "Test:", "Fill-in-the-blank:", or "Exit ticket:".
+- Use visual suggestions that name the Studio layout to render: discussion board, matching pairs, poll check, reflection card, practice workshop, fill-in-the-blank ticket, or quiz ticket.
 - Output must be the JSON array only.
 
 Personalization:
@@ -275,6 +279,54 @@ function asStringArray(value: unknown, fallback: string[]) {
     .map((item) => item.trim())
     .filter(Boolean);
   return lines.length > 0 ? lines : fallback;
+}
+
+const ACTIVITY_CUE_PATTERN = /\b(discussion|discuss|practice activity|activity|matching|match|poll|vote|reflection|reflect|task)\b/i;
+const ASSESSMENT_CUE_PATTERN = /\b(quiz|test|quick check|exit ticket|fill-in-the-blank|fill in the blank|multiple choice|short answer)\b/i;
+
+function slideSearchText(slide: Pick<AiLessonSlide, "title" | "onScreenText" | "speakerNotes" | "visualSuggestion">) {
+  return [
+    slide.title,
+    ...slide.onScreenText,
+    slide.speakerNotes,
+    slide.visualSuggestion,
+  ].join(" ");
+}
+
+function ensureTemplateReadyInteractionCues(slides: AiLessonSlide[]): AiLessonSlide[] {
+  return slides.map((slide) => {
+    const text = slideSearchText(slide);
+    if (slide.type === "activity" && !ACTIVITY_CUE_PATTERN.test(text)) {
+      return {
+        ...slide,
+        title: slide.title.toLowerCase().includes("activity") ? slide.title : `Activity: ${slide.title}`,
+        onScreenText: [
+          `Practice activity: ${slide.onScreenText[0] ?? slide.title}`,
+          ...slide.onScreenText.slice(1),
+        ],
+        visualSuggestion: slide.visualSuggestion
+          ? `${slide.visualSuggestion} Use a practice workshop layout.`
+          : "Use a practice workshop layout.",
+      };
+    }
+    if (slide.type === "assessment" && !ASSESSMENT_CUE_PATTERN.test(text)) {
+      return {
+        ...slide,
+        title: slide.title.toLowerCase().includes("ticket") ? slide.title : `Exit Ticket: ${slide.title}`,
+        onScreenText: [
+          `Quiz: ${slide.onScreenText[0] ?? slide.title}`,
+          ...slide.onScreenText.slice(1),
+        ],
+        speakerNotes: slide.speakerNotes
+          ? `${slide.speakerNotes} Include an answer key for every quiz, test, or fill-in-the-blank item.`
+          : "Answer key: accept accurate, evidence-based responses.",
+        visualSuggestion: slide.visualSuggestion
+          ? `${slide.visualSuggestion} Use a quiz ticket layout.`
+          : "Use a quiz ticket layout.",
+      };
+    }
+    return slide;
+  });
 }
 
 function normalizeSlideType(value: unknown, index: number): AiLessonSlideType {
@@ -342,7 +394,7 @@ function normalizeSlideDeck(rawSlides: unknown[], topic: string): AiLessonSlide[
     throw new Error("Model returned too few slides for the required lesson flow.");
   }
 
-  return withLinearNavigation(slides);
+  return ensureTemplateReadyInteractionCues(withLinearNavigation(slides));
 }
 
 function truncateSourceInput(source: string, maxChars = MAX_SOURCE_CHARS) {
