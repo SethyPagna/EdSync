@@ -774,6 +774,27 @@ export default function FabricLessonStudio() {
         canvas.add(object);
         return object;
       };
+      const addModePill = (left: number, top: number) => {
+        if (design.interaction === "none") return;
+        const label = design.actionLabel.toUpperCase();
+        const pillWidth = Math.max(92, label.length * 10 + 34);
+        canvas.add(new fabric.Rect({
+          left,
+          top,
+          width: pillWidth,
+          height: 34,
+          rx: 17,
+          ry: 17,
+          fill: `${design.accent}18`,
+          stroke: `${design.accent}66`,
+          strokeWidth: 1,
+        }));
+        addText(label, left + 17, top + 9, pillWidth - 34, 12, {
+          fill: design.accent,
+          fontWeight: "900",
+          charSpacing: 70,
+        });
+      };
 
       canvas.add(
         new fabric.Rect({
@@ -800,6 +821,7 @@ export default function FabricLessonStudio() {
       addText(slide.title, margin, titleTop, compact ? canvasWidth - margin * 2 : Math.round(canvasWidth * 0.58), titleFont, {
         fontWeight: "900",
       });
+      addModePill(margin, Math.max(margin + 24, titleTop - 52));
 
       if (design.variant === "hero") {
         addText(lines.join("\n"), margin, bodyTop, compact ? canvasWidth - margin * 2 : bodyWidth, bodyFont, {
@@ -866,8 +888,16 @@ export default function FabricLessonStudio() {
         addCard(margin, bodyTop - 8, panelWidth, Math.min(260, canvasHeight - bodyTop - margin), "#ffffff");
         lines.slice(0, 5).forEach((line, index) => {
           const top = bodyTop + 24 + index * 44;
-          canvas.add(new fabric.Rect({ left: margin + 28, top: top + 8, width: 20, height: 20, rx: 6, ry: 6, fill: `${design.accent}22`, stroke: design.accent }));
-          addText(line, margin + 64, top, panelWidth - 92, Math.max(16, bodyFont - 4), { fontWeight: "700" });
+          const markerText = design.interaction === "fill_blank"
+            ? "___"
+            : design.interaction === "quiz"
+              ? "?"
+              : design.interaction === "matching"
+                ? "="
+                : String(index + 1);
+          canvas.add(new fabric.Rect({ left: margin + 28, top: top + 8, width: 30, height: 22, rx: 8, ry: 8, fill: `${design.accent}22`, stroke: design.accent }));
+          addText(markerText, margin + 34, top + 11, 20, 12, { fill: design.accent, fontWeight: "900" });
+          addText(line, margin + 76, top, panelWidth - 104, Math.max(16, bodyFont - 4), { fontWeight: "700" });
         });
         if (!compact) {
           addCard(margin + panelWidth + 28, bodyTop - 8, canvasWidth - margin * 2 - panelWidth - 28, 170, `${design.secondaryAccent}11`);
