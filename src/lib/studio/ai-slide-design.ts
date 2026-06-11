@@ -46,6 +46,14 @@ export type AiSlideDesign = {
   actionLabel: string;
 };
 
+export type AiSlideInteractionTemplate = {
+  kind: AiSlideInteraction;
+  label: string;
+  primaryPrompt: string;
+  items: string[];
+  teacherHint: string;
+};
+
 type AiSlideBaseDesign = Omit<AiSlideDesign, "titleSize" | "interaction" | "actionLabel">;
 
 const TYPE_DESIGNS: Record<AiSlideType, AiSlideBaseDesign> = {
@@ -167,6 +175,13 @@ function actionLabelForInteraction(interaction: AiSlideInteraction) {
   }
 }
 
+function firstUsefulSentence(value: string) {
+  return value
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .find(Boolean) ?? "";
+}
+
 export function resolveAiSlideDesign(
   slide: Pick<AiSlideMetadata, "type" | "title" | "visualSuggestion"> & Partial<Pick<AiSlideMetadata, "onScreenText" | "speakerNotes">>,
 ): AiSlideDesign {
@@ -209,4 +224,22 @@ export function linesForAiSlide(slide: Pick<AiSlideMetadata, "title" | "onScreen
     .map((line) => line.replace(/\*\*/g, "").trim())
     .filter((line) => line && line.toLowerCase() !== normalizedTitle);
   return lines.length > 0 ? lines : [slide.visualSuggestion || "Review and edit this generated slide."];
+}
+
+export function buildAiSlideInteractionTemplate(slide: AiSlideMetadata): AiSlideInteractionTemplate {
+  const kind = resolveAiSlideInteraction(slide);
+  const label = actionLabelForInteraction(kind);
+  const lines = linesForAiSlide(slide);
+  const usefulLines = lines.map((line) => line.replace(/^(discussion|practice activity|activity|quiz|test|quick check|fill-in-the-blank|matching|poll|reflection)\s*:\s*/i, "").trim());
+  const primaryPrompt = usefulLines[0] || slide.title;
+  const items = usefulLines.slice(1, 5);
+  const teacherHint = firstUsefulSentence(slide.speakerNotes) || slide.visualSuggestion;
+
+  return {
+    kind,
+    label,
+    primaryPrompt,
+    items: items.length > 0 ? items : [slide.visualSuggestion],
+    teacherHint,
+  };
 }
