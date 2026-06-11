@@ -171,6 +171,60 @@ describe("create lesson AI route", () => {
     expect(payload.lesson.title).toBe("Photosynthesis");
     expect(payload.lesson.sections[0].content).toContain("Visual:");
     expect(generateAIChatMock.mock.calls[0]?.[0].feature).toBe("lesson-slide-deck");
+    expect(generateAIChatMock.mock.calls[0]?.[0].messages[1].content).toContain("template-ready");
+    expect(generateAIChatMock.mock.calls[0]?.[0].messages[1].content).toContain("Fill-in-the-blank:");
+    expect(generateAIChatMock.mock.calls[0]?.[0].messages[1].content).toContain("quiz ticket");
+  });
+
+  it("repairs vague activity and assessment slides into template-ready interactions", async () => {
+    const vagueDeck = slideDeckResponse.map((slide) => ({ ...slide }));
+    vagueDeck[7] = {
+      ...vagueDeck[7],
+      title: "Group Work",
+      onScreenText: ["Compare two examples.", "Choose the stronger answer.", "Share one reason."],
+      speakerNotes: "Give learners five minutes in pairs.",
+      visualSuggestion: "Use two simple cards.",
+    };
+    vagueDeck[9] = {
+      ...vagueDeck[9],
+      title: "Final Questions",
+      onScreenText: ["Name two inputs.", "Name one output.", "Explain why sunlight matters."],
+      speakerNotes: "Accept correct topic vocabulary.",
+      visualSuggestion: "Use a compact card.",
+    };
+    generateAIChatMock.mockResolvedValue(JSON.stringify(vagueDeck));
+
+    const response = await POST(jsonRequest({
+      mode: "text",
+      content: "Photosynthesis for adult learners",
+      outputFormat: "slide_deck",
+      slideCount: 10,
+    }));
+
+    const payload = await response.json() as {
+      slides: Array<{
+        title: string;
+        type: string;
+        onScreenText: string[];
+        speakerNotes: string;
+        visualSuggestion: string;
+      }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.slides[7]).toMatchObject({
+      title: "Activity: Group Work",
+      type: "activity",
+    });
+    expect(payload.slides[7].onScreenText[0]).toBe("Practice activity: Compare two examples.");
+    expect(payload.slides[7].visualSuggestion).toContain("practice workshop layout");
+    expect(payload.slides[9]).toMatchObject({
+      title: "Exit Ticket: Final Questions",
+      type: "assessment",
+    });
+    expect(payload.slides[9].onScreenText[0]).toBe("Quiz: Name two inputs.");
+    expect(payload.slides[9].speakerNotes).toContain("answer key");
+    expect(payload.slides[9].visualSuggestion).toContain("quiz ticket layout");
   });
 
   it("falls back to a complete linear slide deck when provider JSON is unusable", async () => {
