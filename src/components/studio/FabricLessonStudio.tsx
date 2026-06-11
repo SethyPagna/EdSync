@@ -573,6 +573,7 @@ export default function FabricLessonStudio() {
   const [pages, setPages] = useState<StudioPage[]>(initialPages);
   const [activePageId, setActivePageId] = useState("");
   const [panel, setPanel] = useState<StudioPanel>("elements");
+  const [isAiBuilderOpen, setIsAiBuilderOpen] = useState(false);
   const [language, setLanguage] = useState<StudioLanguage>("en");
   const [selectedObject, setSelectedObject] = useState<InspectorObject | null>(null);
   const [canUndo, setCanUndo] = useState(false);
@@ -635,6 +636,19 @@ export default function FabricLessonStudio() {
   useEffect(() => {
     pagesRef.current = pages;
   }, [pages]);
+
+  useEffect(() => {
+    if (!isAiBuilderOpen) return undefined;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setIsAiBuilderOpen(false);
+      if (panel === "ai") setPanel("pages");
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isAiBuilderOpen, panel]);
 
   const refreshProjects = useCallback(async () => {
     setProjectsLoading(true);
@@ -1163,6 +1177,7 @@ export default function FabricLessonStudio() {
     activePageIdRef.current = nextPages[0]?.id ?? "";
     setActivePageId(nextPages[0]?.id ?? "");
     setPanel("elements");
+    setIsAiBuilderOpen(false);
     setActiveProject(nextProject);
     setView("editor");
   };
@@ -1203,6 +1218,7 @@ export default function FabricLessonStudio() {
   const startAiAssistedProject = () => {
     startNewProject(templateById("ppt-wide"));
     setPanel("ai");
+    setIsAiBuilderOpen(true);
     setAiLessonType("lesson");
     setAiFocuses(["flow", "quiz", "slides"]);
     setAiStyle("socratic");
@@ -1257,6 +1273,7 @@ export default function FabricLessonStudio() {
     activePageIdRef.current = activeId ?? "";
     setActivePageId(activeId ?? "");
     setPanel("pages");
+    setIsAiBuilderOpen(false);
     setActiveProject({
       id: item.id,
       title: item.title,
@@ -1289,6 +1306,7 @@ export default function FabricLessonStudio() {
   const returnToHub = async () => {
     syncActivePage();
     setOpenPageMenu(null);
+    setIsAiBuilderOpen(false);
     setView("hub");
     setActiveProject(null);
     setSelectedObject(null);
@@ -1788,6 +1806,7 @@ export default function FabricLessonStudio() {
         startAiAssistedProject();
       } else {
         setPanel("ai");
+        setIsAiBuilderOpen(true);
       }
       if (data?.warning) toast(data.warning);
       toast.success(`${data?.kind ?? "Source"} imported for AI lesson.`);
@@ -1805,6 +1824,7 @@ export default function FabricLessonStudio() {
     if (file.type.startsWith("image/") && activeProject && canvasRef.current) {
       await uploadImage(file);
       setPanel("images");
+      setIsAiBuilderOpen(false);
       toast.success("Image added to canvas.");
       return;
     }
@@ -1951,6 +1971,7 @@ export default function FabricLessonStudio() {
       } else if (data.lesson) {
         await applyAiLesson(data.lesson);
       }
+      setIsAiBuilderOpen(false);
       setPanel("pages");
       toast.success("AI lesson added to the canvas.");
     } catch (error) {
@@ -1972,6 +1993,7 @@ export default function FabricLessonStudio() {
 
   const openPanel = (nextPanel: StudioPanel) => {
     setPanel(nextPanel);
+    setIsAiBuilderOpen(nextPanel === "ai");
     const canvas = canvasRef.current;
     if (!canvas?.getActiveObject()) return;
     canvas.discardActiveObject();
@@ -1981,7 +2003,25 @@ export default function FabricLessonStudio() {
 
   const aiLessonBuilder = (
     <div className="space-y-4">
-      <PanelTitle icon={Sparkles} title={t.ai} />
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <PanelTitle icon={Sparkles} title={t.ai} />
+          <p className="mt-1 text-sm font-semibold text-edsync-subtle">
+            Build a lesson with templates for discussion, activity, quiz, fill-in, and proof checks.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setIsAiBuilderOpen(false);
+            if (panel === "ai") setPanel("pages");
+          }}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text"
+          aria-label="Close AI lesson builder"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="block text-xs font-bold text-edsync-subtle">
           Lesson name <RequiredMark />
@@ -2406,11 +2446,11 @@ export default function FabricLessonStudio() {
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
             </button>
-            <button type="button" onClick={() => setPanel("export")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 sm:inline-flex">
+            <button type="button" onClick={() => openPanel("export")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 sm:inline-flex">
               <FileText className="h-4 w-4" />
               File
             </button>
-            <button type="button" onClick={() => setPanel("design")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 sm:inline-flex">
+            <button type="button" onClick={() => openPanel("design")} className="hidden h-10 items-center gap-2 rounded-2xl px-3 text-sm font-black transition hover:bg-white/15 sm:inline-flex">
               <Maximize2 className="h-4 w-4" />
               Resize
             </button>
@@ -2704,7 +2744,7 @@ export default function FabricLessonStudio() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setPanel("ai")}
+                  onClick={() => openPanel("ai")}
                   className="btn-primary w-full justify-center"
                 >
                   <Sparkles className="h-4 w-4" />
@@ -2750,13 +2790,13 @@ export default function FabricLessonStudio() {
                 }}
                 aria-label="EdSync lesson canvas workspace"
               >
-                {panel === "ai" && !selectedObject && (
+                {isAiBuilderOpen && !selectedObject && (
                   <div className="absolute inset-x-2 top-3 z-20 mx-auto max-h-[calc(100%-1.5rem)] max-w-5xl overflow-y-auto rounded-[1.5rem] bg-edsync-card/98 p-4 shadow-2xl shadow-slate-500/25 ring-1 ring-edsync-border backdrop-blur sm:inset-x-4 sm:p-5">
                     {aiLessonBuilder}
                   </div>
                 )}
                 <div className="absolute left-1/2 top-3 z-10 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border border-edsync-border bg-edsync-card/95 p-1.5 shadow-xl shadow-slate-400/20 backdrop-blur">
-                  <button type="button" onClick={() => openPanel("ai")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-blue/10">
+                  <button type="button" onClick={() => openPanel("ai")} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black text-edsync-text transition hover:bg-edsync-blue/10" aria-expanded={isAiBuilderOpen}>
                     <Sparkles className="h-4 w-4 text-edsync-blue" />
                     Ask EdSync
                   </button>
