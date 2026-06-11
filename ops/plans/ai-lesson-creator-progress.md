@@ -125,6 +125,13 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd test -- src/lib/studio/ai-slide-design.test.ts src/lib/studio/ai-slide-pages.test.ts`: passed with 12 tests after adding named AI slide render templates.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-slide-design.ts src/lib/studio/ai-slide-design.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after adding named AI slide render templates.
 - `npm.cmd run typecheck`: passed after adding named AI slide render templates.
+- `npm.cmd test`: passed with 64 files and 272 tests after named AI slide render templates.
+- `npm.cmd run lint`: passed after named AI slide render templates.
+- `npm.cmd run typecheck`: passed after named AI slide render templates.
+- `npm.cmd run build`: passed after named AI slide render templates; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `9d5e501e-093d-4bd5-a187-4d0568de407c`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text.
+- Playwright screenshots: captured desktop 1440x900 and mobile 390x844 live Studio sign-in renders; both showed normal EdSync UI without the previous mobile field overlap.
 
 ## Current Implementation Pass
 
