@@ -61,6 +61,8 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Infer EdSync interaction formats from AI slide text and notes: discussion, quiz/test, fill-in-the-blank, matching, reflection, practice, and poll.
 - [x] Render inferred interaction labels on generated studio slides without changing the exact AI JSON schema.
 - [x] Prompt and fallback-generate AI decks with explicit interaction formats for activities and assessments.
+- [x] Build structured interaction templates from AI slides with a prompt, action items, and teacher hint/answer key.
+- [x] Render structured interaction cards in the studio instead of raw bullet lists for activity and assessment slides.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -110,6 +112,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after AI interaction template support; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `a4f66ac7-a776-4796-9592-5c88f84e49ae`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200, and headless Chrome rendered the unauthenticated sign-in page without 503 or the minified React error.
+- `npm.cmd test -- src/lib/studio/ai-slide-design.test.ts src/lib/studio/ai-slide-pages.test.ts`: passed with 11 tests after adding structured interaction templates.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-slide-design.ts src/lib/studio/ai-slide-design.test.ts src/lib/studio/ai-slide-pages.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after adding structured interaction templates.
+- `npm.cmd run typecheck`: passed after adding structured interaction templates.
 
 ## Current Implementation Pass
 
