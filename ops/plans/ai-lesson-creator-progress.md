@@ -155,6 +155,12 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after adding compact AI focus options and preview template markers.
 - `npm.cmd run typecheck`: passed after adding compact AI focus options and preview template markers.
+- `npm.cmd test`: passed with 64 files and 273 tests after compact AI focus options and preview template markers.
+- `npm.cmd run lint`: passed after compact AI focus options and preview template markers.
+- `npm.cmd run typecheck`: passed after compact AI focus options and preview template markers.
+- `npm.cmd run build`: passed after compact AI focus options and preview template markers; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `ed169062-0458-453c-8039-fe3b932a2d8f`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
 
 ## Current Implementation Pass
 
