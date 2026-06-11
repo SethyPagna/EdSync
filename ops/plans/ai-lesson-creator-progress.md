@@ -165,6 +165,12 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd test -- src/lib/studio/ai-focus-templates.test.ts src/app/api/ai/create-lesson/route.test.ts`: passed with 8 tests after centralizing AI focus template cues.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-focus-templates.ts src/lib/studio/ai-focus-templates.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after centralizing AI focus template cues.
 - `npm.cmd run typecheck`: passed after centralizing AI focus template cues.
+- `npm.cmd test`: passed with 65 files and 277 tests after centralizing AI focus template cues.
+- `npm.cmd run lint`: passed after centralizing AI focus template cues.
+- `npm.cmd run typecheck`: passed after centralizing AI focus template cues.
+- `npm.cmd run build`: passed after centralizing AI focus template cues; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `e7623eb4-73c1-4397-83fa-41ebcd5cafd8`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
 
 ## Current Implementation Pass
 
