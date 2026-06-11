@@ -69,6 +69,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Add compact AI focus options and template markers to the Studio builder/preview UI.
 - [x] Centralize AI focus options so builder chips, prompt preview, and generation request share the same template cues.
 - [x] Guarantee selected Studio focus cues create matching lesson slides when provider output omits them.
+- [x] Open AI lesson creation as a focused Studio modal with explicit close, Escape close, source-import opening, and generation dismissal.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -181,6 +182,10 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after selected focus cue guarantees; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `6f5e49e4-ea0d-4ed7-bab1-6c60ed7f1667`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after making the AI lesson builder a focused Studio modal.
+- `npm.cmd run typecheck`: passed after making the AI lesson builder a focused Studio modal.
+- `npm.cmd run build`: passed after making the AI lesson builder a focused Studio modal; Next still reports the known middleware deprecation warning.
+- Local route smoke: `/studio?adminView=organization-teacher` rendered the protected mobile sign-in gate at 390x844 without overlap while local dev ran on `127.0.0.1:3000`.
 
 ## Current Implementation Pass
 
