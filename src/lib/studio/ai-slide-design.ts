@@ -33,7 +33,24 @@ export type AiSlideInteraction =
   | "poll"
   | "none";
 
+export type AiSlideTemplateId =
+  | "title-hero"
+  | "objective-cards"
+  | "concept-split"
+  | "example-steps"
+  | "socratic-question"
+  | "discussion-board"
+  | "practice-workshop"
+  | "matching-pairs"
+  | "poll-check"
+  | "reflection-card"
+  | "fill-blank-ticket"
+  | "quiz-ticket"
+  | "summary-recap";
+
 export type AiSlideDesign = {
+  templateId: AiSlideTemplateId;
+  templateName: string;
   variant: "hero" | "cards" | "split" | "steps" | "question" | "workshop" | "recap" | "ticket";
   accent: string;
   secondaryAccent: string;
@@ -54,7 +71,7 @@ export type AiSlideInteractionTemplate = {
   teacherHint: string;
 };
 
-type AiSlideBaseDesign = Omit<AiSlideDesign, "titleSize" | "interaction" | "actionLabel">;
+type AiSlideBaseDesign = Omit<AiSlideDesign, "templateId" | "templateName" | "titleSize" | "interaction" | "actionLabel">;
 
 const TYPE_DESIGNS: Record<AiSlideType, AiSlideBaseDesign> = {
   title: {
@@ -175,11 +192,137 @@ function actionLabelForInteraction(interaction: AiSlideInteraction) {
   }
 }
 
+type AiSlideTemplateRecipe = Pick<AiSlideDesign, "templateId" | "templateName" | "variant" | "visual">;
+
+const TYPE_TEMPLATE_RECIPES: Record<AiSlideType, AiSlideTemplateRecipe> = {
+  title: {
+    templateId: "title-hero",
+    templateName: "Title hero",
+    variant: "hero",
+    visual: "badge",
+  },
+  objectives: {
+    templateId: "objective-cards",
+    templateName: "Objective cards",
+    variant: "cards",
+    visual: "cards",
+  },
+  content: {
+    templateId: "concept-split",
+    templateName: "Concept split",
+    variant: "split",
+    visual: "diagram",
+  },
+  example: {
+    templateId: "example-steps",
+    templateName: "Example steps",
+    variant: "steps",
+    visual: "steps",
+  },
+  socratic: {
+    templateId: "socratic-question",
+    templateName: "Socratic question",
+    variant: "question",
+    visual: "question",
+  },
+  activity: {
+    templateId: "practice-workshop",
+    templateName: "Practice workshop",
+    variant: "workshop",
+    visual: "activity",
+  },
+  summary: {
+    templateId: "summary-recap",
+    templateName: "Summary recap",
+    variant: "recap",
+    visual: "checklist",
+  },
+  assessment: {
+    templateId: "quiz-ticket",
+    templateName: "Quiz ticket",
+    variant: "ticket",
+    visual: "ticket",
+  },
+};
+
+const INTERACTION_TEMPLATE_RECIPES: Partial<Record<AiSlideInteraction, AiSlideTemplateRecipe>> = {
+  discussion: {
+    templateId: "discussion-board",
+    templateName: "Discussion board",
+    variant: "workshop",
+    visual: "activity",
+  },
+  fill_blank: {
+    templateId: "fill-blank-ticket",
+    templateName: "Fill-in ticket",
+    variant: "ticket",
+    visual: "ticket",
+  },
+  matching: {
+    templateId: "matching-pairs",
+    templateName: "Matching pairs",
+    variant: "workshop",
+    visual: "activity",
+  },
+  poll: {
+    templateId: "poll-check",
+    templateName: "Poll check",
+    variant: "workshop",
+    visual: "activity",
+  },
+  reflection: {
+    templateId: "reflection-card",
+    templateName: "Reflection card",
+    variant: "workshop",
+    visual: "activity",
+  },
+  quiz: {
+    templateId: "quiz-ticket",
+    templateName: "Quiz ticket",
+    variant: "ticket",
+    visual: "ticket",
+  },
+};
+
 function firstUsefulSentence(value: string) {
   return value
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
     .find(Boolean) ?? "";
+}
+
+function recipeForSlide(
+  slide: Pick<AiSlideMetadata, "type">,
+  interaction: AiSlideInteraction,
+  visual: AiSlideDesign["visual"],
+): AiSlideTemplateRecipe {
+  const interactionRecipe = INTERACTION_TEMPLATE_RECIPES[interaction];
+  const typeRecipe = TYPE_TEMPLATE_RECIPES[slide.type] ?? TYPE_TEMPLATE_RECIPES.content;
+  const recipe = interactionRecipe ?? typeRecipe;
+  return {
+    ...recipe,
+    visual,
+  };
+}
+
+export function markerForAiSlideInteraction(interaction: AiSlideInteraction, index: number): string {
+  switch (interaction) {
+    case "fill_blank":
+      return "___";
+    case "quiz":
+      return "?";
+    case "matching":
+      return "=";
+    case "discussion":
+      return "D";
+    case "poll":
+      return "%";
+    case "reflection":
+      return "R";
+    case "practice":
+    case "none":
+      return String(index + 1);
+  }
 }
 
 export function resolveAiSlideDesign(
@@ -197,10 +340,11 @@ export function resolveAiSlideDesign(
         : interaction === "matching" || interaction === "discussion"
           ? "activity"
         : base.visual;
+  const recipe = recipeForSlide(slide, interaction, visual);
 
   return {
     ...base,
-    visual,
+    ...recipe,
     titleSize: slide.type === "title" || slide.title.length < 34 ? "large" : "medium",
     interaction,
     actionLabel: actionLabelForInteraction(interaction),
