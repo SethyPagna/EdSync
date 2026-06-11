@@ -175,6 +175,12 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed with 5 tests after guaranteeing selected Studio focus cues create matching slides.
 - `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.ts src/app/api/ai/create-lesson/route.test.ts`: passed after selected focus cue guarantees.
 - `npm.cmd run typecheck`: passed after selected focus cue guarantees.
+- `npm.cmd test`: passed with 65 files and 278 tests after selected focus cue guarantees.
+- `npm.cmd run lint`: passed after selected focus cue guarantees.
+- `npm.cmd run typecheck`: passed after selected focus cue guarantees.
+- `npm.cmd run build`: passed after selected focus cue guarantees; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `6f5e49e4-ea0d-4ed7-bab1-6c60ed7f1667`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
 
 ## Current Implementation Pass
 
