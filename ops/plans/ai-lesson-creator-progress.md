@@ -67,6 +67,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Persist the resolved AI template on generated Studio pages so saved lessons keep their design intent.
 - [x] Repair vague AI activity and assessment slide output into template-ready cues before Studio rendering.
 - [x] Add compact AI focus options and template markers to the Studio builder/preview UI.
+- [x] Centralize AI focus options so builder chips, prompt preview, and generation request share the same template cues.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -161,6 +162,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after compact AI focus options and preview template markers; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `ed169062-0458-453c-8039-fe3b932a2d8f`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
+- `npm.cmd test -- src/lib/studio/ai-focus-templates.test.ts src/app/api/ai/create-lesson/route.test.ts`: passed with 8 tests after centralizing AI focus template cues.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-focus-templates.ts src/lib/studio/ai-focus-templates.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after centralizing AI focus template cues.
+- `npm.cmd run typecheck`: passed after centralizing AI focus template cues.
 
 ## Current Implementation Pass
 
