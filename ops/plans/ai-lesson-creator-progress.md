@@ -63,6 +63,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Prompt and fallback-generate AI decks with explicit interaction formats for activities and assessments.
 - [x] Build structured interaction templates from AI slides with a prompt, action items, and teacher hint/answer key.
 - [x] Render structured interaction cards in the studio instead of raw bullet lists for activity and assessment slides.
+- [x] Add named AI slide render templates for discussion, matching, polls, reflection, fill-in-the-blank, and quiz pages.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -121,6 +122,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after structured interaction template rendering; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `063d330d-7c7d-4ac5-9662-46fc2ad21804`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200, and headless Chrome rendered the unauthenticated sign-in page without 503 or the minified React error.
+- `npm.cmd test -- src/lib/studio/ai-slide-design.test.ts src/lib/studio/ai-slide-pages.test.ts`: passed with 12 tests after adding named AI slide render templates.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-slide-design.ts src/lib/studio/ai-slide-design.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after adding named AI slide render templates.
+- `npm.cmd run typecheck`: passed after adding named AI slide render templates.
 
 ## Current Implementation Pass
 
