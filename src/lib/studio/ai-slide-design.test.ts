@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAiSlideInteractionTemplate,
   linesForAiSlide,
+  markerForAiSlideInteraction,
   normalizeAiSlideNavigation,
   resolveAiSlideInteraction,
   resolveAiSlideDesign,
@@ -20,10 +21,10 @@ const baseSlide: AiSlideMetadata = {
 
 describe("AI slide design helpers", () => {
   it("selects a distinct visual recipe by slide type", () => {
-    expect(resolveAiSlideDesign({ ...baseSlide, type: "title" }).variant).toBe("hero");
-    expect(resolveAiSlideDesign({ ...baseSlide, type: "objectives" }).variant).toBe("cards");
-    expect(resolveAiSlideDesign({ ...baseSlide, type: "socratic" }).variant).toBe("question");
-    expect(resolveAiSlideDesign({ ...baseSlide, type: "assessment" }).variant).toBe("ticket");
+    expect(resolveAiSlideDesign({ ...baseSlide, type: "title" })).toMatchObject({ variant: "hero", templateId: "title-hero" });
+    expect(resolveAiSlideDesign({ ...baseSlide, type: "objectives" })).toMatchObject({ variant: "cards", templateId: "objective-cards" });
+    expect(resolveAiSlideDesign({ ...baseSlide, type: "socratic" })).toMatchObject({ variant: "question", templateId: "socratic-question" });
+    expect(resolveAiSlideDesign({ ...baseSlide, type: "assessment" })).toMatchObject({ variant: "ticket", templateId: "quiz-ticket" });
   });
 
   it("lets concrete visual suggestions refine the visual motif without changing the schema", () => {
@@ -65,12 +66,44 @@ describe("AI slide design helpers", () => {
       ...baseSlide,
       type: "assessment",
       onScreenText: ["Fill in the blank: The missing term is ___."],
-    })).toMatchObject({ interaction: "fill_blank", actionLabel: "Fill", visual: "ticket" });
+    })).toMatchObject({
+      interaction: "fill_blank",
+      actionLabel: "Fill",
+      visual: "ticket",
+      templateId: "fill-blank-ticket",
+      templateName: "Fill-in ticket",
+    });
     expect(resolveAiSlideDesign({
       ...baseSlide,
       type: "activity",
       onScreenText: ["Discussion: compare two solutions."],
-    })).toMatchObject({ interaction: "discussion", actionLabel: "Discuss", visual: "activity" });
+    })).toMatchObject({
+      interaction: "discussion",
+      actionLabel: "Discuss",
+      visual: "activity",
+      templateId: "discussion-board",
+      templateName: "Discussion board",
+    });
+  });
+
+  it("maps interaction-specific lessons to named render templates and preview markers", () => {
+    expect(resolveAiSlideDesign({
+      ...baseSlide,
+      type: "activity",
+      visualSuggestion: "Use a matching activity layout.",
+    })).toMatchObject({ interaction: "matching", templateId: "matching-pairs" });
+    expect(resolveAiSlideDesign({
+      ...baseSlide,
+      type: "activity",
+      onScreenText: ["Poll: which evidence source should we trust first?"],
+    })).toMatchObject({ interaction: "poll", templateId: "poll-check" });
+    expect(markerForAiSlideInteraction("fill_blank", 0)).toBe("___");
+    expect(markerForAiSlideInteraction("quiz", 0)).toBe("?");
+    expect(markerForAiSlideInteraction("matching", 0)).toBe("=");
+    expect(markerForAiSlideInteraction("discussion", 0)).toBe("D");
+    expect(markerForAiSlideInteraction("poll", 0)).toBe("%");
+    expect(markerForAiSlideInteraction("reflection", 0)).toBe("R");
+    expect(markerForAiSlideInteraction("practice", 2)).toBe("3");
   });
 
   it("builds structured interaction templates from slide-ready AI text", () => {
