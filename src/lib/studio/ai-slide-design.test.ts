@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAiSlideInteractionTemplate,
   linesForAiSlide,
   normalizeAiSlideNavigation,
   resolveAiSlideInteraction,
@@ -70,6 +71,44 @@ describe("AI slide design helpers", () => {
       type: "activity",
       onScreenText: ["Discussion: compare two solutions."],
     })).toMatchObject({ interaction: "discussion", actionLabel: "Discuss", visual: "activity" });
+  });
+
+  it("builds structured interaction templates from slide-ready AI text", () => {
+    expect(buildAiSlideInteractionTemplate({
+      ...baseSlide,
+      type: "activity",
+      title: "Partner Discussion",
+      onScreenText: [
+        "Discussion: Compare the two strongest solutions.",
+        "Use one evidence card.",
+        "Name one risk.",
+      ],
+      speakerNotes: "Expected response: learners cite evidence before making a claim. Then compare groups.",
+    })).toMatchObject({
+      kind: "discussion",
+      label: "Discuss",
+      primaryPrompt: "Compare the two strongest solutions.",
+      items: ["Use one evidence card.", "Name one risk."],
+      teacherHint: "Expected response: learners cite evidence before making a claim.",
+    });
+
+    expect(buildAiSlideInteractionTemplate({
+      ...baseSlide,
+      type: "assessment",
+      title: "Exit Ticket",
+      onScreenText: [
+        "Fill-in-the-blank: A strong claim needs ___.",
+        "Short answer: Name one evidence source.",
+      ],
+      speakerNotes: "Answer key: evidence; acceptable sources include observations or submitted work.",
+      visualSuggestion: "Use a compact fill-in-the-blank quiz card.",
+    })).toMatchObject({
+      kind: "fill_blank",
+      label: "Fill",
+      primaryPrompt: "A strong claim needs ___.",
+      items: ["Short answer: Name one evidence source."],
+      teacherHint: "Answer key: evidence; acceptable sources include observations or submitted work.",
+    });
   });
 
   it("repairs slide numbers and linear navigation from current order", () => {
