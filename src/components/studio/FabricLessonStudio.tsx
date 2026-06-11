@@ -10,6 +10,7 @@ import {
   linesForAiSlide,
   markerForAiSlideInteraction,
   resolveAiSlideDesign,
+  type AiSlideDesign,
   type AiSlideMetadata,
 } from "@/lib/studio/ai-slide-design";
 import { buildAiSlideStudioPages } from "@/lib/studio/ai-slide-pages";
@@ -68,6 +69,7 @@ type StudioPage = {
   seed: PageSeed;
   snapshot: CanvasSnapshot | null;
   previewDataUrl?: string;
+  aiTemplate?: AiSlideDesign;
   aiSlide?: AiSlideMetadata;
 };
 type InspectorObject = FabricObject & {
@@ -441,6 +443,23 @@ function isStudioPage(value: unknown): value is StudioPage {
   return typeof page.id === "string" && typeof page.name === "string" && !!page.seed;
 }
 
+function isAiSlideDesign(value: unknown): value is AiSlideDesign {
+  if (!value || typeof value !== "object") return false;
+  const design = value as Partial<AiSlideDesign>;
+  return typeof design.templateId === "string"
+    && typeof design.templateName === "string"
+    && typeof design.variant === "string"
+    && typeof design.accent === "string"
+    && typeof design.secondaryAccent === "string"
+    && typeof design.background === "string"
+    && typeof design.foreground === "string"
+    && typeof design.muted === "string"
+    && typeof design.titleSize === "string"
+    && typeof design.visual === "string"
+    && typeof design.interaction === "string"
+    && typeof design.actionLabel === "string";
+}
+
 function readProjectPages(value: unknown) {
   if (!Array.isArray(value)) return null;
   const pages = value.filter(isStudioPage);
@@ -733,7 +752,7 @@ export default function FabricLessonStudio() {
 
     if (page.aiSlide) {
       const slide = page.aiSlide;
-      const design = resolveAiSlideDesign(slide);
+      const design = isAiSlideDesign(page.aiTemplate) ? page.aiTemplate : resolveAiSlideDesign(slide);
       const interactionTemplate = buildAiSlideInteractionTemplate(slide);
       const lines = linesForAiSlide(slide).slice(0, 6);
       const compact = canvasWidth < 900 || canvasHeight > canvasWidth;
