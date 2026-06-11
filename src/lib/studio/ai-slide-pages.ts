@@ -2,6 +2,7 @@ import {
   linesForAiSlide,
   normalizeAiSlideNavigation,
   resolveAiSlideDesign,
+  type AiSlideDesign,
   type AiSlideMetadata,
 } from "./ai-slide-design";
 
@@ -14,6 +15,7 @@ export type AiStudioPageDraft = {
     accent: string;
   };
   snapshot: null;
+  aiTemplate: AiSlideDesign;
   aiSlide: AiSlideMetadata;
 };
 
@@ -39,6 +41,7 @@ export function buildAiSlideStudioPages(
         accent: design.accent,
       },
       snapshot: null,
+      aiTemplate: design,
       aiSlide: {
         ...slide,
         onScreenText: slide.onScreenText.map(cleanSlideText).filter(Boolean),
