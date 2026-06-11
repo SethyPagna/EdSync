@@ -186,6 +186,12 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run typecheck`: passed after making the AI lesson builder a focused Studio modal.
 - `npm.cmd run build`: passed after making the AI lesson builder a focused Studio modal; Next still reports the known middleware deprecation warning.
 - Local route smoke: `/studio?adminView=organization-teacher` rendered the protected mobile sign-in gate at 390x844 without overlap while local dev ran on `127.0.0.1:3000`.
+- `npm.cmd test`: passed with 65 files and 278 tests after the focused AI builder modal.
+- `npm.cmd run lint`: passed after the focused AI builder modal.
+- `npm.cmd run typecheck`: passed after the focused AI builder modal.
+- `npm.cmd run build`: passed after the focused AI builder modal; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `4ffd29ff-68d2-419f-866e-df6a6dc2bfe1`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
 
 ## Current Implementation Pass
 
