@@ -37,6 +37,11 @@ describe("AI slide studio page conversion", () => {
         body: "A practical slide lesson.\nEstimated time: 45 minutes.",
         accent: "#2458dc",
       },
+      aiTemplate: {
+        templateId: "title-hero",
+        templateName: "Title hero",
+        interaction: "none",
+      },
       snapshot: null,
     });
     expect(pages[1].seed.body).toBe("What would prove progress?\nWhich signal can we observe?");
@@ -69,6 +74,12 @@ describe("AI slide studio page conversion", () => {
     ], () => "assessment-page");
 
     expect(page.seed.body).toContain("Fill-in-the-blank");
+    expect(page.aiTemplate).toMatchObject({
+      templateId: "fill-blank-ticket",
+      templateName: "Fill-in ticket",
+      interaction: "fill_blank",
+      actionLabel: "Fill",
+    });
     expect(page.seed.accent).toBe("#2458dc");
     expect(page.aiSlide.speakerNotes).toContain("Answer key");
   });
@@ -91,6 +102,12 @@ describe("AI slide studio page conversion", () => {
     ], () => "discussion-page");
 
     expect(page.seed.body).toContain("Discussion");
+    expect(page.aiTemplate).toMatchObject({
+      templateId: "discussion-board",
+      templateName: "Discussion board",
+      interaction: "discussion",
+      actionLabel: "Discuss",
+    });
     expect(page.aiSlide.onScreenText).toContain("Discussion: Compare two solution paths.");
     expect(page.aiSlide.visualSuggestion).toContain("discussion card");
   });
