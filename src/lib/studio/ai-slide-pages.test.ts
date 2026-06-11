@@ -72,4 +72,26 @@ describe("AI slide studio page conversion", () => {
     expect(page.seed.accent).toBe("#2458dc");
     expect(page.aiSlide.speakerNotes).toContain("Answer key");
   });
+
+  it("keeps discussion activity text ready for interaction template rendering", () => {
+    const [page] = buildAiSlideStudioPages([
+      {
+        slideNumber: 1,
+        title: "Team Discussion",
+        type: "activity",
+        onScreenText: [
+          "Discussion: Compare two solution paths.",
+          "Choose one evidence card.",
+          "Name one assumption.",
+        ],
+        speakerNotes: "Expected response: learners justify the stronger path with evidence.",
+        visualSuggestion: "Use a discussion card with role chips.",
+        navigation: { previous: null, next: null },
+      },
+    ], () => "discussion-page");
+
+    expect(page.seed.body).toContain("Discussion");
+    expect(page.aiSlide.onScreenText).toContain("Discussion: Compare two solution paths.");
+    expect(page.aiSlide.visualSuggestion).toContain("discussion card");
+  });
 });
