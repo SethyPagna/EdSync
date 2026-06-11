@@ -64,6 +64,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Build structured interaction templates from AI slides with a prompt, action items, and teacher hint/answer key.
 - [x] Render structured interaction cards in the studio instead of raw bullet lists for activity and assessment slides.
 - [x] Add named AI slide render templates for discussion, matching, polls, reflection, fill-in-the-blank, and quiz pages.
+- [x] Persist the resolved AI template on generated Studio pages so saved lessons keep their design intent.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -132,6 +133,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `9d5e501e-093d-4bd5-a187-4d0568de407c`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text.
 - Playwright screenshots: captured desktop 1440x900 and mobile 390x844 live Studio sign-in renders; both showed normal EdSync UI without the previous mobile field overlap.
+- `npm.cmd test -- src/lib/studio/ai-slide-pages.test.ts src/lib/studio/ai-slide-design.test.ts`: passed with 12 tests after persisting resolved AI page templates.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-slide-pages.ts src/lib/studio/ai-slide-pages.test.ts src/components/studio/FabricLessonStudio.tsx`: passed after persisting resolved AI page templates.
+- `npm.cmd run typecheck`: passed after persisting resolved AI page templates.
 
 ## Current Implementation Pass
 
