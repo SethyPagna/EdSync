@@ -58,6 +58,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Add focused tests for template selection, navigation normalization, and slide metadata preservation.
 - [x] Add focused tests that convert AI slides into editable studio pages with preview seed text and preserved notes/navigation metadata.
 - [x] Add focused tests for slide preview three-dot menu placement so it stays anchored to the preview and inside the viewport.
+- [x] Infer EdSync interaction formats from AI slide text and notes: discussion, quiz/test, fill-in-the-blank, matching, reflection, practice, and poll.
+- [x] Render inferred interaction labels on generated studio slides without changing the exact AI JSON schema.
+- [x] Prompt and fallback-generate AI decks with explicit interaction formats for activities and assessments.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -98,6 +101,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after page preview menu placement coverage; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `c1e0c264-6e5c-48e6-a713-4dc306dac101`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200, and headless Chrome rendered the unauthenticated sign-in page without 503 or the minified React error.
+- `npm.cmd test -- src/lib/studio/ai-slide-design.test.ts src/lib/studio/ai-slide-pages.test.ts src/app/api/ai/create-lesson/route.test.ts`: passed with 12 tests after adding interaction inference and fill-in-the-blank assessment coverage.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/lib/studio/ai-slide-design.ts src/lib/studio/ai-slide-design.test.ts src/lib/studio/ai-slide-pages.ts src/lib/studio/ai-slide-pages.test.ts src/app/api/ai/create-lesson/route.ts src/components/studio/FabricLessonStudio.tsx`: passed after adding interaction inference.
+- `npm.cmd run typecheck`: passed after adding interaction inference.
 
 ## Current Implementation Pass
 
