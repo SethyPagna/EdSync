@@ -51,4 +51,25 @@ describe("AI slide studio page conversion", () => {
     expect(pages[1].aiSlide.navigation).toEqual({ previous: "Course Launch", next: null });
     expect(pages.map((page) => page.aiSlide.slideNumber)).toEqual([1, 2]);
   });
+
+  it("keeps fill-in-the-blank assessment text ready for the assessment template", () => {
+    const [page] = buildAiSlideStudioPages([
+      {
+        slideNumber: 1,
+        title: "Exit Ticket",
+        type: "assessment",
+        onScreenText: [
+          "Fill-in-the-blank: A strong claim needs ___.",
+          "Short answer: Name one evidence source.",
+        ],
+        speakerNotes: "Answer key: evidence; acceptable sources include observations or submitted work.",
+        visualSuggestion: "Use a compact fill-in-the-blank quiz card.",
+        navigation: { previous: null, next: null },
+      },
+    ], () => "assessment-page");
+
+    expect(page.seed.body).toContain("Fill-in-the-blank");
+    expect(page.seed.accent).toBe("#2458dc");
+    expect(page.aiSlide.speakerNotes).toContain("Answer key");
+  });
 });
