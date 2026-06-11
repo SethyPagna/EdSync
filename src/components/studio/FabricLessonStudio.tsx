@@ -6,6 +6,11 @@ import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
+  AI_FOCUS_OPTIONS,
+  buildAiFocusTemplateCueSummary,
+  type AiLessonFocus,
+} from "@/lib/studio/ai-focus-templates";
+import {
   buildAiSlideInteractionTemplate,
   linesForAiSlide,
   markerForAiSlideInteraction,
@@ -56,7 +61,6 @@ type StudioView = "hub" | "formats" | "editor";
 type StudioFormatKind = "doc" | "slide" | "design";
 type AiLessonStyle = "direct" | "socratic" | "professional" | "expert";
 type AiLessonType = "lesson" | "slides" | "quiz" | "discussion" | "activity";
-type AiLessonFocus = "flow" | "quiz" | "discussion" | "slides" | "activity" | "fill_blank" | "matching" | "poll" | "reflection";
 type CanvasSnapshot = Record<string, unknown>;
 type PageSeed = {
   title: string;
@@ -131,17 +135,6 @@ const DEFAULT_CANVAS_HEIGHT = 540;
 const STORAGE_KEY = "edsync.canva.lesson.studio.v1";
 const DEFAULT_ACCENT = "#2458dc";
 const STUDIO_IMPORT_ACCEPT = "application/json,.json,image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv";
-const AI_FOCUS_OPTIONS = [
-  ["flow", "Flow", "warmup, concept, practice loop, proof check"],
-  ["quiz", "Quiz", "game-style checks, feedback, review cards"],
-  ["discussion", "Discuss", "prompts, roles, rubrics, participation checks"],
-  ["slides", "PPT", "visual slide structure and speaker notes"],
-  ["activity", "Activity", "interactive tasks, Kahoot-style rounds, reflection"],
-  ["fill_blank", "Fill blanks", "fill-in-the-blank checks with answer keys"],
-  ["matching", "Match", "matching pairs, sorting, and classification prompts"],
-  ["poll", "Poll", "quick votes, confidence checks, and compare responses"],
-  ["reflection", "Reflect", "learner reflection, proof of progress, next steps"],
-] satisfies Array<[AiLessonFocus, string, string]>;
 const STUDIO_FORMATS = [
   {
     id: "doc",
@@ -606,13 +599,15 @@ export default function FabricLessonStudio() {
   const selectedRosterClass = classes.find((classItem) => classItem.id === selectedClassId);
   const resolvedLessonClassName = selectedRosterClass?.name ?? lessonClassName.trim();
   const activeLessonOrderIndex = Math.max(1, Math.round(lessonOrderIndex || 1));
-  const activeAiFocusDetails = AI_FOCUS_OPTIONS.filter(([id]) => aiFocuses.includes(id));
+  const activeAiTemplateCues = buildAiFocusTemplateCueSummary(aiFocuses);
   const aiPromptPreview = [
     aiPrompt.trim() || "Build a complete EdSync learning experience.",
     aiLessonName.trim() ? `Lesson: ${aiLessonName.trim()}` : "",
     aiDescription.trim() ? `Description: ${aiDescription.trim()}` : "",
     aiObjectives.trim() ? `Objectives: ${aiObjectives.trim()}` : "",
-    `Outputs: ${activeAiFocusDetails.map(([, label]) => label).join(", ") || "Flow"}.`,
+    `Outputs: ${activeAiTemplateCues.labels.join(", ") || "Flow"}.`,
+    `Templates: ${activeAiTemplateCues.templateSummary}.`,
+    `Use labels: ${activeAiTemplateCues.promptCueSummary}.`,
     `Target length: ${Math.max(1, Math.round(aiPageCount || 1))} pages/sections.`,
     aiSources.trim() ? "Attached source context included." : "",
   ].filter(Boolean).join("\n");
@@ -1895,7 +1890,7 @@ export default function FabricLessonStudio() {
     const objectives = aiObjectives.trim();
     const sources = aiSources.trim();
     const targetPageCount = Math.max(1, Math.round(aiPageCount || 1));
-    const focusSummary = activeAiFocusDetails.map(([, label, detail]) => `${label}: ${detail}`).join("; ") || "Flow: complete lesson sequence";
+    const focusSummary = activeAiTemplateCues.outputSummary;
     if (!prompt && !lessonName && !description && !objectives) {
       toast.error("Add a lesson goal, objective, or AI direction first.");
       return;
@@ -1907,6 +1902,8 @@ export default function FabricLessonStudio() {
       sources ? `Source files, links, or notes: ${sources}.` : null,
       `Lesson type: ${aiLessonType}.`,
       `Required outputs: ${focusSummary}.`,
+      `Template-ready labels to use in slide text: ${activeAiTemplateCues.promptCueSummary}.`,
+      `Studio templates to target: ${activeAiTemplateCues.templateSummary}.`,
       `Teaching style: ${aiStyle}.`,
       `Target pages or sections: ${targetPageCount}.`,
       resolvedLessonClassName ? `Class or cohort: ${resolvedLessonClassName}.` : "Independent learner or creator workspace.",
@@ -2098,17 +2095,17 @@ export default function FabricLessonStudio() {
           </button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {AI_FOCUS_OPTIONS.map(([id, label, detail]) => {
-            const active = aiFocuses.includes(id);
+          {AI_FOCUS_OPTIONS.map((option) => {
+            const active = aiFocuses.includes(option.id);
             return (
               <button
-                key={id}
+                key={option.id}
                 type="button"
-                title={detail}
+                title={`${option.detail}. Template: ${option.templateName}. Cue: ${option.promptCue}`}
                 aria-pressed={active}
                 onClick={() =>
                   setAiFocuses((current) =>
-                    current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+                    current.includes(option.id) ? current.filter((item) => item !== option.id) : [...current, option.id],
                   )
                 }
                 className={`rounded-2xl px-3 py-2 text-center text-xs font-black transition ${
@@ -2117,7 +2114,7 @@ export default function FabricLessonStudio() {
                     : "bg-edsync-surface text-edsync-text hover:bg-edsync-muted"
                 }`}
               >
-                {label}
+                {option.label}
               </button>
             );
           })}
