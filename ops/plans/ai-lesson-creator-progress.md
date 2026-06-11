@@ -68,6 +68,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Repair vague AI activity and assessment slide output into template-ready cues before Studio rendering.
 - [x] Add compact AI focus options and template markers to the Studio builder/preview UI.
 - [x] Centralize AI focus options so builder chips, prompt preview, and generation request share the same template cues.
+- [x] Guarantee selected Studio focus cues create matching lesson slides when provider output omits them.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -171,6 +172,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after centralizing AI focus template cues; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `e7623eb4-73c1-4397-83fa-41ebcd5cafd8`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
+- `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts`: passed with 5 tests after guaranteeing selected Studio focus cues create matching slides.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.ts src/app/api/ai/create-lesson/route.test.ts`: passed after selected focus cue guarantees.
+- `npm.cmd run typecheck`: passed after selected focus cue guarantees.
 
 ## Current Implementation Pass
 
