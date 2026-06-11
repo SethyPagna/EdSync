@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   linesForAiSlide,
   normalizeAiSlideNavigation,
+  resolveAiSlideInteraction,
   resolveAiSlideDesign,
   type AiSlideMetadata,
 } from "./ai-slide-design";
@@ -33,6 +34,42 @@ describe("AI slide design helpers", () => {
 
     expect(design.variant).toBe("split");
     expect(design.visual).toBe("steps");
+  });
+
+  it("infers EdSync learning interactions from slide text, notes, and visual suggestions", () => {
+    expect(resolveAiSlideInteraction({
+      ...baseSlide,
+      type: "assessment",
+      onScreenText: ["Fill-in-the-blank: A valid proof needs ___."],
+    })).toBe("fill_blank");
+    expect(resolveAiSlideInteraction({
+      ...baseSlide,
+      type: "activity",
+      speakerNotes: "Run this as a discussion with roles and evidence prompts.",
+    })).toBe("discussion");
+    expect(resolveAiSlideInteraction({
+      ...baseSlide,
+      type: "activity",
+      visualSuggestion: "Use a matching activity layout.",
+    })).toBe("matching");
+    expect(resolveAiSlideInteraction({
+      ...baseSlide,
+      type: "assessment",
+      onScreenText: ["Multiple choice quiz: choose the strongest evidence."],
+    })).toBe("quiz");
+  });
+
+  it("adds interaction labels to activity and assessment designs", () => {
+    expect(resolveAiSlideDesign({
+      ...baseSlide,
+      type: "assessment",
+      onScreenText: ["Fill in the blank: The missing term is ___."],
+    })).toMatchObject({ interaction: "fill_blank", actionLabel: "Fill", visual: "ticket" });
+    expect(resolveAiSlideDesign({
+      ...baseSlide,
+      type: "activity",
+      onScreenText: ["Discussion: compare two solutions."],
+    })).toMatchObject({ interaction: "discussion", actionLabel: "Discuss", visual: "activity" });
   });
 
   it("repairs slide numbers and linear navigation from current order", () => {
