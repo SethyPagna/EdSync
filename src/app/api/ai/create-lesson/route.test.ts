@@ -227,6 +227,47 @@ describe("create lesson AI route", () => {
     expect(payload.slides[9].visualSuggestion).toContain("quiz ticket layout");
   });
 
+  it("adds missing slides for template cues selected in Studio", async () => {
+    generateAIChatMock.mockResolvedValue(JSON.stringify(slideDeckResponse));
+
+    const response = await POST(jsonRequest({
+      mode: "text",
+      content: [
+        "Photosynthesis for adult learners",
+        "EdSync lesson context:",
+        "Template-ready labels to use in slide text: Discussion:, Poll:, Fill-in-the-blank:",
+        "Studio templates to target: Discussion board, Poll check, Fill-in ticket.",
+      ].join("\n"),
+      outputFormat: "slide_deck",
+      slideCount: 10,
+    }));
+
+    const payload = await response.json() as {
+      slides: Array<{
+        slideNumber: number;
+        title: string;
+        type: string;
+        onScreenText: string[];
+        visualSuggestion: string;
+        navigation: { previous: string | null; next: string | null };
+      }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.slides.length).toBeGreaterThan(10);
+    expect(payload.slides.map((slide) => slide.slideNumber)).toEqual(
+      payload.slides.map((_, index) => index + 1),
+    );
+    expect(payload.slides.some((slide) => slide.onScreenText[0]?.startsWith("Discussion:"))).toBe(true);
+    expect(payload.slides.some((slide) => slide.onScreenText[0]?.startsWith("Poll:"))).toBe(true);
+    expect(payload.slides.some((slide) => slide.onScreenText[0]?.startsWith("Fill-in-the-blank:"))).toBe(true);
+    expect(payload.slides.some((slide) => slide.visualSuggestion.includes("discussion board layout"))).toBe(true);
+    expect(payload.slides.some((slide) => slide.visualSuggestion.includes("poll check layout"))).toBe(true);
+    expect(payload.slides.some((slide) => slide.visualSuggestion.includes("fill-in-the-blank ticket layout"))).toBe(true);
+    expect(payload.slides[0].navigation.previous).toBeNull();
+    expect(payload.slides.at(-1)?.navigation.next).toBeNull();
+  });
+
   it("falls back to a complete linear slide deck when provider JSON is unusable", async () => {
     generateAIChatMock.mockResolvedValue(JSON.stringify([{ title: "Too short", onScreenText: ["Only one slide"] }]));
 
