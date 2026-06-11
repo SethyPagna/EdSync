@@ -23,6 +23,16 @@ export type AiSlideMetadata = {
   navigation: AiSlideNavigation;
 };
 
+export type AiSlideInteraction =
+  | "discussion"
+  | "quiz"
+  | "fill_blank"
+  | "matching"
+  | "reflection"
+  | "practice"
+  | "poll"
+  | "none";
+
 export type AiSlideDesign = {
   variant: "hero" | "cards" | "split" | "steps" | "question" | "workshop" | "recap" | "ticket";
   accent: string;
@@ -32,9 +42,13 @@ export type AiSlideDesign = {
   muted: string;
   titleSize: "large" | "medium";
   visual: "badge" | "cards" | "diagram" | "steps" | "question" | "activity" | "checklist" | "ticket";
+  interaction: AiSlideInteraction;
+  actionLabel: string;
 };
 
-const TYPE_DESIGNS: Record<AiSlideType, Omit<AiSlideDesign, "titleSize">> = {
+type AiSlideBaseDesign = Omit<AiSlideDesign, "titleSize" | "interaction" | "actionLabel">;
+
+const TYPE_DESIGNS: Record<AiSlideType, AiSlideBaseDesign> = {
   title: {
     variant: "hero",
     accent: "#2458dc",
@@ -109,21 +123,72 @@ const TYPE_DESIGNS: Record<AiSlideType, Omit<AiSlideDesign, "titleSize">> = {
   },
 };
 
-export function resolveAiSlideDesign(slide: Pick<AiSlideMetadata, "type" | "title" | "visualSuggestion">): AiSlideDesign {
+function searchableSlideText(slide: Pick<AiSlideMetadata, "title" | "visualSuggestion"> & Partial<Pick<AiSlideMetadata, "onScreenText" | "speakerNotes">>) {
+  return [
+    slide.title,
+    slide.visualSuggestion,
+    ...(slide.onScreenText ?? []),
+    slide.speakerNotes ?? "",
+  ].join(" ").toLowerCase();
+}
+
+export function resolveAiSlideInteraction(
+  slide: Pick<AiSlideMetadata, "type" | "title" | "visualSuggestion"> & Partial<Pick<AiSlideMetadata, "onScreenText" | "speakerNotes">>,
+): AiSlideInteraction {
+  const text = searchableSlideText(slide);
+  if (text.includes("fill in") || text.includes("fill-in") || text.includes("blank")) return "fill_blank";
+  if (text.includes("multiple choice") || text.includes("quiz") || text.includes("test") || text.includes("exit ticket")) return "quiz";
+  if (text.includes("match") || text.includes("matching") || text.includes("sort")) return "matching";
+  if (text.includes("discuss") || text.includes("discussion") || text.includes("debate")) return "discussion";
+  if (text.includes("poll") || text.includes("vote")) return "poll";
+  if (text.includes("reflect") || text.includes("reflection")) return "reflection";
+  if (text.includes("practice") || text.includes("activity") || text.includes("task")) return "practice";
+  return slide.type === "activity" ? "practice" : slide.type === "assessment" ? "quiz" : "none";
+}
+
+function actionLabelForInteraction(interaction: AiSlideInteraction) {
+  switch (interaction) {
+    case "discussion":
+      return "Discuss";
+    case "quiz":
+      return "Check";
+    case "fill_blank":
+      return "Fill";
+    case "matching":
+      return "Match";
+    case "reflection":
+      return "Reflect";
+    case "practice":
+      return "Practice";
+    case "poll":
+      return "Vote";
+    case "none":
+      return "Learn";
+  }
+}
+
+export function resolveAiSlideDesign(
+  slide: Pick<AiSlideMetadata, "type" | "title" | "visualSuggestion"> & Partial<Pick<AiSlideMetadata, "onScreenText" | "speakerNotes">>,
+): AiSlideDesign {
   const base = TYPE_DESIGNS[slide.type] ?? TYPE_DESIGNS.content;
-  const visualSuggestion = slide.visualSuggestion.toLowerCase();
-  const visual = visualSuggestion.includes("step") || visualSuggestion.includes("flow")
+  const searchText = searchableSlideText(slide);
+  const interaction = resolveAiSlideInteraction(slide);
+  const visual = searchText.includes("step") || searchText.includes("flow")
     ? "steps"
-    : visualSuggestion.includes("question") || visualSuggestion.includes("socratic")
+    : searchText.includes("question") || searchText.includes("socratic")
       ? "question"
-      : visualSuggestion.includes("check") || visualSuggestion.includes("ticket")
+      : interaction === "fill_blank" || interaction === "quiz" || searchText.includes("check") || searchText.includes("ticket")
         ? "ticket"
+        : interaction === "matching" || interaction === "discussion"
+          ? "activity"
         : base.visual;
 
   return {
     ...base,
     visual,
     titleSize: slide.type === "title" || slide.title.length < 34 ? "large" : "medium",
+    interaction,
+    actionLabel: actionLabelForInteraction(interaction),
   };
 }
 
