@@ -56,7 +56,7 @@ type StudioView = "hub" | "formats" | "editor";
 type StudioFormatKind = "doc" | "slide" | "design";
 type AiLessonStyle = "direct" | "socratic" | "professional" | "expert";
 type AiLessonType = "lesson" | "slides" | "quiz" | "discussion" | "activity";
-type AiLessonFocus = "flow" | "quiz" | "discussion" | "slides" | "activity";
+type AiLessonFocus = "flow" | "quiz" | "discussion" | "slides" | "activity" | "fill_blank" | "matching" | "poll" | "reflection";
 type CanvasSnapshot = Record<string, unknown>;
 type PageSeed = {
   title: string;
@@ -137,6 +137,10 @@ const AI_FOCUS_OPTIONS = [
   ["discussion", "Discuss", "prompts, roles, rubrics, participation checks"],
   ["slides", "PPT", "visual slide structure and speaker notes"],
   ["activity", "Activity", "interactive tasks, Kahoot-style rounds, reflection"],
+  ["fill_blank", "Fill blanks", "fill-in-the-blank checks with answer keys"],
+  ["matching", "Match", "matching pairs, sorting, and classification prompts"],
+  ["poll", "Poll", "quick votes, confidence checks, and compare responses"],
+  ["reflection", "Reflect", "learner reflection, proof of progress, next steps"],
 ] satisfies Array<[AiLessonFocus, string, string]>;
 const STUDIO_FORMATS = [
   {
@@ -460,6 +464,12 @@ function isAiSlideDesign(value: unknown): value is AiSlideDesign {
     && typeof design.actionLabel === "string";
 }
 
+function resolvePageAiTemplate(page: StudioPage) {
+  if (isAiSlideDesign(page.aiTemplate)) return page.aiTemplate;
+  if (page.aiSlide) return resolveAiSlideDesign(page.aiSlide);
+  return null;
+}
+
 function readProjectPages(value: unknown) {
   if (!Array.isArray(value)) return null;
   const pages = value.filter(isStudioPage);
@@ -752,7 +762,7 @@ export default function FabricLessonStudio() {
 
     if (page.aiSlide) {
       const slide = page.aiSlide;
-      const design = isAiSlideDesign(page.aiTemplate) ? page.aiTemplate : resolveAiSlideDesign(slide);
+      const design = resolvePageAiTemplate(page) ?? resolveAiSlideDesign(slide);
       const interactionTemplate = buildAiSlideInteractionTemplate(slide);
       const lines = linesForAiSlide(slide).slice(0, 6);
       const compact = canvasWidth < 900 || canvasHeight > canvasWidth;
@@ -2094,21 +2104,20 @@ export default function FabricLessonStudio() {
               <button
                 key={id}
                 type="button"
+                title={detail}
+                aria-pressed={active}
                 onClick={() =>
                   setAiFocuses((current) =>
                     current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
                   )
                 }
-                className={`rounded-2xl px-3 py-2 text-left text-xs font-black transition ${
+                className={`rounded-2xl px-3 py-2 text-center text-xs font-black transition ${
                   active
                     ? "bg-edsync-blue/10 text-edsync-blue ring-1 ring-edsync-blue/30"
                     : "bg-edsync-surface text-edsync-text hover:bg-edsync-muted"
                 }`}
               >
-                <span className="block">{label}</span>
-                <span className="mt-1 block text-[11px] font-semibold leading-4 text-edsync-subtle">
-                  {detail}
-                </span>
+                {label}
               </button>
             );
           })}
@@ -2782,6 +2791,10 @@ export default function FabricLessonStudio() {
                   {pages.map((page, index) => {
                     const isActivePage = page.id === activePageId;
                     const isMenuOpen = openPageMenu?.pageId === page.id;
+                    const pageTemplate = resolvePageAiTemplate(page);
+                    const templateMarker = pageTemplate && pageTemplate.interaction !== "none"
+                      ? markerForAiSlideInteraction(pageTemplate.interaction, 0)
+                      : null;
                     return (
                       <div
                         key={page.id}
@@ -2818,6 +2831,14 @@ export default function FabricLessonStudio() {
                           <span className="absolute bottom-1 left-1 rounded-md bg-edsync-text/80 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
                             {index + 1}
                           </span>
+                          {templateMarker && (
+                            <span
+                              className="absolute bottom-1 right-1 rounded-md px-1.5 py-0.5 text-[10px] font-black leading-none text-white"
+                              style={{ backgroundColor: pageTemplate?.accent ?? DEFAULT_ACCENT }}
+                            >
+                              {templateMarker}
+                            </span>
+                          )}
                         </button>
                         <button
                           type="button"
@@ -2831,6 +2852,11 @@ export default function FabricLessonStudio() {
                         </button>
                         <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden max-w-48 -translate-x-1/2 rounded-xl bg-edsync-text px-3 py-2 text-xs font-black text-edsync-card shadow-xl group-hover:block">
                           {page.name}
+                          {pageTemplate && (
+                            <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-edsync-card/70">
+                              {pageTemplate.templateName}
+                            </span>
+                          )}
                         </span>
                       </div>
                     );
