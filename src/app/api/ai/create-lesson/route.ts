@@ -95,6 +95,12 @@ Every non-clarification lesson must contain these slide types in order:
 7. Summary: 3-5 main takeaways.
 8. Assessment / exit ticket: 2-3 quick questions with answer key in speaker notes.
 
+EdSync interaction requirements:
+- Include at least two concrete learning interaction formats across the deck: discussion, practice activity, matching, poll, reflection, quiz/test, or fill-in-the-blank.
+- The activity slide must name its interaction format in onScreenText or speakerNotes.
+- The assessment slide must include a clear quick-check format such as multiple choice, short answer, fill-in-the-blank, or exit ticket, with answer key in speakerNotes.
+- If the user asks for quiz, tests, discussion, activities, or fill-in-the-blank, make those formats explicit in the relevant slide titles, onScreenText, or speakerNotes.
+
 Complexity adaptation:
 - Beginner: simple language, concrete analogies, everyday examples.
 - Intermediate: some technical terms, applied examples, moderate depth.
@@ -218,6 +224,7 @@ Settings:
 - Number of slides: ${slideCount}
 - Audience language: ${audienceLanguage}
 - Include Socratic questions, speaker notes, visual suggestions, and linear navigation on every slide.
+- Include EdSync interaction formats where useful: discussion, practice activity, matching, poll, reflection, quiz/test, and fill-in-the-blank.
 - Output must be the JSON array only.
 
 Personalization:
@@ -638,12 +645,12 @@ function buildLocalFallbackSlideDeck(topic: string, requestedSlides: number): Ai
       title: "Interactive Activity",
       type: "activity",
       onScreenText: [
-        "Choose one real scenario.",
+        "Practice activity: choose one real scenario.",
         "Apply the three-step walkthrough.",
-        "Share one decision and one piece of evidence.",
+        "Discuss one decision and one piece of evidence with a partner.",
       ],
-      speakerNotes: "Give learners 5-7 minutes. Invite pairs to compare decisions before sharing.",
-      visualSuggestion: "Use a worksheet-style activity panel.",
+      speakerNotes: "Give learners 5-7 minutes. Invite pairs to compare decisions before sharing. Optional variation: turn this into a poll or matching task.",
+      visualSuggestion: "Use a worksheet-style practice and discussion panel.",
     },
     {
       slideNumber: 9,
@@ -662,12 +669,12 @@ function buildLocalFallbackSlideDeck(topic: string, requestedSlides: number): Ai
       title: "Exit Ticket",
       type: "assessment",
       onScreenText: [
-        `What is the core idea of ${topic}?`,
-        "How would you apply it in one real situation?",
-        "What evidence would prove progress?",
+        `Fill-in-the-blank: The core idea of ${topic} is ___.`,
+        "Short answer: How would you apply it in one real situation?",
+        "Quick check: What evidence would prove progress?",
       ],
-      speakerNotes: "Answer key: accurate definition, realistic application, and observable evidence of progress.",
-      visualSuggestion: "Use a compact quiz or ticket layout.",
+      speakerNotes: "Answer key: accurate definition, realistic application, and observable evidence of progress. Accept equivalent wording for the fill-in-the-blank item.",
+      visualSuggestion: "Use a compact fill-in-the-blank quiz or exit ticket layout.",
     },
   ];
 
