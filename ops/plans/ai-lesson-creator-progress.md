@@ -65,6 +65,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Render structured interaction cards in the studio instead of raw bullet lists for activity and assessment slides.
 - [x] Add named AI slide render templates for discussion, matching, polls, reflection, fill-in-the-blank, and quiz pages.
 - [x] Persist the resolved AI template on generated Studio pages so saved lessons keep their design intent.
+- [x] Repair vague AI activity and assessment slide output into template-ready cues before Studio rendering.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -142,6 +143,9 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after persisting resolved AI page templates; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `605d07d9-0f35-4ea5-86ad-3560425fa450`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
+- `npm.cmd test -- src/app/api/ai/create-lesson/route.test.ts src/lib/studio/ai-slide-design.test.ts`: passed with 12 tests after adding template-ready activity and assessment repair.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/app/api/ai/create-lesson/route.ts src/app/api/ai/create-lesson/route.test.ts`: passed after adding template-ready activity and assessment repair.
+- `npm.cmd run typecheck`: passed after adding template-ready activity and assessment repair.
 
 ## Current Implementation Pass
 
