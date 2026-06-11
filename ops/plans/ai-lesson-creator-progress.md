@@ -66,6 +66,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Add named AI slide render templates for discussion, matching, polls, reflection, fill-in-the-blank, and quiz pages.
 - [x] Persist the resolved AI template on generated Studio pages so saved lessons keep their design intent.
 - [x] Repair vague AI activity and assessment slide output into template-ready cues before Studio rendering.
+- [x] Add compact AI focus options and template markers to the Studio builder/preview UI.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -152,6 +153,8 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run build`: passed after template-ready cue repair; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `d7323c8d-58da-4c96-b466-61bfbe072740`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after adding compact AI focus options and preview template markers.
+- `npm.cmd run typecheck`: passed after adding compact AI focus options and preview template markers.
 
 ## Current Implementation Pass
 
