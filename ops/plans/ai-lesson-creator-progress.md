@@ -70,6 +70,7 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - [x] Centralize AI focus options so builder chips, prompt preview, and generation request share the same template cues.
 - [x] Guarantee selected Studio focus cues create matching lesson slides when provider output omits them.
 - [x] Open AI lesson creation as a focused Studio modal with explicit close, Escape close, source-import opening, and generation dismissal.
+- [x] Make the Studio page preview density control functional so the bottom strip can switch between large and compact previews.
 - [ ] Verify the studio AI builder creates editable pages with live previews, no console errors, and no blocked menus.
 
 ## Verification Log
@@ -191,6 +192,13 @@ The first slide must use `navigation.previous: null`; the final slide must use `
 - `npm.cmd run typecheck`: passed after the focused AI builder modal.
 - `npm.cmd run build`: passed after the focused AI builder modal; Next still reports the known middleware deprecation warning.
 - `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `4ffd29ff-68d2-419f-866e-df6a6dc2bfe1`.
+- Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
+- `npx.cmd eslint --config config/eslint/eslint.config.mjs src/components/studio/FabricLessonStudio.tsx`: passed after wiring the Studio page preview density toggle.
+- `npm.cmd run typecheck`: passed after wiring the Studio page preview density toggle.
+- `npm.cmd test`: passed with 65 files and 278 tests after wiring the Studio page preview density toggle.
+- `npm.cmd run lint`: passed after wiring the Studio page preview density toggle.
+- `npm.cmd run build`: passed after wiring the Studio page preview density toggle; Next still reports the known middleware deprecation warning.
+- `npm.cmd run deploy:cloudflare`: deployed `edsync` to `https://edsync.learn-app.workers.dev` as version `5cb46010-3fe9-4584-a546-41ef33f44409`.
 - Live route smoke: `/studio?adminView=organization-teacher` returned HTTP 200 with no `Service Unavailable` or minified React error text, and a mobile 390x844 screenshot rendered the sign-in UI without overlap.
 
 ## Current Implementation Pass
