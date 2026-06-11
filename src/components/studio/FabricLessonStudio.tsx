@@ -59,6 +59,7 @@ type StudioPanel = "design" | "elements" | "text" | "images" | "pages" | "ai" | 
 type StudioLanguage = "en" | "es" | "fr";
 type StudioView = "hub" | "formats" | "editor";
 type StudioFormatKind = "doc" | "slide" | "design";
+type PagePreviewMode = "filmstrip" | "compact";
 type AiLessonStyle = "direct" | "socratic" | "professional" | "expert";
 type AiLessonType = "lesson" | "slides" | "quiz" | "discussion" | "activity";
 type CanvasSnapshot = Record<string, unknown>;
@@ -591,6 +592,7 @@ export default function FabricLessonStudio() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [pagePreviewMode, setPagePreviewMode] = useState<PagePreviewMode>("filmstrip");
   const [savedStudioItemId, setSavedStudioItemId] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState<"draft" | "published" | null>(null);
   const t = copy[language];
@@ -2829,6 +2831,7 @@ export default function FabricLessonStudio() {
                     const isActivePage = page.id === activePageId;
                     const isMenuOpen = openPageMenu?.pageId === page.id;
                     const pageTemplate = resolvePageAiTemplate(page);
+                    const isCompactPreview = pagePreviewMode === "compact";
                     const templateMarker = pageTemplate && pageTemplate.interaction !== "none"
                       ? markerForAiSlideInteraction(pageTemplate.interaction, 0)
                       : null;
@@ -2845,14 +2848,16 @@ export default function FabricLessonStudio() {
                           setDraggingPageId(null);
                         }}
                         onDragEnd={() => setDraggingPageId(null)}
-                        className={`group relative min-w-[7.25rem] rounded-xl p-1.5 transition ${
+                        className={`group relative rounded-xl p-1.5 transition ${
                           isActivePage ? "bg-edsync-blue/10 ring-2 ring-edsync-blue/35" : "hover:bg-edsync-muted"
-                        } ${draggingPageId === page.id ? "opacity-55" : ""}`}
+                        } ${isCompactPreview ? "min-w-[5.5rem]" : "min-w-[7.25rem]"} ${draggingPageId === page.id ? "opacity-55" : ""}`}
                       >
                         <button
                           type="button"
                           onClick={() => void switchPage(page.id)}
-                          className="relative block h-14 w-[6.5rem] overflow-hidden rounded-lg bg-white text-left shadow-sm"
+                          className={`relative block overflow-hidden rounded-lg bg-white text-left shadow-sm transition ${
+                            isCompactPreview ? "h-10 w-20" : "h-14 w-[6.5rem]"
+                          }`}
                           aria-label={`Open page ${index + 1}`}
                         >
                           {page.previewDataUrl ? (
@@ -2930,8 +2935,16 @@ export default function FabricLessonStudio() {
                     <span className="whitespace-nowrap text-edsync-text">
                       {pages.findIndex((page) => page.id === activePageId) + 1} / {pages.length}
                     </span>
-                    <button type="button" className="grid h-8 w-8 place-items-center rounded-xl text-edsync-text transition hover:bg-edsync-muted" aria-label="Grid view">
+                    <button
+                      type="button"
+                      onClick={() => setPagePreviewMode((mode) => (mode === "filmstrip" ? "compact" : "filmstrip"))}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-xl px-2 text-edsync-text transition hover:bg-edsync-muted"
+                      aria-label={pagePreviewMode === "filmstrip" ? "Use compact page previews" : "Use larger page previews"}
+                      aria-pressed={pagePreviewMode === "compact"}
+                      title={pagePreviewMode === "filmstrip" ? "Compact page previews" : "Larger page previews"}
+                    >
                       <LayoutPanelLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">{pagePreviewMode === "filmstrip" ? "Compact" : "Large"}</span>
                     </button>
                     <button type="button" onClick={presentProject} className="grid h-8 w-8 place-items-center rounded-xl text-edsync-text transition hover:bg-edsync-muted" aria-label="Full screen presentation">
                       <Maximize2 className="h-4 w-4" />
