@@ -284,6 +284,161 @@ function asStringArray(value: unknown, fallback: string[]) {
 const ACTIVITY_CUE_PATTERN = /\b(discussion|discuss|practice activity|activity|matching|match|poll|vote|reflection|reflect|task)\b/i;
 const ASSESSMENT_CUE_PATTERN = /\b(quiz|test|quick check|exit ticket|fill-in-the-blank|fill in the blank|multiple choice|short answer)\b/i;
 
+type RequestedTemplateCue = {
+  cue: string;
+  pattern: RegExp;
+  draft: (topic: string) => Omit<AiLessonSlide, "navigation">;
+};
+
+const REQUESTED_TEMPLATE_CUES: RequestedTemplateCue[] = [
+  {
+    cue: "Discussion:",
+    pattern: /\b(discussion|discuss|debate)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Discussion: Compare Ideas",
+      type: "activity",
+      onScreenText: [
+        `Discussion: Which idea in ${topic} matters most?`,
+        "Use one evidence point.",
+        "Name one risk or misconception.",
+      ],
+      speakerNotes: "Expected responses should cite evidence before opinions. Invite learners to compare reasoning in pairs before sharing.",
+      visualSuggestion: "Use a discussion board layout with two response columns and role chips.",
+    }),
+  },
+  {
+    cue: "Practice activity:",
+    pattern: /\b(practice activity|practice loop|task|workshop)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Practice Activity",
+      type: "activity",
+      onScreenText: [
+        `Practice activity: apply ${topic} to one realistic situation.`,
+        "Choose a step, make a decision, and check the result.",
+        "Record one proof of progress.",
+      ],
+      speakerNotes: "Give learners a short timed task. Ask them to show the decision they made and the evidence they used to check it.",
+      visualSuggestion: "Use a practice workshop layout with task, action, and proof areas.",
+    }),
+  },
+  {
+    cue: "Matching:",
+    pattern: /\b(matching|match|sort|classification)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Matching: Concepts and Evidence",
+      type: "activity",
+      onScreenText: [
+        `Matching: pair each ${topic} concept with the best evidence.`,
+        "Explain one match.",
+        "Revise one mismatch.",
+      ],
+      speakerNotes: "Expected responses should connect terms to observable evidence. Let learners correct one mismatch after peer feedback.",
+      visualSuggestion: "Use a matching pairs layout with left-side concepts and right-side evidence cards.",
+    }),
+  },
+  {
+    cue: "Poll:",
+    pattern: /\b(poll|vote|confidence check)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Poll: Confidence Check",
+      type: "activity",
+      onScreenText: [
+        `Poll: how confident are you applying ${topic}?`,
+        "A: Ready to use it.",
+        "B: Need one more example.",
+        "C: Still unclear.",
+      ],
+      speakerNotes: "Use responses to decide whether to continue, reteach with another example, or pair learners for peer explanation.",
+      visualSuggestion: "Use a poll check layout with three large answer buttons.",
+    }),
+  },
+  {
+    cue: "Reflection:",
+    pattern: /\b(reflection|reflect|next steps)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Reflection: Proof of Progress",
+      type: "activity",
+      onScreenText: [
+        `Reflection: what changed in your understanding of ${topic}?`,
+        "Name one proof of progress.",
+        "Choose one next step.",
+      ],
+      speakerNotes: "Ask learners to write a short reflection. Strong responses name a before/after change and a concrete next action.",
+      visualSuggestion: "Use a reflection card layout with progress and next-step sections.",
+    }),
+  },
+  {
+    cue: "Quiz:",
+    pattern: /\b(quiz|quick check|multiple choice|test)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Quiz: Quick Check",
+      type: "assessment",
+      onScreenText: [
+        `Quiz: which choice best applies ${topic}?`,
+        "A: A vague explanation.",
+        "B: A specific evidence-based answer.",
+        "C: An unrelated detail.",
+      ],
+      speakerNotes: "Answer key: B. The strongest answer applies the idea with specific evidence.",
+      visualSuggestion: "Use a quiz ticket layout with answer choices and a compact answer key area.",
+    }),
+  },
+  {
+    cue: "Test:",
+    pattern: /\b(test|assessment|final check)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Test: Final Check",
+      type: "assessment",
+      onScreenText: [
+        `Test: explain ${topic} in one sentence.`,
+        "Apply it to one realistic case.",
+        "Name the evidence that proves your answer.",
+      ],
+      speakerNotes: "Answer key: accept accurate definitions, realistic application, and observable evidence. Use this as the final proof check.",
+      visualSuggestion: "Use a quiz ticket layout with short-answer rows.",
+    }),
+  },
+  {
+    cue: "Fill-in-the-blank:",
+    pattern: /\b(fill-in-the-blank|fill in the blank|blank)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Fill-in-the-Blank: Key Idea",
+      type: "assessment",
+      onScreenText: [
+        `Fill-in-the-blank: The most important idea in ${topic} is ___.`,
+        "Short answer: give one example.",
+        "Quick check: name one piece of evidence.",
+      ],
+      speakerNotes: "Answer key: accept the core concept from the lesson, a relevant example, and observable evidence of progress.",
+      visualSuggestion: "Use a fill-in-the-blank ticket layout with blanks and answer-key notes.",
+    }),
+  },
+  {
+    cue: "Exit ticket:",
+    pattern: /\b(exit ticket|exit check)\b/i,
+    draft: (topic) => ({
+      slideNumber: 0,
+      title: "Exit Ticket",
+      type: "assessment",
+      onScreenText: [
+        `Exit ticket: what is one thing you can now do with ${topic}?`,
+        "What is one question you still have?",
+        "What evidence proves progress?",
+      ],
+      speakerNotes: "Answer key: learners should name one skill, one honest question, and one observable proof of learning.",
+      visualSuggestion: "Use an exit ticket or quiz ticket layout with three response prompts.",
+    }),
+  },
+];
+
 function slideSearchText(slide: Pick<AiLessonSlide, "title" | "onScreenText" | "speakerNotes" | "visualSuggestion">) {
   return [
     slide.title,
@@ -291,6 +446,13 @@ function slideSearchText(slide: Pick<AiLessonSlide, "title" | "onScreenText" | "
     slide.speakerNotes,
     slide.visualSuggestion,
   ].join(" ");
+}
+
+function extractRequestedTemplateCues(source: string): RequestedTemplateCue[] {
+  const match = source.match(/Template-ready labels to use in slide text:\s*([^\n]+)/i);
+  if (!match) return [];
+  const cueLine = match[1];
+  return REQUESTED_TEMPLATE_CUES.filter((definition) => cueLine.toLowerCase().includes(definition.cue.toLowerCase()));
 }
 
 function ensureTemplateReadyInteractionCues(slides: AiLessonSlide[]): AiLessonSlide[] {
@@ -327,6 +489,52 @@ function ensureTemplateReadyInteractionCues(slides: AiLessonSlide[]): AiLessonSl
     }
     return slide;
   });
+}
+
+function renumberSlides(slides: Omit<AiLessonSlide, "navigation">[]): Omit<AiLessonSlide, "navigation">[] {
+  return slides.map((slide, index) => ({ ...slide, slideNumber: index + 1 }));
+}
+
+function withoutNavigation(slide: AiLessonSlide): Omit<AiLessonSlide, "navigation"> {
+  return {
+    slideNumber: slide.slideNumber,
+    title: slide.title,
+    type: slide.type,
+    onScreenText: slide.onScreenText,
+    speakerNotes: slide.speakerNotes,
+    visualSuggestion: slide.visualSuggestion,
+  };
+}
+
+function ensureRequestedTemplateCueSlides(
+  slides: AiLessonSlide[],
+  requestedCues: RequestedTemplateCue[],
+  topic: string,
+): AiLessonSlide[] {
+  if (requestedCues.length === 0) return slides;
+
+  const nextSlides: Omit<AiLessonSlide, "navigation">[] = slides.map(withoutNavigation);
+  requestedCues.forEach((cue) => {
+    const hasCue = nextSlides.some((slide) => cue.pattern.test(slideSearchText({
+      title: slide.title,
+      onScreenText: slide.onScreenText,
+      speakerNotes: slide.speakerNotes,
+      visualSuggestion: slide.visualSuggestion,
+    })));
+    if (hasCue) return;
+
+    const draftSlide = cue.draft(topic);
+    const firstAssessmentIndex = nextSlides.findIndex((slide) => slide.type === "assessment");
+    const firstSummaryIndex = nextSlides.findIndex((slide) => slide.type === "summary");
+    const insertIndex = draftSlide.type === "assessment"
+      ? firstAssessmentIndex === -1 ? nextSlides.length : firstAssessmentIndex
+      : firstSummaryIndex === -1
+        ? firstAssessmentIndex === -1 ? nextSlides.length : firstAssessmentIndex
+        : firstSummaryIndex;
+    nextSlides.splice(insertIndex, 0, draftSlide);
+  });
+
+  return ensureTemplateReadyInteractionCues(withLinearNavigation(renumberSlides(nextSlides)));
 }
 
 function normalizeSlideType(value: unknown, index: number): AiLessonSlideType {
@@ -871,6 +1079,7 @@ export async function POST(request: NextRequest) {
 
     if (outputFormat === "slide_deck") {
       const topic = deriveTopicLabel(normalizedContent);
+      const requestedTemplateCues = extractRequestedTemplateCues(normalizedContent);
       const slidePrompt = buildSlideDeckUserPrompt({
         mode,
         safeContent,
@@ -901,13 +1110,21 @@ export async function POST(request: NextRequest) {
         if (clarification) {
           return NextResponse.json({ clarification, slides: [] });
         }
-        slides = normalizeSlideDeck(parsedSlides, topic);
+        slides = ensureRequestedTemplateCueSlides(
+          normalizeSlideDeck(parsedSlides, topic),
+          requestedTemplateCues,
+          topic,
+        );
       } catch (slideError) {
         warning =
           slideError instanceof Error
             ? `AI slide output was not usable (${slideError.message}). Returned a local slide draft.`
             : "AI slide output was not usable. Returned a local slide draft.";
-        slides = buildLocalFallbackSlideDeck(topic, requestedSlideCount);
+        slides = ensureRequestedTemplateCueSlides(
+          buildLocalFallbackSlideDeck(topic, requestedSlideCount),
+          requestedTemplateCues,
+          topic,
+        );
       }
 
       const lesson = slideDeckToLessonDraft(slides, topic);
