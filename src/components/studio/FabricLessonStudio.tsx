@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
+  buildAiSlideInteractionTemplate,
   linesForAiSlide,
   resolveAiSlideDesign,
   type AiSlideMetadata,
@@ -732,6 +733,7 @@ export default function FabricLessonStudio() {
     if (page.aiSlide) {
       const slide = page.aiSlide;
       const design = resolveAiSlideDesign(slide);
+      const interactionTemplate = buildAiSlideInteractionTemplate(slide);
       const lines = linesForAiSlide(slide).slice(0, 6);
       const compact = canvasWidth < 900 || canvasHeight > canvasWidth;
       const titleFont = design.titleSize === "large"
@@ -886,8 +888,11 @@ export default function FabricLessonStudio() {
       } else if (design.variant === "workshop" || design.variant === "ticket") {
         const panelWidth = compact ? canvasWidth - margin * 2 : Math.round(canvasWidth * 0.66);
         addCard(margin, bodyTop - 8, panelWidth, Math.min(260, canvasHeight - bodyTop - margin), "#ffffff");
-        lines.slice(0, 5).forEach((line, index) => {
-          const top = bodyTop + 24 + index * 44;
+        addText(interactionTemplate.primaryPrompt, margin + 28, bodyTop + 20, panelWidth - 56, Math.max(19, bodyFont - 2), {
+          fontWeight: "900",
+        });
+        interactionTemplate.items.slice(0, 4).forEach((line, index) => {
+          const top = bodyTop + 84 + index * 40;
           const markerText = design.interaction === "fill_blank"
             ? "___"
             : design.interaction === "quiz"
@@ -895,13 +900,13 @@ export default function FabricLessonStudio() {
               : design.interaction === "matching"
                 ? "="
                 : String(index + 1);
-          canvas.add(new fabric.Rect({ left: margin + 28, top: top + 8, width: 30, height: 22, rx: 8, ry: 8, fill: `${design.accent}22`, stroke: design.accent }));
-          addText(markerText, margin + 34, top + 11, 20, 12, { fill: design.accent, fontWeight: "900" });
-          addText(line, margin + 76, top, panelWidth - 104, Math.max(16, bodyFont - 4), { fontWeight: "700" });
+          canvas.add(new fabric.Rect({ left: margin + 28, top: top + 6, width: 30, height: 22, rx: 8, ry: 8, fill: `${design.accent}22`, stroke: design.accent }));
+          addText(markerText, margin + 34, top + 9, 20, 12, { fill: design.accent, fontWeight: "900" });
+          addText(line, margin + 76, top, panelWidth - 104, Math.max(15, bodyFont - 5), { fontWeight: "700" });
         });
         if (!compact) {
           addCard(margin + panelWidth + 28, bodyTop - 8, canvasWidth - margin * 2 - panelWidth - 28, 170, `${design.secondaryAccent}11`);
-          addText(slide.visualSuggestion, margin + panelWidth + 52, bodyTop + 24, canvasWidth - margin * 2 - panelWidth - 76, 17, {
+          addText(interactionTemplate.teacherHint, margin + panelWidth + 52, bodyTop + 24, canvasWidth - margin * 2 - panelWidth - 76, 17, {
             fill: design.muted,
             fontWeight: "700",
           });
