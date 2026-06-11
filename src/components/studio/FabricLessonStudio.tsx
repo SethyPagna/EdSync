@@ -8,6 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import {
   buildAiSlideInteractionTemplate,
   linesForAiSlide,
+  markerForAiSlideInteraction,
   resolveAiSlideDesign,
   type AiSlideMetadata,
 } from "@/lib/studio/ai-slide-design";
@@ -777,8 +778,9 @@ export default function FabricLessonStudio() {
         return object;
       };
       const addModePill = (left: number, top: number) => {
-        if (design.interaction === "none") return;
-        const label = design.actionLabel.toUpperCase();
+        const label = design.interaction === "none"
+          ? design.templateName.toUpperCase()
+          : `${design.actionLabel} / ${design.templateName}`.toUpperCase();
         const pillWidth = Math.max(92, label.length * 10 + 34);
         canvas.add(new fabric.Rect({
           left,
@@ -893,13 +895,7 @@ export default function FabricLessonStudio() {
         });
         interactionTemplate.items.slice(0, 4).forEach((line, index) => {
           const top = bodyTop + 84 + index * 40;
-          const markerText = design.interaction === "fill_blank"
-            ? "___"
-            : design.interaction === "quiz"
-              ? "?"
-              : design.interaction === "matching"
-                ? "="
-                : String(index + 1);
+          const markerText = markerForAiSlideInteraction(design.interaction, index);
           canvas.add(new fabric.Rect({ left: margin + 28, top: top + 6, width: 30, height: 22, rx: 8, ry: 8, fill: `${design.accent}22`, stroke: design.accent }));
           addText(markerText, margin + 34, top + 9, 20, 12, { fill: design.accent, fontWeight: "900" });
           addText(line, margin + 76, top, panelWidth - 104, Math.max(15, bodyFont - 5), { fontWeight: "700" });
