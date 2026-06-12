@@ -15,6 +15,7 @@ export type AiStudioPageDraft = {
     accent: string;
   };
   snapshot: null;
+  notes: string;
   aiTemplate: AiSlideDesign;
   aiSlide: AiSlideMetadata;
 };
@@ -41,6 +42,7 @@ export function buildAiSlideStudioPages(
         accent: design.accent,
       },
       snapshot: null,
+      notes: slide.speakerNotes.trim(),
       aiTemplate: design,
       aiSlide: {
         ...slide,
