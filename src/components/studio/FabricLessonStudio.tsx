@@ -73,6 +73,7 @@ type StudioPage = {
   name: string;
   seed: PageSeed;
   snapshot: CanvasSnapshot | null;
+  notes?: string;
   previewDataUrl?: string;
   aiTemplate?: AiSlideDesign;
   aiSlide?: AiSlideMetadata;
@@ -542,6 +543,12 @@ function formatUpdatedAt(value: string | undefined) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function formatStudioTimer(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export default function FabricLessonStudio() {
   const searchParams = useSearchParams();
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
@@ -593,6 +600,9 @@ export default function FabricLessonStudio() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [pagePreviewMode, setPagePreviewMode] = useState<PagePreviewMode>("filmstrip");
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isStudioTimerRunning, setIsStudioTimerRunning] = useState(false);
+  const [studioTimerSeconds, setStudioTimerSeconds] = useState(0);
   const [savedStudioItemId, setSavedStudioItemId] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState<"draft" | "published" | null>(null);
   const t = copy[language];
@@ -638,6 +648,12 @@ export default function FabricLessonStudio() {
   useEffect(() => {
     pagesRef.current = pages;
   }, [pages]);
+
+  useEffect(() => {
+    if (!isStudioTimerRunning) return undefined;
+    const timer = window.setInterval(() => setStudioTimerSeconds((seconds) => seconds + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [isStudioTimerRunning]);
 
   useEffect(() => {
     if (!isAiBuilderOpen) return undefined;
@@ -708,6 +724,15 @@ export default function FabricLessonStudio() {
     () => pages.find((page) => page.id === activePageId) ?? pages[0],
     [activePageId, pages],
   );
+  const activePageNotes = activePage?.notes ?? activePage?.aiSlide?.speakerNotes ?? "";
+
+  const updateActivePageNotes = (notes: string) => {
+    const pageId = activePageIdRef.current;
+    if (!pageId) return;
+    const updatePage = (page: StudioPage) => (page.id === pageId ? { ...page, notes } : page);
+    pagesRef.current = pagesRef.current.map(updatePage);
+    setPages((current) => current.map(updatePage));
+  };
 
   const refreshHistoryState = useCallback(() => {
     setCanUndo(historyRef.current.length > 1);
@@ -1652,7 +1677,14 @@ export default function FabricLessonStudio() {
 
   const projectPlainText = () =>
     pages
-      .map((page, index) => `${index + 1}. ${page.name}\n${page.seed.title}\n${page.seed.body}`)
+      .map((page, index) =>
+        [
+          `${index + 1}. ${page.name}`,
+          page.seed.title,
+          page.seed.body,
+          page.notes ? `Notes: ${page.notes}` : "",
+        ].filter(Boolean).join("\n"),
+      )
       .join("\n\n");
 
   const downloadProject = () => {
@@ -2910,12 +2942,39 @@ export default function FabricLessonStudio() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-edsync-border/70 px-3 py-2 text-xs font-black text-edsync-subtle">
                   <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-2 py-1.5 transition hover:bg-edsync-muted hover:text-edsync-text">
+                    <button
+                      type="button"
+                      onClick={() => setIsNotesOpen((value) => !value)}
+                      className={`rounded-xl px-2 py-1.5 transition hover:bg-edsync-muted hover:text-edsync-text ${
+                        isNotesOpen ? "bg-edsync-blue/10 text-edsync-blue" : ""
+                      }`}
+                      aria-expanded={isNotesOpen}
+                    >
                       Notes
                     </button>
-                    <button type="button" onClick={() => openPanel("pages")} className="rounded-xl px-2 py-1.5 transition hover:bg-edsync-muted hover:text-edsync-text">
-                      Timer
+                    <button
+                      type="button"
+                      onClick={() => setIsStudioTimerRunning((value) => !value)}
+                      className={`rounded-xl px-2 py-1.5 transition hover:bg-edsync-muted hover:text-edsync-text ${
+                        isStudioTimerRunning ? "bg-edsync-emerald/10 text-edsync-emerald" : ""
+                      }`}
+                      aria-pressed={isStudioTimerRunning}
+                      title={isStudioTimerRunning ? "Pause timer" : "Start timer"}
+                    >
+                      Timer {formatStudioTimer(studioTimerSeconds)}
                     </button>
+                    {studioTimerSeconds > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsStudioTimerRunning(false);
+                          setStudioTimerSeconds(0);
+                        }}
+                        className="rounded-xl px-2 py-1.5 text-edsync-subtle transition hover:bg-edsync-muted hover:text-edsync-text"
+                      >
+                        Reset
+                      </button>
+                    )}
                   </div>
                   <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
                     <label className="flex items-center gap-2">
@@ -2951,6 +3010,20 @@ export default function FabricLessonStudio() {
                     </button>
                   </div>
                 </div>
+                {isNotesOpen && activePage && (
+                  <div className="border-t border-edsync-border/70 px-3 py-3">
+                    <label className="block text-xs font-black uppercase tracking-[0.12em] text-edsync-subtle">
+                      Page notes
+                      <textarea
+                        value={activePageNotes}
+                        onChange={(event) => updateActivePageNotes(event.target.value)}
+                        rows={3}
+                        className="edsync-textarea mt-2 text-sm"
+                        placeholder="Speaker notes, reminders, activity facilitation, or answer keys for this page."
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
           </section>
