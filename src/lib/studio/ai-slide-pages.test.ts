@@ -46,6 +46,7 @@ describe("AI slide studio page conversion", () => {
     });
     expect(pages[1].seed.body).toBe("What would prove progress?\nWhich signal can we observe?");
     expect(pages[1].aiSlide.speakerNotes).toContain("Expected response");
+    expect(pages[1].notes).toContain("Expected response");
     expect(pages[1].aiSlide.visualSuggestion).toBe("Use a question bubble.");
   });
 
