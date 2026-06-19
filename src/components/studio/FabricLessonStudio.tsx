@@ -2531,13 +2531,13 @@ export default function FabricLessonStudio() {
         </header>
 
         <div
-          className={`grid min-h-0 flex-1 ${
+          className={`grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden ${
             panel === "ai" && !selectedObject
               ? "lg:grid-cols-[72px_minmax(0,1fr)]"
               : "lg:grid-cols-[72px_304px_minmax(0,1fr)]"
           }`}
         >
-          <nav className="flex gap-1 overflow-x-auto border-b border-edsync-border bg-edsync-card p-2 lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r">
+          <nav className="flex min-w-0 max-w-full gap-1 overflow-x-auto border-b border-edsync-border bg-edsync-card p-2 lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r">
             {toolRail.map((tool) => {
               const Icon = tool.icon;
               return (
@@ -2557,7 +2557,7 @@ export default function FabricLessonStudio() {
           </nav>
 
           <aside
-            className={`edsync-scrollbar-none min-h-0 border-b border-edsync-border bg-edsync-card p-3 lg:border-b-0 lg:border-r lg:overflow-y-auto ${
+            className={`edsync-scrollbar-none min-h-0 min-w-0 max-w-full overflow-hidden border-b border-edsync-border bg-edsync-card p-3 lg:border-b-0 lg:border-r lg:overflow-y-auto ${
               panel === "ai" && !selectedObject ? "hidden" : "block"
             }`}
           >
@@ -2805,7 +2805,7 @@ export default function FabricLessonStudio() {
             )}
           </aside>
 
-          <section className="min-h-0 bg-edsync-bg lg:overflow-hidden">
+          <section className="min-h-0 min-w-0 max-w-full bg-edsync-bg lg:overflow-hidden">
             <div className="flex h-full min-h-[24rem] flex-col bg-edsync-bg sm:min-h-[34rem]">
               <div
                 ref={canvasStageRef}
