@@ -322,6 +322,7 @@ function SignupForm() {
                   type="button"
                   onClick={() => changeAccountType(item.key)}
                   aria-label={`${item.label}: ${item.copy}`}
+              aria-pressed={selected}
                   className={`edsync-auth-choice rounded-2xl border p-3 text-left shadow-sm transition ${
                     selected
                       ? "premium-active text-edsync-text"
@@ -604,7 +605,7 @@ function SignupOrganizationBenefits() {
 
 export default function SignupPage() {
   return (
-    <main className="premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_560px]">
+    <main className="auth-revamp premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_560px]">
       <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-center lg:gap-8">
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
