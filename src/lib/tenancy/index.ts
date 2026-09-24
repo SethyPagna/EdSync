@@ -1,3 +1,5 @@
+import { normalizeRequestHost, portalBaseDomain, portalFromHostname } from "./domains";
+import { deserializeRow } from "@/lib/db/schema";
 import { cookies, headers } from "next/headers";
 import { ACTIVE_TENANT_COOKIE } from "@/lib/auth/constants";
 import { d1Query } from "@/lib/db/d1";
@@ -19,7 +21,7 @@ function defaultTenantSlug() {
 
 async function requestHostname() {
   const headerStore = await headers();
-  return (headerStore.get("x-forwarded-host") || headerStore.get("host") || "").split(":")[0].toLowerCase();
+  return normalizeRequestHost(headerStore.get("host") || "");
 }
 
 async function activeTenantIdFromCookie() {
@@ -43,16 +45,28 @@ export async function ensureDefaultTenant(ownerId?: string | null) {
 export async function resolveTenantContext(user?: SessionUser | null): Promise<TenantContext> {
   await ensureDefaultTenant(user?.id);
   const host = await requestHostname();
+  const subdomain = portalFromHostname(host, portalBaseDomain());
   const domainRows = host
     ? await d1Query<Tenant & { portal_id: string | null }>(
         `SELECT t.*, td.portal_id
            FROM tenant_domains td
            JOIN tenants t ON t.id = td.tenant_id
-          WHERE lower(td.hostname) = lower(?) AND td.status = 'active'
+          WHERE lower(td.hostname) = lower(?) AND td.status = 'active' AND t.status = 'active'
           LIMIT 1`,
         [host],
       )
     : [];
+
+  if (!domainRows[0] && subdomain) {
+    domainRows.push(...await d1Query<Tenant & { portal_id: string | null }>(
+      "SELECT t.*, tp.id AS portal_id FROM tenants t JOIN tenant_portals tp ON tp.tenant_id = t.id WHERE t.slug = ? AND tp.slug = ? AND t.status = 'active' LIMIT 1",
+      [subdomain.tenantSlug, subdomain.portalSlug],
+    ));
+    if (!domainRows[0]) throw new Error("Unknown organization hostname.");
+  }
+  // Unrecognized hosts beneath the configured wildcard must never fall back to the platform tenant.
+  const base = portalBaseDomain();
+  if (base && host.endsWith("." + base) && !domainRows[0]) throw new Error("Unknown organization hostname.");
 
   let activeTenantRows: Tenant[] = [];
   if (!domainRows[0] && user) {
@@ -95,7 +109,7 @@ export async function resolveTenantContext(user?: SessionUser | null): Promise<T
       )
     : [];
 
-  if (user && membershipRows.length === 0) {
+  if (user && membershipRows.length === 0 && tenantId === DEFAULT_TENANT_ID) {
     const roleProfile =
       user.user_metadata.role === "admin"
         ? "role_master_admin"
@@ -112,10 +126,10 @@ export async function resolveTenantContext(user?: SessionUser | null): Promise<T
       "SELECT * FROM tenant_memberships WHERE tenant_id = ? AND user_id = ? LIMIT 1",
       [tenantId, user.id],
     );
-    return { tenant, portal: portalRows[0] ?? null, membership: membership ?? null };
+    return { tenant, portal: portalRows[0] ?? null, membership: membership ? deserializeRow("tenant_memberships", membership as unknown as Record<string, unknown>) as unknown as TenantMembership : null };
   }
 
-  return { tenant, portal: portalRows[0] ?? null, membership: membershipRows[0] ?? null };
+  return { tenant, portal: portalRows[0] ?? null, membership: membershipRows[0] ? deserializeRow("tenant_memberships", membershipRows[0] as unknown as Record<string, unknown>) as unknown as TenantMembership : null };
 }
 
 export async function linkTenantObject(input: {
