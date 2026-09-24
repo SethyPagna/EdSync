@@ -1,18 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, Building2 } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpenCheck,
+  Building2,
+  CheckCircle2,
+  Search,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
-import EmilIntroShowcase from "@/components/catalog/EmilIntroShowcase";
+import PublicTopbar from "@/components/public/PublicTopbar";
 import { listPublicCatalog, listPublicPortals } from "@/lib/catalog";
-import { hasCatalogFilters, normalizeCatalogFilters, type CatalogSearchParams } from "@/lib/catalog/filters";
-import { getPublicAuthCopy } from "@/lib/public/auth-copy";
+import {
+  hasCatalogFilters,
+  normalizeCatalogFilters,
+  type CatalogSearchParams,
+} from "@/lib/catalog/filters";
 import { getPublicCopy } from "@/lib/public/i18n";
-import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
+import {
+  publicLanguageHref,
+  publicLanguageQueryValue,
+} from "@/lib/public/languages";
 
 export const metadata: Metadata = {
-  title: "Catalog",
+  title: "Explore courses",
   description:
-    "Search public EdSync courses, organization academies, free programs, and paid learning products.",
+    "Find your next course. Learn, practice, and make progress with EdSync.",
 };
 
 export default async function CatalogPage({
@@ -22,176 +36,247 @@ export default async function CatalogPage({
 }) {
   const filters = normalizeCatalogFilters(await searchParams);
   const copy = getPublicCopy(filters.language);
-  const authCopy = getPublicAuthCopy(filters.language);
   const hasFilters = hasCatalogFilters(filters);
-  const [items, portals] = await Promise.all([
-    listPublicCatalog({
-      ...filters,
-    }),
+  const [catalogResult, portalsResult] = await Promise.allSettled([
+    listPublicCatalog(filters),
     listPublicPortals(),
   ]);
-  const featured = items.filter((item) => item.metadata.featured).slice(0, 3);
-  const freeCount = items.filter((item) => item.price.isFree).length;
-  const paidCount = items.length - freeCount;
-  const categories = Array.from(
-    new Set(items.map((item) => item.metadata.category).filter(Boolean) as string[]),
-  ).slice(0, 6);
-  const cardLabels = {
+  const unavailable = catalogResult.status === "rejected";
+  const items = catalogResult.status === "fulfilled" ? catalogResult.value : [];
+  const portals =
+    portalsResult.status === "fulfilled" ? portalsResult.value : [];
+  const labels = {
     featured: copy.featured,
     free: copy.free,
-    preview: "Course preview.",
+    preview: "",
     flexible: copy.anyDuration,
-    view: "View",
+    view: "Explore course",
     minutes: "min",
   };
-  const catalogHref = (params: Record<string, string> = {}) => {
-    const query = new URLSearchParams();
-    const publicLanguage = publicLanguageQueryValue(filters.language);
-    if (publicLanguage) query.set("language", publicLanguage);
-    for (const [key, value] of Object.entries(params)) {
-      if (value) query.set(key, value);
-    }
-    const queryString = query.toString();
-    return `/catalog${queryString ? `?${queryString}` : ""}`;
-  };
-  const orgHref = (slug: string) => {
-    return `/org/${slug}${publicLanguageQuerySuffix(filters.language)}`;
-  };
-
+  const language = publicLanguageQueryValue(filters.language);
   return (
-    <>
-      <EmilIntroShowcase
-        labels={{
-          signIn: copy.signIn,
-          start: copy.start,
-          catalog: copy.catalogLabel,
-          workflow: copy.workflowLabel,
-          brandSubhead: copy.brandSubhead,
-          search: copy.searchButton,
-          courses: copy.courses,
-          free: copy.free,
-          paid: copy.paid,
-          filters: copy.filters,
-          individual: authCopy.individual,
-          organization: authCopy.organization,
-        }}
-      />
-
-      <main id="catalog-results" className="edsync-catalog-reference edsync-public-launch text-edsync-text">
-        <section className="mx-auto max-w-[90rem] px-4 py-10">
-          <div className="premium-panel animate-reveal-soft overflow-visible rounded-[1.65rem] p-4 sm:p-6">
-            <div className="mb-5 flex flex-col gap-3 border-b border-edsync-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
-                  <p className="text-sm text-edsync-subtle">{copy.coursesSubhead}</p>
-                </div>
-                {hasFilters && (
-                  <Link href={catalogHref()} className="text-sm font-semibold text-edsync-blue hover:underline">
-                    {copy.clearFilters}
-                  </Link>
-                )}
-              </div>
-              <div className="edsync-catalog-availability-strip" aria-label="Catalog availability">
-                <span>
-                  <strong>{items.length}</strong>
-                  <small>{copy.courses}</small>
-                </span>
-                <span>
-                  <strong>{freeCount}</strong>
-                  <small>{copy.free}</small>
-                </span>
-                <span>
-                  <strong>{paidCount}</strong>
-                  <small>{copy.paid}</small>
-                </span>
-              </div>
+    <main className="catalog-revamp text-edsync-text">
+      <PublicTopbar active="catalog" language={filters.language} />
+      {!hasFilters && (
+        <section className="catalog-hero">
+          <div>
+            <span className="catalog-eyebrow">
+              <Sparkles size={14} /> A little progress, every day
+            </span>
+            <h1 className="font-display">
+              Make room
+              <br />
+              for your <em>next idea.</em>
+            </h1>
+            <p>
+              {copy.heroCopy} Discover a course, put it into practice, and see
+              how far you can go.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a href="#courses" className="btn-primary">
+                {copy.catalogLabel}
+                <ArrowRight size={16} />
+              </a>
+              <Link
+                href={publicLanguageHref("/auth/signup", filters.language)}
+                className="btn-secondary"
+              >
+                {copy.createWorkspace}
+              </Link>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {items.map((item) => (
-                <CatalogCourseCard key={item.id} item={item} labels={cardLabels} language={filters.language} />
-              ))}
+          </div>
+          <div className="catalog-feature">
+            <span className="catalog-feature-label">Your space to grow</span>
+            <h2 className="font-display">
+              Small steps.
+              <br />
+              Meaningful progress.
+            </h2>
+            <div className="catalog-feature-row">
+              <BookOpenCheck />
+              <span>Find something that sparks your curiosity</span>
+              <span aria-hidden="true">01</span>
             </div>
-            {items.length === 0 && (
-              <div className="premium-surface rounded-2xl border-dashed p-8 text-center sm:p-10">
-                <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
-                <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
-                <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
-                <Link href={publicLanguageHref("/auth/signup", filters.language)} className="btn-primary mx-auto mt-5 w-fit">
-                  {copy.createWorkspace}
-                </Link>
-              </div>
-            )}
+            <div className="catalog-feature-row">
+              <Target />
+              <span>Build confidence through practice</span>
+              <span aria-hidden="true">02</span>
+            </div>
+            <div className="catalog-feature-row">
+              <CheckCircle2 />
+              <span>Pick up exactly where you left off</span>
+              <span aria-hidden="true">03</span>
+            </div>
           </div>
         </section>
-
-        {categories.length > 0 && (
-          <section className="mx-auto mt-5 max-w-[90rem] px-4">
-            <h2 className="sr-only">{copy.categories}</h2>
-            <div className="premium-surface rounded-2xl p-4">
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category, index) => (
-                  <Link
-                    key={`category-${index}-${category}`}
-                    href={catalogHref({ category })}
-                    className="rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5 text-sm font-semibold text-edsync-subtle shadow-sm transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:text-edsync-blue"
-                  >
-                    {category}
-                  </Link>
-                ))}
-              </div>
+      )}
+      <section id="courses" className="catalog-browse scroll-mt-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <span className="catalog-eyebrow">Explore at your own pace</span>
+            <h2 className="mt-2 font-display text-2xl font-bold">
+              {hasFilters ? "Find your next course" : copy.courses}
+            </h2>
+          </div>
+          <span className="text-sm text-edsync-subtle">
+            {unavailable ? "" : `${items.length} ${copy.courses.toLowerCase()}`}
+          </span>
+        </div>
+        <form action="/catalog" className="catalog-filter">
+          {language && <input type="hidden" name="language" value={language} />}
+          {filters.tenantSlug && (
+            <input type="hidden" name="tenant" value={filters.tenantSlug} />
+          )}
+          {filters.portalSlug && (
+            <input type="hidden" name="portal" value={filters.portalSlug} />
+          )}
+          <label>
+            <Search size={18} />
+            <span className="sr-only">{copy.searchPlaceholder}</span>
+            <input
+              name="q"
+              defaultValue={filters.query}
+              placeholder={copy.searchPlaceholder}
+            />
+          </label>
+          <select
+            name="price"
+            aria-label={copy.allPrices}
+            defaultValue={filters.price}
+          >
+            <option value="all">{copy.allPrices}</option>
+            <option value="free">{copy.free}</option>
+            <option value="paid">{copy.paid}</option>
+          </select>
+          <select
+            name="duration"
+            aria-label={copy.anyDuration}
+            defaultValue={filters.maxDuration ?? ""}
+          >
+            <option value="">{copy.anyDuration}</option>
+            <option value="30">Under 30 min</option>
+            <option value="60">Under 1 hour</option>
+            <option value="120">Under 2 hours</option>
+          </select>
+          <button className="btn-primary" type="submit">
+            {copy.searchButton}
+            <ArrowRight size={15} />
+          </button>
+          <details className="w-full">
+            <summary className="cursor-pointer text-xs text-edsync-subtle">
+              {copy.filters}
+            </summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <input
+                className="edsync-input"
+                aria-label={copy.categories}
+                name="category"
+                defaultValue={filters.category}
+                placeholder={copy.categories}
+              />
+              <input
+                className="edsync-input"
+                aria-label={copy.difficulty}
+                name="difficulty"
+                defaultValue={filters.difficulty}
+                placeholder={copy.difficulty}
+              />
+              <input
+                className="edsync-input"
+                aria-label="Course language"
+                name="courseLanguage"
+                defaultValue={filters.courseLanguage}
+                placeholder="Course language"
+              />
+              <label className="text-xs">
+                <input
+                  type="checkbox"
+                  name="featured"
+                  value="true"
+                  defaultChecked={filters.featuredOnly}
+                />
+                {copy.featured}
+              </label>
             </div>
-          </section>
+          </details>
+        </form>
+        {hasFilters && (
+          <Link
+            href={publicLanguageHref("/catalog", filters.language)}
+            className="mb-4 inline-block text-sm text-edsync-blue underline"
+          >
+            {copy.clearFilters}
+          </Link>
         )}
-
-        {featured.length > 0 && (
-          <section className="mx-auto mt-8 max-w-[90rem] px-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="font-display text-2xl font-bold">{copy.featured}</h2>
-              <span className="text-sm text-edsync-subtle">{copy.featuredSubhead}</span>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {featured.map((item) => (
-                <CatalogCourseCard key={item.id} item={item} featured labels={cardLabels} language={filters.language} />
-              ))}
-            </div>
-          </section>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => (
+            <CatalogCourseCard
+              key={item.id}
+              item={item}
+              labels={labels}
+              language={filters.language}
+            />
+          ))}
+        </div>
+        {!items.length && (
+          <div className="rounded-2xl border border-dashed border-edsync-border p-10 text-center">
+            <BookOpenCheck
+              className="mx-auto mb-4 text-edsync-blue"
+              size={32}
+            />
+            <h3 className="font-semibold">
+              {unavailable
+                ? "Courses are temporarily unavailable"
+                : copy.emptyTitle}
+            </h3>
+            <p className="mt-2 text-sm text-edsync-subtle">
+              {unavailable ? "Please try again in a moment." : copy.emptyCopy}
+            </p>
+            <Link
+              href={publicLanguageHref("/catalog", filters.language)}
+              className="btn-secondary mt-5"
+            >
+              {unavailable ? "Try again" : copy.clearFilters}
+            </Link>
+          </div>
         )}
-
         {portals.length > 0 && (
-          <section id="organizations" className="mx-auto mt-10 max-w-[90rem] px-4 pb-12">
-            <div className="mb-3">
-              <h2 className="font-display text-2xl font-bold">{copy.academies}</h2>
-              <p className="text-sm text-edsync-subtle">{copy.academiesSubhead}</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {portals.slice(0, 9).map((portal) => (
+          <details className="mt-10 rounded-2xl border border-edsync-border p-5">
+            <summary className="cursor-pointer font-display text-lg font-semibold">
+              {copy.academies}
+              <span className="ml-2 text-sm text-edsync-subtle">
+                {portals.length}
+              </span>
+            </summary>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {portals.map((portal) => (
                 <Link
                   key={portal.id}
-                  href={orgHref(portal.slug)}
-                  className="premium-card group rounded-2xl p-4"
+                  href={publicLanguageHref(
+                    `/org/${portal.slug}`,
+                    filters.language,
+                    { tenant: portal.tenant_slug },
+                  )}
+                  className="premium-card flex items-center gap-3 rounded-xl p-4"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-                      <Building2 className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="truncate font-semibold text-edsync-text">{portal.name}</p>
-                        <ArrowRight className="h-4 w-4 flex-shrink-0 text-edsync-blue transition group-hover:translate-x-0.5" />
-                      </div>
-                      <p className="mt-1 truncate text-sm text-edsync-subtle">{portal.tenant_name}</p>
-                      <span className="mt-3 inline-flex rounded-full border border-edsync-border px-2 py-0.5 text-xs font-semibold capitalize text-edsync-subtle">
-                        {portal.audience}
-                      </span>
-                    </div>
-                  </div>
+                  <Building2 size={18} />
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {portal.name}
+                  </span>
+                  <ArrowRight size={16} />
                 </Link>
               ))}
             </div>
-          </section>
+          </details>
         )}
-      </main>
-    </>
+        <footer className="mt-12 flex justify-between border-t border-edsync-border pt-5 text-xs text-edsync-subtle">
+          <span>EdSync · Keep growing.</span>
+          <Link href={publicLanguageHref("/auth/login", filters.language)}>
+            {copy.signIn}
+            <ArrowRight className="ml-2 inline" size={12} />
+          </Link>
+        </footer>
+      </section>
+    </main>
   );
 }
