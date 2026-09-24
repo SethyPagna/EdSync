@@ -173,7 +173,7 @@ export async function listPublicCatalog(input: {
 } = {}) {
   const filters = normalizeCatalogFilters(input);
   const params: unknown[] = [];
-  const where = ["bp.status = 'active'"];
+  const where = ["bp.status = 'active'", "t.status = 'active'"];
 
   if (filters.portalSlug) {
     where.push("tp.slug = ?");
@@ -207,7 +207,7 @@ export async function listPublicCatalog(input: {
        FROM billing_products bp
        JOIN tenants t ON t.id = bp.tenant_id
        LEFT JOIN tenant_object_links tol ON tol.object_table = 'billing_products' AND tol.object_id = bp.id
-       LEFT JOIN tenant_portals tp ON tp.id = tol.portal_id OR (tp.tenant_id = bp.tenant_id AND tp.is_default = 1)
+       LEFT JOIN tenant_portals tp ON tp.tenant_id = bp.tenant_id AND (tp.id = tol.portal_id OR (tol.portal_id IS NULL AND tp.is_default = 1))
        LEFT JOIN lessons l ON l.id = bp.course_id
       WHERE ${where.join(" AND ")}
       ORDER BY bp.updated_at DESC
@@ -243,9 +243,9 @@ export async function getPublicCatalogItem(id: string) {
        FROM billing_products bp
        JOIN tenants t ON t.id = bp.tenant_id
        LEFT JOIN tenant_object_links tol ON tol.object_table = 'billing_products' AND tol.object_id = bp.id
-       LEFT JOIN tenant_portals tp ON tp.id = tol.portal_id OR (tp.tenant_id = bp.tenant_id AND tp.is_default = 1)
+       LEFT JOIN tenant_portals tp ON tp.tenant_id = bp.tenant_id AND (tp.id = tol.portal_id OR (tol.portal_id IS NULL AND tp.is_default = 1))
        LEFT JOIN lessons l ON l.id = bp.course_id
-      WHERE bp.id = ? AND bp.status = 'active'
+      WHERE bp.id = ? AND bp.status = 'active' AND t.status = 'active'
       LIMIT 1`,
     [id],
   );
@@ -299,27 +299,26 @@ export async function listPublicPortals() {
     `SELECT tp.*, t.name AS tenant_name, t.slug AS tenant_slug
        FROM tenant_portals tp
        JOIN tenants t ON t.id = tp.tenant_id
-      WHERE tp.audience IN ('public', 'customer', 'partner')
+      WHERE t.status = 'active' AND tp.audience IN ('public', 'customer', 'partner') AND COALESCE(json_extract(tp.catalog_settings, '$.enabled'), 1) != 0
       ORDER BY tp.is_default DESC, tp.name ASC
       LIMIT 100`,
   );
 }
 
-export async function getOrganizationPortal(slug: string) {
-  const [portal] = await d1Query<TenantPortal & { tenant_name: string; tenant_slug: string }>(
+export async function getOrganizationPortal(slug: string, tenantSlug?: string | null) {
+  const portals = await d1Query<TenantPortal & { tenant_name: string; tenant_slug: string }>(
     `SELECT tp.*, t.name AS tenant_name, t.slug AS tenant_slug
-       FROM tenant_portals tp
-       JOIN tenants t ON t.id = tp.tenant_id
-      WHERE t.status = 'active'
-        AND (lower(tp.slug) = lower(?) OR lower(t.slug) = lower(?))
-      ORDER BY
-        CASE WHEN lower(t.slug) = lower(?) THEN 0 ELSE 1 END,
-        tp.is_default DESC,
-        tp.created_at ASC
-      LIMIT 1`,
-    [slug, slug, slug],
+       FROM tenant_portals tp JOIN tenants t ON t.id = tp.tenant_id
+      WHERE t.status = 'active' AND tp.audience IN ('public', 'customer', 'partner')
+        AND COALESCE(json_extract(tp.catalog_settings, '$.enabled'), 1) != 0
+        AND (? IS NULL OR lower(t.slug) = lower(?))
+        AND (lower(tp.slug) = lower(?) OR (lower(t.slug) = lower(?) AND tp.is_default = 1))
+      ORDER BY tp.is_default DESC, tp.created_at ASC`,
+    [tenantSlug || null, tenantSlug || null, slug, slug],
   );
-  return portal ?? null;
+  // Legacy links remain usable only when the slug identifies one organization.
+  if (new Set(portals.map((portal) => portal.tenant_id)).size > 1) return null;
+  return portals[0] ?? null;
 }
 
 export type CatalogTenant = Tenant;
