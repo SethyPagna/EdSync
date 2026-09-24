@@ -1,4 +1,4 @@
-/// <reference types="@cloudflare/workers-types" />
+import type { D1Database, R2Bucket, Queue, MessageBatch } from "@cloudflare/workers-types";
 
 export type Env = {
   EDSYNC_DB: D1Database;
