@@ -3,7 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { BookOpenCheck, Clock3, Copy, FileText, Plus, Presentation, Search, Sparkles, Trash2 } from "lucide-react";
+import {
+  BookOpenCheck,
+  Clock3,
+  Copy,
+  FileText,
+  Plus,
+  Presentation,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
 import { createClient } from "@/lib/edsync/client";
 import { listStudioItems, type StudioServerItem } from "@/lib/studio/api";
@@ -18,7 +28,12 @@ type LessonStatusFilter = "all" | "draft" | "published" | "archived";
 type DurationFilter = "all" | "short" | "medium" | "long";
 type SemesterFilter = "all" | "spring" | "summer" | "fall";
 
-const STATUS_FILTERS: LessonStatusFilter[] = ["all", "published", "draft", "archived"];
+const STATUS_FILTERS: LessonStatusFilter[] = [
+  "all",
+  "published",
+  "draft",
+  "archived",
+];
 const SEMESTER_FILTERS: Array<{ value: SemesterFilter; label: string }> = [
   { value: "all", label: "Any term" },
   { value: "spring", label: "Spring" },
@@ -29,7 +44,8 @@ const STUDIO_LESSON_KINDS = new Set(["doc", "slide", "design", "lesson"]);
 
 function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
   if (durationFilter === "short") return lesson.estimated_duration <= 20;
-  if (durationFilter === "medium") return lesson.estimated_duration >= 21 && lesson.estimated_duration <= 60;
+  if (durationFilter === "medium")
+    return lesson.estimated_duration >= 21 && lesson.estimated_duration <= 60;
   if (durationFilter === "long") return lesson.estimated_duration >= 61;
   return true;
 }
@@ -52,7 +68,9 @@ function matchesYear(createdAt: string, yearFilter: string) {
 }
 
 function matchesSemester(createdAt: string, semesterFilter: SemesterFilter) {
-  return semesterFilter === "all" || courseSemester(createdAt) === semesterFilter;
+  return (
+    semesterFilter === "all" || courseSemester(createdAt) === semesterFilter
+  );
 }
 
 function studioOriginalKind(item: StudioServerItem) {
@@ -62,21 +80,28 @@ function studioOriginalKind(item: StudioServerItem) {
 }
 
 function studioClassName(item: StudioServerItem) {
-  return typeof item.metadata?.className === "string" ? item.metadata.className : "";
+  return typeof item.metadata?.className === "string"
+    ? item.metadata.className
+    : "";
 }
 
 function studioOrderIndex(item: StudioServerItem) {
-  return typeof item.metadata?.orderIndex === "number" ? item.metadata.orderIndex : null;
+  return typeof item.metadata?.orderIndex === "number"
+    ? item.metadata.orderIndex
+    : null;
 }
 
 function studioPageCount(item: StudioServerItem) {
-  return typeof item.metadata?.pageCount === "number" ? item.metadata.pageCount : null;
+  return typeof item.metadata?.pageCount === "number"
+    ? item.metadata.pageCount
+    : null;
 }
 
 export default function TeacherLessons() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [studioItems, setStudioItems] = useState<StudioServerItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [filter, setFilter] = useState<LessonStatusFilter>("all");
   const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
   const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>("all");
@@ -86,27 +111,40 @@ export default function TeacherLessons() {
 
   const loadLessons = useCallback(async () => {
     setLoading(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) {
-      setLessons([]);
-      setStudioItems([]);
+    setLoadError("");
+    try {
+      const {
+        data: { user },
+      } = await edsync.auth.getUser();
+      if (!user) {
+        setLessons([]);
+        setStudioItems([]);
+        setLoading(false);
+        return;
+      }
+      const [lessonResult, studioResult] = await Promise.all([
+        edsync
+          .from("lessons")
+          .select("*")
+          .eq("teacher_id", user.id)
+          .order("updated_at", { ascending: false }),
+        listStudioItems(undefined, false),
+      ]);
+      const { data } = lessonResult;
+      if (lessonResult.error) throw new Error(lessonResult.error.message);
+      setLessons(data || []);
+      setStudioItems(
+        studioResult.filter((item) =>
+          STUDIO_LESSON_KINDS.has(studioOriginalKind(item)),
+        ),
+      );
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Could not load courses.",
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-    const [lessonResult, studioResult] = await Promise.all([
-      edsync
-        .from("lessons")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .order("updated_at", { ascending: false }),
-      listStudioItems(undefined, false).catch(() => []),
-    ]);
-    const { data } = lessonResult;
-    setLessons(data || []);
-    setStudioItems(studioResult.filter((item) => STUDIO_LESSON_KINDS.has(studioOriginalKind(item))));
-    setLoading(false);
   }, [edsync]);
 
   useEffect(() => {
@@ -132,7 +170,7 @@ export default function TeacherLessons() {
       data: { user },
     } = await edsync.auth.getUser();
     if (!user) return;
-    const { data } = await edsync
+    const { data, error } = await edsync
       .from("lessons")
       .insert({
         ...lesson,
@@ -145,6 +183,10 @@ export default function TeacherLessons() {
       })
       .select()
       .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (data) {
       setLessons((current) => [data, ...current]);
       toast.success("Course duplicated");
@@ -159,7 +201,11 @@ export default function TeacherLessons() {
       if (!matchesDuration(lesson, durationFilter)) return false;
       if (!matchesSemester(lesson.created_at, semesterFilter)) return false;
       if (!matchesYear(lesson.created_at, yearFilter)) return false;
-      if (normalizedSearch && !lesson.title.toLowerCase().includes(normalizedSearch)) return false;
+      if (
+        normalizedSearch &&
+        !lesson.title.toLowerCase().includes(normalizedSearch)
+      )
+        return false;
       return true;
     });
   }, [durationFilter, filter, lessons, search, semesterFilter, yearFilter]);
@@ -172,8 +218,10 @@ export default function TeacherLessons() {
       if (filter !== "all" && item.status !== filter) return false;
       if (!matchesSemester(item.createdAt, semesterFilter)) return false;
       if (!matchesYear(item.createdAt, yearFilter)) return false;
-      const searchableText = `${item.title} ${studioClassName(item)} ${studioOriginalKind(item)}`.toLowerCase();
-      if (normalizedSearch && !searchableText.includes(normalizedSearch)) return false;
+      const searchableText =
+        `${item.title} ${studioClassName(item)} ${studioOriginalKind(item)}`.toLowerCase();
+      if (normalizedSearch && !searchableText.includes(normalizedSearch))
+        return false;
       return true;
     });
   }, [durationFilter, filter, search, semesterFilter, studioItems, yearFilter]);
@@ -190,7 +238,10 @@ export default function TeacherLessons() {
       const year = courseYear(item.createdAt);
       if (year) years.add(year);
     });
-    return ["all", ...Array.from(years).sort((left, right) => Number(right) - Number(left))];
+    return [
+      "all",
+      ...Array.from(years).sort((left, right) => Number(right) - Number(left)),
+    ];
   }, [lessons, studioItems]);
 
   return (
@@ -198,9 +249,6 @@ export default function TeacherLessons() {
       <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              Course library
-            </p>
             <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
               Courses
             </h1>
@@ -214,13 +262,14 @@ export default function TeacherLessons() {
           </Link>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
           <label className="relative min-w-0">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search courses..."
+              aria-label="Search courses"
               className="edsync-input py-2 pl-10"
             />
           </label>
@@ -230,6 +279,7 @@ export default function TeacherLessons() {
                 key={status}
                 type="button"
                 onClick={() => setFilter(status)}
+                aria-pressed={filter === status}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold capitalize transition ${
                   filter === status
                     ? "bg-edsync-blue text-white"
@@ -240,51 +290,87 @@ export default function TeacherLessons() {
               </button>
             ))}
           </div>
-          <select
-            value={durationFilter}
-            onChange={(event) => setDurationFilter(event.target.value as DurationFilter)}
-            className="edsync-input w-full py-2 text-sm sm:w-48"
-            aria-label="Filter by expected duration"
-          >
-            <option value="all">Any duration</option>
-            <option value="short">Short, 1-20 min</option>
-            <option value="medium">Medium, 21-60 min</option>
-            <option value="long">Long, 61+ min</option>
-          </select>
-          <select
-            value={semesterFilter}
-            onChange={(event) => setSemesterFilter(event.target.value as SemesterFilter)}
-            className="edsync-input w-full py-2 text-sm sm:w-40"
-            aria-label="Filter by semester"
-          >
-            {SEMESTER_FILTERS.map((semester) => (
-              <option key={semester.value} value={semester.value}>
-                {semester.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={yearFilter}
-            onChange={(event) => setYearFilter(event.target.value)}
-            className="edsync-input w-full py-2 text-sm sm:w-32"
-            aria-label="Filter by year"
-          >
-            {yearOptions.map((year) => (
-              <option key={year} value={year}>
-                {year === "all" ? "Any year" : year}
-              </option>
-            ))}
-          </select>
         </div>
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-edsync-subtle">
+            More filters
+            {durationFilter !== "all" ||
+            semesterFilter !== "all" ||
+            yearFilter !== "all"
+              ? " · Active"
+              : ""}
+          </summary>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <select
+              value={durationFilter}
+              onChange={(event) =>
+                setDurationFilter(event.target.value as DurationFilter)
+              }
+              className="edsync-input w-full py-2 text-sm sm:w-48"
+              aria-label="Filter by expected duration"
+            >
+              <option value="all">Any duration</option>
+              <option value="short">Short, 1-20 min</option>
+              <option value="medium">Medium, 21-60 min</option>
+              <option value="long">Long, 61+ min</option>
+            </select>
+            <select
+              value={semesterFilter}
+              onChange={(event) =>
+                setSemesterFilter(event.target.value as SemesterFilter)
+              }
+              className="edsync-input w-full py-2 text-sm sm:w-40"
+              aria-label="Filter by creation season"
+            >
+              {SEMESTER_FILTERS.map((semester) => (
+                <option key={semester.value} value={semester.value}>
+                  {semester.value === "all"
+                    ? "Any creation season"
+                    : "Created in " + semester.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={yearFilter}
+              onChange={(event) => setYearFilter(event.target.value)}
+              className="edsync-input w-full py-2 text-sm sm:w-32"
+              aria-label="Filter by creation year"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year === "all" ? "Any creation year" : year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </details>
       </section>
+
+      {loadError && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-xl border border-edsync-border p-4 text-sm"
+        >
+          <span>{loadError}</span>
+          <button
+            className="text-edsync-blue underline"
+            onClick={() => void loadLessons()}
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="grid gap-3">
           {[...Array(6)].map((_, index) => (
-            <div key={index} className="h-24 rounded-xl bg-edsync-card shimmer" />
+            <div
+              key={index}
+              className="h-24 rounded-xl bg-edsync-card shimmer"
+            />
           ))}
         </div>
-      ) : !hasResults ? (
+      ) : loadError && !totalItems ? null : !hasResults ? (
         <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card py-16 text-center">
           <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
           <h3 className="mb-2 font-display text-xl font-bold text-edsync-text">
@@ -321,7 +407,8 @@ export default function TeacherLessons() {
 function StudioLessonRow({ item }: { item: StudioServerItem }) {
   const badge = getStatusBadge(item.status);
   const kind = studioOriginalKind(item);
-  const Icon = kind === "slide" ? Presentation : kind === "doc" ? FileText : Sparkles;
+  const Icon =
+    kind === "slide" ? Presentation : kind === "doc" ? FileText : Sparkles;
   const className = studioClassName(item);
   const orderIndex = studioOrderIndex(item);
   const pageCount = studioPageCount(item);
@@ -344,12 +431,21 @@ function StudioLessonRow({ item }: { item: StudioServerItem }) {
               {item.title}
             </h3>
             <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
-              Editable lesson canvas for course materials, documents, and presentations.
+              Editable lesson canvas for course materials, documents, and
+              presentations.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
-              {className && <span className="badge bg-edsync-muted/30">{className}</span>}
-              <span className="capitalize">{kind === "slide" ? "PPT" : kind}</span>
-              {pageCount && <span>{pageCount} page{pageCount !== 1 ? "s" : ""}</span>}
+              {className && (
+                <span className="badge bg-edsync-muted/30">{className}</span>
+              )}
+              <span className="capitalize">
+                {kind === "slide" ? "PPT" : kind}
+              </span>
+              {pageCount && (
+                <span>
+                  {pageCount} page{pageCount !== 1 ? "s" : ""}
+                </span>
+              )}
               {orderIndex && <span>Order {orderIndex}</span>}
               <span>Updated {formatRelativeTime(item.updatedAt)}</span>
             </div>
@@ -403,12 +499,18 @@ function LessonRow({
               {lesson.description || "No description."}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
-              {lesson.subject && <span className="badge bg-edsync-muted/30">{lesson.subject}</span>}
+              {lesson.subject && (
+                <span className="badge bg-edsync-muted/30">
+                  {lesson.subject}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1">
                 <Clock3 className="h-3.5 w-3.5" />
                 {lesson.estimated_duration} min
               </span>
-              <span className={getDifficultyColor(lesson.difficulty)}>{lesson.difficulty}</span>
+              <span className={getDifficultyColor(lesson.difficulty)}>
+                {lesson.difficulty}
+              </span>
               <span>Updated {formatRelativeTime(lesson.updated_at)}</span>
             </div>
           </div>
