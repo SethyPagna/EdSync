@@ -85,8 +85,9 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/admin/summary", { cache: "no-store", signal: controller.signal })
-      .then((response) => response.json())
+      .then(async (response) => { if (!response.ok) throw new Error("Summary unavailable"); return response.json(); })
       .then((payload) => {
+        if (!payload.data || payload.error) throw new Error("Summary unavailable");
         setSummary(payload.data);
         setError(null);
       })
@@ -103,9 +104,9 @@ export default function AdminDashboardPage() {
         <section className="premium-panel rounded-2xl p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Platform owner console</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Your platform at a glance</p>
               <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text sm:text-4xl">
-                Admin command center
+                Overview
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -131,7 +132,7 @@ export default function AdminDashboardPage() {
           <MetricTile
             key={key}
             label={label}
-            value={summary?.cards?.[key] ?? 0}
+            value={summary?.cards?.[key] ?? "—"}
             icon={Icon}
             tone={tone}
             detail={detail}
@@ -179,7 +180,7 @@ export default function AdminDashboardPage() {
 
           <section className="premium-surface overflow-hidden rounded-2xl p-0">
             <div className="border-b border-edsync-border p-4">
-              <h2 className="font-display text-xl font-bold">Recent admin audit</h2>
+              <h2 className="font-display text-xl font-bold">Recent activity</h2>
             </div>
             <div className="divide-y divide-edsync-border">
               {!summary &&
@@ -205,7 +206,7 @@ export default function AdminDashboardPage() {
         </section>
 
         <aside className="space-y-3">
-          <h2 className="font-display text-xl font-bold">Priority actions</h2>
+          <h2 className="font-display text-xl font-bold">Manage your platform</h2>
           {priorityActions.map((action) => (
             <Link
               key={action.href}
