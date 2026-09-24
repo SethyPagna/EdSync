@@ -41,6 +41,7 @@ export default function TeacherDashboard() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [recentLessons, setRecentLessons] = useState<Lesson[]>([]);
   const [alerts, setAlerts] = useState<TeacherAlert[]>([]);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
@@ -56,6 +57,7 @@ export default function TeacherDashboard() {
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const {
         data: { user },
@@ -74,8 +76,7 @@ export default function TeacherDashboard() {
           .from("lessons")
           .select("*")
           .eq("teacher_id", user.id)
-          .order("updated_at", { ascending: false })
-          .limit(6),
+          .order("updated_at", { ascending: false }),
         edsync
           .from("teacher_alerts")
           .select("*")
@@ -85,6 +86,7 @@ export default function TeacherDashboard() {
           .limit(6),
       ]);
 
+      if (classesRes.error || lessonsRes.error || profileRes.error) throw new Error("Could not load your workspace.");
       const classRows: Class[] = classesRes.data || [];
       const lessonRows: Lesson[] = lessonsRes.data || [];
       const lessonIds = lessonRows.map((lesson) => lesson.id);
@@ -129,17 +131,19 @@ export default function TeacherDashboard() {
 
       setProfile(profileRes.data);
       setClasses(classRows);
-      setRecentLessons(lessonRows);
+      setRecentLessons(lessonRows.slice(0, 6));
       setAlerts(alertsRes.data || []);
       setReviewSignal(nextReviewSignal);
       setStats({
-        totalStudents: enrollmentRes.count || 0,
+        totalStudents: new Set((enrollmentRes.data || []).map((row: { student_id: string }) => row.student_id)).size,
         activeLessons: lessonRows.filter((lesson) => lesson.status === "published").length,
         avgScore: scores.length > 0 ? Math.round(scoreTotal / scores.length) : 0,
         interactions: interactionRes.count || 0,
         lowConfidence: reflectionRes.data?.length || 0,
         pendingReviews: nextReviewSignal.pendingCount,
       });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not load your workspace.");
     } finally {
       setLoading(false);
     }
@@ -153,10 +157,11 @@ export default function TeacherDashboard() {
   }, [loadDashboard]);
 
   const dismissAlert = async (alertId: string) => {
-    await edsync
+    const { error: dismissError } = await edsync
       .from("teacher_alerts")
       .update({ is_dismissed: true })
       .eq("id", alertId);
+    if (dismissError) { setError("Could not dismiss alert. Try again."); return; }
     setAlerts((current) => current.filter((alert) => alert.id !== alertId));
   };
 
@@ -168,10 +173,10 @@ export default function TeacherDashboard() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-              Creator home
+              Your teaching space
             </p>
             <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">
-              Good to see you, {firstName}
+              Make something great, {firstName}.
             </h1>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:flex">
@@ -179,9 +184,9 @@ export default function TeacherDashboard() {
               <Plus className="h-4 w-4" />
               New course
             </Link>
-            <Link href="/studio" className="btn-secondary justify-center">
+            <Link href="/teacher/lessons" className="btn-secondary justify-center">
               <Sparkles className="h-4 w-4" />
-              Open editor
+              My courses
             </Link>
           </div>
         </div>
@@ -225,6 +230,7 @@ export default function TeacherDashboard() {
         </div>
       </header>
 
+      {error && <div role="alert" className="rounded-xl border border-edsync-red/30 p-4 text-sm text-edsync-red">{error}<button className="ml-3 underline" onClick={() => void loadDashboard()}>Retry</button></div>}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="premium-surface group rounded-2xl p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -287,15 +293,9 @@ export default function TeacherDashboard() {
           </div>
         </section>
 
-        <aside className="premium-surface group rounded-2xl p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-xl font-bold">Quick actions</h2>
-              <p className="edsync-hover-detail">Common tasks.</p>
-            </div>
-            <CalendarClock className="h-5 w-5 text-edsync-blue" />
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+        <details className="compact-guide">
+          <summary><CalendarClock size={18} />Quick actions</summary>
+          <div className="mt-4 grid gap-2">
             <Link href="/studio" className="btn-secondary justify-center text-sm">
               <Plus className="h-4 w-4" /> Create course
             </Link>
@@ -306,7 +306,7 @@ export default function TeacherDashboard() {
               <TrendingUp className="h-4 w-4" /> Reports
             </Link>
           </div>
-        </aside>
+        </details>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
