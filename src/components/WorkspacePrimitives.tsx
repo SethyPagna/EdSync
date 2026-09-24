@@ -1,4 +1,4 @@
-import { Ellipsis, Info } from "lucide-react";
+import { ChevronDown, Ellipsis, Info } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type MetricTileProps = {
@@ -25,9 +25,13 @@ export function MetricTile({
       }`}
       title={detail}
     >
-      <div className={`flex items-start justify-between ${compact ? "gap-2" : "gap-4"}`}>
+      <div
+        className={`flex items-start justify-between ${compact ? "gap-2" : "gap-4"}`}
+      >
         <div className="min-w-0">
-          <p className={`${compact ? "text-[11px]" : "text-sm"} truncate font-semibold text-edsync-subtle`}>
+          <p
+            className={`${compact ? "text-[11px]" : "text-sm"} truncate font-semibold text-edsync-subtle`}
+          >
             {label}
           </p>
           <p
@@ -67,26 +71,21 @@ export function GuidePanel({
   tone = "text-edsync-blue",
 }: GuidePanelProps) {
   return (
-    <aside className="group min-w-0 rounded-lg border border-edsync-border bg-edsync-surface p-4 sm:p-5" tabIndex={0} title={description}>
-      <div className="flex gap-3">
-        <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-current/10 ${tone}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-display text-lg font-bold text-edsync-text">{title}</h2>
-          <p className="edsync-hover-detail">{description}</p>
-        </div>
-      </div>
+    <details className="compact-guide">
+      <summary>
+        <Icon className={tone} size={18} />
+        <span>{title}</span>
+        <ChevronDown size={16} />
+      </summary>
+      <p className="mt-3 text-sm leading-6 text-edsync-subtle">{description}</p>
       {items.length > 0 && (
-        <div className="mt-4 grid gap-2">
+        <ul className="mt-3 grid gap-2 text-sm text-edsync-subtle">
           {items.map((item) => (
-            <p key={item} className="rounded-lg border border-edsync-border bg-edsync-card px-3 py-2 text-sm text-edsync-subtle">
-              <span className="break-words">{item}</span>
-            </p>
+            <li key={item}>{item}</li>
           ))}
-        </div>
+        </ul>
       )}
-    </aside>
+    </details>
   );
 }
 
