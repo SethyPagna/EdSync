@@ -133,6 +133,11 @@ dependency check; lint and build error checks remain enabled. The `pptxgenjs`
 image-size dependency is overridden to patched 2.x to remove parser denial-of-service
 advisories; PowerPoint text and image export has been smoke-tested.
 
+Dependency freshness uses a 72-hour release window in CI, matching the local npm
+release cutoff. An explicit `npm_config_before` is respected. Newly published
+versions become eligible after that window; this does not delay the separate
+security audit, which always checks current advisories.
+
 ## Repository Layout
 
 - `src/` contains the TypeScript application, API routes, shared libraries, and
