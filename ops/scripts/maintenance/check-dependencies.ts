@@ -74,14 +74,22 @@ function isAllowedOutdatedPackage(name: string, details: OutdatedPackage) {
 }
 
 function runNpmOutdated() {
+  // Match the local install policy in CI. A release published during a build
+  // must not force an immediate, unreviewed dependency upgrade.
+  const before = process.env.npm_config_before || process.env.NPM_CONFIG_BEFORE ||
+    new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const env = { ...process.env, npm_config_before: before };
+  console.log(`Checking dependency freshness for releases published before ${before}.`);
   if (process.platform === "win32") {
     return spawnSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "npm.cmd", "outdated", "--json"], {
       encoding: "utf8",
+      env,
     });
   }
 
   return spawnSync("npm", ["outdated", "--json"], {
     encoding: "utf8",
+    env,
   });
 }
 
