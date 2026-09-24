@@ -28,7 +28,7 @@ export default async function RootPage({
     context?.portal?.slug &&
     ["public", "customer", "partner"].includes(context.portal.audience)
   ) {
-    redirect(publicLanguageHref(`/org/${context.portal.slug}`, resolvedSearchParams?.language));
+    redirect(publicLanguageHref(`/org/${context.portal.slug}`, resolvedSearchParams?.language, { tenant: context.tenant.slug }));
   }
 
   return <CatalogPage searchParams={Promise.resolve(resolvedSearchParams ?? {})} />;
