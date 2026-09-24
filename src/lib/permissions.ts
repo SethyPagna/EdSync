@@ -1,3 +1,4 @@
+import { deserializeRow } from "@/lib/db/schema";
 import { d1Query } from "@/lib/db/d1";
 import type { SessionUser } from "@/lib/auth/session";
 import type { TenantContext } from "@/lib/tenancy";
@@ -22,13 +23,15 @@ export async function getPermissionSet(user: SessionUser, context: TenantContext
   }
 
   const membership = context.membership;
-  const direct = new Set<string>(membership?.permissions ?? []);
+  if (!membership || membership.status !== "active") return new Set<string>();
+  const direct = new Set<string>(Array.isArray(membership.permissions) ? membership.permissions : []);
   if (membership?.role_profile_id) {
     const [profile] = await d1Query<RoleProfile>(
       "SELECT * FROM role_profiles WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL OR is_system = 1) LIMIT 1",
       [membership.role_profile_id, context.tenant.id],
     );
-    for (const permission of profile?.permissions ?? []) direct.add(permission);
+    const parsed = profile ? deserializeRow("role_profiles", profile as unknown as Record<string, unknown>) : null;
+    for (const permission of (Array.isArray(parsed?.permissions) ? parsed.permissions : []) as string[]) direct.add(permission);
   }
 
   if (user.user_metadata.role === "teacher") {
