@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/edsync/client";
-import { listPracticeReviews, type PracticeReviewCardRow } from "@/lib/practice/reviews";
+import {
+  listPracticeReviews,
+  type PracticeReviewCardRow,
+} from "@/lib/practice/reviews";
 import { summarizePracticeReviewCards } from "@/lib/practice/review-recommendations";
 import {
-  ACTIVE_TIME_WEEKLY_TARGET_MINUTES,
   STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY,
   areStudentNotificationsPaused,
   defaultStudentDashboardVisibility,
@@ -32,9 +34,6 @@ import {
   CheckCircle2,
   Compass,
   GraduationCap,
-  Megaphone,
-  Plus,
-  ShoppingBag,
   Timer,
   Target,
 } from "lucide-react";
@@ -46,26 +45,15 @@ type AssignedLesson = Lesson & {
 
 type StudentPlannerData = {
   announcements: (Announcement & { class_name?: string | null })[];
-  events: (ScheduleEvent & { class_name?: string | null; lesson_title?: string | null })[];
+  events: (ScheduleEvent & {
+    class_name?: string | null;
+    lesson_title?: string | null;
+  })[];
 };
 
 type EnrollmentRow = { class_id: string };
 type AssignmentRow = { lesson_id: string };
 type SectionLessonRow = { lesson_id: string };
-type EntitlementRow = {
-  id: string;
-  product_id: string | null;
-  source_type: string;
-  status: "active" | "expired" | "revoked";
-};
-type BillingProductRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  product_type: string;
-  course_id: string | null;
-  metadata: Record<string, unknown> | string | null;
-};
 type IndividualCourse = {
   id: string;
   title: string;
@@ -99,33 +87,14 @@ function formatMinutes(totalMinutes: number) {
   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
-function parseProductMetadata(value: BillingProductRow["metadata"]) {
-  if (!value) return {};
-  if (typeof value === "object") return value;
-  try {
-    return JSON.parse(value) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
-function productDescription(product: BillingProductRow) {
-  const metadata = parseProductMetadata(product.metadata);
-  return (
-    product.description ||
-    String(metadata.previewSummary ?? "") ||
-    String(metadata.category ?? "") ||
-    "Personal catalog course"
-  );
-}
-
 function readDashboardVisibility() {
   if (typeof window === "undefined") return defaultStudentDashboardVisibility;
   try {
     return mergeStudentDashboardVisibility(
-      JSON.parse(window.localStorage.getItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY) || "null") as
-        | Partial<StudentDashboardVisibility>
-        | null,
+      JSON.parse(
+        window.localStorage.getItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY) ||
+          "null",
+      ) as Partial<StudentDashboardVisibility> | null,
     );
   } catch {
     return defaultStudentDashboardVisibility;
@@ -139,8 +108,12 @@ export default function StudentDashboard() {
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [reflections, setReflections] = useState<LearningReflection[]>([]);
   const [reviewCards, setReviewCards] = useState<PracticeReviewCardRow[]>([]);
-  const [individualCourses, setIndividualCourses] = useState<IndividualCourse[]>([]);
-  const [catalogSuggestions, setCatalogSuggestions] = useState<CatalogSuggestion[]>([]);
+  const [individualCourses, setIndividualCourses] = useState<
+    IndividualCourse[]
+  >([]);
+  const [catalogSuggestions, setCatalogSuggestions] = useState<
+    CatalogSuggestion[]
+  >([]);
   const [planner, setPlanner] = useState<StudentPlannerData>({
     announcements: [],
     events: [],
@@ -150,11 +123,16 @@ export default function StudentDashboard() {
   const [joinCode, setJoinCode] = useState("");
   const [joiningClass, setJoiningClass] = useState(false);
   const [savingStudy, setSavingStudy] = useState(false);
+  const [tab, setTab] = useState<"today" | "courses" | "progress">("today");
+  const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(readDashboardVisibility);
+  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(
+    readDashboardVisibility,
+  );
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const {
         data: { user },
@@ -164,40 +142,54 @@ export default function StudentDashboard() {
         return;
       }
 
-      const [profileRes, enrollmentsRes, goalsRes, reflectionsRes, plannerRes, reviewsRes, entitlementsRes, catalogRes] =
-        await Promise.all([
-          edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-          edsync
-            .from("class_enrollments")
-            .select("class_id")
-            .eq("student_id", user.id)
-            .eq("is_active", true),
-          edsync
-            .from("learning_goals")
-            .select("*")
-            .eq("student_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(4),
-          edsync
-            .from("learning_reflections")
-            .select("*")
-            .eq("student_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(4),
-          fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
-            res.json(),
-          ),
-          listPracticeReviews().catch(() => []),
-          edsync
-            .from("entitlements")
-            .select("id, product_id, source_type, status")
-            .eq("user_id", user.id)
-            .eq("status", "active"),
-          fetch("/api/catalog", { cache: "no-store" })
-            .then((res) => res.json())
-            .catch(() => ({ data: { items: [] } })),
-        ]);
+      const [
+        profileRes,
+        enrollmentsRes,
+        goalsRes,
+        reflectionsRes,
+        plannerRes,
+        reviewsRes,
+        personalCoursesRes,
+        catalogRes,
+      ] = await Promise.all([
+        edsync.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        edsync
+          .from("class_enrollments")
+          .select("class_id")
+          .eq("student_id", user.id)
+          .eq("is_active", true),
+        edsync
+          .from("learning_goals")
+          .select("*")
+          .eq("student_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(4),
+        edsync
+          .from("learning_reflections")
+          .select("*")
+          .eq("student_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(4),
+        fetch("/api/planner", {
+          credentials: "include",
+          cache: "no-store",
+        }).then((res) => res.json()),
+        listPracticeReviews().catch(() => []),
+        fetch("/api/me/courses", { cache: "no-store" }).then(
+          async (response) => {
+            const result = await response.json();
+            if (!response.ok)
+              throw new Error(result.error || "Could not load your courses.");
+            return result;
+          },
+        ),
+        fetch("/api/catalog", { cache: "no-store" })
+          .then((res) => res.json())
+          .catch(() => ({ data: { items: [] } })),
+      ]);
 
+      if (profileRes.error || enrollmentsRes.error)
+        throw new Error("Dashboard unavailable");
       setProfile(profileRes.data);
       setGoals(goalsRes.data || []);
       setReflections(reflectionsRes.data || []);
@@ -205,36 +197,7 @@ export default function StudentDashboard() {
       setReviewCards(reviewsRes ?? []);
       setCatalogSuggestions((catalogRes.data?.items ?? []).slice(0, 3));
 
-      const entitlements = (entitlementsRes.data || []) as EntitlementRow[];
-      const productIds = Array.from(
-        new Set(entitlements.map((entitlement) => entitlement.product_id).filter(Boolean) as string[]),
-      );
-      if (productIds.length > 0) {
-        const { data: products } = await edsync
-          .from("billing_products")
-          .select("id, title, description, product_type, course_id, metadata")
-          .in("id", productIds)
-          .eq("status", "active");
-        const productById = new Map(((products || []) as BillingProductRow[]).map((product) => [product.id, product]));
-        setIndividualCourses(
-          entitlements.flatMap((entitlement) => {
-            if (!entitlement.product_id) return [];
-            const product = productById.get(entitlement.product_id);
-            if (!product) return [];
-            return [
-              {
-                id: entitlement.id,
-                title: product.title,
-                description: productDescription(product),
-                courseId: product.course_id,
-                sourceType: entitlement.source_type,
-              },
-            ];
-          }),
-        );
-      } else {
-        setIndividualCourses([]);
-      }
+      setIndividualCourses(personalCoursesRes.data?.courses ?? []);
 
       const classIds = ((enrollmentsRes.data || []) as EnrollmentRow[]).map(
         (row) => row.class_id,
@@ -251,7 +214,11 @@ export default function StudentDashboard() {
         .eq("is_active", true);
 
       const lessonIds = Array.from(
-        new Set(((assignments || []) as AssignmentRow[]).map((assignment) => assignment.lesson_id)),
+        new Set(
+          ((assignments || []) as AssignmentRow[]).map(
+            (assignment) => assignment.lesson_id,
+          ),
+        ),
       );
 
       if (lessonIds.length === 0) {
@@ -266,7 +233,10 @@ export default function StudentDashboard() {
           .in("id", lessonIds)
           .eq("status", "published")
           .order("updated_at", { ascending: false }),
-        edsync.from("lesson_sections").select("lesson_id").in("lesson_id", lessonIds),
+        edsync
+          .from("lesson_sections")
+          .select("lesson_id")
+          .in("lesson_id", lessonIds),
         edsync
           .from("student_progress")
           .select("*")
@@ -276,7 +246,10 @@ export default function StudentDashboard() {
 
       const sectionCounts = new Map<string, number>();
       ((sectionRes.data || []) as SectionLessonRow[]).forEach((section) => {
-        sectionCounts.set(section.lesson_id, (sectionCounts.get(section.lesson_id) || 0) + 1);
+        sectionCounts.set(
+          section.lesson_id,
+          (sectionCounts.get(section.lesson_id) || 0) + 1,
+        );
       });
       const progressByLesson = new Map(
         ((progressRes.data || []) as StudentProgress[]).map((progress) => [
@@ -294,6 +267,7 @@ export default function StudentDashboard() {
       );
     } catch (error) {
       console.error(error);
+      setLoadError("We couldn’t load your learning space. Please try again.");
       toast.error("Could not load your dashboard.");
     } finally {
       setLoading(false);
@@ -310,7 +284,10 @@ export default function StudentDashboard() {
   const toggleVisibility = (key: keyof StudentDashboardVisibility) => {
     setVisibility((current) => {
       const nextValue = { ...current, [key]: !current[key] };
-      window.localStorage.setItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY, JSON.stringify(nextValue));
+      window.localStorage.setItem(
+        STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY,
+        JSON.stringify(nextValue),
+      );
       return nextValue;
     });
   };
@@ -339,15 +316,19 @@ export default function StudentDashboard() {
     }
 
     if (!cls) {
-      toast.error("Invalid access code. Ask the creator or organization for the current code.");
+      toast.error(
+        "Invalid access code. Ask the creator or organization for the current code.",
+      );
       setJoiningClass(false);
       return;
     }
 
-    const { error } = await edsync.from("class_enrollments").upsert(
-      { class_id: cls.id, student_id: user.id, is_active: true },
-      { onConflict: "class_id,student_id" },
-    );
+    const { error } = await edsync
+      .from("class_enrollments")
+      .upsert(
+        { class_id: cls.id, student_id: user.id, is_active: true },
+        { onConflict: "class_id,student_id" },
+      );
 
     if (error) {
       toast.error(`Could not join space: ${error.message}`);
@@ -371,9 +352,12 @@ export default function StudentDashboard() {
         title: "Complete one focused lesson",
         target_type: "weekly_lessons",
         target_value: 1,
-        current_value: lessons.filter((lesson) => lesson.progress?.status === "completed")
-          .length,
-        due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        current_value: lessons.filter(
+          (lesson) => lesson.progress?.status === "completed",
+        ).length,
+        due_date: new Date(Date.now() + 7 * 86400000)
+          .toISOString()
+          .slice(0, 10),
       })
       .select()
       .single();
@@ -392,26 +376,35 @@ export default function StudentDashboard() {
       return;
     }
     setSavingStudy(true);
-    const response = await fetch("/api/planner", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        title: studyTitle,
-        description: "Personal study time",
-        startsAt: studyAt || null,
-      }),
-    });
-    const payload = await response.json();
-    setSavingStudy(false);
-    if (!response.ok) {
-      toast.error(payload.error?.message || "Could not add study block.");
-      return;
+    try {
+      const response = await fetch("/api/planner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: studyTitle.trim(),
+          description: "Personal study time",
+          startsAt: studyAt ? new Date(studyAt).toISOString() : null,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok)
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : payload.error?.message || "Could not add study block.",
+        );
+      toast.success("Study block added.");
+      setStudyTitle("Focused study block");
+      setStudyAt("");
+      await loadDashboard();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not add study block.",
+      );
+    } finally {
+      setSavingStudy(false);
     }
-    toast.success("Study block added.");
-    setStudyTitle("Focused study block");
-    setStudyAt("");
-    await loadDashboard();
   };
 
   const { completed, active, next } = useMemo(() => {
@@ -437,17 +430,22 @@ export default function StudentDashboard() {
     };
   }, [lessons]);
 
-  const recommendation = active[0] || next[0] || completed[0];
+  const recommendation = active[0] || next[0];
   const totalTimeSpent = useMemo(
-    () => lessons.reduce((sum, lesson) => sum + Number(lesson.progress?.time_spent ?? 0), 0),
+    () =>
+      lessons.reduce(
+        (sum, lesson) => sum + Number(lesson.progress?.time_spent ?? 0),
+        0,
+      ),
     [lessons],
   );
-  const activeTimePct = Math.min(100, Math.round((totalTimeSpent / ACTIVE_TIME_WEEKLY_TARGET_MINUTES) * 100));
   const reviewRecommendation = useMemo(
     () => summarizePracticeReviewCards(reviewCards),
     [reviewCards],
   );
-  const visibleReviewRecommendation = visibility.practice ? reviewRecommendation : null;
+  const visibleReviewRecommendation = visibility.practice
+    ? reviewRecommendation
+    : null;
   const assignmentEvents = useMemo(
     () => planner.events.filter((event) => event.event_type === "deadline"),
     [planner.events],
@@ -463,525 +461,462 @@ export default function StudentDashboard() {
   const notificationsPaused = areStudentNotificationsPaused(visibility);
 
   return (
-    <div className="page-shell space-y-5">
-      <header className="premium-panel rounded-2xl p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-              Learner home
-            </p>
-            <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">
-              Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
-            </h1>
-          </div>
-          <TimeSpentGauge minutes={totalTimeSpent} percent={activeTimePct} />
+    <div className="page-shell space-y-6">
+      <header className="premium-panel flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="mb-2 text-xs text-edsync-subtle">Your learning space</p>
+          <h1 className="font-display font-bold">
+            Welcome back, {profile?.full_name?.split(" ")[0] || "Learner"}
+            <span className="text-edsync-blue">.</span>
+          </h1>
         </div>
-
-        <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
-          {[
-            {
-              label: "Time spent",
-              value: formatMinutes(totalTimeSpent),
-              icon: Timer,
-              tone: "text-edsync-cyan",
-            },
-            {
-              label: "Active",
-              value: active.length,
-              icon: BookOpenCheck,
-              tone: "text-edsync-blue",
-            },
-            {
-              label: "Done",
-              value: completed.length,
-              icon: CheckCircle2,
-              tone: "text-edsync-emerald",
-            },
-            {
-              label: "Reviews",
-              value: reviewRecommendation?.count ?? 0,
-              icon: GraduationCap,
-              tone: "text-edsync-amber",
-            },
-          ].map((item) => (
-            <MetricTile
-              key={item.label}
-              label={item.label}
-              value={loading ? "..." : item.value}
-              icon={item.icon}
-              tone={item.tone}
-              compact
-            />
-          ))}
-        </div>
+        <Link href="/student/planner" className="btn-secondary">
+          <CalendarClock size={16} />
+          My planner
+        </Link>
       </header>
-
-      <section className="premium-surface rounded-2xl p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">Individual learning</p>
-            <h2 className="font-display text-xl font-bold">Your catalog courses</h2>
-          </div>
-          <Link href="/catalog" className="btn-secondary w-fit px-3 py-2 text-sm">
-            <Compass className="h-4 w-4" />
-            Browse catalog
-          </Link>
+      {loadError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-edsync-red/30 p-4 text-sm text-edsync-red"
+        >
+          {loadError}
+          <button
+            className="ml-3 underline"
+            onClick={() => void loadDashboard()}
+          >
+            Retry
+          </button>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {individualCourses.length > 0
-            ? individualCourses.slice(0, 3).map((course) => (
-                <Link
-                  key={course.id}
-                  href={course.courseId ? `/student/lessons/${course.courseId}` : "/catalog"}
-                  className="group rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-blue/40 hover:bg-edsync-card"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
-                      <ShoppingBag className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-edsync-text">{course.title}</p>
-                      <p className="edsync-hover-detail">{course.description}</p>
-                      <span className="mt-3 inline-flex text-xs font-bold uppercase tracking-wide text-edsync-blue">
-                        {course.sourceType.replace("_", " ")}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))
-            : catalogSuggestions.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/catalog/${item.id}`}
-                  className="group rounded-2xl border border-edsync-border bg-edsync-surface p-4 transition hover:-translate-y-0.5 hover:border-edsync-emerald/40 hover:bg-edsync-card"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-emerald/10 text-edsync-emerald">
-                      <Compass className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-semibold text-edsync-text">{item.title}</p>
-                        <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
-                          {item.price?.label ?? "Catalog"}
-                        </span>
-                      </div>
-                      <p className="edsync-hover-detail">
-                        {item.description || "Start a public EdSync course."}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-          {individualCourses.length === 0 && catalogSuggestions.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-5 md:col-span-3">
-              <p className="font-semibold text-edsync-text">No personal courses yet</p>
-              <Link href="/catalog" className="btn-secondary mt-4 inline-flex px-3 py-2 text-sm">
-                Browse
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-xl font-bold">Continue learning</h2>
-              <p className="edsync-hover-detail">Your next recommended step.</p>
-            </div>
-            {visibility.practice && (
-              <Link href="/practice" className="btn-secondary justify-center text-sm">
-                Practice
-              </Link>
-            )}
-          </div>
-          {recommendation ? (
-            <div className="space-y-3">
-              {visibleReviewRecommendation && (
-                <Link
-                  href={visibleReviewRecommendation.href}
-                  className="group block rounded-2xl border border-edsync-amber/30 bg-edsync-amber/10 p-4 transition hover:-translate-y-0.5"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-amber/15 text-edsync-amber">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="badge bg-edsync-amber/15 text-edsync-amber">
-                          {visibleReviewRecommendation.label}
-                        </span>
-                        <p className="font-semibold text-edsync-text">{visibleReviewRecommendation.title}</p>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-sm text-edsync-subtle">
-                        {visibleReviewRecommendation.subtitle}
-                      </p>
-                      <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-amber">
-                        Review now <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-              <Link
-                href={`/student/lessons/${recommendation.id}`}
-                className="premium-card group block rounded-2xl p-4 transition hover:-translate-y-0.5"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-                    <BookOpenCheck className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-2xl font-bold text-edsync-text">
-                      {recommendation.title}
-                    </p>
-                    <p className="mt-1 text-sm text-edsync-subtle">
-                      {recommendation.subject || "General"} - {recommendation.estimated_duration} min
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                        {recommendation.progress?.status?.replace("_", " ") || "not started"}
-                      </span>
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                        Open course <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
-              <Target className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">No course yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Browse catalog or enter an access code.</p>
-            </div>
-          )}
-        </section>
-
-        <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-          <h2 className="font-display text-xl font-bold">Enter access code</h2>
-          <div className="mt-3 flex gap-2">
-            <input
-              value={joinCode}
-              onChange={(event) => setJoinCode(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && joinClass()}
-              placeholder="EDSYNC8"
-              className="edsync-input min-w-0 flex-1 py-2 font-mono uppercase"
-            />
+      )}
+      <div
+        className="workspace-tabs"
+        role="tablist"
+        aria-label="Dashboard sections"
+      >
+        {(["today", "courses", "progress"] as const).map(
+          (value, index, tabs) => (
             <button
+              key={value}
+              id={"tab-" + value}
+              role="tab"
               type="button"
-              onClick={joinClass}
-              disabled={joiningClass || !joinCode.trim()}
-              className="btn-primary flex-none justify-center px-4 py-2"
+              aria-selected={tab === value}
+              aria-controls={"panel-" + value}
+              tabIndex={tab === value ? 0 : -1}
+              onClick={() => setTab(value)}
+              onKeyDown={(event) => {
+                if (
+                  ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+                ) {
+                  event.preventDefault();
+                  const nextTab =
+                    tabs[
+                      event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? tabs.length - 1
+                          : (index +
+                              (event.key === "ArrowRight" ? 1 : -1) +
+                              tabs.length) %
+                            tabs.length
+                    ];
+                  setTab(nextTab);
+                  document.getElementById("tab-" + nextTab)?.focus();
+                }
+              }}
             >
-              Enter
+              {value === "today"
+                ? "Today"
+                : value === "courses"
+                  ? "My courses"
+                  : "Progress"}
             </button>
-          </div>
-        </section>
+          ),
+        )}
       </div>
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="premium-surface rounded-2xl p-4 sm:p-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-xl font-bold">Learning path</h2>
-              <p className="edsync-hover-detail">Grouped by what needs attention.</p>
-            </div>
-          </div>
-
-          {!visibility.newContent ? (
-            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
-              <p className="font-semibold text-edsync-text">Learning path hidden</p>
-              <p className="mt-1 text-sm text-edsync-subtle">New content is off.</p>
-            </div>
-          ) : loading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, index) => (
-                <div key={index} className="h-24 animate-pulse rounded-lg bg-edsync-surface" />
+      <section
+        id={"panel-" + tab}
+        role="tabpanel"
+        aria-labelledby={"tab-" + tab}
+        className="space-y-5"
+      >
+        {tab === "today" && (
+          <>
+            {loading ? (
+              <div
+                className="h-40 animate-pulse rounded-2xl bg-edsync-muted"
+                aria-label="Loading your next lesson"
+              />
+            ) : (
+              <section className="focus-banner">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-emerald-200">
+                    {recommendation ? "Your next step" : "A fresh start"}
+                  </span>
+                  <h2 className="font-display">
+                    {recommendation?.title || "What will you learn today?"}
+                  </h2>
+                  <p>
+                    {recommendation
+                      ? (recommendation.subject || "Your course") +
+                        " · " +
+                        (recommendation.estimated_duration || "Self-paced") +
+                        (recommendation.estimated_duration ? " min" : "")
+                      : "Make a little space for something new."}
+                  </p>
+                </div>
+                <Link
+                  href={
+                    recommendation
+                      ? "/student/lessons/" + recommendation.id
+                      : "/catalog"
+                  }
+                  className="btn-primary"
+                >
+                  {recommendation ? "Continue learning" : "Explore courses"}
+                  <ArrowRight size={16} />
+                </Link>
+              </section>
+            )}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                {
+                  label: "In progress",
+                  value: active.length,
+                  icon: BookOpenCheck,
+                },
+                {
+                  label: "Completed",
+                  value: completed.length,
+                  icon: CheckCircle2,
+                },
+                {
+                  label: "Learning time",
+                  value: formatMinutes(totalTimeSpent),
+                  icon: Timer,
+                },
+                {
+                  label: "To review",
+                  value: reviewRecommendation?.count ?? 0,
+                  icon: GraduationCap,
+                },
+              ].map((item) => (
+                <MetricTile
+                  key={item.label}
+                  {...item}
+                  value={loading ? "…" : item.value}
+                  compact
+                />
               ))}
             </div>
-          ) : lessons.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-10 text-center">
-              <Target className="mx-auto mb-4 h-9 w-9 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">No courses yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Browse catalog or enter an access code.</p>
+            <div className="grid items-start gap-5 xl:grid-cols-[1.5fr_1fr]">
+              <section className="premium-surface p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="font-display font-bold">Up next</h2>
+                  <button
+                    className="text-xs font-semibold text-edsync-blue"
+                    onClick={() => setTab("courses")}
+                  >
+                    All courses <ArrowRight className="inline" size={13} />
+                  </button>
+                </div>
+                {visibleReviewRecommendation && (
+                  <Link
+                    href={visibleReviewRecommendation.href}
+                    className="mb-3 flex items-center gap-3 rounded-xl bg-edsync-amber/10 p-3 text-sm"
+                  >
+                    <GraduationCap size={20} className="text-edsync-amber" />
+                    <span className="flex-1">
+                      {visibleReviewRecommendation.title}
+                    </span>
+                    <ArrowRight size={16} />
+                  </Link>
+                )}
+                {visibility.newContent &&
+                  [...active, ...next].slice(0, 3).map((lesson) => (
+                    <div className="mb-2" key={lesson.id}>
+                      <LessonCard lesson={lesson} />
+                    </div>
+                  ))}
+                {!loading &&
+                  (!visibility.newContent ||
+                    (!active.length && !next.length)) && (
+                    <p className="py-5 text-sm text-edsync-subtle">
+                      {!visibility.newContent
+                        ? "Course updates are hidden in your preferences."
+                        : "You’re all caught up. Explore a course when you’re ready."}
+                    </p>
+                  )}
+              </section>
+              <aside className="space-y-4">
+                <section className="premium-surface p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="font-display font-bold">On your schedule</h2>
+                    <CalendarClock size={18} className="text-edsync-blue" />
+                  </div>
+                  {visibleEvents.slice(0, 3).map((event) => (
+                    <Link
+                      href="/student/planner"
+                      key={event.id}
+                      className="block border-b border-edsync-border py-3 last:border-0"
+                    >
+                      <p className="text-sm font-semibold">{event.title}</p>
+                      <p className="mt-1 text-xs text-edsync-subtle">
+                        {formatPlannerDate(event.due_at || event.starts_at)}
+                      </p>
+                    </Link>
+                  ))}
+                  {!visibleEvents.length && (
+                    <p className="text-sm text-edsync-subtle">
+                      A little breathing room. Plan your next study session.
+                    </p>
+                  )}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-xs font-semibold text-edsync-blue">
+                      Schedule study time
+                    </summary>
+                    <form
+                      className="mt-3 grid gap-2"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void createStudyBlock();
+                      }}
+                    >
+                      <input
+                        aria-label="Study block title"
+                        required
+                        className="edsync-input"
+                        value={studyTitle}
+                        onChange={(event) => setStudyTitle(event.target.value)}
+                      />
+                      <input
+                        aria-label="Study time"
+                        type="datetime-local"
+                        required
+                        className="edsync-input"
+                        value={studyAt}
+                        onChange={(event) => setStudyAt(event.target.value)}
+                      />
+                      <button className="btn-primary" disabled={savingStudy}>
+                        {savingStudy ? "Saving…" : "Add to planner"}
+                      </button>
+                    </form>
+                  </details>
+                </section>
+                <details className="compact-guide">
+                  <summary>
+                    <UsersIcon />
+                    Have an access code?
+                  </summary>
+                  <form
+                    className="mt-3 flex gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void joinClass();
+                    }}
+                  >
+                    <input
+                      aria-label="Class access code"
+                      placeholder="Access code"
+                      value={joinCode}
+                      onChange={(event) => setJoinCode(event.target.value)}
+                      className="edsync-input min-w-0 uppercase"
+                      required
+                    />
+                    <button
+                      className="btn-primary"
+                      disabled={joiningClass || !joinCode.trim()}
+                    >
+                      {joiningClass ? "Joining…" : "Join"}
+                    </button>
+                  </form>
+                </details>
+              </aside>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {active.length > 0 && (
-                <LessonGroup title="Continue now" lessons={active} />
-              )}
-              {next.length > 0 && <LessonGroup title="Up next" lessons={next} />}
-              {completed.length > 0 && (
-                <LessonGroup title="Completed" lessons={completed} />
-              )}
-            </div>
-          )}
-        </section>
-
-        <aside className="space-y-5">
-          <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-xl font-bold">Notifications</h2>
-                <p className="edsync-hover-detail">Choose what appears on your dashboard.</p>
-              </div>
-              <Megaphone className="h-5 w-5 text-edsync-amber" />
-            </div>
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              {studentNotificationToggleOptions.map(({ key, label }) => {
-                return (
+            <details className="compact-guide">
+              <summary>Updates & preferences</summary>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {studentNotificationToggleOptions.map(({ key, label }) => (
                   <button
                     key={key}
-                    type="button"
                     onClick={() => toggleVisibility(key)}
-                    className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
-                      visibility[key]
-                        ? "border-edsync-blue/35 bg-edsync-blue/10 text-edsync-blue"
-                        : "border-edsync-border bg-edsync-surface text-edsync-subtle"
-                    }`}
                     aria-pressed={visibility[key]}
+                    className={
+                      "rounded-lg border px-3 py-2 text-xs " +
+                      (visibility[key]
+                        ? "border-edsync-blue text-edsync-blue"
+                        : "border-edsync-border text-edsync-subtle")
+                    }
                   >
                     {label}
                   </button>
-                );
-              })}
-            </div>
-            <div className="space-y-3">
-              {notificationsPaused ? (
-                <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-surface p-3">
-                  <p className="text-sm font-semibold text-edsync-text">Notifications are paused</p>
-                  <p className="mt-1 text-xs text-edsync-subtle">All updates are hidden.</p>
-                </div>
-              ) : planner.announcements.length === 0 ? (
-                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No updates yet.
-                </p>
-              ) : (
+                ))}
+              </div>
+              {!notificationsPaused &&
                 planner.announcements.slice(0, 3).map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border border-edsync-border bg-edsync-surface p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-edsync-text">{item.title}</p>
-                      <span className="text-xs text-edsync-subtle">
-                        {item.class_name || "Space"}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
+                  <div key={item.id} className="mt-4">
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-1 text-sm text-edsync-subtle">
+                      {item.body}
+                    </p>
                   </div>
-                ))
-              )}
+                ))}
+            </details>
+          </>
+        )}
+        {tab === "courses" && (
+          <>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-bold">Your library</h2>
+              <Link href="/catalog" className="btn-secondary">
+                <Compass size={16} />
+                Explore
+              </Link>
             </div>
-          </section>
-
-          {(visibility.practice || visibility.grades || visibility.feedback) && (
-            <section className="premium-surface rounded-2xl p-4 sm:p-5">
-              <h2 className="font-display text-xl font-bold">Support shortcuts</h2>
-              <div className="mt-4 grid gap-2">
-                {visibility.practice && (
-                  <Link href="/practice" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Practice <ArrowRight className="h-4 w-4" />
-                  </Link>
-                )}
-                {visibility.grades && (
-                  <Link href="/student/grades" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Progress <ArrowRight className="h-4 w-4" />
-                  </Link>
-                )}
-                {visibility.feedback && (
-                  <Link href="/student/notes" className="btn-secondary justify-between px-3 py-2 text-sm">
-                    Feedback <ArrowRight className="h-4 w-4" />
-                  </Link>
-                )}
-              </div>
-            </section>
-          )}
-
-          <section className="premium-surface rounded-2xl p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-xl font-bold">Schedule</h2>
-              </div>
-              <CalendarClock className="h-5 w-5 text-edsync-blue" />
-            </div>
-            <div className="mb-4 grid gap-2">
-              <input
-                value={studyTitle}
-                onChange={(event) => setStudyTitle(event.target.value)}
-                className="edsync-input py-2"
-                placeholder="Study block title"
-              />
-              <div className="flex gap-2">
-                <input
-                  type="datetime-local"
-                  value={studyAt}
-                  onChange={(event) => setStudyAt(event.target.value)}
-                  className="edsync-input py-2"
+            {individualCourses.map((course) => (
+              <Link
+                key={course.id}
+                className="premium-card flex items-center gap-3 p-4"
+                href={
+                  course.courseId
+                    ? "/student/lessons/" + course.courseId
+                    : "/catalog"
+                }
+              >
+                <BookOpenCheck size={22} />
+                <span className="flex-1 text-sm font-semibold">
+                  {course.title}
+                </span>
+                <ArrowRight size={16} />
+              </Link>
+            ))}
+            {active.length > 0 && (
+              <LessonGroup title="In progress" lessons={active} />
+            )}
+            {next.length > 0 && (
+              <LessonGroup title="Ready to start" lessons={next} />
+            )}
+            {completed.length > 0 && (
+              <details className="compact-guide">
+                <summary>Completed · {completed.length}</summary>
+                <div className="mt-4">
+                  <LessonGroup title="Completed" lessons={completed} />
+                </div>
+              </details>
+            )}
+            {!loading && !lessons.length && !individualCourses.length && (
+              <div className="premium-surface p-8 text-center">
+                <BookOpenCheck
+                  size={32}
+                  className="mx-auto mb-3 text-edsync-blue"
                 />
+                <h2 className="font-display">Your next chapter starts here</h2>
+                <Link className="btn-primary mt-4" href="/catalog">
+                  Find a course
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            )}
+            {catalogSuggestions.length > 0 && (
+              <details className="compact-guide">
+                <summary>Something new to explore</summary>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {catalogSuggestions.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={"/catalog/" + item.id}
+                      className="premium-card p-4"
+                    >
+                      <span className="text-xs text-edsync-blue">
+                        {item.price?.label ?? "Course"}
+                      </span>
+                      <p className="mt-2 text-sm font-semibold">{item.title}</p>
+                    </Link>
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
+        )}
+        {tab === "progress" && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <MetricTile
+                label="Courses completed"
+                value={completed.length}
+                icon={CheckCircle2}
+              />
+              <MetricTile
+                label="Total learning time"
+                value={formatMinutes(totalTimeSpent)}
+                icon={Timer}
+              />
+              <MetricTile
+                label="Learning goals"
+                value={goals.length}
+                icon={Target}
+              />
+            </div>
+            <section className="premium-surface p-5">
+              <div className="mb-4 flex justify-between">
+                <h2 className="font-display font-bold">Your goals</h2>
                 <button
-                  type="button"
-                  onClick={createStudyBlock}
-                  disabled={savingStudy}
-                  className="btn-secondary px-3"
-                  aria-label="Add study block"
+                  className="text-sm text-edsync-blue"
+                  onClick={() => void createGoal()}
                 >
-                  <Plus className="h-4 w-4" />
+                  + Add goal
                 </button>
               </div>
-            </div>
-            <div className="space-y-3">
-              {visibleEvents.length === 0 ? (
-                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No events yet.
+              {!goals.length && (
+                <p className="text-sm text-edsync-subtle">
+                  Start small. Set a goal for your next lesson.
                 </p>
-              ) : (
-                visibleEvents.slice(0, 5).map((event) => (
-                  <div
-                    key={event.id}
-                    className="rounded-2xl border border-edsync-border bg-edsync-surface p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-edsync-text">{event.title}</p>
-                        <p className="mt-1 text-xs text-edsync-subtle">
-                          {event.class_name || "Personal"} -{" "}
-                          {formatPlannerDate(event.due_at || event.starts_at)}
-                        </p>
-                      </div>
-                      <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                        {event.event_type.replace("_", " ")}
-                      </span>
-                    </div>
-                  </div>
-                ))
               )}
-            </div>
-          </section>
-
-          <details className="premium-surface rounded-2xl p-4 sm:p-5">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden">
-              <div>
-                <h2 className="font-display text-xl font-bold">Goals</h2>
-                <p className="text-sm text-edsync-subtle">{goals.length} active</p>
-              </div>
-              <button
-                type="button"
-                onClick={createGoal}
-                className="rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-sm font-semibold text-edsync-text hover:border-edsync-blue/50"
-              >
-                New
-              </button>
-            </summary>
-            <div className="mt-4 space-y-3">
-              {goals.length === 0 ? (
-                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No goals yet.
-                </p>
-              ) : (
-                goals.map((goal) => {
-                  const pct = Math.min(
-                    100,
-                    Math.round((goal.current_value / Math.max(1, goal.target_value)) * 100),
-                  );
-                  return (
-                    <div
-                      key={goal.id}
-                      className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-semibold text-edsync-text">
-                          {goal.title}
-                        </p>
-                        <span className="text-xs font-semibold text-edsync-emerald">
-                          {pct}%
-                        </span>
-                      </div>
-                      <div className="mt-3 progress-bar">
-                        <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
-                      </div>
-                      {goal.due_date && (
-                        <p className="mt-2 text-xs text-edsync-subtle">
-                          Due {new Date(goal.due_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </details>
-
-          <details className="premium-surface rounded-2xl p-4 sm:p-5">
-            <summary className="cursor-pointer list-none marker:hidden">
-              <h2 className="font-display text-xl font-bold">Reflections</h2>
-              <p className="mt-1 text-sm text-edsync-subtle">{reflections.length} recent notes</p>
-            </summary>
-            <div className="mt-4 space-y-3">
-              {reflections.length === 0 ? (
-                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No reflections yet.
-                </p>
-              ) : (
-                reflections.map((reflection) => (
-                  <div
-                    key={reflection.id}
-                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-edsync-blue">
-                        Confidence {reflection.confidence ?? "N/A"}/5
-                      </span>
-                      <span className="text-xs text-edsync-subtle">
-                        {new Date(reflection.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-sm leading-6 text-edsync-text">
-                      {reflection.reflection}
+              {goals.map((goal) => (
+                <div
+                  key={goal.id}
+                  className="border-t border-edsync-border py-4"
+                >
+                  <p className="text-sm font-semibold">{goal.title}</p>
+                  <progress
+                    className="mt-3 h-2 w-full accent-edsync-blue"
+                    aria-label={goal.title}
+                    max={Math.max(1, goal.target_value)}
+                    value={goal.current_value}
+                  />
+                  <p className="mt-1 text-xs text-edsync-subtle">
+                    {goal.current_value} of {goal.target_value}
+                  </p>
+                </div>
+              ))}
+            </section>
+            <details className="compact-guide">
+              <summary>Reflections · {reflections.length}</summary>
+              {reflections.map((item) => (
+                <div className="mt-4 text-sm" key={item.id}>
+                  <p>{item.reflection}</p>
+                  {item.next_step && (
+                    <p className="mt-1 text-edsync-subtle">
+                      Next: {item.next_step}
                     </p>
-                    {reflection.next_step && (
-                      <p className="mt-3 text-xs leading-5 text-edsync-subtle">
-                        Next: {reflection.next_step}
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </details>
-        </aside>
-      </div>
+                  )}
+                </div>
+              ))}
+            </details>
+            <Link href="/student/grades" className="btn-secondary">
+              View grades & feedback
+              <ArrowRight size={16} />
+            </Link>
+          </>
+        )}
+      </section>
     </div>
   );
 }
 
-function TimeSpentGauge({ minutes, percent }: { minutes: number; percent: number }) {
-  return (
-    <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 shadow-sm">
-      <div className="flex items-center gap-4">
-        <div
-          className="grid h-16 w-16 place-items-center rounded-full"
-          style={{
-            background: `conic-gradient(var(--blue) ${percent}%, color-mix(in srgb, var(--border) 72%, transparent) 0)`,
-          }}
-          aria-label={`${percent}% of weekly active learning target`}
-        >
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-edsync-card">
-            <Timer className="h-5 w-5 text-edsync-blue" />
-          </div>
-        </div>
-        <div>
-          <p className="font-display text-2xl font-bold">{formatMinutes(minutes)}</p>
-          <p className="text-xs text-edsync-subtle">active learning time</p>
-          <p className="mt-1 text-[11px] font-semibold text-edsync-blue">{percent}% weekly focus</p>
-        </div>
-      </div>
-    </div>
-  );
+function UsersIcon() {
+  return <GraduationCap size={18} className="text-edsync-blue" />;
 }
 
 function LessonGroup({
@@ -1014,7 +949,10 @@ function LessonCard({ lesson }: { lesson: AssignedLesson }) {
       : progress?.status === "in_progress"
         ? Math.min(
             100,
-            Math.round(((progress.sections_completed?.length || 0) / totalSections) * 100),
+            Math.round(
+              ((progress.sections_completed?.length || 0) / totalSections) *
+                100,
+            ),
           )
         : 0;
 
@@ -1027,7 +965,9 @@ function LessonCard({ lesson }: { lesson: AssignedLesson }) {
         <BookOpenCheck className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-edsync-text">{lesson.title}</p>
+        <p className="truncate font-semibold text-edsync-text">
+          {lesson.title}
+        </p>
         <p className="mt-1 text-xs text-edsync-subtle">
           {lesson.subject || "General"} - {lesson.estimated_duration} min -
           {lesson.difficulty}
