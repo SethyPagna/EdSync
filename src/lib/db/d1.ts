@@ -1,6 +1,10 @@
 import { assertTableName, deserializeRow, serializeRow, type TableName } from "./schema";
 import { sqlInPlaceholders } from "./sql";
-import { getD1QueryAdapter } from "./d1-adapter";
+import { getD1QueryAdapter, type D1Statement } from "./d1-adapter";
+
+export async function d1Batch(statements: D1Statement[]) {
+  await getD1QueryAdapter().batch(statements);
+}
 
 export type DataFilter =
   | { op: "eq" | "neq" | "gte" | "lte"; column: string; value: unknown }
@@ -170,17 +174,23 @@ export async function executeDataRequest(request: DataRequest): Promise<D1Result
         const keys = Object.keys(row);
         const values = Object.values(row);
         const conflictColumn = request.onConflict || "id";
+        const conflictColumns = conflictColumn.split(",").map((column) => column.trim());
+        const conflictTarget = conflictColumns.map(quoteIdentifier).join(", ");
         const updateSet = keys
-          .filter((key) => key !== conflictColumn)
+          .filter((key) => !conflictColumns.includes(key) && key !== "id")
           .map((key) => `${quoteIdentifier(key)} = excluded.${quoteIdentifier(key)}`)
           .join(", ");
         const sql =
           `INSERT INTO ${table} (${keys.map(quoteIdentifier).join(", ")}) VALUES (${keys.map(() => "?").join(", ")})` +
           (request.action === "upsert"
-            ? ` ON CONFLICT(${quoteIdentifier(conflictColumn)}) DO UPDATE SET ${updateSet}`
+            ? ` ON CONFLICT(${conflictTarget}) ${updateSet ? "DO UPDATE SET " + updateSet : "DO NOTHING"}`
             : "");
-        await d1Query(sql, values);
-        inserted.push(deserializeRow(request.table, row));
+        const persisted = await d1Query(`${sql} RETURNING *`, values);
+        if (!persisted.length && request.action === "upsert" && !updateSet) {
+          // DO NOTHING returns no row; callers still need the existing identity.
+          persisted.push(...await d1Query(`SELECT * FROM ${table} WHERE ${conflictColumns.map((column) => `${quoteIdentifier(column)} IS ?`).join(" AND ")} LIMIT 1`, conflictColumns.map((column) => row[column])));
+        }
+        inserted.push(deserializeRow(request.table, persisted[0] ?? row));
       }
 
       const data = request.single || request.maybeSingle ? inserted[0] : inserted;
