@@ -17,12 +17,13 @@ import { getPublicCopy } from "@/lib/public/i18n";
 import { publicLanguageHref, publicLanguageQuerySuffix, publicLanguageQueryValue } from "@/lib/public/languages";
 
 export async function generateMetadata({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ portalSlug: string }>;
+  searchParams?: Promise<CatalogSearchParams>;
 }): Promise<Metadata> {
   const { portalSlug } = await params;
-  const portal = await getOrganizationPortal(portalSlug);
+  const portal = await getOrganizationPortal(portalSlug, (await searchParams)?.tenant);
   return {
     title: portal ? `${portal.name} Catalog` : "Organization Catalog",
     description: portal
@@ -62,6 +63,7 @@ export default async function OrganizationPortalPage({
     minutes: "min",
   };
   const languageQuery = publicLanguageQuerySuffix(filters.language);
+  const portalHref = `/org/${portal.slug}${languageQuery}${languageQuery ? "&" : "?"}tenant=${encodeURIComponent(portal.tenant_slug)}`;
   const loginHref = publicLanguageHref("/auth/login", filters.language, { org: portal.tenant_slug });
   const signupHref = publicLanguageHref("/auth/signup", filters.language, { org: portal.tenant_slug });
 
@@ -103,6 +105,7 @@ export default async function OrganizationPortalPage({
               </div>
             </div>
             <form className="border-t border-edsync-border bg-edsync-surface/85 p-3">
+              <input type="hidden" name="tenant" value={portal.tenant_slug} />
               {publicLanguageQueryValue(filters.language) && (
                 <input type="hidden" name="language" value={publicLanguageQueryValue(filters.language) ?? ""} />
               )}
@@ -178,7 +181,7 @@ export default async function OrganizationPortalPage({
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="font-display text-2xl font-bold">{copy.courses}</h2>
             {hasFilters && (
-              <Link href={`/org/${portal.slug}${languageQuery}`} className="text-sm font-semibold text-edsync-blue hover:underline">
+              <Link href={portalHref} className="text-sm font-semibold text-edsync-blue hover:underline">
                 {copy.clearFilters}
               </Link>
             )}
