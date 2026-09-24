@@ -17,6 +17,12 @@ type VersionParts = [number, number, number];
 
 const allowedOutdatedPackages: AllowedOutdatedPackage[] = [
   {
+    latestMajor: 7,
+    name: "typescript",
+    reason: "The typescript-eslint parser bundled with eslint-config-next rejects TypeScript 7.0; retain the supported TypeScript 6 API.",
+    stableMajor: 6,
+  },
+  {
     latestMajor: 10,
     name: "eslint",
     reason: "ESLint 10 currently breaks the React plugin chain bundled by eslint-config-next.",
