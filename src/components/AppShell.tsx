@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/edsync/client";
+import CommandMenu from "@/components/CommandMenu";
 import NotificationMenu from "@/components/NotificationMenu";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle, { type ThemePreference } from "@/components/ThemeToggle";
-import { SECTION_ORDER_EVENT, type SectionOrderEventDetail } from "@/components/SectionOrderSettings";
+import {
+  SECTION_ORDER_EVENT,
+  type SectionOrderEventDetail,
+} from "@/components/SectionOrderSettings";
 import type { Profile } from "@/types";
 import { generateInitials } from "@/lib/utils";
 import {
@@ -17,6 +21,9 @@ import {
   type AdminViewMode,
 } from "@/lib/admin-view";
 import {
+  ArrowUpRight,
+  ChevronDown,
+  Compass,
   BarChart3,
   Bell,
   BookOpenCheck,
@@ -107,15 +114,31 @@ export function shellWorkspaceLabel({
   isAdminViewMode,
 }: ShellWorkspaceLabelInput) {
   if (role === "admin") return roleCopy.admin.label;
-  if (isAdminViewMode && adminViewMode) return adminViewModeLabel(adminViewMode);
+  if (isAdminViewMode && adminViewMode)
+    return adminViewModeLabel(adminViewMode);
   if (workspaceContext?.type === "organization") {
     return role === "teacher" ? "Org Creator" : "Org Learner";
   }
   return role === "teacher" ? roleCopy.teacher.label : roleCopy.student.label;
 }
 
-export function shellNavDisplayLabel({ label, role, workspaceContext }: ShellNavDisplayInput) {
-  if (workspaceContext?.type === "organization" || role === "admin") return label;
+export function shellNavDisplayLabel({
+  label,
+  role,
+  workspaceContext,
+}: ShellNavDisplayInput) {
+  const concise: Record<string, string> = {
+    Dashboard: "Home",
+    "Courses Studio": "Studio",
+    "Profile & Settings": "Settings",
+    "Course Access": "Classes",
+    "Individual Account": "Personal",
+    "AI Providers": "AI",
+    Certifications: "Certificates",
+  };
+  if (concise[label]) return concise[label];
+  if (workspaceContext?.type === "organization" || role === "admin")
+    return label;
 
   if (role === "teacher") {
     const creatorLabels: Record<string, string> = {
@@ -139,8 +162,13 @@ export function shellNavDisplayLabel({ label, role, workspaceContext }: ShellNav
   return learnerLabels[label] ?? label;
 }
 
-export function shellNavGroupDisplayLabel({ label, role, workspaceContext }: ShellNavDisplayInput) {
-  if (workspaceContext?.type === "organization" || role === "admin") return label;
+export function shellNavGroupDisplayLabel({
+  label,
+  role,
+  workspaceContext,
+}: ShellNavDisplayInput) {
+  if (workspaceContext?.type === "organization" || role === "admin")
+    return label;
   if (role === "teacher" && label === "Classroom") return "Course Ops";
   if (role === "student" && label === "Support") return "Progress";
   return label;
@@ -152,8 +180,12 @@ function sessionRoleFromCookie() {
     .split(";")
     .map((value) => value.trim())
     .find((value) => value.startsWith("edsync_role="));
-  const role = match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null;
-  return role === "admin" || role === "teacher" || role === "student" ? role : null;
+  const role = match
+    ? decodeURIComponent(match.split("=").slice(1).join("="))
+    : null;
+  return role === "admin" || role === "teacher" || role === "student"
+    ? role
+    : null;
 }
 
 function pathWithoutQuery(href: string) {
@@ -162,7 +194,13 @@ function pathWithoutQuery(href: string) {
 
 function appendAdminViewMode(href: string, mode: AdminViewMode | null) {
   if (!mode || href.includes("adminView=")) return href;
-  if (href.startsWith("/teacher") || href.startsWith("/student") || href === "/ai" || href === "/practice" || href === "/studio") {
+  if (
+    href.startsWith("/teacher") ||
+    href.startsWith("/student") ||
+    href === "/ai" ||
+    href === "/practice" ||
+    href === "/studio"
+  ) {
     return `${href}${href.includes("?") ? "&" : "?"}adminView=${mode}`;
   }
   return href;
@@ -171,13 +209,21 @@ function appendAdminViewMode(href: string, mode: AdminViewMode | null) {
 function workspaceContextFromStorage(): WorkspaceContext | null {
   if (typeof window === "undefined") return null;
   try {
-    const parsed = JSON.parse(window.localStorage.getItem("edsync-auth-workspace") || "null") as unknown;
+    const parsed = JSON.parse(
+      window.localStorage.getItem("edsync-auth-workspace") || "null",
+    ) as unknown;
     if (!parsed || typeof parsed !== "object") return null;
     const record = parsed as Record<string, unknown>;
     return {
       type: record.type === "organization" ? "organization" : "individual",
-      organizationCode: typeof record.organizationCode === "string" ? record.organizationCode : null,
-      organizationName: typeof record.organizationName === "string" ? record.organizationName : null,
+      organizationCode:
+        typeof record.organizationCode === "string"
+          ? record.organizationCode
+          : null,
+      organizationName:
+        typeof record.organizationName === "string"
+          ? record.organizationName
+          : null,
     };
   } catch {
     return null;
@@ -186,7 +232,9 @@ function workspaceContextFromStorage(): WorkspaceContext | null {
 
 function adminViewModeFromLocation() {
   if (typeof window === "undefined") return null;
-  return normalizeAdminViewMode(new URLSearchParams(window.location.search).get("adminView"));
+  return normalizeAdminViewMode(
+    new URLSearchParams(window.location.search).get("adminView"),
+  );
 }
 
 function adminViewModeFromCookie() {
@@ -195,7 +243,9 @@ function adminViewModeFromCookie() {
     .split(";")
     .map((value) => value.trim())
     .find((value) => value.startsWith("edsync-admin-view-mode="));
-  return normalizeAdminViewMode(match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null);
+  return normalizeAdminViewMode(
+    match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null,
+  );
 }
 
 function sidebarCollapsedFromStorage() {
@@ -204,15 +254,11 @@ function sidebarCollapsedFromStorage() {
 }
 
 function sidebarWidthClass(isCollapsed: boolean) {
-  return isCollapsed ? "lg:w-20" : "lg:w-72";
+  return isCollapsed ? "lg:w-20" : "lg:w-60";
 }
 
 function sidebarMarginClass(isCollapsed: boolean) {
-  return isCollapsed ? "lg:ml-20" : "lg:ml-72";
-}
-
-function shouldStartWithCompactSidebar(pathname: string | null) {
-  return pathname === "/studio" || pathname?.startsWith("/studio/");
+  return isCollapsed ? "lg:ml-20" : "lg:ml-60";
 }
 
 function sectionOrderStorageKey(role: AppShellProps["role"]) {
@@ -224,8 +270,12 @@ function sectionOrderStorageKey(role: AppShellProps["role"]) {
 function readSectionOrder(storageKey: string) {
   if (typeof window === "undefined") return [];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "[]") as unknown;
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    const parsed = JSON.parse(
+      window.localStorage.getItem(storageKey) || "[]",
+    ) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
   } catch {
     return [];
   }
@@ -246,14 +296,26 @@ function findNavItem(navItems: ShellNavItem[], reference: NavItemReference) {
     return navItems.find((item) => item.href === reference);
   }
 
-  return navItems.find((item) => item.href === reference.href && item.label === reference.label);
+  return navItems.find(
+    (item) => item.href === reference.href && item.label === reference.label,
+  );
 }
 
-function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: string[]) {
+function reorderGroupsByPreference(
+  groups: ShellNavGroup[],
+  preferredOrder: string[],
+) {
   if (preferredOrder.length === 0) return groups;
-  const orderIndex = new Map(preferredOrder.map((label, index) => [label, index]));
+  const orderIndex = new Map(
+    preferredOrder.map((label, index) => [label, index]),
+  );
   const groupRank = (group: ShellNavGroup) =>
-    Math.min(...group.items.map((item) => orderIndex.get(navOrderLabel(item)) ?? Number.MAX_SAFE_INTEGER));
+    Math.min(
+      ...group.items.map(
+        (item) =>
+          orderIndex.get(navOrderLabel(item)) ?? Number.MAX_SAFE_INTEGER,
+      ),
+    );
 
   return groups
     .map((group, originalIndex) => ({
@@ -261,12 +323,17 @@ function reorderGroupsByPreference(groups: ShellNavGroup[], preferredOrder: stri
       originalIndex,
       rank: groupRank(group),
       items: [...group.items].sort((left, right) => {
-        const leftRank = orderIndex.get(navOrderLabel(left)) ?? Number.MAX_SAFE_INTEGER;
-        const rightRank = orderIndex.get(navOrderLabel(right)) ?? Number.MAX_SAFE_INTEGER;
+        const leftRank =
+          orderIndex.get(navOrderLabel(left)) ?? Number.MAX_SAFE_INTEGER;
+        const rightRank =
+          orderIndex.get(navOrderLabel(right)) ?? Number.MAX_SAFE_INTEGER;
         return leftRank - rightRank;
       }),
     }))
-    .sort((left, right) => left.rank - right.rank || left.originalIndex - right.originalIndex)
+    .sort(
+      (left, right) =>
+        left.rank - right.rank || left.originalIndex - right.originalIndex,
+    )
     .map((group) => ({ label: group.label, items: group.items }));
 }
 
@@ -298,33 +365,97 @@ export const studentNavItems: ShellNavItem[] = [
 export const adminNavItems: ShellNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: UsersRound },
-  { href: "/admin/portals", label: "Portals", icon: GraduationCap, permission: "portals.manage", plan: "team" },
-  { href: "/admin/permissions", label: "Permissions", icon: ShieldCheck, permission: "users.manage", plan: "enterprise" },
+  {
+    href: "/admin/portals",
+    label: "Portals",
+    icon: GraduationCap,
+    permission: "portals.manage",
+    plan: "team",
+  },
+  {
+    href: "/admin/permissions",
+    label: "Permissions",
+    icon: ShieldCheck,
+    permission: "users.manage",
+    plan: "enterprise",
+  },
   { href: "/admin/governance", label: "Governance", icon: ShieldCheck },
   { href: "/admin/ai", label: "AI Providers", icon: Brain },
-  { href: "/admin/standards", label: "Standards", icon: FileCheck2, permission: "courses.author", plan: "team" },
-  { href: "/admin/certifications", label: "Certifications", icon: ClipboardList, permission: "courses.publish", plan: "team" },
-  { href: "/admin/automation", label: "Automation", icon: Sparkles, permission: "courses.publish", plan: "team" },
-  { href: "/admin/billing", label: "Billing", icon: CalendarClock, permission: "billing.manage", plan: "team" },
+  {
+    href: "/admin/standards",
+    label: "Standards",
+    icon: FileCheck2,
+    permission: "courses.author",
+    plan: "team",
+  },
+  {
+    href: "/admin/certifications",
+    label: "Certifications",
+    icon: ClipboardList,
+    permission: "courses.publish",
+    plan: "team",
+  },
+  {
+    href: "/admin/automation",
+    label: "Automation",
+    icon: Sparkles,
+    permission: "courses.publish",
+    plan: "team",
+  },
+  {
+    href: "/admin/billing",
+    label: "Billing",
+    icon: CalendarClock,
+    permission: "billing.manage",
+    plan: "team",
+  },
   { href: "/admin/email", label: "Email", icon: MessageSquareText },
   { href: "/admin/security", label: "Security", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: ClipboardList },
-  { href: "/student/dashboard?adminView=individual", label: "Individual Account", icon: UserRound },
+  {
+    href: "/student/dashboard?adminView=individual",
+    label: "Individual Account",
+    icon: UserRound,
+  },
   { href: "/admin/portals", label: "Organizations", icon: Building2 },
-  { href: "/teacher/dashboard?adminView=organization-teacher", label: "Org Creator", icon: GraduationCap },
-  { href: "/student/dashboard?adminView=organization-student", label: "Org Learner", icon: BookOpenCheck },
+  {
+    href: "/teacher/dashboard?adminView=organization-teacher",
+    label: "Org Creator",
+    icon: GraduationCap,
+  },
+  {
+    href: "/student/dashboard?adminView=organization-student",
+    label: "Org Learner",
+    icon: BookOpenCheck,
+  },
 ];
 
-export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNavItem[]): ShellNavGroup[] {
-  const pick = (items: NavItemReference[]) => items.map((item) => findNavItem(navItems, item)).filter(isShellNavItem);
+export function navGroupsForRole(
+  role: AppShellProps["role"],
+  navItems: ShellNavItem[],
+): ShellNavGroup[] {
+  const pick = (items: NavItemReference[]) =>
+    items.map((item) => findNavItem(navItems, item)).filter(isShellNavItem);
 
   if (role === "admin") {
     return [
       { label: "Home", items: pick(["/admin/dashboard"]) },
-      { label: "Platform", items: pick(["/admin/users", "/admin/portals", "/admin/permissions"]) },
+      {
+        label: "Platform",
+        items: pick(["/admin/users", "/admin/portals", "/admin/permissions"]),
+      },
       { label: "Learning Ops", items: pick(["/admin/email"]) },
       { label: "Intelligence", items: pick(["/admin/ai"]) },
-      { label: "Governance", items: pick(["/admin/governance", "/admin/standards", "/admin/certifications", "/admin/automation", "/admin/security"]) },
+      {
+        label: "Governance",
+        items: pick([
+          "/admin/governance",
+          "/admin/standards",
+          "/admin/certifications",
+          "/admin/automation",
+          "/admin/security",
+        ]),
+      },
       { label: "System", items: pick(["/admin/billing", "/admin/settings"]) },
       {
         label: "Owner Views",
@@ -342,7 +473,15 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
     return [
       { label: "Home", items: pick(["/teacher/dashboard"]) },
       { label: "Create", items: pick(["/studio"]) },
-      { label: "Course Ops", items: pick(["/teacher/work", "/teacher/notes", "/teacher/planner", "/teacher/students"]) },
+      {
+        label: "Course Ops",
+        items: pick([
+          "/teacher/work",
+          "/teacher/notes",
+          "/teacher/planner",
+          "/teacher/students",
+        ]),
+      },
       { label: "Support", items: pick(["/practice"]) },
       { label: "Insights", items: pick(["/teacher/analytics"]) },
       { label: "Account", items: pick(["/teacher/profile"]) },
@@ -351,9 +490,21 @@ export function navGroupsForRole(role: AppShellProps["role"], navItems: ShellNav
 
   return [
     { label: "Home", items: pick(["/student/dashboard"]) },
-    { label: "Learning", items: pick(["/student/lessons", "/student/classes", "/student/work", "/student/planner", "/student/notes"]) },
+    {
+      label: "Learning",
+      items: pick([
+        "/student/lessons",
+        "/student/classes",
+        "/student/work",
+        "/student/planner",
+        "/student/notes",
+      ]),
+    },
     { label: "Support", items: pick(["/practice", "/student/grades"]) },
-    { label: "Account", items: pick(["/student/notifications", "/student/profile"]) },
+    {
+      label: "Account",
+      items: pick(["/student/notifications", "/student/profile"]),
+    },
   ];
 }
 
@@ -365,19 +516,33 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
-  const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">("solo");
-  const [sessionRole, setSessionRole] = useState<"admin" | "teacher" | "student" | null>(null);
-  const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
-  const [requestedAdminViewMode, setRequestedAdminViewMode] = useState<AdminViewMode | null>(null);
+  const [planTier, setPlanTier] = useState<"solo" | "team" | "enterprise">(
+    "solo",
+  );
+  const [sessionRole, setSessionRole] = useState<
+    "admin" | "teacher" | "student" | null
+  >(null);
+  const [workspaceContext, setWorkspaceContext] =
+    useState<WorkspaceContext | null>(null);
+  const [requestedAdminViewMode, setRequestedAdminViewMode] =
+    useState<AdminViewMode | null>(null);
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
-  const copy = roleCopy[role];
-  const studioCompactSidebar = shouldStartWithCompactSidebar(pathname);
-  const displayCollapsed = studioCompactSidebar || collapsed;
-  const isAdminViewMode = role !== "admin" && (sessionRole === "admin" || requestedAdminViewMode !== null);
+  const mobileDialog = useRef<HTMLDialogElement>(null);
+  const [storageReady, setStorageReady] = useState(false);
+  const displayCollapsed = !mobileOpen && collapsed;
+  const isAdminViewMode =
+    role !== "admin" &&
+    (sessionRole === "admin" || requestedAdminViewMode !== null);
   const adminViewMode = isAdminViewMode
-    ? requestedAdminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student")
+    ? (requestedAdminViewMode ??
+      adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student"))
     : null;
-  const shellLabel = shellWorkspaceLabel({ role, workspaceContext, adminViewMode, isAdminViewMode });
+  const shellLabel = shellWorkspaceLabel({
+    role,
+    workspaceContext,
+    adminViewMode,
+    isAdminViewMode,
+  });
   const ShellIcon =
     role === "admin"
       ? ShieldCheck
@@ -393,16 +558,43 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     document.documentElement.classList.toggle("dark", useDark);
     queueMicrotask(() => {
       setCollapsed(sidebarCollapsedFromStorage());
+      setStorageReady(true);
       setSessionRole(sessionRoleFromCookie());
       setWorkspaceContext(workspaceContextFromStorage());
-      setRequestedAdminViewMode(adminViewModeFromLocation() ?? adminViewModeFromCookie());
+      setRequestedAdminViewMode(
+        adminViewModeFromLocation() ?? adminViewModeFromCookie(),
+      );
       setSectionOrder(readSectionOrder(sectionOrderStorageKey(role)));
     });
   }, [pathname, role]);
 
   useEffect(() => {
-    window.localStorage.setItem("edsync-sidebar-collapsed", String(collapsed));
-  }, [collapsed]);
+    if (storageReady)
+      window.localStorage.setItem(
+        "edsync-sidebar-collapsed",
+        String(collapsed),
+      );
+  }, [collapsed, storageReady]);
+
+  useEffect(() => {
+    const dialog = mobileDialog.current;
+    if (mobileOpen) dialog?.showModal();
+    else dialog?.close();
+    const previous = document.body.style.overflow;
+    if (mobileOpen) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMobileOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   useEffect(() => {
     const storageKey = sectionOrderStorageKey(role);
@@ -412,7 +604,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       if (detail?.storageKey === storageKey) setSectionOrder(detail.order);
     };
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === storageKey) setSectionOrder(readSectionOrder(storageKey));
+      if (event.key === storageKey)
+        setSectionOrder(readSectionOrder(storageKey));
     };
 
     window.addEventListener(SECTION_ORDER_EVENT, handleOrderChange);
@@ -427,7 +620,11 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     edsync.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       const actualRole = user.user_metadata?.role;
-      if (actualRole === "admin" || actualRole === "teacher" || actualRole === "student") {
+      if (
+        actualRole === "admin" ||
+        actualRole === "teacher" ||
+        actualRole === "student"
+      ) {
         setSessionRole(actualRole);
       }
       edsync
@@ -464,7 +661,9 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
   useEffect(() => {
     if (!isAdminViewMode) return;
 
-    const mode = adminViewMode ?? adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student");
+    const mode =
+      adminViewMode ??
+      adminViewModeForWorkspaceRole(role === "teacher" ? "teacher" : "student");
     document.cookie = `edsync-admin-view-mode=${mode}; path=/; max-age=3600; SameSite=Lax`;
     const path = `${window.location.pathname}${window.location.search}`;
     const auditKey = `edsync-admin-view-audit:${mode}:${path}`;
@@ -483,7 +682,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   useEffect(() => {
     if (role !== "admin") return;
-    document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
+    document.cookie =
+      "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
   }, [role]);
 
   const handleLogout = async () => {
@@ -491,7 +691,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
       await edsync.auth.signOut();
     } finally {
       window.localStorage.removeItem("edsync-auth-workspace");
-      document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
+      document.cookie =
+        "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "edsync_role=; path=/; max-age=0; SameSite=Lax";
       router.replace("/auth/login");
       router.refresh();
@@ -500,7 +701,10 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const handleThemeChange = (theme: ThemePreference) => {
     if (profile) {
-      const preferences = { ...(profile.preferences ?? { text_size: "medium" }), theme };
+      const preferences = {
+        ...(profile.preferences ?? { text_size: "medium" }),
+        theme,
+      };
       setProfile({ ...profile, preferences });
       edsync.from("profiles").update({ preferences }).eq("id", profile.id);
     }
@@ -508,7 +712,7 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
 
   const visibleNavGroups = useMemo(() => {
     const grantedPermissions = new Set(permissions);
-    const hiddenLegacyNavLabels = new Set(["Studio", "Practice", "AI Tutor"]);
+    const hiddenLegacyNavLabels = new Set(["AI Tutor"]);
 
     const groups = navGroupsForRole(role, navItems)
       .map((group) => ({
@@ -518,9 +722,11 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
             return false;
           }
           if (role === "admin") return true;
-          if (item.permission && !grantedPermissions.has(item.permission)) return false;
+          if (item.permission && !grantedPermissions.has(item.permission))
+            return false;
           if (item.plan === "team" && planTier === "solo") return false;
-          if (item.plan === "enterprise" && planTier !== "enterprise") return false;
+          if (item.plan === "enterprise" && planTier !== "enterprise")
+            return false;
           return true;
         }),
       }))
@@ -528,211 +734,293 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     return reorderGroupsByPreference(groups, sectionOrder);
   }, [navItems, permissions, planTier, role, sectionOrder]);
 
+  const commands = visibleNavGroups.flatMap((group) =>
+    group.items.map((item) => ({
+      ...item,
+      href: appendAdminViewMode(item.href, adminViewMode),
+      label: shellNavDisplayLabel({
+        label: item.label,
+        role,
+        workspaceContext,
+      }),
+      group: group.label,
+    })),
+  );
+  const currentPage =
+    commands.find((item) => pathname === pathWithoutQuery(item.href))?.label ??
+    "Workspace";
+  const primaryGroups = visibleNavGroups.filter(
+    (group) =>
+      !["Governance", "System", "Owner Views", "Account"].includes(group.label),
+  );
+  const primaryLinks = new Set(primaryGroups.flatMap((group) => group.items.map((item) => item.href)));
+  const secondaryGroups = visibleNavGroups.filter((group) =>
+    ["Governance", "System", "Owner Views", "Account"].includes(group.label),
+  ).map((group) => ({ ...group, items: group.items.filter((item) => !primaryLinks.has(item.href)) }))
+    .filter((group) => group.items.length > 0);
+
   const renderNavItem = (item: ShellNavItem) => {
     const Icon = item.icon;
-    const displayLabel = shellNavDisplayLabel({ label: item.label, role, workspaceContext });
+    const label = shellNavDisplayLabel({
+      label: item.label,
+      role,
+      workspaceContext,
+    });
     const itemPath = pathWithoutQuery(item.href);
-    const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
-    const href = appendAdminViewMode(item.href, adminViewMode);
+    const active = pathname === itemPath || pathname.startsWith(itemPath + "/");
     return (
       <Link
-        key={item.href}
-        href={href}
+        key={item.href + item.label}
+        href={appendAdminViewMode(item.href, adminViewMode)}
         onClick={() => setMobileOpen(false)}
-        title={displayCollapsed ? displayLabel : undefined}
-        className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
-          isActive
-            ? "premium-active"
-            : "border-transparent text-edsync-subtle hover:border-edsync-border hover:bg-edsync-card hover:text-edsync-text"
-        } ${displayCollapsed ? "mx-auto h-11 w-11 justify-center px-0 py-0" : ""}`}
+        title={label}
+        aria-label={label}
+        aria-current={active ? "page" : undefined}
+        className={
+          "workspace-nav-item " +
+          (active ? "is-active " : "") +
+          (displayCollapsed ? "is-collapsed" : "")
+        }
       >
-        <Icon className="h-5 w-5 flex-shrink-0" />
-        {!displayCollapsed && (
-          <span className="min-w-0 flex-1 truncate">{displayLabel}</span>
-        )}
+        <Icon size={18} aria-hidden="true" />
+        {!displayCollapsed && <span>{label}</span>}
       </Link>
     );
   };
 
   const sidebar = (
     <aside
-      className={`${sidebarWidthClass(displayCollapsed)} flex h-dvh w-[min(18rem,calc(100vw-1rem))] flex-col overflow-visible border-r border-edsync-border bg-edsync-surface shadow-xl shadow-slate-200/70 transition-all duration-300 dark:shadow-black/35`}
+      className={
+        "workspace-sidebar " + (displayCollapsed ? "is-collapsed" : "")
+      }
+      aria-label="Workspace navigation"
     >
-      {!displayCollapsed && (
-        <div className="flex items-center gap-3 border-b border-edsync-border bg-edsync-card/40 px-4 py-4">
-          <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-lg font-bold text-edsync-text">
-                EdSync
-              </p>
-              <p className="text-xs text-edsync-subtle">{shellLabel}</p>
-            </div>
-          </Link>
+      <div className="workspace-brand-row">
+        <Link
+          href={"/" + role + "/dashboard"}
+          className="workspace-brand"
+          aria-label="EdSync home"
+        >
+          <span className="workspace-mark">
+            <GraduationCap size={23} />
+          </span>
+          {!displayCollapsed && (
+            <strong>
+              EdSync<span className="workspace-brand-dot">.</span>
+            </strong>
+          )}
+        </Link>
+        {!displayCollapsed && (
           <button
+            className="workspace-icon lg:hidden"
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="rounded-lg p-2 text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:hidden"
             aria-label="Close menu"
           >
-            <X className="h-5 w-5" />
+            <X size={18} />
           </button>
-        </div>
-      )}
-
+        )}
+      </div>
       {!displayCollapsed && (
-        <div className="mx-4 mt-4 p-2">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-edsync-surface text-sm font-bold text-edsync-text shadow-sm">
-              {generateInitials(profile?.full_name || profile?.email || role)}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-edsync-text">
-                {profile?.full_name || "Getting ready"}
-              </p>
-              <p className="truncate text-xs text-edsync-subtle">
-                {profile?.email || shellLabel}
-              </p>
-            </div>
-          </div>
+        <div className="workspace-context">
+          <ShellIcon size={16} />
+          <span>{workspaceContext?.organizationName || shellLabel}</span>
         </div>
       )}
-
-      <nav className={`edsync-scrollbar-none flex-1 space-y-3 overflow-y-auto ${displayCollapsed ? "px-2 py-3" : "p-3"}`}>
+      <nav
+        className="workspace-nav edsync-scrollbar-none"
+        aria-label="Main navigation"
+      >
         {isAdminViewMode && (
           <Link
             href="/admin/dashboard"
-            onClick={() => {
-              document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
-              setMobileOpen(false);
-            }}
-            title={displayCollapsed ? "Back to Admin" : undefined}
-            className={`mb-2 flex items-center gap-3 rounded-xl border border-edsync-blue/25 bg-edsync-blue/10 px-3 py-3 text-sm font-bold text-edsync-blue shadow-sm transition-all hover:bg-edsync-blue/15 ${
-              displayCollapsed ? "justify-center" : ""
-            }`}
+            className="workspace-nav-item"
+            title="Back to admin"
+            onClick={() => setMobileOpen(false)}
           >
-            <ShieldCheck className="h-5 w-5 flex-shrink-0" />
-            {!displayCollapsed && <span>Back to Admin</span>}
+            <ShieldCheck size={18} />
+            {!displayCollapsed && <span>Back to admin</span>}
           </Link>
         )}
-        {visibleNavGroups.map((group) => {
-          const groupLabel = shellNavGroupDisplayLabel({ label: group.label, role, workspaceContext });
-          const groupActive = group.items.some((item) => {
-            const itemPath = pathWithoutQuery(item.href);
-            return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
-          });
-          return (
-            <div key={group.label} className={displayCollapsed ? "space-y-1" : "space-y-1.5"}>
-              {!displayCollapsed && (
-                <div
-                  className={`px-3 pt-2 text-xs font-bold uppercase tracking-wide ${
-                    groupActive ? "text-edsync-blue" : "text-edsync-subtle"
-                  }`}
-                >
-                  <span>{groupLabel}</span>
-                </div>
-              )}
-              <div className="space-y-1">{group.items.map(renderNavItem)}</div>
-            </div>
-          );
-        })}
-      </nav>
-
-      <div className={`border-t border-edsync-border ${displayCollapsed ? "p-2" : "p-3"}`}>
-        <div className={`mb-2 flex gap-2 ${displayCollapsed ? "flex-col items-center" : "items-center justify-between px-2 py-1"}`}>
-          {!displayCollapsed && <span className="min-w-0 text-sm font-semibold text-edsync-subtle">Workspace</span>}
-          <div className={`min-w-0 gap-1.5 ${displayCollapsed ? "grid grid-cols-1 [&_.premium-icon-button]:h-9 [&_.premium-icon-button]:w-9 [&_.premium-icon-button_svg]:h-4 [&_.premium-icon-button_svg]:w-4" : "flex items-center"}`}>
-            <NotificationMenu align="left" placement="top" />
-            <ThemeToggle compact onThemeChange={handleThemeChange} />
-            <LanguageMenu compact align="left" placement="top" />
+        {primaryGroups.map((group) => (
+          <div key={group.label} className="workspace-nav-group">
+            {group.items.map(renderNavItem)}
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setCollapsed((value) => !value)}
-          className={`hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-subtle hover:bg-edsync-card hover:text-edsync-text lg:flex ${displayCollapsed ? "justify-center" : ""}`}
-          aria-label={displayCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {displayCollapsed ? (
-            <PanelLeftOpen className="h-5 w-5" />
+        ))}
+        {secondaryGroups.map((group) =>
+          displayCollapsed ? (
+            <div key={group.label} className="workspace-nav-group">
+              {group.items.map(renderNavItem)}
+            </div>
           ) : (
-            <PanelLeftClose className="h-5 w-5" />
-          )}
-          {!displayCollapsed && "Collapse sidebar"}
-        </button>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-edsync-red hover:bg-edsync-red/10 ${displayCollapsed ? "justify-center" : ""}`}
-          aria-label="Sign out"
+            <details
+              key={group.label}
+              className="workspace-nav-more"
+              open={
+                group.items.some(
+                  (item) => pathname === pathWithoutQuery(item.href),
+                ) || undefined
+              }
+            >
+              <summary>
+                {group.label === "Account"
+                  ? "Account"
+                  : group.label === "Owner Views"
+                    ? "Switch view"
+                    : group.label}
+                <ChevronDown size={14} />
+              </summary>
+              <div>{group.items.map(renderNavItem)}</div>
+            </details>
+          ),
+        )}
+      </nav>
+      {!displayCollapsed && (
+        <Link href="/catalog" className="workspace-discover">
+          <Compass size={20} />
+          <span>
+            Find your next course<small>Explore the catalog</small>
+          </span>
+          <ArrowUpRight size={16} />
+        </Link>
+      )}
+      <div className="workspace-sidebar-footer">
+        <Link
+          href={role === "admin" ? "/admin/settings" : "/" + role + "/profile"}
+          className="workspace-profile"
+          title="Your profile"
         >
-          <LogOut className="h-5 w-5" />
-          {!displayCollapsed && "Sign out"}
-        </button>
+          <span className="workspace-avatar">
+            {generateInitials(profile?.full_name || role)}
+          </span>
+          {!displayCollapsed && (
+            <span>
+              {profile?.full_name ||
+                (role === "teacher"
+                  ? "Creator"
+                  : role === "student"
+                    ? "Learner"
+                    : "Administrator")}
+              <small>{shellLabel}</small>
+            </span>
+          )}
+        </Link>
+        <div className="workspace-footer-actions">
+          <button
+            type="button"
+            onClick={() => setCollapsed((value) => !value)}
+            className="workspace-icon hidden lg:inline-flex"
+            aria-label={
+              displayCollapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
+            title={displayCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {displayCollapsed ? (
+              <PanelLeftOpen size={17} />
+            ) : (
+              <PanelLeftClose size={17} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="workspace-icon"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <LogOut size={17} />
+          </button>
+        </div>
       </div>
     </aside>
   );
 
   return (
-    <div className="premium-shell min-h-screen text-edsync-text" data-shell-role={role}>
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-edsync-border bg-edsync-bg/95 px-4 py-3 shadow-sm backdrop-blur-xl lg:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="rounded-xl border border-edsync-border bg-edsync-card p-2 text-edsync-text shadow-sm"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <Link href="/" className="flex items-center gap-2 font-display font-bold" aria-label="EdSync home">
-          <ShellIcon className={`h-5 w-5 ${copy.accent}`} />
-          <span className="hidden sm:inline">EdSync</span>
-        </Link>
-        <div className="flex items-center gap-1.5">
-          <ThemeToggle compact onThemeChange={handleThemeChange} />
-          <LanguageMenu compact />
-          <NotificationMenu />
-        </div>
+    <div
+      className="premium-shell workspace-shell min-h-screen text-edsync-text"
+      data-shell-role={role}
+    >
+      <a href="#workspace-content" className="workspace-skip">
+        Skip to content
+      </a>
+      <div
+        className={
+          sidebarWidthClass(displayCollapsed) +
+          " fixed inset-y-0 left-0 z-40 hidden transition-all duration-200 lg:block"
+        }
+      >
+        {sidebar}
       </div>
-
-      <div>
-        <div className={`${sidebarWidthClass(displayCollapsed)} fixed inset-y-0 left-0 z-40 hidden transition-all duration-300 lg:block`}>
-          {sidebar}
-        </div>
-        {mobileOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+      <dialog
+        ref={mobileDialog}
+        className="workspace-mobile-dialog"
+        aria-label="Navigation"
+        onCancel={() => setMobileOpen(false)}
+        onClose={() => setMobileOpen(false)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setMobileOpen(false);
+        }}
+      >
+        {sidebar}
+      </dialog>
+      <div
+        className={
+          sidebarMarginClass(displayCollapsed) +
+          " workspace-body transition-[margin] duration-200"
+        }
+      >
+        <header className="workspace-topbar">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              aria-label="Close navigation overlay"
-              className="absolute inset-0 bg-black/60"
-              onClick={() => setMobileOpen(false)}
+              className="workspace-icon lg:hidden"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+            <span className="workspace-breadcrumb">
+              <span className="hidden sm:inline">
+                {role === "admin" ? "Platform" : "My workspace"}
+                <span className="mx-3 opacity-40">/</span>
+              </span>
+              <strong>{currentPage}</strong>
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CommandMenu
+              items={[
+                ...commands,
+                {
+                  href: "/catalog",
+                  label: "Explore courses",
+                  icon: Compass,
+                  group: "Discover",
+                },
+              ]}
             />
-            <div className="relative h-full w-[min(18rem,calc(100vw-1rem))]">{sidebar}</div>
+            <div className="hidden sm:block">
+              <LanguageMenu compact />
+            </div>
+            <ThemeToggle compact onThemeChange={handleThemeChange} />
+            <NotificationMenu />
+          </div>
+        </header>
+        {isAdminViewMode && (
+          <div className="workspace-preview-banner">
+            <ShieldCheck size={16} />
+            <span>
+              Previewing{" "}
+              {adminViewMode ? adminViewModeLabel(adminViewMode) : "workspace"}
+            </span>
+            <Link href="/admin/dashboard">Exit preview</Link>
           </div>
         )}
         <main
-          className={`${sidebarMarginClass(displayCollapsed)} min-h-screen overflow-x-hidden pt-16 transition-[margin] duration-300 lg:p-3 lg:pt-3`}
+          id="workspace-content"
+          tabIndex={-1}
+          className="workspace-content"
         >
-          {isAdminViewMode && (
-            <div className="sticky top-14 z-20 border-b border-edsync-blue/20 bg-edsync-blue/10 px-4 py-3 backdrop-blur lg:top-0 lg:px-6">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3 text-sm text-edsync-blue">
-                  <ShieldCheck className="h-5 w-5 flex-shrink-0" />
-                  <div>
-                    <p className="font-bold">Admin view mode</p>
-                    <p className="text-xs text-edsync-subtle">
-                      You are previewing the {adminViewMode ? adminViewModeLabel(adminViewMode) : "workspace"} with admin access.
-                    </p>
-                  </div>
-                </div>
-                <Link href="/admin/dashboard" className="btn-primary w-fit px-4 py-2 text-sm">
-                  Back to Platform Admin
-                </Link>
-              </div>
-            </div>
-          )}
           {children}
         </main>
       </div>
