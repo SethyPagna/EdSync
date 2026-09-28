@@ -11,6 +11,8 @@ import {
   type StoredQuizQuestion,
 } from "@/lib/grades/quiz-grading";
 import { validateGradePercent } from "@/lib/grades/validation";
+import { questionFeedback } from "@/lib/lessons/quiz";
+import { loadAccessibleLesson } from "@/lib/lessons/access";
 import { recordGradeEvent } from "@/lib/learning-events";
 import { resolveTenantContext } from "@/lib/tenancy";
 import {
@@ -224,8 +226,8 @@ async function gradeAttempt(input: {
   lesson: LessonRow;
   answers: QuizAnswers;
 }) {
-  const questions = await d1Query<StoredQuizQuestion>(
-    `SELECT id, question_type, options, correct_answer, points
+  const questions = await d1Query<StoredQuizQuestion & { explanation: string | null }>(
+    `SELECT id, question_type, options, correct_answer, explanation, points
        FROM quiz_questions
       WHERE lesson_id = ?
         AND is_final_quiz = 1
@@ -234,6 +236,12 @@ async function gradeAttempt(input: {
   );
   const grade = gradeQuiz(questions, input.answers);
   const summary = { score: grade.score, maxScore: grade.maxScore, percent: grade.percent, results: grade.results };
+  const reviewedResults = grade.results.map((result) => {
+    const question = questions.find((item) => item.id === result.questionId);
+    if (!question) return result;
+    const feedback = questionFeedback(question);
+    return { ...result, correctOptionIds: feedback.correctOptionIds, ...(feedback.explanation ? { explanation: feedback.explanation } : {}) };
+  });
   if (questions.length === 0) {
     return NextResponse.json({ data: { ...summary, status: "ungraded", recorded: false }, error: null });
   }
@@ -254,7 +262,7 @@ async function gradeAttempt(input: {
     last.pendingReview === grade.pendingReview
   ) {
     return NextResponse.json({
-      data: { ...summary, status, attemptNumber: last.attemptNumber, recorded: true, locked: false, replayed: true },
+      data: { ...summary, results: reviewedResults, status, attemptNumber: last.attemptNumber, recorded: true, locked: false, replayed: true },
       error: null,
     });
   }
@@ -304,6 +312,7 @@ async function gradeAttempt(input: {
   return NextResponse.json({
     data: {
       ...summary,
+      results: reviewedResults,
       status,
       attemptNumber,
       recorded: recorded.applied,
@@ -362,6 +371,13 @@ export async function POST(request: Request) {
   }
 
   const context = await resolveTenantContext(user);
+  const accessible = await loadAccessibleLesson({
+    lessonId,
+    tenantId: context.tenant.id,
+    tenantMember: Boolean(context.membership),
+    user,
+  });
+  if (!accessible) return jsonError("Lesson not found.", 404);
   const lesson = await loadStudentLesson(lessonId, context.tenant.id, user.id);
   if (!lesson) return jsonError("Lesson not found.", 404);
 
