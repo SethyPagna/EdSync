@@ -178,8 +178,7 @@ async function syncDeadlineEvent(input: {
   className: string | null;
 }) {
   const { record } = input;
-  // Archived work has no deadline in anyone's planner, even when it is edited.
-  if (!input.classId || !record.due_at || record.status === "archived") {
+  if (!input.classId || !record.due_at || record.status !== "published") {
     await d1Query("DELETE FROM schedule_events WHERE json_extract(metadata, '$.workItemId') = ?", [input.workItemId]);
     return;
   }
