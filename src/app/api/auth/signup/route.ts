@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { d1Query } from "@/lib/db/d1";
+import { d1Batch, d1Query } from "@/lib/db/d1";
+import type { D1Statement } from "@/lib/db/d1-adapter";
 import { validateDisplayName } from "@/lib/auth/display-name";
 import { hashPassword } from "@/lib/auth/password";
 import { validateSignupPassword } from "@/lib/auth/password-validation";
@@ -127,13 +128,22 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
-  const rate = await enforceRateLimit({
+  // A class onboarding together shares one egress IP, so this ceiling only stops floods.
+  const ipRate = await enforceRateLimit({
     request,
-    scope: "auth_signup",
-    limit: 5,
+    scope: "auth_signup_ip",
+    limit: 200,
     windowSeconds: 900,
-    subject: normalizedEmail,
   });
+  const rate = ipRate.allowed
+    ? await enforceRateLimit({
+        request,
+        scope: "auth_signup",
+        limit: 5,
+        windowSeconds: 900,
+        subject: normalizedEmail,
+      })
+    : ipRate;
   if (!rate.allowed) {
     return NextResponse.json(
       {
@@ -144,14 +154,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const joinedTenantRows = accountType === "organization" && organizationMode === "join"
+  const [joinedTenant] = accountType === "organization" && organizationMode === "join"
     ? await d1Query<{ id: string; name: string }>(
         "SELECT id, name FROM tenants WHERE lower(slug) = lower(?) AND status = 'active' LIMIT 1",
         [organizationCode],
       )
     : [];
 
-  if (accountType === "organization" && organizationMode === "join" && !joinedTenantRows[0]) {
+  if (accountType === "organization" && organizationMode === "join" && !joinedTenant) {
     return NextResponse.json({
       data: { user: null, session: null },
       error: { message: "Organization was not found. Check the code or ask your organization owner.", status: 404 },
@@ -178,76 +188,63 @@ export async function POST(request: Request) {
 
   const id = crypto.randomUUID();
   const passwordHash = await hashPassword(password);
+  const roleProfileId = roleProfileFor({ role, accountType, organizationMode: organizationMode ?? undefined });
+  const membershipSql = `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', '[]', datetime('now'), datetime('now'))`;
   let tenantContext: { id: string; slug: string; name: string } | null = null;
-
-  await d1Query(
-    `INSERT INTO auth_users (id, email, password_hash, created_at, updated_at)
+  const statements: D1Statement[] = [
+    {
+      sql: `INSERT INTO auth_users (id, email, password_hash, created_at, updated_at)
      VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
-    [id, normalizedEmail, passwordHash],
-  );
-  await d1Query(
-    `INSERT INTO profiles (
+      params: [id, normalizedEmail, passwordHash],
+    },
+    {
+      sql: `INSERT INTO profiles (
        id, email, full_name, role, subjects, interests, preferences, achievements,
        total_xp, streak_days, last_active_at, created_at, updated_at
      ) VALUES (?, ?, ?, ?, '[]', '[]', '{"theme":"light","text_size":"medium"}', '[]', 0, 0, datetime('now'), datetime('now'), datetime('now'))`,
-    [id, normalizedEmail, fullName, role],
-  );
+      params: [id, normalizedEmail, fullName, role],
+    },
+  ];
 
   if (accountType === "organization" && organizationMode === "create" && organizationName) {
     const tenantId = crypto.randomUUID();
-    const portalId = crypto.randomUUID();
     const tenantSlug = organizationSlug(organizationName);
-    await d1Query(
-      `INSERT INTO tenants (id, slug, name, owner_id, plan_tier, isolation_mode, settings, created_at, updated_at)
+    statements.push(
+      {
+        sql: `INSERT INTO tenants (id, slug, name, owner_id, plan_tier, isolation_mode, settings, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'solo', 'shared_d1', ?, datetime('now'), datetime('now'))`,
-      [
-        tenantId,
-        tenantSlug,
-        organizationName,
-        id,
-        JSON.stringify({ signup_source: "auth_signup", owner_role: role }),
-      ],
-    );
-    await d1Query(
-      `INSERT INTO tenant_portals (id, tenant_id, slug, name, audience, is_default, theme, catalog_settings, created_at, updated_at)
+        params: [
+          tenantId,
+          tenantSlug,
+          organizationName,
+          id,
+          JSON.stringify({ signup_source: "auth_signup", owner_role: role }),
+        ],
+      },
+      {
+        sql: `INSERT INTO tenant_portals (id, tenant_id, slug, name, audience, is_default, theme, catalog_settings, created_at, updated_at)
        VALUES (?, ?, 'main', ?, 'internal', 1, '{"theme":"light"}', '{}', datetime('now'), datetime('now'))`,
-      [portalId, tenantId, `${organizationName} Portal`],
-    );
-    await d1Query(
-      `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'active', '[]', datetime('now'), datetime('now'))`,
-      [
-        crypto.randomUUID(),
-        tenantId,
-        id,
-        roleProfileFor({ role, accountType, organizationMode: organizationMode ?? undefined }),
-      ],
+        params: [crypto.randomUUID(), tenantId, `${organizationName} Portal`],
+      },
+      { sql: membershipSql, params: [crypto.randomUUID(), tenantId, id, roleProfileId] },
     );
     tenantContext = { id: tenantId, slug: tenantSlug, name: organizationName };
   }
 
-  if (accountType === "organization" && organizationMode === "join" && joinedTenantRows[0]) {
-    if (!organizationCode) {
-      return NextResponse.json({
-        data: { user: null, session: null },
-        error: { message: "Organization code is required.", status: 400 },
-      }, { status: 400 });
-    }
-    await d1Query(
-      `INSERT INTO tenant_memberships (id, tenant_id, user_id, role_profile_id, status, permissions, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'active', '[]', datetime('now'), datetime('now'))`,
-      [
-        crypto.randomUUID(),
-        joinedTenantRows[0].id,
-        id,
-        roleProfileFor({ role, accountType, organizationMode: organizationMode ?? undefined }),
-      ],
-    );
-    tenantContext = {
-      id: joinedTenantRows[0].id,
-      slug: organizationCode,
-      name: joinedTenantRows[0].name,
-    };
+  if (joinedTenant && organizationCode) {
+    statements.push({ sql: membershipSql, params: [crypto.randomUUID(), joinedTenant.id, id, roleProfileId] });
+    tenantContext = { id: joinedTenant.id, slug: organizationCode, name: joinedTenant.name };
+  }
+
+  try {
+    await d1Batch(statements);
+  } catch (error) {
+    if (!(error instanceof Error) || !/UNIQUE/i.test(error.message)) throw error;
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "This email is already registered. Try signing in.", status: 409 },
+    }, { status: 409 });
   }
 
   const user: SessionUser = {
