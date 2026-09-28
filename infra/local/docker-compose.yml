@@ -1,17 +1,22 @@
+# Run from the repository root: npm run db:local (docker compose -f infra/local/docker-compose.yml up -d).
+# Compose resolves relative paths against this file's folder, so ../.. is the repository root.
 services:
   edsync:
-    image: node:20-alpine
+    image: node:24-alpine
     container_name: edsync
     working_dir: /app
-    command: sh -c "npm install && npm run build && npm run start"
+    command: sh -c "npm ci && npm run build && npm run start"
     ports:
       - "3000:3000"
     env_file:
-      - .env.local
+      - ../../.env.local
     environment:
       DEPLOYMENT_TARGET: docker
     volumes:
-      - ./:/app
+      - ../..:/app
+      # Keep Linux-native dependencies and build output inside the container, away from the host checkout.
+      - /app/node_modules
+      - /app/.next
     restart: unless-stopped
 
   cloudflared:
@@ -19,5 +24,5 @@ services:
     container_name: edsync-cloudflared
     command: tunnel --no-autoupdate run
     env_file:
-      - .env.local
+      - ../../.env.local
     restart: unless-stopped
