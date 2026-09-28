@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Bell, BellOff, CalendarClock, CheckCircle2, ClipboardList, GraduationCap, MessageSquareText, Sparkles } from "lucide-react";
+import { Bell, BellOff, CheckCheck, Settings2 } from "lucide-react";
+import { Button, EmptyState, PageHeader, Segmented, Skeleton, Switch, usePersistentState } from "@/components/ui";
 import {
   STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY,
   areStudentNotificationsPaused,
@@ -11,148 +12,67 @@ import {
   studentNotificationToggleOptions,
   type StudentDashboardVisibility,
 } from "@/lib/student/dashboard-preferences";
+import type { Notification } from "@/types";
 
-const previewItems = [
-  { key: "newContent", title: "New course content", detail: "A creator publishes a course update or new module.", icon: Sparkles },
-  { key: "assignments", title: "Work updates", detail: "Projects, quizzes, and practice work assigned to you.", icon: ClipboardList },
-  { key: "deadlines", title: "Deadlines", detail: "Due dates, study blocks, and planner events.", icon: CalendarClock },
-  { key: "grades", title: "Progress posted", detail: "Visible progress updates and score releases.", icon: GraduationCap },
-  { key: "feedback", title: "Feedback", detail: "Creator comments and improvement notes.", icon: MessageSquareText },
-] as const;
+type Filter = "all" | "unread";
 
-function readVisibility() {
-  if (typeof window === "undefined") return defaultStudentDashboardVisibility;
-  try {
-    return mergeStudentDashboardVisibility(
-      JSON.parse(window.localStorage.getItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY) || "null") as Partial<StudentDashboardVisibility> | null,
-    );
-  } catch {
-    return defaultStudentDashboardVisibility;
-  }
+function message(error: unknown) {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return "Notifications are unavailable.";
+}
+
+async function notificationRequest<T>(init?: RequestInit): Promise<T> {
+  const response = await fetch("/api/notifications", { credentials: "include", cache: "no-store", ...init });
+  const payload = await response.json().catch(() => null) as { data?: T; error?: unknown } | null;
+  if (!response.ok || payload?.data === undefined) throw new Error(message(payload?.error));
+  return payload.data;
 }
 
 export default function StudentNotificationsPage() {
-  const [visibility, setVisibility] = useState<StudentDashboardVisibility>(readVisibility);
+  const [items, setItems] = useState<Notification[]>([]);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [storedVisibility, setVisibility] = usePersistentState<StudentDashboardVisibility>(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY, defaultStudentDashboardVisibility);
+  const visibility = mergeStudentDashboardVisibility(storedVisibility);
+  const paused = areStudentNotificationsPaused(visibility);
+  const unread = items.filter((item) => !item.read_at).length;
+  const shown = filter === "unread" ? items.filter((item) => !item.read_at) : items;
 
-  const paused = useMemo(() => areStudentNotificationsPaused(visibility), [visibility]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try { setItems(await notificationRequest<Notification[]>()); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Notifications are unavailable."); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
-  const updateVisibility = (key: keyof StudentDashboardVisibility) => {
-    setVisibility((current) => {
-      const next = { ...current, [key]: !current[key] };
-      window.localStorage.setItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const markRead = async (id?: string) => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await notificationRequest<{ updated: true }>({ method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(id ? { id } : { all: true }) });
+      const now = new Date().toISOString();
+      setItems((current) => current.map((item) => !id || item.id === id ? { ...item, read_at: item.read_at ?? now } : item));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not mark as read."); }
+    finally { setBusy(false); }
   };
-
-  const setAll = (enabled: boolean) => {
-    const next = Object.fromEntries(
-      Object.keys(defaultStudentDashboardVisibility).map((key) => [key, enabled]),
-    ) as StudentDashboardVisibility;
-    window.localStorage.setItem(STUDENT_DASHBOARD_VISIBILITY_STORAGE_KEY, JSON.stringify(next));
-    setVisibility(next);
-  };
+  const toggle = (key: keyof StudentDashboardVisibility) => setVisibility((current) => { const resolved = mergeStudentDashboardVisibility(current); return { ...resolved, [key]: !resolved[key] }; });
+  const setAll = (enabled: boolean) => setVisibility(Object.fromEntries(Object.keys(defaultStudentDashboardVisibility).map((key) => [key, enabled])) as StudentDashboardVisibility);
 
   return (
-    <div className="page-shell max-w-6xl space-y-5">
-      <section className="premium-panel group rounded-2xl p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Learner preferences</p>
-            <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Notifications</h1>
-            <p className="edsync-hover-detail max-w-2xl">
-              Choose which updates appear on your dashboard. These settings stay personal to your browser and keep the learner portal quieter.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setAll(false)} className="btn-secondary justify-center px-4 py-2 text-sm">
-              <BellOff className="h-4 w-4" />
-              Pause all
-            </button>
-            <button type="button" onClick={() => setAll(true)} className="btn-primary justify-center px-4 py-2 text-sm">
-              <Bell className="h-4 w-4" />
-              Enable all
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {paused && (
-        <section className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-4">
-          <div className="flex items-start gap-3">
-            <BellOff className="mt-0.5 h-5 w-5 text-edsync-subtle" />
-            <div>
-              <p className="font-semibold text-edsync-text">Notifications are paused</p>
-              <p className="mt-1 text-sm text-edsync-subtle">All updates are hidden.</p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="premium-surface group rounded-2xl p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-xl font-bold">Dashboard toggles</h2>
-              <p className="edsync-hover-detail">Tap a tile to show or hide that update type.</p>
-            </div>
-            <span className={`badge ${paused ? "bg-edsync-red/10 text-edsync-red" : "bg-edsync-emerald/10 text-edsync-emerald"}`}>
-              {paused ? "paused" : "active"}
-            </span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {studentNotificationToggleOptions.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => updateVisibility(option.key)}
-                aria-pressed={visibility[option.key]}
-                className={`group rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${
-                  visibility[option.key]
-                    ? "border-edsync-blue/35 bg-edsync-blue/10 shadow-sm"
-                    : "border-edsync-border bg-edsync-surface text-edsync-subtle"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-edsync-text">{option.label}</p>
-                    <p className="edsync-hover-detail">{option.description}</p>
-                  </div>
-                  <span className={`mt-1 h-3 w-3 rounded-full ${visibility[option.key] ? "bg-edsync-blue" : "bg-edsync-muted"}`} />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <aside className="space-y-3">
-          <div className="premium-surface group rounded-2xl p-4">
-            <h2 className="font-display text-xl font-bold">Preview</h2>
-            <p className="edsync-hover-detail">Dashboard updates will stay compact and respect these choices.</p>
-            <Link href="/student/dashboard" className="btn-secondary mt-4 w-full justify-between px-3 py-2 text-sm">
-              Back to dashboard
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {previewItems.map((item) => {
-              const Icon = item.icon;
-              const enabled = visibility[item.key];
-              return (
-                <div key={item.key} className={`group rounded-2xl border p-3 ${enabled ? "border-edsync-border bg-edsync-card" : "border-dashed border-edsync-border bg-edsync-surface opacity-70"}`}>
-                  <div className="flex items-start gap-3">
-                    <Icon className={`mt-0.5 h-4 w-4 ${enabled ? "text-edsync-blue" : "text-edsync-subtle"}`} />
-                    <div>
-                      <p className="text-sm font-semibold text-edsync-text">{item.title}</p>
-                      <p className="edsync-hover-detail">{item.detail}</p>
-                    </div>
-                    {enabled && <CheckCircle2 className="ml-auto h-4 w-4 flex-shrink-0 text-edsync-emerald" />}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </aside>
-      </section>
+    <div className="page page-narrow">
+      <PageHeader title="Notifications" count={unread} actions={unread > 0 ? <Button icon={CheckCheck} size="sm" onClick={() => void markRead()} loading={busy}>Mark all read</Button> : undefined} />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2"><Segmented value={filter} onChange={setFilter} ariaLabel="Notification filter" options={[{ value: "all", label: "All" }, { value: "unread", label: "Unread", count: unread }]} /><details className="relative"><summary className="btn btn-secondary btn-sm cursor-pointer list-none"><Settings2 className="size-4" />Preferences</summary><div className="absolute right-0 z-10 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-line bg-elevated p-4 shadow-soft"><div className="mb-3 flex gap-2"><Button size="sm" icon={BellOff} onClick={() => setAll(false)} disabled={paused}>Pause</Button><Button size="sm" icon={Bell} onClick={() => setAll(true)} disabled={!paused}>Enable all</Button></div><div className="space-y-3 border-t border-line pt-3">{studentNotificationToggleOptions.map((option) => <Switch key={option.key} checked={visibility[option.key]} onChange={() => toggle(option.key)} label={option.label} />)}</div></div></details></div>
+      {error && <div role="alert" className="mb-4 flex items-center justify-between gap-2 rounded-lg bg-danger-soft p-3 text-sm text-danger"><span>{error}</span><Button size="sm" onClick={() => void load()}>Retry</Button></div>}
+      {loading ? <div className="space-y-2">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-20 rounded-lg" />)}</div> : shown.length ? <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">{shown.map((item) => {
+        const href = item.action_url?.startsWith("/") && !item.action_url.startsWith("//") ? item.action_url : null;
+        return <article key={item.id} className={`flex items-start gap-3 p-4 ${item.read_at ? "" : "bg-accent-soft/40"}`}><span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.read_at ? "bg-line-strong" : "bg-accent"}`} aria-label={item.read_at ? "Read" : "Unread"} /><div className="min-w-0 flex-1">{href ? <Link href={href} onClick={() => { if (!item.read_at) void markRead(item.id); }} className="text-sm font-medium text-fg hover:text-accent">{item.title}</Link> : <h2 className="text-sm font-medium text-fg">{item.title}</h2>}<p className="mt-1 text-sm text-fg-muted">{item.message}</p><p className="mt-1.5 text-xs text-fg-faint">{new Date(item.created_at).toLocaleString()}</p></div>{!item.read_at && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void markRead(item.id)}>Read</Button>}</article>;
+      })}</div> : !error ? <EmptyState icon={Bell} title={filter === "unread" ? "All caught up" : "No notifications yet"} compact /> : null}
     </div>
   );
 }
