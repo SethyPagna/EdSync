@@ -14,13 +14,27 @@ function main() {
   loadEnvFile(".env.local");
   loadEnvFile(".env");
 
-  const hasCloudflareAuth =
-    process.env.CLOUDFLARE_API_TOKEN ||
-    (process.env.CLOUDFLARE_EMAIL && (process.env.CLOUDFLARE_GLOBAL_API_KEY || process.env.CLOUDFLARE_API_KEY));
-
-  if (!process.env.CLOUDFLARE_ACCOUNT_ID || !hasCloudflareAuth) {
-    throw new Error("CLOUDFLARE_ACCOUNT_ID and either CLOUDFLARE_API_TOKEN or Cloudflare email/global key are required.");
+  if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
+    throw new Error("CLOUDFLARE_ACCOUNT_ID is required. Wrangler can authenticate through its OAuth login or an API token.");
   }
+
+  run("npx", [
+    "opennextjs-cloudflare",
+    "build",
+    "--config",
+    APP_WORKER_CONFIG_PATH,
+    "--openNextConfigPath",
+    OPEN_NEXT_CONFIG_PATH,
+  ]);
+
+  run("npx", [
+    "opennextjs-cloudflare",
+    "deploy",
+    "--config",
+    APP_WORKER_CONFIG_PATH,
+    "--",
+    "--keep-vars",
+  ]);
 
   if (process.env.CLOUDFLARE_SKIP_SECRET_SYNC === "1") {
     console.log("Skipping Worker secret sync because CLOUDFLARE_SKIP_SECRET_SYNC=1.");
@@ -41,24 +55,6 @@ function main() {
       putWorkerSecret(key, APP_WORKER_CONFIG_PATH);
     }
   }
-
-  run("npx", [
-    "opennextjs-cloudflare",
-    "build",
-    "--config",
-    APP_WORKER_CONFIG_PATH,
-    "--openNextConfigPath",
-    OPEN_NEXT_CONFIG_PATH,
-  ]);
-
-  run("npx", [
-    "opennextjs-cloudflare",
-    "deploy",
-    "--config",
-    APP_WORKER_CONFIG_PATH,
-    "--",
-    "--keep-vars",
-  ]);
 
   console.log("Cloudflare Worker deployed for edsync.");
 }
