@@ -29,6 +29,7 @@ async function readEnrollPayload(response: Response): Promise<EnrollPayload> {
 export default function CatalogEnrollButton({
   productId,
   isFree,
+  available = true,
   language,
   labels = {
     enrolled: "Enrolled",
@@ -42,10 +43,12 @@ export default function CatalogEnrollButton({
     manualSuccess: "Checkout request created.",
     activeSuccess: "You already have access.",
     enrolledSuccess: "Enrollment is active.",
+    unavailable: "Unavailable",
   },
 }: {
   productId: string;
   isFree: boolean;
+  available?: boolean;
   language?: string | null;
   labels?: {
     enrolled: string;
@@ -59,6 +62,7 @@ export default function CatalogEnrollButton({
     manualSuccess: string;
     activeSuccess: string;
     enrolledSuccess: string;
+    unavailable?: string;
   };
 }) {
   const router = useRouter();
@@ -122,7 +126,7 @@ export default function CatalogEnrollButton({
     <button
       type="button"
       onClick={enroll}
-      disabled={loading || done}
+      disabled={loading || done || !available}
       className="btn-primary w-full justify-center py-3.5"
       aria-busy={loading}
     >
@@ -131,6 +135,8 @@ export default function CatalogEnrollButton({
           <CheckCircle2 className="h-4 w-4" />
           {doneLabel}
         </>
+      ) : !available ? (
+        labels.unavailable ?? "Unavailable"
       ) : loading ? (
         labels.working
       ) : (
