@@ -24,19 +24,25 @@ function hashValue(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function getClientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip") ||
-    forwarded ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+// Forwarded headers are client-controlled unless a known proxy sets them, so they are opt-in.
+export function getClientIp(request: Request) {
+  const cloudflareIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (cloudflareIp) return cloudflareIp;
+  if (process.env.TRUST_PROXY_HEADERS !== "true") return null;
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return forwarded?.at(-1) ?? null;
 }
 
-export function getClientFingerprint(request: Request, subject?: string | null) {
-  const userAgent = request.headers.get("user-agent") || "unknown-agent";
-  return hashValue(`${getClientIp(request)}:${userAgent}:${subject || ""}`);
+export function rateLimitKey(request: Request, subject?: string | null) {
+  if (subject) return hashValue(`subject:${subject}`);
+  const ip = getClientIp(request);
+  return ip ? hashValue(`ip:${ip}`) : null;
 }
 
 export async function logSecurityEvent(input: SecurityEventInput) {
@@ -64,47 +70,50 @@ export async function logSecurityEvent(input: SecurityEventInput) {
   );
 }
 
+/**
+ * Counts one request against `scope`. With a subject (or userId) the bucket is that subject on
+ * any IP; without one it is the client IP, and requests with no trustworthy IP are not counted.
+ */
 export async function enforceRateLimit(options: RateLimitOptions) {
+  const subject = options.subject ?? options.userId ?? null;
+  const subjectHash = rateLimitKey(options.request, subject);
+  if (!subjectHash) return { allowed: true, retryAfter: 0 };
+
   const now = Date.now();
-  const windowStartMs = Math.floor(now / (options.windowSeconds * 1000)) * options.windowSeconds * 1000;
+  const windowMs = options.windowSeconds * 1000;
+  const windowStartMs = Math.floor(now / windowMs) * windowMs;
   const windowStart = new Date(windowStartMs).toISOString();
-  const subjectHash = getClientFingerprint(options.request, options.subject ?? options.userId ?? null);
-  const id = `${options.scope}:${subjectHash}`;
 
-  const [current] = await d1Query<{ count: number; window_start: string }>(
-    "SELECT count, window_start FROM rate_limits WHERE scope = ? AND subject_hash = ? LIMIT 1",
-    [options.scope, subjectHash],
-  );
-
-  const nextCount = current?.window_start === windowStart ? Number(current.count || 0) + 1 : 1;
-  await d1Query(
+  const [row] = await d1Query<{ count: number }>(
     `INSERT INTO rate_limits (id, scope, subject_hash, window_start, count, updated_at)
-     VALUES (?, ?, ?, ?, ?, datetime('now'))
+     VALUES (?, ?, ?, ?, 1, datetime('now'))
      ON CONFLICT(scope, subject_hash) DO UPDATE SET
+       count = CASE WHEN rate_limits.window_start = excluded.window_start THEN rate_limits.count + 1 ELSE 1 END,
        window_start = excluded.window_start,
-       count = excluded.count,
-       updated_at = datetime('now')`,
-    [id, options.scope, subjectHash, windowStart, nextCount],
+       updated_at = datetime('now')
+     RETURNING count`,
+    [`${options.scope}:${subjectHash}`, options.scope, subjectHash, windowStart],
   );
+  const count = Number(row?.count ?? 1);
 
-  if (nextCount > options.limit) {
+  if (count > options.limit) {
     await logSecurityEvent({
       request: options.request,
       userId: options.userId,
       eventType: "rate_limit_exceeded",
       severity: "warning",
-      subject: options.subject ?? options.userId ?? null,
+      subject,
       message: `Rate limit exceeded for ${options.scope}.`,
       metadata: {
         scope: options.scope,
         limit: options.limit,
         windowSeconds: options.windowSeconds,
-        count: nextCount,
+        count,
       },
     });
     return {
       allowed: false,
-      retryAfter: Math.max(1, Math.ceil((windowStartMs + options.windowSeconds * 1000 - now) / 1000)),
+      retryAfter: Math.max(1, Math.ceil((windowStartMs + windowMs - now) / 1000)),
     };
   }
 
