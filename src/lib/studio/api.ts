@@ -47,6 +47,15 @@ export async function listStudioItems(kind?: StudioItemKind, includeArchived = f
   return data.items;
 }
 
+export async function getStudioItem(id: string, includeArchived = false) {
+  const params = new URLSearchParams({ id });
+  if (includeArchived) params.set("includeArchived", "true");
+  const data = await fetch(`/api/studio?${params.toString()}`, { credentials: "include" }).then(
+    parseStudioResponse<{ item: StudioServerItem }>,
+  );
+  return data.item;
+}
+
 export async function saveStudioItem(input: {
   id?: string;
   kind: StudioItemKind;
