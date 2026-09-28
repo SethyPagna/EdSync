@@ -1,11 +1,13 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/edsync/client";
-import type { Lesson, Profile, StudentProgress } from "@/types";
-import { BarChart3, CheckCircle2, Download, FileSpreadsheet, Timer, UsersRound } from "lucide-react";
 
-interface StudentReport {
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/edsync/client";
+import { averageScore, csvCell } from "@/components/teacher-home/metrics";
+import { Badge, Button, Card, EmptyState, PageHeader, Section, Skeleton, StatTile, Toolbar } from "@/components/ui";
+import type { Lesson, Profile, StudentProgress } from "@/types";
+import { BookOpen, CheckCircle2, Clock3, Download, FileSpreadsheet, UsersRound } from "lucide-react";
+
+type StudentReport = {
   id: string;
   name: string;
   email: string;
@@ -16,358 +18,164 @@ interface StudentReport {
   timeSpent: number;
   sectionsCompleted: number;
   knowledgeGaps: string[];
+};
+
+function statusLabel(status: string) {
+  return status === "completed" ? "Completed" : status === "in_progress" ? "In progress" : "Not started";
 }
 
 export default function TeacherReports() {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [selectedLesson, setSelectedLesson] = useState<string>("");
-  const [reports, setReports] = useState<StudentReport[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingLessons, setLoadingLessons] = useState(true);
   const edsync = useMemo(() => createClient(), []);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState("");
+  const [reports, setReports] = useState<StudentReport[]>([]);
+  const [loadingLessons, setLoadingLessons] = useState(true);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [error, setError] = useState("");
 
   const loadLessons = useCallback(async () => {
     setLoadingLessons(true);
+    setError("");
     try {
-      const {
-        data: { user },
-      } = await edsync.auth.getUser();
-      if (!user) return;
-      const { data } = await edsync
-        .from("lessons")
-        .select("*")
-        .eq("teacher_id", user.id)
-        .order("created_at", { ascending: false });
-      const list: Lesson[] = data || [];
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to view reports.");
+      const result = await edsync.from("lessons").select("*").eq("teacher_id", user.id).order("created_at", { ascending: false });
+      if (result.error) throw new Error("Could not load courses.");
+      const list = (result.data || []) as Lesson[];
       setLessons(list);
-      if (list.length > 0) setSelectedLesson((current) => current || list[0].id);
+      setSelectedLesson((current) => list.some((lesson) => lesson.id === current) ? current : list[0]?.id || "");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not load courses.");
     } finally {
       setLoadingLessons(false);
     }
   }, [edsync]);
 
   const loadReport = useCallback(async (lessonId: string) => {
-    setLoading(true);
+    setLoadingReport(true);
+    setError("");
+    setReports([]);
     try {
-      const { data: progressRows } = await edsync
-        .from("student_progress")
-        .select("*")
-        .eq("lesson_id", lessonId);
-
-      if (!progressRows || progressRows.length === 0) {
-        setReports([]);
-        return;
-      }
-
-      const progressList: StudentProgress[] = progressRows;
-      const studentIds = progressList.map((progress) => progress.student_id);
-
-      const { data: profileRows } = await edsync
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", studentIds);
-
-      const profileMap = new Map(
-        ((profileRows || []) as Pick<Profile, "id" | "full_name" | "email">[]).map(
-          (profile) => [profile.id, profile],
-        ),
-      );
-
-      const built: StudentReport[] = progressList.map((progress) => {
-        const profile = profileMap.get(progress.student_id);
-        return {
-          id: progress.student_id,
-          name: profile?.full_name || "Unknown",
-          email: profile?.email || "",
-          status: progress.status,
-          score: progress.score,
-          diagnosticScore: progress.diagnostic_score,
-          finalScore: progress.final_quiz_score,
-          timeSpent: progress.time_spent || 0,
-          sectionsCompleted: (progress.sections_completed || []).length,
-          knowledgeGaps: progress.knowledge_gaps || [],
-        };
-      });
-
-      setReports(built.sort((a, b) => (b.score || 0) - (a.score || 0)));
+      const progressRes = await edsync.from("student_progress").select("*").eq("lesson_id", lessonId);
+      if (progressRes.error) throw new Error("Could not load learner results.");
+      const progress = (progressRes.data || []) as StudentProgress[];
+      if (progress.length === 0) { setReports([]); return; }
+      const studentIds = [...new Set(progress.map((row) => row.student_id))];
+      const profilesRes = await edsync.from("profiles").select("id, full_name, email").in("id", studentIds);
+      if (profilesRes.error) throw new Error("Could not load learner details.");
+      const profiles = new Map(((profilesRes.data || []) as Pick<Profile, "id" | "full_name" | "email">[]).map((row) => [row.id, row]));
+      const rows = progress.map((row): StudentReport => ({
+        id: row.student_id,
+        name: profiles.get(row.student_id)?.full_name || "Learner",
+        email: profiles.get(row.student_id)?.email || "",
+        status: row.status,
+        score: row.score,
+        diagnosticScore: row.diagnostic_score,
+        finalScore: row.final_quiz_score,
+        timeSpent: row.time_spent || 0,
+        sectionsCompleted: row.sections_completed?.length || 0,
+        knowledgeGaps: row.knowledge_gaps || [],
+      }));
+      setReports(rows.sort((left, right) => (right.score ?? -1) - (left.score ?? -1)));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not load this report.");
     } finally {
-      setLoading(false);
+      setLoadingReport(false);
     }
   }, [edsync]);
 
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadLessons();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
+    const timer = window.setTimeout(() => { void loadLessons(); }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadLessons]);
 
   useEffect(() => {
     if (!selectedLesson) return;
-    const loadTimer = window.setTimeout(() => {
-      void loadReport(selectedLesson);
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
+    const timer = window.setTimeout(() => { void loadReport(selectedLesson); }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadReport, selectedLesson]);
 
-  const exportCSV = () => {
-    if (reports.length === 0) {
-      return;
-    }
-    const lessonTitle =
-      lessons.find((l) => l.id === selectedLesson)?.title || "Report";
-    const rows = [
-      "Learner,Email,Status,Final Result,Diagnostic,Time (min),Pages Done,Knowledge Gaps",
-      ...reports.map(
-        (r) =>
-          `"${r.name}","${r.email}","${r.status}","${r.score !== null ? r.score + "%" : "N/A"}","${r.diagnosticScore !== null ? r.diagnosticScore + "%" : "N/A"}","${Math.round(r.timeSpent / 60)}","${r.sectionsCompleted}","${r.knowledgeGaps.join("; ")}"`,
-      ),
-    ].join("\n");
-    const blob = new Blob([rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `edsync_report_${lessonTitle.replace(/\s+/g, "_")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const summary = useMemo(() => {
-    const completed = reports.filter((report) => report.status === "completed");
-    const inProgress = reports.filter((report) => report.status === "in_progress");
-    const scored = completed.filter((report) => report.score !== null);
-    const avgScore =
-      scored.length > 0
-        ? Math.round(scored.reduce((sum, report) => sum + (report.score || 0), 0) / scored.length)
-        : null;
-
+    const completed = reports.filter((row) => row.status === "completed");
     return {
-      avgScore,
-      completedCount: completed.length,
-      inProgressCount: inProgress.length,
+      completed: completed.length,
+      inProgress: reports.filter((row) => row.status === "in_progress").length,
+      average: averageScore(completed.map((row) => row.score)),
     };
   }, [reports]);
 
-  // Build a simple completion-over-time approximation from real completed_at data
-  // (for now show a summary bar chart instead of time-series since we'd need historical snapshots)
+  const exportCSV = () => {
+    if (!reports.length) return;
+    const title = lessons.find((lesson) => lesson.id === selectedLesson)?.title || "Course";
+    const header = ["Learner", "Email", "Status", "Final result", "Diagnostic", "Final quiz", "Time (min)", "Pages done", "Knowledge gaps"];
+    const rows = [
+      header.map(csvCell).join(","),
+      ...reports.map((row) => [
+        row.name, row.email, statusLabel(row.status),
+        row.score === null ? "N/A" : `${row.score}%`,
+        row.diagnosticScore === null ? "N/A" : `${row.diagnosticScore}%`,
+        row.finalScore === null ? "N/A" : `${row.finalScore}%`,
+        Math.round(row.timeSpent / 60), row.sectionsCompleted, row.knowledgeGaps.join("; "),
+      ].map(csvCell).join(",")),
+    ];
+    const url = URL.createObjectURL(new Blob([rows.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `edsync-report-${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "course"}.csv`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
 
   return (
-    <div className="page-shell animate-fade-in space-y-6">
-      <div className="premium-panel rounded-2xl p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              Analytics & Reports
-            </p>
-            <h1 className="font-display font-bold text-3xl text-edsync-text">
-              Course reports
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-edsync-subtle">
-              Detailed course evidence for feedback, updates, and support.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/teacher/analytics" className="btn-secondary px-4 py-2 text-sm">
-              <BarChart3 className="h-4 w-4" />
-              Analytics overview
-            </Link>
-            <button
-              onClick={exportCSV}
-              disabled={reports.length === 0}
-              className="btn-primary px-4 py-2 text-sm disabled:opacity-40"
-            >
-              <Download className="h-4 w-4" />
-              Export CSV
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Lesson selector */}
-      <div className="premium-surface rounded-2xl p-4 sm:p-5">
-        {loadingLessons ? (
-          <div className="h-10 w-64 bg-edsync-card rounded-xl shimmer" />
-        ) : lessons.length === 0 ? (
-          <p className="text-edsync-subtle">
-            No courses yet. Create a course to see reports.
-          </p>
-        ) : (
-          <select
-            value={selectedLesson}
-            onChange={(e) => setSelectedLesson(e.target.value)}
-            className="edsync-input w-full max-w-md py-2"
-          >
-            {lessons.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.title}
-              </option>
-            ))}
+    <div className="page space-y-6">
+      <PageHeader title="Reports" actions={<Button variant="secondary" size="sm" icon={Download} onClick={exportCSV} disabled={!reports.length || loadingReport}>Export CSV</Button>} />
+      <Toolbar>
+        <label htmlFor="report-course" className="sr-only">Course</label>
+        {loadingLessons ? <Skeleton className="h-9 w-56" /> : (
+          <select id="report-course" value={selectedLesson} onChange={(event) => setSelectedLesson(event.target.value)} className="select min-w-0 max-w-full sm:w-72" disabled={!lessons.length}>
+            {lessons.length ? lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>) : <option value="">No courses</option>}
           </select>
         )}
-      </div>
-
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-edsync-card rounded-2xl shimmer" />
-          ))}
+      </Toolbar>
+      {error ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft p-3 text-[13px] text-danger">
+          <span>{error}</span>
+          <button type="button" onClick={() => void (selectedLesson ? loadReport(selectedLesson) : loadLessons())} className="font-medium underline underline-offset-2">Retry</button>
         </div>
-      ) : reports.length === 0 && selectedLesson ? (
-        <div className="premium-surface rounded-2xl py-16 text-center">
-          <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-edsync-subtle" />
-          <h3 className="font-display font-bold text-xl text-edsync-text mb-2">
-            No learner data yet
-          </h3>
-          <p className="text-edsync-subtle">
-            Share this course with a space and wait for learners to start working
-            on it.
-          </p>
-        </div>
-      ) : reports.length > 0 ? (
-        <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[
-              {
-                label: "Total Learners",
-                value: reports.length,
-                icon: UsersRound,
-                tone: "text-edsync-blue",
-              },
-              {
-                label: "Completed",
-                value: summary.completedCount,
-                icon: CheckCircle2,
-                tone: "text-edsync-emerald",
-              },
-              {
-                label: "In Progress",
-                value: summary.inProgressCount,
-                icon: Timer,
-                tone: "text-edsync-cyan",
-              },
-              {
-                label: "Avg Score",
-                value: summary.avgScore !== null ? `${summary.avgScore}%` : "N/A",
-                icon: BarChart3,
-                tone:
-                  summary.avgScore !== null && summary.avgScore >= 70 ? "text-edsync-emerald" : "text-edsync-amber",
-              },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.label} className="premium-card rounded-2xl p-4">
-                  <Icon className={`mb-3 h-5 w-5 ${s.tone}`} />
-                  <p className="font-display font-bold text-2xl text-edsync-text">
-                    {s.value}
-                  </p>
-                  <p className="text-edsync-subtle text-xs mt-1">{s.label}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Learner report table */}
-          <div className="premium-surface rounded-2xl p-4 sm:p-5">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="font-display font-semibold text-lg text-edsync-text">
-                  Individual learner report
-                </h3>
-                <p className="text-sm text-edsync-subtle">
-                  Results, time, progress, and knowledge gaps for the selected course.
-                </p>
-              </div>
-              <span className="badge bg-edsync-blue/10 text-edsync-blue">{reports.length} records</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
-                <thead>
-                  <tr className="border-b border-edsync-border">
-                    {[
-                      "Learner",
-                      "Status",
-                      "Final Result",
-                      "Diagnostic",
-                      "Time (min)",
-                      "Pages",
-                      "Knowledge Gaps",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="border-b border-edsync-border/50 hover:bg-edsync-surface/50"
-                    >
-                      <td className="py-3 pr-4">
-                        <p className="font-medium text-edsync-text text-sm">
-                          {r.name}
-                        </p>
-                        <p className="text-xs text-edsync-subtle">{r.email}</p>
-                      </td>
-                      <td className="py-3 pr-4">
-                        <span
-                          className={`badge text-xs ${
-                            r.status === "completed"
-                              ? "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20"
-                              : r.status === "in_progress"
-                                ? "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20"
-                                : "bg-edsync-muted/30 text-edsync-subtle"
-                          }`}
-                        >
-                          {r.status === "not_started"
-                            ? "Not started"
-                            : r.status === "in_progress"
-                              ? "In progress"
-                              : "Completed"}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4">
-                        {r.score !== null ? (
-                          <span
-                            className={`font-bold text-sm ${r.score >= 80 ? "text-edsync-emerald" : r.score >= 60 ? "text-edsync-amber" : "text-edsync-red"}`}
-                          >
-                            {Math.round(r.score)}%
-                          </span>
-                        ) : (
-                          <span className="text-edsync-subtle text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
-                        {r.diagnosticScore !== null
-                          ? `${Math.round(r.diagnosticScore)}%`
-                          : "-"}
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
-                        {r.timeSpent > 0 ? Math.round(r.timeSpent / 60) : "-"}
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
-                        {r.sectionsCompleted}
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
-                        {r.knowledgeGaps.length > 0 ? (
-                          r.knowledgeGaps.join(", ")
-                        ) : (
-                          <span className="text-edsync-emerald/70">None</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
       ) : null}
+      {!loadingLessons && !lessons.length ? (
+        <Card><EmptyState icon={BookOpen} title="No courses yet" /></Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+            <StatTile label="Learners" value={loadingReport ? "…" : reports.length} icon={UsersRound} tone="accent" />
+            <StatTile label="Completed" value={loadingReport ? "…" : summary.completed} icon={CheckCircle2} tone="success" />
+            <StatTile label="In progress" value={loadingReport ? "…" : summary.inProgress} icon={Clock3} tone="warning" />
+            <StatTile label="Average" value={loadingReport ? "…" : summary.average === null ? "—" : `${summary.average}%`} icon={FileSpreadsheet} tone="neutral" />
+          </div>
+          <Section title="Learner results" count={reports.length}>
+            <Card padding="none" className="overflow-hidden">
+              {loadingReport ? <div className="space-y-2 p-4"><Skeleton className="h-14" /><Skeleton className="h-14" /><Skeleton className="h-14" /></div>
+                : reports.length ? reports.map((row) => (
+                  <details key={row.id} className="border-b border-line px-4 py-3 last:border-0">
+                    <summary className="flex min-w-0 cursor-pointer items-center gap-3 text-[13px]">
+                      <span className="min-w-0 flex-1"><span className="block truncate font-medium text-fg">{row.name}</span><span className="block truncate text-xs text-fg-faint">{row.email || statusLabel(row.status)}</span></span>
+                      <Badge tone={row.status === "completed" ? "success" : row.status === "in_progress" ? "accent" : "neutral"}>{statusLabel(row.status)}</Badge>
+                      <span className="w-11 shrink-0 text-right font-semibold tabular-nums text-fg">{row.score === null ? "—" : `${Math.round(row.score)}%`}</span>
+                    </summary>
+                    <div className="mt-3 grid gap-2 border-t border-line pt-3 text-xs text-fg-muted sm:grid-cols-2 lg:grid-cols-4">
+                      <span>Diagnostic <strong className="font-medium text-fg">{row.diagnosticScore === null ? "—" : `${Math.round(row.diagnosticScore)}%`}</strong></span>
+                      <span>Final quiz <strong className="font-medium text-fg">{row.finalScore === null ? "—" : `${Math.round(row.finalScore)}%`}</strong></span>
+                      <span>Time <strong className="font-medium text-fg">{row.timeSpent ? `${Math.round(row.timeSpent / 60)} min` : "—"}</strong></span>
+                      <span>Pages <strong className="font-medium text-fg">{row.sectionsCompleted}</strong></span>
+                      {row.knowledgeGaps.length ? <div className="sm:col-span-2 lg:col-span-4"><span className="mr-2">Gaps</span>{row.knowledgeGaps.map((gap) => <Badge key={gap} tone="warning" className="mr-1">{gap}</Badge>)}</div> : null}
+                    </div>
+                  </details>
+                )) : <EmptyState compact icon={FileSpreadsheet} title="No learner data yet" />}
+            </Card>
+          </Section>
+        </>
+      )}
     </div>
   );
 }
