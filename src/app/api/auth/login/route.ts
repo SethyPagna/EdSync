@@ -6,7 +6,7 @@ import { createSession, setActiveTenantCookie, setSessionCookies, type SessionUs
 import { validateOrganizationCode } from "@/lib/auth/organization-code";
 import { normalizeAccountType, normalizeUserRole } from "@/lib/auth/roles";
 import { validateEmailAddress } from "@/lib/validation/email-address";
-import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
+import { enforceRateLimit, getClientIp, logSecurityEvent } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -70,13 +70,24 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
   }
-  const rate = await enforceRateLimit({
+  const clientIp = getClientIp(request);
+  // A whole school often shares one egress IP, so this ceiling only stops floods.
+  const ipRate = await enforceRateLimit({
     request,
-    scope: "auth_login",
-    limit: 8,
+    scope: "auth_login_ip",
+    limit: 1000,
     windowSeconds: 300,
-    subject: normalizedEmail,
   });
+  // Keyed on account and IP together so failures sent from elsewhere cannot lock the owner out.
+  const rate = ipRate.allowed
+    ? await enforceRateLimit({
+        request,
+        scope: "auth_login",
+        limit: 8,
+        windowSeconds: 300,
+        subject: clientIp ? `${normalizedEmail}|${clientIp}` : normalizedEmail,
+      })
+    : ipRate;
   if (!rate.allowed) {
     return NextResponse.json(
       {
