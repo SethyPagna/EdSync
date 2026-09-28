@@ -79,6 +79,7 @@ export default async function CatalogDetailPage({
     manualSuccess: copy.start,
     activeSuccess: copy.start,
     enrolledSuccess: copy.start,
+    unavailable: "Unavailable",
   };
 
   return (
@@ -177,6 +178,7 @@ export default async function CatalogDetailPage({
               <CatalogEnrollButton
                 productId={item.id}
                 isFree={item.price.isFree}
+                available={item.price.isFree || Boolean(item.price.id)}
                 language={publicLanguage}
                 labels={enrollLabels}
               />
