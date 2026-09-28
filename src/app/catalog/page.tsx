@@ -4,10 +4,8 @@ import {
   ArrowRight,
   BookOpenCheck,
   Building2,
-  CheckCircle2,
   Search,
   Sparkles,
-  Target,
 } from "lucide-react";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import PublicTopbar from "@/components/public/PublicTopbar";
@@ -59,19 +57,12 @@ export default async function CatalogPage({
       <PublicTopbar active="catalog" language={filters.language} />
       {!hasFilters && (
         <section className="catalog-hero">
-          <div>
+          <div className="max-w-2xl">
             <span className="catalog-eyebrow">
-              <Sparkles size={14} /> A little progress, every day
+              <Sparkles size={14} /> {copy.catalogLabel}
             </span>
-            <h1 className="font-display">
-              Make room
-              <br />
-              for your <em>next idea.</em>
-            </h1>
-            <p>
-              {copy.heroCopy} Discover a course, put it into practice, and see
-              how far you can go.
-            </p>
+            <h1 className="font-display">{copy.heroTitle}</h1>
+            <p>{copy.heroCopy}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="#courses" className="btn-primary">
                 {copy.catalogLabel}
@@ -83,29 +74,6 @@ export default async function CatalogPage({
               >
                 {copy.createWorkspace}
               </Link>
-            </div>
-          </div>
-          <div className="catalog-feature">
-            <span className="catalog-feature-label">Your space to grow</span>
-            <h2 className="font-display">
-              Small steps.
-              <br />
-              Meaningful progress.
-            </h2>
-            <div className="catalog-feature-row">
-              <BookOpenCheck />
-              <span>Find something that sparks your curiosity</span>
-              <span aria-hidden="true">01</span>
-            </div>
-            <div className="catalog-feature-row">
-              <Target />
-              <span>Build confidence through practice</span>
-              <span aria-hidden="true">02</span>
-            </div>
-            <div className="catalog-feature-row">
-              <CheckCircle2 />
-              <span>Pick up exactly where you left off</span>
-              <span aria-hidden="true">03</span>
             </div>
           </div>
         </section>
@@ -139,15 +107,21 @@ export default async function CatalogPage({
               placeholder={copy.searchPlaceholder}
             />
           </label>
-          <select
-            name="price"
-            aria-label={copy.allPrices}
-            defaultValue={filters.price}
-          >
-            <option value="all">{copy.allPrices}</option>
-            <option value="free">{copy.free}</option>
-            <option value="paid">{copy.paid}</option>
-          </select>
+          <fieldset className="flex flex-wrap items-center gap-1 rounded-full border border-edsync-border bg-edsync-surface p-1">
+            <legend className="sr-only">{copy.allPrices}</legend>
+            {([
+              ["all", copy.allPrices],
+              ["free", copy.free],
+              ["paid", copy.paid],
+            ] as const).map(([value, label]) => (
+              <label key={value} className="cursor-pointer">
+                <input className="peer sr-only" type="radio" name="price" value={value} defaultChecked={filters.price === value} />
+                <span className="inline-flex min-h-9 items-center rounded-full px-3 text-xs font-semibold text-edsync-subtle transition peer-checked:bg-edsync-blue peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-edsync-blue">
+                  {label}
+                </span>
+              </label>
+            ))}
+          </fieldset>
           <select
             name="duration"
             aria-label={copy.anyDuration}
