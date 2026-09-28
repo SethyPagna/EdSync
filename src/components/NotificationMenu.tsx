@@ -12,6 +12,7 @@ type NotificationResponse = {
 type NotificationMenuProps = {
   align?: "left" | "right";
   placement?: "top" | "bottom";
+  role?: "student" | "teacher" | "admin";
 };
 
 const NOTIFICATION_REFRESH_MS = 60_000;
@@ -43,11 +44,12 @@ function priorityClass(priority: Notification["priority"]) {
   return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200";
 }
 
-export default function NotificationMenu({ align = "right", placement = "bottom" }: NotificationMenuProps) {
+export default function NotificationMenu({ align = "right", placement = "bottom", role }: NotificationMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
 
@@ -55,9 +57,11 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
     try {
       const response = await fetch("/api/notifications", { credentials: "include", cache: "no-store" });
       const payload = await readNotifications(response);
+      if (payload.error) throw new Error(payload.error);
       setItems(payload.data ?? []);
+      setError(null);
     } catch {
-      setItems([]);
+      setError("Notifications are unavailable.");
     } finally {
       setLoaded(true);
     }
@@ -97,28 +101,26 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
 
   const markAllRead = async () => {
     if (unread === 0) return;
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    });
-    setItems((current) =>
-      current.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })),
-    );
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ all: true }),
+      });
+      if (!response.ok) throw new Error("Could not mark notifications read.");
+      setItems((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })));
+      setError(null);
+    } catch { setError("Could not mark notifications read."); }
   };
 
   const markRead = async (id: string) => {
     setBusyIds((current) => new Set(current).add(id));
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, read_at: new Date().toISOString() } : item)),
-    );
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }),
+      });
+      if (!response.ok) throw new Error("Could not mark notification read.");
+      setItems((current) => current.map((item) => (item.id === id ? { ...item, read_at: new Date().toISOString() } : item)));
+      setError(null);
+    } catch { setError("Could not mark notification read."); }
     setBusyIds((current) => {
       const next = new Set(current);
       next.delete(id);
@@ -128,13 +130,14 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
 
   const remove = async (id: string) => {
     setBusyIds((current) => new Set(current).add(id));
-    const previous = items;
-    setItems((current) => current.filter((item) => item.id !== id));
-    const response = await fetch(`/api/notifications?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!response.ok) setItems(previous);
+    try {
+      const response = await fetch(`/api/notifications?id=${encodeURIComponent(id)}`, {
+        method: "DELETE", credentials: "include",
+      });
+      if (!response.ok) throw new Error("Could not delete notification.");
+      setItems((current) => current.filter((item) => item.id !== id));
+      setError(null);
+    } catch { setError("Could not delete notification."); }
     setBusyIds((current) => {
       const next = new Set(current);
       next.delete(id);
@@ -152,11 +155,7 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
         aria-expanded={open}
       >
         <Bell className="h-5 w-5" />
-        {loaded && unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-edsync-red px-1 text-[10px] font-bold text-white">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
+        {loaded && unread > 0 && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-danger ring-2 ring-surface" aria-label={`${unread} unread`} />}
       </button>
 
       {open && (
@@ -166,12 +165,7 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
           } ${placement === "top" ? "bottom-12" : "top-12"}`}
         >
           <div className="flex items-center justify-between border-b border-edsync-border px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-edsync-text">Notifications</p>
-              <p className="text-xs text-edsync-subtle">
-                {unread > 0 ? `${unread} unread` : "All caught up"}
-              </p>
-            </div>
+            <div><p className="text-sm font-semibold text-fg">Notifications <span className="text-fg-muted">{unread > 0 ? `· ${unread}` : ""}</span></p></div>
             <button
               type="button"
               onClick={markAllRead}
@@ -184,6 +178,7 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
           </div>
 
           <div className="max-h-96 overflow-y-auto p-2">
+            {error && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger"><span>{error}</span><button type="button" onClick={() => { void load(); }} className="font-semibold underline">Retry</button></div>}
             {items.length === 0 ? (
               <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card/60 px-4 py-8 text-center text-sm text-edsync-subtle">
                 <Bell className="mx-auto mb-3 h-7 w-7 text-edsync-blue" />
@@ -250,6 +245,7 @@ export default function NotificationMenu({ align = "right", placement = "bottom"
               ))
             )}
           </div>
+          {role === "student" && <Link href="/student/notifications" onClick={() => setOpen(false)} className="block border-t border-line px-4 py-2 text-center text-xs font-medium text-accent">View all</Link>}
         </div>
       )}
     </div>
