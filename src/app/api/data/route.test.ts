@@ -52,6 +52,47 @@ function post(body: string) {
 }
 
 describe("POST /api/data", () => {
+  it("projects quiz questions without keys for learners while teachers retain authoring fields", async () => {
+    db.prepare("UPDATE quiz_questions SET correct_answer = ?, explanation = ?, options = ? WHERE id = ?")
+      .run("secret-answer-917", "private explanation", JSON.stringify([
+        { id: "a", text: "A", is_correct: true },
+        { id: "b", text: "B", is_correct: false },
+      ]), "question-1");
+    const request = { table: "quiz_questions", action: "select", columns: "*", filters: [{ op: "eq", column: "id", value: "question-1" }] };
+    const learner = await post(JSON.stringify(request));
+    expect(learner.status).toBe(200);
+    const learnerJson = await learner.text();
+    expect(learnerJson).not.toMatch(/secret-answer-917|private explanation|correct_answer|is_correct|options/);
+    state.user = TEACHER;
+    const teacherJson = await (await post(JSON.stringify(request))).text();
+    expect(teacherJson).toContain("secret-answer-917");
+    state.user = STUDENT;
+    for (const leak of [
+      { ...request, columns: "correct_answer" },
+      { ...request, filters: [{ op: "eq", column: "correct_answer", value: "secret-answer-917" }] },
+      { ...request, filters: [{ op: "eq", column: "CORRECT_ANSWER", value: "secret-answer-917" }] },
+      { ...request, order: [{ column: "correct_answer" }] },
+    ]) {
+      expect((await post(JSON.stringify(leak))).status).toBe(403);
+    }
+  });
+
+  it("rejects client-controlled progress, quiz attempts and streaks", async () => {
+    const writes = [
+      { table: "profiles", action: "update", values: { streak_days: 99 }, filters: [{ op: "eq", column: "id", value: STUDENT.id }] },
+      { table: "profiles", action: "update", values: { last_active_at: now() }, filters: [{ op: "eq", column: "id", value: STUDENT.id }] },
+      { table: "student_progress", action: "insert", values: { lesson_id: "lesson-1", status: "in_progress" } },
+      { table: "student_progress", action: "update", values: { time_spent: 999 }, filters: [{ op: "eq", column: "id", value: "progress-1" }] },
+      { table: "student_progress", action: "update", values: { diagnostic_score: 100 }, filters: [{ op: "eq", column: "id", value: "progress-1" }] },
+      { table: "student_progress", action: "update", values: { sections_completed: ["section-1"] }, filters: [{ op: "eq", column: "id", value: "progress-1" }] },
+      { table: "student_progress", action: "update", values: { status: "completed", score: 100, completed_at: now() }, filters: [{ op: "eq", column: "id", value: "progress-1" }] },
+      { table: "quiz_attempts", action: "insert", values: { lesson_id: "lesson-1", question_id: "question-1", attempt_number: 999 } },
+    ];
+    for (const write of writes) expect((await post(JSON.stringify(write))).status).toBe(403);
+    expect(rowOf(db, "profiles", STUDENT.id)?.streak_days).toBe(0);
+    expect(rowOf(db, "student_progress", "progress-1")?.score).toBe(80);
+  });
+
   it("returns 401 with a string error when signed out", async () => {
     state.user = null;
     const response = await post(JSON.stringify({ table: "profiles", action: "select" }));
@@ -101,7 +142,7 @@ describe("client round trip", () => {
     const upsert = await edsync
       .from("student_progress")
       .upsert({ id: "progress-2", lesson_id: "lesson-4", status: "completed", score: 100 });
-    expect(upsert.error).toEqual({ message: "That record belongs to someone else.", status: 403 });
+    expect(upsert.error).toEqual({ message: "Use the lesson progress route to save activity.", status: 403 });
     expect(rowOf(db, "student_progress", "progress-2")?.student_id).toBe(OTHER_STUDENT.id);
   });
 
@@ -221,7 +262,6 @@ const CENSUS: Flow[] = [
         .eq("id", TEACHER.id),
     rows(1),
   ],
-  ["profiles: streak", STUDENT, (e) => e.from("profiles").update({ streak_days: 3, last_active_at: now() }).eq("id", STUDENT.id), rows(1)],
   [
     "profiles: signup upsert",
     STUDENT,
@@ -389,32 +429,6 @@ const CENSUS: Flow[] = [
   ],
   ["progress: teacher scores", TEACHER, (e) => e.from("student_progress").select("score").in("lesson_id", ["lesson-1"]).not("score", "is", null), rows(1)],
   ["progress: teacher report", TEACHER, (e) => e.from("student_progress").select("*").eq("lesson_id", "lesson-1"), rows(1)],
-  [
-    "progress: start",
-    BUYER,
-    (e) =>
-      e
-        .from("student_progress")
-        .insert({ student_id: BUYER.id, lesson_id: "lesson-4", status: "in_progress", sections_completed: [], started_at: now() })
-        .select()
-        .single(),
-    one({ student_id: BUYER.id, lesson_id: "lesson-4" }),
-  ],
-  ["progress: time", STUDENT, (e) => e.from("student_progress").update({ time_spent: 60, last_active: now() }).eq("id", "progress-1"), rows(1)],
-  [
-    "progress: diagnostic",
-    STUDENT,
-    (e) => e.from("student_progress").update({ diagnostic_completed: true, diagnostic_score: 50 }).eq("id", "progress-1"),
-    rows(1),
-  ],
-  ["progress: sections", STUDENT, (e) => e.from("student_progress").update({ sections_completed: ["section-1"] }).eq("id", "progress-1"), rows(1)],
-  [
-    "progress: complete",
-    STUDENT,
-    (e) => e.from("student_progress").update({ status: "completed", final_quiz_score: 90, score: 90, completed_at: now() }).eq("id", "progress-1"),
-    rows(1),
-  ],
-  ["progress: metadata", STUDENT, (e) => e.from("student_progress").update({ metadata: { mode: "focus" }, last_active: now() }).eq("id", "progress-1"), rows(1)],
   [
     "hints: own count",
     STUDENT,
