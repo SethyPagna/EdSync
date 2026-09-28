@@ -1,46 +1,64 @@
 import { NextResponse } from "next/server";
-import { executeDataRequest, type DataRequest } from "@/lib/db/d1";
+import { executeDataRequest } from "@/lib/db/d1";
 import { getSessionUser } from "@/lib/auth/session";
-import { authorizeDataRequest } from "@/lib/security/data-access";
+import { authorizeDataRequest, parseDataRequest } from "@/lib/security/data-access";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 
+function failure(error: string, status: number, headers?: HeadersInit) {
+  return NextResponse.json({ data: null, error }, { status, headers });
+}
+
+async function logDenied(request: Request, userId: string, message: string, metadata: Record<string, unknown>) {
+  try {
+    await logSecurityEvent({ request, userId, eventType: "data_access_denied", severity: "warning", message, metadata });
+  } catch {
+    // Audit logging must never turn a clean 403 into a 500.
+  }
+}
+
 export async function POST(request: Request) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({
-      data: null,
-      error: { message: "Authentication required." },
-    }, { status: 401 });
-  }
+  try {
+    const user = await getSessionUser();
+    if (!user) return failure("Authentication required.", 401);
 
-  const payload = (await request.json()) as DataRequest;
-  const rate = await enforceRateLimit({
-    request,
-    scope: `data_${payload.action}`,
-    limit: payload.action === "select" ? 180 : 80,
-    windowSeconds: 300,
-    userId: user.id,
-  });
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { data: null, error: { message: "Too many data requests. Try again shortly." } },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
-    );
-  }
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return failure("Request body must be valid JSON.", 400);
+    }
 
-  const denied = await authorizeDataRequest(user, payload);
-  if (denied) {
-    await logSecurityEvent({
+    const parsed = parseDataRequest(payload);
+    if (!parsed.ok) return failure(parsed.error, 400);
+
+    const rate = await enforceRateLimit({
       request,
+      scope: `data_${parsed.request.action}`,
+      limit: parsed.request.action === "select" ? 180 : 80,
+      windowSeconds: 300,
       userId: user.id,
-      eventType: "data_access_denied",
-      severity: "warning",
-      message: denied,
-      metadata: { table: payload.table, action: payload.action },
     });
-    return NextResponse.json({ data: null, error: { message: denied } }, { status: 403 });
-  }
+    if (!rate.allowed) {
+      return failure("Too many data requests. Try again shortly.", 429, { "Retry-After": String(rate.retryAfter) });
+    }
 
-  const result = await executeDataRequest(payload);
-  return NextResponse.json(result);
+    const metadata = { table: parsed.request.table, action: parsed.request.action };
+    const decision = await authorizeDataRequest(user, parsed.request);
+    if (!decision.allowed) {
+      if (decision.status === 403) await logDenied(request, user.id, decision.error, metadata);
+      return failure(decision.error, decision.status);
+    }
+
+    const result = await executeDataRequest(decision.request, { scope: decision.scope });
+    if (result.error) {
+      const status = result.error.status ?? 500;
+      if (status === 403) await logDenied(request, user.id, result.error.message, metadata);
+      return failure(result.error.message, status);
+    }
+
+    return NextResponse.json({ data: result.data, count: result.count ?? null, error: null });
+  } catch (error) {
+    console.error("EdSync data route failed", error);
+    return failure("The data request could not be completed.", 500);
+  }
 }
