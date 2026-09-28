@@ -81,10 +81,13 @@ function catalogMetadata(row: CatalogRow) {
 async function activePrices(productIds: string[]) {
   const uniqueIds = Array.from(new Set(productIds));
   if (uniqueIds.length === 0) return new Map<string, BillingPrice>();
-  const rows = await d1Query<BillingPrice>(
-    `SELECT * FROM billing_prices WHERE active = 1 AND product_id IN (${sqlInPlaceholders(uniqueIds)}) ORDER BY amount_cents ASC, created_at ASC`,
-    uniqueIds,
-  );
+  const chunks = Array.from({ length: Math.ceil(uniqueIds.length / 100) }, (_, index) =>
+    uniqueIds.slice(index * 100, (index + 1) * 100));
+  const rows = (await Promise.all(chunks.map((ids) => d1Query<BillingPrice>(
+    `SELECT * FROM billing_prices WHERE active = 1 AND product_id IN (${sqlInPlaceholders(ids)}) ORDER BY amount_cents ASC, created_at ASC`,
+    ids,
+  )))).flat().sort((left, right) =>
+    left.amount_cents - right.amount_cents || String(left.created_at).localeCompare(String(right.created_at)));
   const byProduct = new Map<string, BillingPrice>();
   for (const row of rows) {
     if (!byProduct.has(row.product_id)) byProduct.set(row.product_id, row);
