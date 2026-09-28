@@ -22,16 +22,58 @@ EdSync-owned data bindings.
    ```
 2. Copy `config/env/.env.example` to `.env.local` and fill in EdSync-specific
    Cloudflare resources. Do not reuse AllChess or LEARN D1/R2 resources.
-3. Run D1 migrations:
+3. Run D1 migrations against the hosted Cloudflare database (local development
+   uses its own database; see Local development below):
    ```powershell
    npm.cmd run db:migrate:dry-run
    npm.cmd run db:migrate
    ```
-4. Start the app:
+4. Start the app on the local database (see Local development; needs
+   `LOCAL_SEED_PASSWORD` in `.env.local`):
    ```powershell
-   npm.cmd run dev
+   npm.cmd run dev:local
    ```
+   To run `npm.cmd run dev` against the hosted database migrated in step 3
+   instead, set `EDSYNC_LOCAL_D1=0` in `.env.local`.
 5. Open `http://localhost:3000`.
+
+## Local development
+
+`npm.cmd run dev` binds `EDSYNC_DB` to a local, file-backed D1 database
+(Miniflare, stored under `.wrangler/state`) using
+`infra/cloudflare/wrangler.app.jsonc` with remote bindings disabled, so local
+work never touches the production database.
+
+1. Put local-only values in `.env.local`: `LOCAL_SEED_PASSWORD` (8+ characters,
+   required by the seed), `APP_ENCRYPTION_KEY` (64 hex characters), and
+   `SESSION_SECRET`.
+2. Apply every migration in `infra/database/migrations`. Applied files are
+   recorded in a `d1_migrations` table, so reruns only apply new files:
+   ```powershell
+   npm.cmd run db:migrate:local
+   ```
+3. Load sample data with `ops/scripts/database/seed-local.ts`. It is idempotent
+   and safe to rerun:
+   ```powershell
+   npm.cmd run db:seed:local
+   ```
+4. Start the app with `npm.cmd run dev`, or migrate, seed, and start in one step:
+   ```powershell
+   npm.cmd run dev:local
+   ```
+
+The seed signs in as `admin@edsync.test` (admin), `teacher@edsync.test`, and
+`student@edsync.test`, all with `LOCAL_SEED_PASSWORD`. It adds three classes with
+a roster, six published lessons (sections, quizzes, glossary) and a draft,
+assessments with submissions and grades in every state, planner events,
+announcements, notes, notifications, catalog products, and Studio designs.
+
+- Set `EDSYNC_LOCAL_D1=0` to make `next dev` use the Cloudflare D1 REST
+  credentials instead of the local database.
+- To start over, stop the dev server, delete `.wrangler/state/v3/d1`, and rerun
+  the migrate and seed commands.
+- Vectorize has no local emulator; the Wrangler warning at startup is expected.
+  R2 uploads still use the `R2_*` S3 credentials.
 
 ## Deployment
 
@@ -43,6 +85,10 @@ EdSync-owned data bindings.
 - Cloudflare Vectorize index: `edsync-learning-prod`
 - Real secrets belong in `.env.local`, Vercel environment variables, Cloudflare
   secrets, or CI secrets. They must not be committed.
+- `npm.cmd run db:local` starts the production-mode Docker self-hosting profile
+  (`infra/local/docker-compose.yml`: `next build` + `next start` plus a
+  cloudflared tunnel) with the root `.env.local`. It does not use the local D1;
+  it reads and writes the hosted D1 through the `CLOUDFLARE_*` REST credentials.
 
 ## Verification
 
@@ -54,6 +100,11 @@ npm.cmd run verify
 
 `verify` runs the repository hygiene gates, typecheck, ESLint, the Vitest suite,
 a moderate dependency audit, and a production Next.js build.
+
+The Vitest suite (`config/test/vitest.config.ts`) runs `src/lib` tests in a
+Node environment and component, route, middleware, and `src/lib/ui` tests in
+jsdom. A library test that needs the DOM can opt in with a
+`// @vitest-environment jsdom` comment at the top of the file.
 
 To guard the compact root layout, run:
 
