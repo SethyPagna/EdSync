@@ -70,6 +70,17 @@ function workRow(id: string): Record<string, unknown> | undefined {
 }
 
 describe("POST /api/work", () => {
+  it("keeps a draft deadline private until publication", async () => {
+    const { response, body } = await create({ status: "draft", dueAt: "2999-01-02T09:00:00Z" });
+    expect(response.status).toBe(200);
+    const id = String(body.data?.id);
+    expect(deadlineCount(id)).toBe(0);
+    expect((await patch({ id, title: "Draft revision" })).status).toBe(200);
+    expect(deadlineCount(id)).toBe(0);
+    expect((await patch({ id, status: "published" })).status).toBe(200);
+    expect(deadlineCount(id)).toBe(1);
+  });
+
   it("accepts a lesson and category from the same class", async () => {
     const { response, body } = await create({ lessonId: "lesson-1", categoryId: "cat-tests" });
     expect(response.status).toBe(200);
