@@ -37,11 +37,12 @@ export default function CatalogCourseCard({
   return (
     <Link
       href={detailUrl}
+      aria-label={`${labels.view}: ${item.title}`}
       className={`premium-card group overflow-hidden rounded-2xl ${
         featured ? "border-edsync-blue/40" : ""
       }`}
     >
-      <div className="relative aspect-video overflow-hidden bg-edsync-surface">
+      <div className="relative aspect-[16/10] overflow-hidden bg-edsync-surface">
         {item.metadata.thumbnailUrl ? (
           <div
             className="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
@@ -65,22 +66,18 @@ export default function CatalogCourseCard({
         </div>
       </div>
       <div className="p-4">
-        {featured && item.metadata.category && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="badge bg-edsync-amber/10 text-edsync-amber">
-              {item.metadata.category}
-            </span>
-          </div>
-        )}
-        <h3 className="font-display text-xl font-bold leading-tight text-edsync-text">
-          {item.title}
-        </h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-edsync-subtle">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-display text-lg font-semibold leading-snug text-edsync-text">
+            {item.title}
+          </h3>
+          <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-edsync-blue transition group-hover:translate-x-0.5" aria-hidden="true" />
+        </div>
+        <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
           {item.metadata.previewSummary ||
             item.description ||
             labels.preview}
         </p>
-        <div className="mt-4 grid gap-2 text-xs text-edsync-subtle sm:grid-cols-2">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-edsync-subtle">
           {showOrganization && (
             <span className="flex min-w-0 items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
@@ -91,10 +88,6 @@ export default function CatalogCourseCard({
             <Clock3 className="h-3.5 w-3.5" />
             {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} ${labels.minutes}` : labels.flexible}
           </span>
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-3 text-sm font-semibold text-edsync-blue">
-          <span>{labels.view}</span>
-          <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
         </div>
       </div>
     </Link>
