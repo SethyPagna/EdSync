@@ -4,30 +4,82 @@ import { normalizeCertificationRulePayload, validateCertificationRuleId } from "
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  readJson,
+  withRoute,
+} from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { isOwnerScoped, ownerScope } from "@/lib/tenancy/ownership";
 
-export async function GET() {
-  const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
-  const context = await resolveTenantContext(user);
-  const ruleRows = await d1Query("SELECT * FROM certification_rules WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]);
-  const rules = ruleRows.map((row) => deserializeRow("certification_rules", row));
-  const certifications = user.user_metadata.role === "student"
-    ? await d1Query("SELECT * FROM learner_certifications WHERE tenant_id = ? AND user_id = ? ORDER BY expires_at ASC", [context.tenant.id, user.id])
-    : await d1Query("SELECT * FROM learner_certifications WHERE tenant_id = ? ORDER BY expires_at ASC LIMIT 100", [context.tenant.id]);
-  return NextResponse.json({ data: { rules, certifications, context }, error: null });
+// certification_rules has no owner column, so the creator is kept in settings.ownerId.
+const RULE_OWNER = "CASE WHEN json_valid(settings) THEN json_extract(settings, '$.ownerId') END";
+
+function ruleOwner(settings: unknown) {
+  try {
+    const parsed = typeof settings === "string" ? (JSON.parse(settings) as Record<string, unknown>) : settings;
+    const ownerId = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).ownerId : null;
+    return typeof ownerId === "string" && ownerId ? ownerId : null;
+  } catch {
+    return null;
+  }
 }
 
-export async function POST(request: Request) {
-  const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
-  const context = await resolveTenantContext(user);
+function ruleId(value: unknown) {
   try {
-    await requirePermission(user, context, PERMISSIONS.coursesPublish);
-  } catch {
-    return NextResponse.json({ data: null, error: "Missing publish permission." }, { status: 403 });
+    return validateCertificationRuleId(value);
+  } catch (error) {
+    throw new BadRequestError(error instanceof Error ? error.message : "Rule is required.");
   }
-  const body = (await request.json()) as {
+}
+
+export const GET = withRoute(async () => {
+  const user = await getSessionUser();
+  if (!user) throw new UnauthorizedError();
+  const context = await resolveTenantContext(user);
+  const tenantId = context.tenant.id;
+  const isStudent = user.user_metadata.role === "student";
+  const scoped = isOwnerScoped(user, context);
+  const ruleFilter = !scoped
+    ? { sql: "", params: [] as unknown[] }
+    : isStudent
+      ? {
+          sql: " AND id IN (SELECT rule_id FROM learner_certifications WHERE tenant_id = ? AND user_id = ?)",
+          params: [tenantId, user.id] as unknown[],
+        }
+      : ownerScope(user, context, RULE_OWNER);
+  const ruleRows = await d1Query(
+    `SELECT * FROM certification_rules WHERE tenant_id = ?${ruleFilter.sql} ORDER BY updated_at DESC`,
+    [tenantId, ...ruleFilter.params],
+  );
+  const rules = ruleRows.map((row) => deserializeRow("certification_rules", row));
+  const certifications = isStudent
+    ? await d1Query("SELECT * FROM learner_certifications WHERE tenant_id = ? AND user_id = ? ORDER BY expires_at ASC", [tenantId, user.id])
+    : scoped
+      ? await d1Query(
+          `SELECT lc.*
+             FROM learner_certifications lc
+             JOIN certification_rules cr ON cr.id = lc.rule_id
+            WHERE lc.tenant_id = ? AND CASE WHEN json_valid(cr.settings) THEN json_extract(cr.settings, '$.ownerId') END = ?
+            ORDER BY lc.expires_at ASC
+            LIMIT 100`,
+          [tenantId, user.id],
+        )
+      : await d1Query("SELECT * FROM learner_certifications WHERE tenant_id = ? ORDER BY expires_at ASC LIMIT 100", [tenantId]);
+  return NextResponse.json({ data: { rules, certifications, context }, error: null });
+});
+
+export const POST = withRoute(async (request) => {
+  const user = await getSessionUser();
+  if (!user) throw new UnauthorizedError();
+  const context = await resolveTenantContext(user);
+  await requirePermission(user, context, PERMISSIONS.coursesPublish).catch(() => {
+    throw new ForbiddenError("Missing publish permission.");
+  });
+  const body = await readJson<{
     action?: "create" | "update" | "delete";
     id?: string;
     title?: string;
@@ -36,17 +88,16 @@ export async function POST(request: Request) {
     expiresAfterDays?: number | null;
     notifyBeforeDays?: number;
     settings?: Record<string, unknown>;
-  };
+  }>(request);
+  const owner = ownerScope(user, context, RULE_OWNER);
 
   if (body.action === "delete") {
-    let id: string;
-    try {
-      id = validateCertificationRuleId(body.id);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Rule is required.";
-      return NextResponse.json({ data: null, error: message }, { status: 400 });
-    }
-    await d1Query("DELETE FROM certification_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, id]);
+    const id = ruleId(body.id);
+    const [deleted] = await d1Query<{ id: string }>(
+      `DELETE FROM certification_rules WHERE tenant_id = ? AND id = ?${owner.sql} RETURNING id`,
+      [context.tenant.id, id, ...owner.params],
+    );
+    if (!deleted) throw new NotFoundError("Rule not found.");
     return NextResponse.json({ data: { id }, error: null });
   }
 
@@ -54,18 +105,20 @@ export async function POST(request: Request) {
   try {
     normalized = normalizeCertificationRulePayload(body);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Certification rule is invalid.";
-    return NextResponse.json({ data: null, error: message }, { status: 400 });
+    throw new BadRequestError(error instanceof Error ? error.message : "Certification rule is invalid.");
   }
+  const settings: Record<string, unknown> = { ...normalized.settings };
+  delete settings.ownerId;
 
   if (body.action === "update") {
-    let id: string;
-    try {
-      id = validateCertificationRuleId(body.id);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Rule is required.";
-      return NextResponse.json({ data: null, error: message }, { status: 400 });
-    }
+    const id = ruleId(body.id);
+    const [existing] = await d1Query<{ settings: unknown }>(
+      `SELECT settings FROM certification_rules WHERE tenant_id = ? AND id = ?${owner.sql} LIMIT 1`,
+      [context.tenant.id, id, ...owner.params],
+    );
+    if (!existing) throw new NotFoundError("Rule not found.");
+    const existingOwner = ruleOwner(existing.settings);
+    if (existingOwner) settings.ownerId = existingOwner;
     await d1Query(
       `UPDATE certification_rules
        SET title = ?, description = ?, course_id = ?, expires_after_days = ?, notify_before_days = ?, settings = ?, updated_at = datetime('now')
@@ -76,7 +129,7 @@ export async function POST(request: Request) {
         normalized.courseId,
         normalized.expiresAfterDays,
         normalized.notifyBeforeDays,
-        JSON.stringify(normalized.settings),
+        JSON.stringify(settings),
         context.tenant.id,
         id,
       ],
@@ -97,8 +150,8 @@ export async function POST(request: Request) {
       normalized.courseId,
       normalized.expiresAfterDays,
       normalized.notifyBeforeDays,
-      JSON.stringify(normalized.settings),
+      JSON.stringify({ ...settings, ownerId: user.id }),
     ],
   );
   return NextResponse.json({ data: { id }, error: null });
-}
+});
