@@ -1,6 +1,16 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { R2Bucket } from "@cloudflare/workers-types";
 
 let client: S3Client | null = null;
+
+function getR2Binding(): R2Bucket | null {
+  try {
+    return (getCloudflareContext().env as CloudflareEnv & { EDSYNC_ASSETS?: R2Bucket }).EDSYNC_ASSETS ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function getR2Client() {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -28,14 +38,21 @@ export async function putR2Object(input: {
   const bucket = process.env.R2_BUCKET;
   if (!bucket) throw new Error("R2_BUCKET is not set");
 
-  await getR2Client().send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: input.key,
-      Body: input.body,
-      ContentType: input.contentType,
-    }),
-  );
+  const binding = getR2Binding();
+  if (binding) {
+    await binding.put(input.key, new Uint8Array(input.body), {
+      httpMetadata: input.contentType ? { contentType: input.contentType } : undefined,
+    });
+  } else {
+    await getR2Client().send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: input.key,
+        Body: input.body,
+        ContentType: input.contentType,
+      }),
+    );
+  }
 
   const baseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
   return {
