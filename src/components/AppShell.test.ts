@@ -1,95 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
-  adminNavItems,
-  navGroupsForRole,
-  shellNavDisplayLabel,
-  shellNavGroupDisplayLabel,
-  shellWorkspaceLabel,
+  adminNavItems, shellNavDisplayLabel, shellNavGroupDisplayLabel,
+  shellWorkspaceLabel, studentNavItems, teacherNavItems,
 } from "./AppShell";
 
-function labelsForGroup(groupLabel: string) {
-  return navGroupsForRole("admin", adminNavItems).find((group) => group.label === groupLabel)?.items.map((item) => item.label) ?? [];
-}
-
-describe("navGroupsForRole", () => {
-  it("keeps duplicate admin portal links in their intended groups", () => {
-    expect(labelsForGroup("Platform")).toContain("Portals");
-    expect(labelsForGroup("Platform")).not.toContain("Organizations");
-    expect(labelsForGroup("Owner Views")).toContain("Organizations");
+describe("shell navigation", () => {
+  it("keeps the primary rail to six or fewer choices per role", () => {
+    expect(studentNavItems).toHaveLength(6);
+    expect(teacherNavItems).toHaveLength(6);
+    expect(adminNavItems).toHaveLength(6);
   });
 
-  it("exposes every owner view mode from platform admin", () => {
-    expect(labelsForGroup("Owner Views")).toEqual([
-      "Individual Account",
-      "Organizations",
-      "Org Creator",
-      "Org Learner",
-    ]);
-  });
-});
-
-describe("shellWorkspaceLabel", () => {
-  it("uses creator and learner language for individual workspaces", () => {
-    expect(shellWorkspaceLabel({
-      role: "teacher",
-      workspaceContext: { type: "individual" },
-      adminViewMode: null,
-      isAdminViewMode: false,
-    })).toBe("Creator Workspace");
-    expect(shellWorkspaceLabel({
-      role: "student",
-      workspaceContext: { type: "individual" },
-      adminViewMode: null,
-      isAdminViewMode: false,
-    })).toBe("Learner Workspace");
-  });
-
-  it("uses concise organization creator and learner labels", () => {
-    expect(shellWorkspaceLabel({
-      role: "teacher",
-      workspaceContext: { type: "organization", organizationCode: "edsync" },
-      adminViewMode: null,
-      isAdminViewMode: false,
-    })).toBe("Org Creator");
-    expect(shellWorkspaceLabel({
-      role: "student",
-      workspaceContext: { type: "organization", organizationCode: "edsync" },
-      adminViewMode: null,
-      isAdminViewMode: false,
-    })).toBe("Org Learner");
-  });
-
-  it("shows owner preview labels for platform admin mode", () => {
-    expect(shellWorkspaceLabel({
-      role: "student",
-      workspaceContext: { type: "individual" },
-      adminViewMode: "organization-student",
-      isAdminViewMode: true,
-    })).toBe("organization learner workspace");
-  });
-});
-
-describe("shell nav display labels", () => {
-  it("uses creator language for individual creator workspaces", () => {
-    const workspaceContext = { type: "individual" as const };
-    expect(shellNavDisplayLabel({ label: "Create Lesson", role: "teacher", workspaceContext })).toBe("Create Course");
-    expect(shellNavDisplayLabel({ label: "Gradebook & Feedback", role: "teacher", workspaceContext })).toBe("Feedback");
-    expect(shellNavDisplayLabel({ label: "Students", role: "teacher", workspaceContext })).toBe("Learners");
-    expect(shellNavGroupDisplayLabel({ label: "Classroom", role: "teacher", workspaceContext })).toBe("Course Ops");
-  });
-
-  it("uses learner progress language for individual learner workspaces", () => {
-    const workspaceContext = { type: "individual" as const };
-    expect(shellNavDisplayLabel({ label: "Lessons", role: "student", workspaceContext })).toBe("Courses");
-    expect(shellNavDisplayLabel({ label: "Teachers & Classes", role: "student", workspaceContext })).toBe("Course Access");
-    expect(shellNavDisplayLabel({ label: "Grades", role: "student", workspaceContext })).toBe("Progress");
-    expect(shellNavGroupDisplayLabel({ label: "Support", role: "student", workspaceContext })).toBe("Progress");
-  });
-
-  it("preserves organization role labels inside organization workspaces", () => {
-    const workspaceContext = { type: "organization" as const };
-    expect(shellNavDisplayLabel({ label: "Grades", role: "student", workspaceContext })).toBe("Grades");
-    expect(shellNavDisplayLabel({ label: "Students", role: "teacher", workspaceContext })).toBe("Students");
-    expect(shellNavGroupDisplayLabel({ label: "Classroom", role: "teacher", workspaceContext })).toBe("Classroom");
+  it("uses short labels and keeps organization context visible", () => {
+    expect(shellNavDisplayLabel({ label: "Courses", role: "student", workspaceContext: null })).toBe("Courses");
+    expect(shellNavGroupDisplayLabel({ label: "Rules", role: "admin", workspaceContext: null })).toBe("Rules");
+    expect(shellWorkspaceLabel({ role: "teacher", workspaceContext: { type: "organization", organizationName: "North Academy" }, adminViewMode: null, isAdminViewMode: false })).toBe("North Academy");
+    expect(shellWorkspaceLabel({ role: "student", workspaceContext: null, adminViewMode: "organization-student", isAdminViewMode: true })).toBe("organization learner workspace");
   });
 });
