@@ -9,6 +9,8 @@ import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 
 const MEDIA_ASSET_TABLE = "media_assets";
 const STORAGE_OBJECT_TABLE = "storage_objects";
+// 25MB file limit plus room for multipart boundaries and form fields.
+const MAX_REQUEST_BYTES = 26 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -19,18 +21,6 @@ export async function POST(request: Request) {
     );
   }
   const context = await resolveTenantContext(user);
-
-  const form = await request.formData();
-  const file = form.get("file");
-  const path = String(form.get("path") ?? "");
-  const bucketAlias = String(form.get("bucket") ?? "uploads");
-
-  if (!(file instanceof File) || !path) {
-    return NextResponse.json(
-      { data: null, error: { message: "File and path are required." } },
-      { status: 400 },
-    );
-  }
 
   const rate = await enforceRateLimit({
     request,
@@ -43,6 +33,34 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { data: null, error: { message: "Too many uploads. Try again shortly." } },
       { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
+    );
+  }
+
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
+    return NextResponse.json(
+      { data: null, error: { message: "Files must be 25MB or smaller." } },
+      { status: 413 },
+    );
+  }
+
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return NextResponse.json(
+      { data: null, error: { message: "Upload must be multipart form data." } },
+      { status: 400 },
+    );
+  }
+  const file = form.get("file");
+  const path = String(form.get("path") ?? "");
+  const bucketAlias = String(form.get("bucket") ?? "uploads");
+
+  if (!(file instanceof File) || !path) {
+    return NextResponse.json(
+      { data: null, error: { message: "File and path are required." } },
+      { status: 400 },
     );
   }
 
@@ -112,13 +130,21 @@ export async function POST(request: Request) {
     contentType: safeFile.contentType,
   });
 
-  const storageObjectId = crypto.randomUUID();
-  await d1Query(
-    `INSERT OR REPLACE INTO storage_objects
+  // Re-uploading the same path keeps the existing row so media assets and tenant links stay attached.
+  const [storageObject] = await d1Query<{ id: string }>(
+    `INSERT INTO storage_objects
        (id, owner_id, bucket, object_key, public_url, content_type, size_bytes, purpose, metadata, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(bucket, object_key) DO UPDATE SET
+       owner_id = excluded.owner_id,
+       public_url = excluded.public_url,
+       content_type = excluded.content_type,
+       size_bytes = excluded.size_bytes,
+       purpose = excluded.purpose,
+       metadata = excluded.metadata
+     RETURNING id`,
     [
-      storageObjectId,
+      crypto.randomUUID(),
       user.id,
       uploaded.bucket,
       uploaded.key,
@@ -129,6 +155,7 @@ export async function POST(request: Request) {
       JSON.stringify({ malwareScan }),
     ],
   );
+  const storageObjectId = storageObject.id;
   await linkTenantObject({
     tenantId: context.tenant.id,
     portalId: context.portal?.id,
