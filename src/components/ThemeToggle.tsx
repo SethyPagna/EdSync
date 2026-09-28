@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
+import { counterpartTheme, useAppearance, type ThemePreference } from "@/lib/ui/theme";
 
-export type ThemePreference = "light" | "dark";
+export type { ThemePreference } from "@/lib/ui/theme";
 
 type ThemeToggleProps = {
   compact?: boolean;
@@ -11,64 +11,26 @@ type ThemeToggleProps = {
   onThemeChange?: (theme: ThemePreference) => void;
 };
 
-function readThemePreference(): ThemePreference {
-  if (typeof window === "undefined") return "light";
-  return window.localStorage.getItem("edsync-theme") === "dark" ? "dark" : "light";
-}
-
-function syncThemeDocument(theme: ThemePreference) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-  document.documentElement.dataset.theme = theme;
-}
-
-function applyTheme(theme: ThemePreference) {
-  syncThemeDocument(theme);
-  window.localStorage.setItem("edsync-theme", theme);
-  window.dispatchEvent(new CustomEvent("edsync-theme-change", { detail: { theme } }));
-}
-
-function subscribeThemePreference(onStoreChange: () => void) {
-  window.addEventListener("edsync-theme-change", onStoreChange);
-  return () => window.removeEventListener("edsync-theme-change", onStoreChange);
-}
-
-function readServerThemePreference(): ThemePreference {
-  return "light";
-}
-
-export default function ThemeToggle({
-  compact = false,
-  className = "",
-  onThemeChange,
-}: ThemeToggleProps) {
-  const theme = useSyncExternalStore(
-    subscribeThemePreference,
-    readThemePreference,
-    readServerThemePreference,
-  );
-
-  useEffect(() => {
-    syncThemeDocument(theme);
-  }, [theme]);
+export default function ThemeToggle({ compact = false, className = "", onThemeChange }: ThemeToggleProps) {
+  const { resolvedTheme, mode, setAppearance } = useAppearance();
+  const Icon = mode === "dark" ? Sun : Moon;
+  const label = mode === "dark" ? "Light theme" : "Dark theme";
 
   const toggleTheme = () => {
-    const nextTheme: ThemePreference = theme === "dark" ? "light" : "dark";
-    applyTheme(nextTheme);
+    const nextTheme = counterpartTheme(resolvedTheme);
+    setAppearance({ theme: nextTheme });
     onThemeChange?.(nextTheme);
   };
-
-  const Icon = theme === "dark" ? Sun : Moon;
-  const label = theme === "dark" ? "Light theme" : "Dark theme";
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className={`${compact ? "premium-icon-button" : "btn-secondary px-4 py-2 text-sm"} ${className}`}
+      className={`${compact ? "icon-btn" : "btn btn-secondary"} ${className}`}
       aria-label={label}
-      title={label}
+      data-tooltip={compact ? label : undefined}
     >
-      <Icon className="h-4 w-4" />
+      <Icon aria-hidden size={16} strokeWidth={1.75} />
       {!compact && <span>{label}</span>}
     </button>
   );
