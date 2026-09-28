@@ -44,29 +44,65 @@ function authValidationError(message: string): AuthResponse {
   };
 }
 
-async function postJson<T>(url: string, body?: unknown): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const fallback = (message: string, forceError = false) => {
-    const error = !response.ok || forceError ? { message, status: response.status } : null;
-    if (url.startsWith("/api/auth/")) {
-      return { data: { user: null, session: null }, error } as T;
-    }
-    return { data: null, error } as T;
-  };
-  const text = await response.text();
-  if (!text) {
-    return fallback("Request is unavailable. Try again shortly.", url.startsWith("/api/auth/"));
+type DataError = { message: string; status?: number };
+
+const NETWORK_ERROR = "Network error. Check your connection and try again.";
+
+function normalizeError(error: unknown, status: number): DataError | null {
+  if (error === null || error === undefined) return null;
+  if (typeof error === "string") return { message: error, status };
+  if (typeof error === "object" && typeof (error as DataError).message === "string") {
+    const shaped = error as DataError;
+    return { ...shaped, status: shaped.status ?? status };
   }
+  return { message: "Request failed.", status };
+}
+
+/** Resolves every outcome, including network failures, to a `{ data, error }` shape. */
+async function sendJson<T>(url: string, init: RequestInit, auth: boolean): Promise<T> {
+  const failure = (message: string, status: number) =>
+    (auth
+      ? { data: { user: null, session: null }, error: { message, status } }
+      : { data: null, error: { message, status } }) as T;
+  let response: Response;
+  let text: string;
   try {
-    return JSON.parse(text) as T;
+    response = await fetch(url, { credentials: "include", ...init });
+    text = await response.text();
   } catch {
-    return fallback("Request returned an invalid response.", true);
+    return failure(NETWORK_ERROR, 0);
   }
+  if (!text) {
+    return !response.ok || auth
+      ? failure("Request is unavailable. Try again shortly.", response.status)
+      : ({ data: null, error: null } as T);
+  }
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return failure("Request returned an invalid response.", response.status);
+  }
+  if (typeof body !== "object" || body === null) {
+    return failure("Request returned an invalid response.", response.status);
+  }
+  const record = body as { error?: unknown };
+  const error =
+    normalizeError(record.error, response.status) ??
+    (response.ok ? null : { message: "Request failed.", status: response.status });
+  return { ...record, error } as T;
+}
+
+function postJson<T>(url: string, body?: unknown): Promise<T> {
+  return sendJson<T>(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    },
+    url.startsWith("/api/auth/"),
+  );
 }
 
 async function readAuthResponse(response: Response): Promise<AuthResponse> {
@@ -83,10 +119,40 @@ async function readAuthResponse(response: Response): Promise<AuthResponse> {
   }
 }
 
+const joinCodesByClass = new Map<string, string>();
+
+function joinCodeFilter(request: DataRequest) {
+  const filter = request.filters?.find((item) => item.op === "eq" && item.column === "join_code");
+  return typeof filter?.value === "string" && filter.value.trim() ? filter.value.trim().toUpperCase() : null;
+}
+
+// Enrolling needs proof of the class join code; remember codes the user looked up so join flows send it.
+function withJoinCodes(request: DataRequest): DataRequest {
+  if (request.table !== "class_enrollments" || (request.action !== "insert" && request.action !== "upsert")) return request;
+  const attach = (row: Record<string, unknown>) => {
+    const joinCode = typeof row.class_id === "string" ? joinCodesByClass.get(row.class_id) : undefined;
+    return joinCode && row.join_code === undefined ? { ...row, join_code: joinCode } : row;
+  };
+  const values = Array.isArray(request.values) ? request.values.map(attach) : request.values && attach(request.values);
+  return { ...request, values };
+}
+
+function rememberJoinCodes(request: DataRequest, result: D1Result<unknown>) {
+  const joinCode = request.table === "classes" && request.action === "select" ? joinCodeFilter(request) : null;
+  if (!joinCode || !result.data) return;
+  for (const row of Array.isArray(result.data) ? result.data : [result.data]) {
+    const id = (row as { id?: unknown } | null)?.id;
+    if (typeof id === "string") joinCodesByClass.set(id, joinCode);
+  }
+}
+
 // The query builder keeps legacy table callers working while new code moves toward typed D1 helpers.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
   private request: DataRequest;
+  private invalid: string | null = null;
+  private executed = false;
+  private watched = false;
 
   constructor(table: string) {
     this.request = {
@@ -97,10 +163,8 @@ class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
     };
   }
 
+  /** Picks columns for a query, or asks a mutation to return the rows it wrote. */
   select(columns = "*", options: QueryOptions = {}) {
-    this.request.action = this.request.action === "insert" || this.request.action === "upsert"
-      ? this.request.action
-      : "select";
     this.request.columns = columns;
     this.request.count = options.count;
     this.request.head = options.head;
@@ -108,30 +172,24 @@ class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
   }
 
   insert(values: Record<string, unknown> | Record<string, unknown>[]) {
-    this.request.action = "insert";
-    this.request.values = values;
-    return this;
+    return this.mutate("insert", values);
   }
 
   upsert(
     values: Record<string, unknown> | Record<string, unknown>[],
     options: { onConflict?: string } = {},
   ) {
-    this.request.action = "upsert";
-    this.request.values = values;
     this.request.onConflict = options.onConflict;
-    return this;
+    return this.mutate("upsert", values);
   }
 
+  /** Resolves with the rows that were changed. */
   update(values: Record<string, unknown>) {
-    this.request.action = "update";
-    this.request.values = values;
-    return this;
+    return this.mutate("update", values);
   }
 
   delete() {
-    this.request.action = "delete";
-    return this;
+    return this.mutate("delete");
   }
 
   eq(column: string, value: unknown) {
@@ -151,14 +209,14 @@ class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
   }
 
   not(column: string, operator: string, value: unknown) {
-    if (operator === "is" && value === null) {
-      return this.filter({ op: "neq", column, value: null });
-    }
-    return this.filter({ op: "neq", column, value });
+    if (operator === "is") return this.nullFilter("is_not", column, value);
+    if (operator === "eq") return this.filter({ op: "neq", column, value });
+    if (operator === "neq") return this.filter({ op: "eq", column, value });
+    return this.fail(`not("${operator}") filters are not supported.`);
   }
 
   is(column: string, value: unknown) {
-    return this.filter({ op: "eq", column, value });
+    return this.nullFilter("is", column, value);
   }
 
   in(column: string, value: unknown[]) {
@@ -192,13 +250,45 @@ class EdSyncQueryBuilder<T = any> implements PromiseLike<D1Result<T>> {
     return this.execute().then(onfulfilled, onrejected);
   }
 
+  private mutate(action: "insert" | "upsert" | "update" | "delete", values?: DataRequest["values"]) {
+    this.request.action = action;
+    if (values !== undefined) this.request.values = values;
+    this.warnIfNeverAwaited();
+    return this;
+  }
+
+  private warnIfNeverAwaited() {
+    if (process.env.NODE_ENV === "production" || this.watched) return;
+    this.watched = true;
+    setTimeout(() => {
+      if (!this.executed) {
+        console.warn(`EdSync: ${this.request.action} on "${this.request.table}" was never awaited, so it did not run.`);
+      }
+    }, 0);
+  }
+
   private filter(filter: DataFilter) {
     this.request.filters = [...(this.request.filters ?? []), filter];
     return this;
   }
 
+  private nullFilter(op: "is" | "is_not", column: string, value: unknown) {
+    if (value !== null && typeof value !== "boolean") return this.fail("is() filters accept null, true or false.");
+    return this.filter({ op, column, value });
+  }
+
+  private fail(message: string) {
+    this.invalid ??= message;
+    return this;
+  }
+
   private async execute(): Promise<D1Result<T>> {
-    return postJson<D1Result<T>>("/api/data", this.request);
+    this.executed = true;
+    if (this.invalid) return { data: null, error: { message: this.invalid, status: 400 } };
+    const request = withJoinCodes(this.request);
+    const result = await postJson<D1Result<T>>("/api/data", request);
+    rememberJoinCodes(request, result);
+    return result;
   }
 }
 
@@ -295,12 +385,11 @@ export function createClient() {
             form.set("path", path);
             form.set("file", file);
             if (options.upsert !== undefined) form.set("upsert", String(options.upsert));
-            const response = await fetch("/api/storage/upload", {
-              method: "POST",
-              credentials: "include",
-              body: form,
-            });
-            return (await response.json()) as D1Result<{ path: string; publicUrl: string }>;
+            return sendJson<D1Result<{ path: string; publicUrl: string }>>(
+              "/api/storage/upload",
+              { method: "POST", body: form },
+              false,
+            );
           },
           getPublicUrl(path: string) {
             const base = process.env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL || "";
