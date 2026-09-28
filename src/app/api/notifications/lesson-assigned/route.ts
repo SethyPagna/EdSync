@@ -14,6 +14,7 @@ import {
   tenantObjectParams,
   tenantObjectPredicate,
 } from "@/lib/tenancy/object-scope";
+import { readJson, withRoute } from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
 
 type AssignmentPayload = {
@@ -40,7 +41,7 @@ function jsonError(message: string, status: number) {
   return NextResponse.json({ data: null, error: message }, { status });
 }
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request) => {
   const user = await getSessionUser();
   if (!user) return jsonError("Unauthorized", 401);
 
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     return jsonError("Teacher access required.", 403);
   }
 
-  const body = (await request.json()) as AssignmentPayload;
+  const body = await readJson<AssignmentPayload>(request);
   let assignment: ReturnType<typeof normalizeAssignmentNotificationPayload>;
   try {
     assignment = normalizeAssignmentNotificationPayload(body);
@@ -190,4 +191,4 @@ export async function POST(request: Request) {
   );
 
   return NextResponse.json({ data: { notified: results.length }, error: null });
-}
+});
