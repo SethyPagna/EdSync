@@ -95,14 +95,15 @@ const ALL_CORRECT = { "q-mcq": "a", "q-tf": true, "q-short": " photosynthesis " 
 
 describe("POST /api/grades/lesson-quiz", () => {
   it("grades the final quiz on the server", async () => {
+    db.prepare("UPDATE quiz_questions SET explanation = ? WHERE id = 'q-mcq'").run("The organelle releases energy.");
     const response = await submit({ lessonId: "lesson-1", answers: ALL_CORRECT });
     expect(response.status).toBe(200);
     const { data } = await readJson(response);
     expect(data).toMatchObject({ score: 4, maxScore: 4, percent: 100, status: "graded", attemptNumber: 1, recorded: true });
     expect(data?.results).toEqual([
-      { questionId: "q-mcq", correct: true, pointsEarned: 2, pointsPossible: 2 },
-      { questionId: "q-tf", correct: true, pointsEarned: 1, pointsPossible: 1 },
-      { questionId: "q-short", correct: true, pointsEarned: 1, pointsPossible: 1 },
+      { questionId: "q-mcq", correct: true, pointsEarned: 2, pointsPossible: 2, correctOptionIds: ["a"], explanation: "The organelle releases energy." },
+      { questionId: "q-tf", correct: true, pointsEarned: 1, pointsPossible: 1, correctOptionIds: ["true"] },
+      { questionId: "q-short", correct: true, pointsEarned: 1, pointsPossible: 1, correctOptionIds: [] },
     ]);
 
     expect(scoreRow()).toMatchObject({
@@ -189,7 +190,9 @@ describe("POST /api/grades/lesson-quiz", () => {
   it("records a client-reported score as submitted, never graded", async () => {
     const response = await submit({ lessonId: "lesson-1", score: 100 });
     expect(response.status).toBe(200);
-    expect((await readJson(response)).data).toMatchObject({ status: "submitted", recorded: true });
+    const claim = (await readJson(response)).data;
+    expect(claim).toMatchObject({ status: "submitted", recorded: true });
+    expect(claim?.results).toBeUndefined();
     expect(scoreRow()).toMatchObject({
       status: "submitted",
       percent: null,
