@@ -8,6 +8,7 @@ export const NOTIFICATION_METADATA_MAX_LENGTH = 4_000;
 const NOTIFICATION_TYPE_PATTERN = /^[a-z0-9_.:-]+$/i;
 const NOTIFICATION_ID_PATTERN = /^[a-z0-9_.:-]+$/i;
 const SAFE_CHANNELS = new Set(["in_app", "email"]);
+const INTERNAL_PATH_PATTERN = /^\/(?![/\\])/;
 
 export type NotificationPriority = "low" | "normal" | "high";
 
@@ -72,7 +73,12 @@ export function validateNotificationActionUrl(value: unknown) {
   if (url.length > NOTIFICATION_ACTION_URL_MAX_LENGTH) {
     throw new Error(`Notification action must be ${NOTIFICATION_ACTION_URL_MAX_LENGTH} characters or fewer.`);
   }
-  if (!url.startsWith("/") || url.startsWith("//") || /[\r\n]/.test(url)) {
+  // Browsers drop tabs/newlines and treat "\" like "/", so "/\evil.com" or "/\t/evil.com" would leave the app.
+  const hasControlCharacter = Array.from(url).some((char) => {
+    const code = char.charCodeAt(0);
+    return code < 0x20 || code === 0x7f;
+  });
+  if (!INTERNAL_PATH_PATTERN.test(url) || /[\s\\]/.test(url) || hasControlCharacter) {
     throw new Error("Notification action must be an internal EdSync path.");
   }
   return url;
