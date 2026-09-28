@@ -13,7 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getPublicAuthCopy } from "@/lib/public/auth-copy";
 import { getPublicCopy } from "@/lib/public/i18n";
 import { usePublicLanguagePreference } from "@/lib/public/use-public-language";
-import { ArrowRight, Building2, GraduationCap, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Building2, GraduationCap, UserRound } from "lucide-react";
 
 type AccountType = "organization" | "individual";
 type OrganizationLookup = {
@@ -150,54 +150,61 @@ function LoginForm() {
     }
 
     setLoading(true);
+    try {
+      const { data, error } = await edsync.auth.signInWithPassword({
+        email,
+        password,
+        account_type: accountType,
+        organization_code: accountType === "organization" ? normalizedOrganizationCode : undefined,
+      });
 
-    const { data, error } = await edsync.auth.signInWithPassword({
-      email,
-      password,
-      account_type: accountType,
-      organization_code: accountType === "organization" ? normalizedOrganizationCode : undefined,
-    });
-
-    if (error) {
-      const message = error.message.toLowerCase();
-      if (message.includes("email not confirmed")) {
-        toast.error(authCopy.confirmEmailFirst);
-      } else if (message.includes("invalid login credentials")) {
-        toast.error(authCopy.wrongCredentials);
-      } else {
-        toast.error(error.message);
+      if (error) {
+        const message = error.message.toLowerCase();
+        if (message.includes("email not confirmed")) {
+          toast.error(authCopy.confirmEmailFirst);
+        } else if (message.includes("invalid login credentials")) {
+          toast.error(authCopy.wrongCredentials);
+        } else {
+          toast.error(error.message);
+        }
+        return;
       }
+
+      const role = normalizeUserRole(data.user?.user_metadata?.role);
+      if (!role) {
+        toast.error(authCopy.missingRole);
+        return;
+      }
+
+      const tenantSlug = data.user?.user_metadata?.tenant_slug || normalizedOrganizationCode;
+      const requestedNext = searchParams.get("next");
+      const fallbackNext = accountType === "organization" && tenantSlug
+        ? `${homeForRole(role)}?tenant=${encodeURIComponent(tenantSlug)}`
+        : homeForRole(role);
+      const safeNext = requestedNext ? safeNextPath(requestedNext, role) : fallbackNext;
+
+      try {
+        window.localStorage.setItem(
+          "edsync-auth-workspace",
+          JSON.stringify({
+            type: accountType,
+            organizationCode: accountType === "organization" ? tenantSlug : null,
+            organizationName: data.user?.user_metadata?.tenant_name ?? null,
+            signedInAt: new Date().toISOString(),
+          }),
+        );
+      } catch {
+        // Authentication stays valid when browser storage is unavailable.
+      }
+
+      toast.success(authCopy.welcomeBack);
+      router.push(safeNext);
+      router.refresh();
+    } catch {
+      toast.error("Could not connect. Please try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const role = normalizeUserRole(data.user?.user_metadata?.role);
-    if (!role) {
-      toast.error(authCopy.missingRole);
-      setLoading(false);
-      return;
-    }
-
-    const tenantSlug = data.user?.user_metadata?.tenant_slug || normalizedOrganizationCode;
-    const requestedNext = searchParams.get("next");
-    const fallbackNext = accountType === "organization" && tenantSlug
-      ? `${homeForRole(role)}?tenant=${encodeURIComponent(tenantSlug)}`
-      : homeForRole(role);
-    const safeNext = requestedNext ? safeNextPath(requestedNext, role) : fallbackNext;
-
-    window.localStorage.setItem(
-      "edsync-auth-workspace",
-      JSON.stringify({
-        type: accountType,
-        organizationCode: accountType === "organization" ? tenantSlug : null,
-        organizationName: data.user?.user_metadata?.tenant_name ?? null,
-        signedInAt: new Date().toISOString(),
-      }),
-    );
-
-    toast.success(authCopy.welcomeBack);
-    router.push(safeNext);
-    router.refresh();
   };
 
   return (
@@ -361,52 +368,10 @@ function LoginSignupLink() {
   );
 }
 
-function LoginSidePanelCopy() {
-  const { language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
-
-  return (
-    <>
-      <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-        {copy.workspaceTitle}
-      </h1>
-      <p className="sr-only">{copy.workspaceCopy}</p>
-    </>
-  );
-}
-
-function ProtectedPortalsCopy() {
-  const { language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
-
-  return <span>{copy.protectedPortals}</span>;
-}
-
 export default function LoginPage() {
   return (
-    <main className="auth-revamp premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_520px]">
-      <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-center lg:gap-8">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-display text-xl font-bold">EdSync</span>
-        </Link>
-        <div className="premium-panel rounded-[1.65rem] p-7">
-          <Suspense fallback={null}>
-            <LoginSidePanelCopy />
-          </Suspense>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-edsync-subtle">
-          <ShieldCheck className="h-5 w-5 text-edsync-emerald" />
-          <Suspense fallback={<span>Protected individual, organization, and owner views.</span>}>
-            <ProtectedPortalsCopy />
-          </Suspense>
-        </div>
-      </section>
-
-      <section className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-5 sm:py-10">
-        <div className="w-full max-w-[22rem] min-w-0 sm:max-w-md">
+    <main className="auth-revamp premium-shell flex min-h-screen items-center justify-center overflow-x-hidden px-4 py-10 sm:px-6">
+      <section className="w-full max-w-[30rem]">
           <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
@@ -419,7 +384,7 @@ export default function LoginPage() {
               <LanguageMenu compact />
             </div>
           </div>
-          <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 sm:rounded-[1.65rem] sm:p-7">
+          <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 shadow-xl sm:rounded-[1.65rem] sm:p-8">
             <Suspense fallback={<h2 className="font-display text-3xl font-bold">Sign in</h2>}>
               <LoginPanelTitle />
             </Suspense>
@@ -436,7 +401,6 @@ export default function LoginPage() {
               <LoginSignupLink />
             </Suspense>
           </div>
-        </div>
       </section>
     </main>
   );
