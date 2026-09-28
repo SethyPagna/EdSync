@@ -1,0 +1,321 @@
+/*
+ * EdSync design tokens. Every color in the app resolves through these variables.
+ * <html data-theme="…" data-accent="…" data-density="…"> selects the set; the boot
+ * script in src/lib/ui/theme.ts writes the attributes before first paint.
+ * src/lib/ui/theme.test.ts parses this file and enforces WCAG AA contrast for
+ * every theme × accent, so keep selectors to the simple forms used below.
+ */
+
+:root {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --control-h: 34px;
+  --motion-fast: 160ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-density="compact"] {
+  --control-h: 32px;
+}
+
+/* Light themes */
+
+:root,
+[data-theme="porcelain"] {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eff1f4;
+  --elevated: #ffffff;
+  --border: #e3e6eb;
+  --border-strong: #8c94a1;
+  --text: #111418;
+  --text-muted: #5b6472;
+  --text-faint: #828994;
+  --accent: #3d4ed7;
+  --accent-hover: #3141c0;
+  --accent-contrast: #ffffff;
+  --success: #1a7445;
+  --warning: #8f5600;
+  --danger: #c22f2d;
+  --info: #1f5fae;
+  --scrim: rgb(17 20 24 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(17 20 24 / 0.06);
+  --shadow: 0 1px 2px rgb(17 20 24 / 0.05), 0 8px 24px -8px rgb(17 20 24 / 0.12);
+  --shadow-lg: 0 2px 6px rgb(17 20 24 / 0.06), 0 24px 56px -12px rgb(17 20 24 / 0.22);
+}
+
+[data-theme="sand"] {
+  color-scheme: light;
+  --bg: #f7f3ec;
+  --surface: #fffdf9;
+  --surface-2: #f0eae0;
+  --elevated: #ffffff;
+  --border: #e6ddcf;
+  --border-strong: #9a8d7b;
+  --text: #1f1a14;
+  --text-muted: #6b6052;
+  --text-faint: #8e8579;
+  --accent: #a84b25;
+  --accent-hover: #8f3f1e;
+  --accent-contrast: #ffffff;
+  --success: #3a7236;
+  --warning: #8a5a00;
+  --danger: #b3372b;
+  --info: #1f5fae;
+  --scrim: rgb(31 26 20 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(56 40 20 / 0.07);
+  --shadow: 0 1px 2px rgb(56 40 20 / 0.06), 0 8px 24px -8px rgb(56 40 20 / 0.14);
+  --shadow-lg: 0 2px 6px rgb(56 40 20 / 0.07), 0 24px 56px -12px rgb(56 40 20 / 0.24);
+}
+
+[data-theme="sage"] {
+  color-scheme: light;
+  --bg: #f3f5f1;
+  --surface: #fcfdfb;
+  --surface-2: #e9ede6;
+  --elevated: #ffffff;
+  --border: #dde3d8;
+  --border-strong: #879283;
+  --text: #161b16;
+  --text-muted: #58635a;
+  --text-faint: #7f8880;
+  --accent: #3c6a4d;
+  --accent-hover: #315840;
+  --accent-contrast: #ffffff;
+  --success: #2d7443;
+  --warning: #855900;
+  --danger: #b03e2c;
+  --info: #1f5fae;
+  --scrim: rgb(22 27 22 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(22 34 24 / 0.06);
+  --shadow: 0 1px 2px rgb(22 34 24 / 0.05), 0 8px 24px -8px rgb(22 34 24 / 0.12);
+  --shadow-lg: 0 2px 6px rgb(22 34 24 / 0.06), 0 24px 56px -12px rgb(22 34 24 / 0.22);
+}
+
+[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f2f2f2;
+  --elevated: #ffffff;
+  --border: #e5e5e5;
+  --border-strong: #8f8f8f;
+  --text: #0a0a0a;
+  --text-muted: #5f5f5f;
+  --text-faint: #868686;
+  --accent: #111111;
+  --accent-hover: #2e2e2e;
+  --accent-contrast: #ffffff;
+  --success: #1a7445;
+  --warning: #8f5600;
+  --danger: #c22f2d;
+  --info: #1f5fae;
+  --scrim: rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 8px 24px -8px rgb(0 0 0 / 0.12);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.06), 0 24px 56px -12px rgb(0 0 0 / 0.22);
+}
+
+/* Dark themes */
+
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --bg: #1c1d20;
+  --surface: #232428;
+  --surface-2: #2a2c30;
+  --elevated: #303237;
+  --border: #383a40;
+  --border-strong: #6e727b;
+  --text: #ecedef;
+  --text-muted: #a3a7af;
+  --text-faint: #7b7e84;
+  --accent: #93a5ff;
+  --accent-hover: #aab8ff;
+  --accent-contrast: #11131c;
+  --success: #62c98e;
+  --warning: #e6b04f;
+  --danger: #f2837b;
+  --info: #7db4f2;
+  --scrim: rgb(0 0 0 / 0.6);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -6px rgb(0 0 0 / 0.45);
+  --shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 24px 56px -12px rgb(0 0 0 / 0.6);
+}
+
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0b0c0f;
+  --surface: #121317;
+  --surface-2: #181a1f;
+  --elevated: #1e2026;
+  --border: #262930;
+  --border-strong: #646977;
+  --text: #f2f3f5;
+  --text-muted: #9499a3;
+  --text-faint: #6b6f77;
+  --accent: #a98dfa;
+  --accent-hover: #bca6fc;
+  --accent-contrast: #130b26;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #7db4f2;
+  --scrim: rgb(0 0 0 / 0.66);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 8px 28px -6px rgb(0 0 0 / 0.7);
+  --shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 64px -12px rgb(0 0 0 / 0.8);
+}
+
+[data-theme="ocean"] {
+  color-scheme: dark;
+  --bg: #0b1a22;
+  --surface: #10232d;
+  --surface-2: #152c38;
+  --elevated: #1a3442;
+  --border: #244251;
+  --border-strong: #55788a;
+  --text: #e6f1f5;
+  --text-muted: #96b1be;
+  --text-faint: #6c848f;
+  --accent: #4fd1c5;
+  --accent-hover: #74ddd3;
+  --accent-contrast: #05201d;
+  --success: #5bd08f;
+  --warning: #f2c14e;
+  --danger: #f58d82;
+  --info: #7db4f2;
+  --scrim: rgb(0 8 14 / 0.62);
+  --shadow-sm: 0 1px 2px rgb(0 8 14 / 0.4);
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -6px rgb(0 8 14 / 0.55);
+  --shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 24px 56px -12px rgb(0 8 14 / 0.7);
+}
+
+[data-theme="rosewood"] {
+  color-scheme: dark;
+  --bg: #1d1416;
+  --surface: #251a1d;
+  --surface-2: #2d2124;
+  --elevated: #35282c;
+  --border: #433337;
+  --border-strong: #7e6569;
+  --text: #f6eded;
+  --text-muted: #bfa8ab;
+  --text-faint: #8e7c7e;
+  --accent: #e8aa90;
+  --accent-hover: #f0bda8;
+  --accent-contrast: #2a1411;
+  --success: #7ecc96;
+  --warning: #ebb75e;
+  --danger: #f48d84;
+  --info: #7db4f2;
+  --scrim: rgb(10 2 4 / 0.62);
+  --shadow-sm: 0 1px 2px rgb(10 2 4 / 0.4);
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -6px rgb(10 2 4 / 0.55);
+  --shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 24px 56px -12px rgb(10 2 4 / 0.7);
+}
+
+/* Accent overrides: light variant, then the dark variant for dark themes. */
+
+[data-accent="indigo"] {
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-contrast: #ffffff;
+}
+
+[data-accent="teal"] {
+  --accent: #0e6b63;
+  --accent-hover: #0b5750;
+  --accent-contrast: #ffffff;
+}
+
+[data-accent="violet"] {
+  --accent: #6d28d9;
+  --accent-hover: #5b21b6;
+  --accent-contrast: #ffffff;
+}
+
+[data-accent="rose"] {
+  --accent: #be123c;
+  --accent-hover: #9f1239;
+  --accent-contrast: #ffffff;
+}
+
+[data-accent="amber"] {
+  --accent: #96500a;
+  --accent-hover: #7c4208;
+  --accent-contrast: #ffffff;
+}
+
+[data-accent="ink"] {
+  --accent: #111418;
+  --accent-hover: #2e3238;
+  --accent-contrast: #ffffff;
+}
+
+[data-accent="indigo"]:is([data-theme="graphite"], [data-theme="midnight"], [data-theme="ocean"], [data-theme="rosewood"]) {
+  --accent: #a5b4fc;
+  --accent-hover: #c7d2fe;
+  --accent-contrast: #11132b;
+}
+
+[data-accent="teal"]:is([data-theme="graphite"], [data-theme="midnight"], [data-theme="ocean"], [data-theme="rosewood"]) {
+  --accent: #4fd1c5;
+  --accent-hover: #74ddd3;
+  --accent-contrast: #05201d;
+}
+
+[data-accent="violet"]:is([data-theme="graphite"], [data-theme="midnight"], [data-theme="ocean"], [data-theme="rosewood"]) {
+  --accent: #c4b5fd;
+  --accent-hover: #ddd6fe;
+  --accent-contrast: #1e1033;
+}
+
+[data-accent="rose"]:is([data-theme="graphite"], [data-theme="midnight"], [data-theme="ocean"], [data-theme="rosewood"]) {
+  --accent: #fda4af;
+  --accent-hover: #fecdd3;
+  --accent-contrast: #3b0a15;
+}
+
+[data-accent="amber"]:is([data-theme="graphite"], [data-theme="midnight"], [data-theme="ocean"], [data-theme="rosewood"]) {
+  --accent: #f5c04a;
+  --accent-hover: #f9d27a;
+  --accent-contrast: #2a1a00;
+}
+
+[data-accent="ink"]:is([data-theme="graphite"], [data-theme="midnight"], [data-theme="ocean"], [data-theme="rosewood"]) {
+  --accent: #ecedef;
+  --accent-hover: #ffffff;
+  --accent-contrast: #111418;
+}
+
+/* Tokens derived from the palette above, recomputed wherever a theme or accent applies. */
+
+:root,
+[data-theme],
+[data-accent] {
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --success-soft: color-mix(in srgb, var(--success) 12%, var(--surface));
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  --info-soft: color-mix(in srgb, var(--info) 12%, var(--surface));
+  --focus: var(--accent);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus);
+
+  /* Legacy aliases for CSS and components that predate the token set. New code uses the names above. */
+  --card: var(--elevated);
+  --muted: var(--surface-2);
+  --subtle: var(--text-muted);
+  --blue: var(--accent);
+  --purple: var(--accent);
+  --emerald: var(--success);
+  --amber: var(--warning);
+  --red: var(--danger);
+  --cyan: var(--info);
+  --overlay: color-mix(in srgb, var(--elevated) 92%, transparent);
+  --overlay-strong: var(--elevated);
+  --shadow-soft: var(--shadow);
+  --shadow-menu: var(--shadow-lg);
+}
