@@ -15,7 +15,7 @@ const DEFAULT_GRADING_SETTINGS: WorkGradingSettings = {
   participationCriteria: "",
 };
 
-function readRecord(value: unknown) {
+export function readSettingsRecord(value: unknown): Record<string, unknown> {
   if (!value) return {};
   if (typeof value === "string") {
     try {
@@ -29,7 +29,7 @@ function readRecord(value: unknown) {
 }
 
 export function normalizeWorkGradingSettings(value: unknown): WorkGradingSettings {
-  const record = readRecord(value);
+  const record = readSettingsRecord(value);
   const rawMode = String(record.gradingMode ?? record.mode ?? DEFAULT_GRADING_SETTINGS.mode);
   const mode = MODES.has(rawMode as WorkGradingMode) ? (rawMode as WorkGradingMode) : DEFAULT_GRADING_SETTINGS.mode;
   const rawWeight = Number(record.gradeWeightPercent ?? record.weightPercent ?? 0);
@@ -40,10 +40,6 @@ export function normalizeWorkGradingSettings(value: unknown): WorkGradingSetting
     typeof record.participationCriteria === "string" ? record.participationCriteria.slice(0, 500) : "";
 
   return { mode, gradeWeightPercent, countsTowardGrade, participationCriteria };
-}
-
-export function serializeWorkGradingSettings(value: unknown) {
-  return JSON.stringify(normalizeWorkGradingSettings(value));
 }
 
 export function workGradeContribution(input: {
