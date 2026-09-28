@@ -1,3 +1,5 @@
+import type { ThemePreference } from "@/lib/ui/theme";
+
 export type UserRole = "admin" | "teacher" | "student";
 export type LessonStatus = "draft" | "published" | "archived";
 export type ContentType =
@@ -35,7 +37,7 @@ export interface Profile {
 }
 
 export interface UserPreferences {
-  theme: "light" | "dark" | "system";
+  theme: ThemePreference | "light" | "dark";
   text_size: "small" | "medium" | "large";
   email_notifications?: boolean;
   assignment_notifications?: boolean;
