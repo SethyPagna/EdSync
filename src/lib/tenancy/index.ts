@@ -145,14 +145,34 @@ export async function linkTenantObject(input: {
   );
 }
 
+const SQL_IDENTIFIER = /^[a-z][a-z0-9_]*$/i;
+
+function sqlIdentifier(value: string) {
+  if (!SQL_IDENTIFIER.test(value)) throw new Error(`Invalid SQL identifier: ${value}`);
+  return value;
+}
+
 export async function assertTenantObject(input: {
   tenantId: string;
   table: string;
   objectId: string;
+  ownerColumn?: string;
+  userId?: string | null;
+  isTenantAdmin?: boolean;
 }) {
-  const [row] = await d1Query<{ id: string }>(
-    "SELECT id FROM tenant_object_links WHERE tenant_id = ? AND object_table = ? AND object_id = ? LIMIT 1",
-    [input.tenantId, input.table, input.objectId],
+  const table = sqlIdentifier(input.table);
+  const [link] = await d1Query<{ tenant_id: string }>(
+    "SELECT tenant_id FROM tenant_object_links WHERE object_table = ? AND object_id = ? LIMIT 1",
+    [table, input.objectId],
   );
-  return Boolean(row) || input.tenantId === DEFAULT_TENANT_ID;
+  if (input.tenantId !== DEFAULT_TENANT_ID) return link?.tenant_id === input.tenantId;
+  if (link && link.tenant_id !== DEFAULT_TENANT_ID) return false;
+  if (input.isTenantAdmin) return true;
+  // Unrelated accounts share the default tenant, so ownership is the boundary there.
+  if (!input.ownerColumn || !input.userId) return false;
+  const [owned] = await d1Query<{ id: string }>(
+    `SELECT id FROM ${table} WHERE id = ? AND ${sqlIdentifier(input.ownerColumn)} = ? LIMIT 1`,
+    [input.objectId, input.userId],
+  );
+  return Boolean(owned);
 }
