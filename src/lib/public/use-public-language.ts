@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   DEFAULT_PUBLIC_LANGUAGE,
   normalizePublicLanguage,
   publicLanguageQuerySuffix,
-  type PublicLanguageName,
 } from "./languages";
 
 function readStoredLanguage() {
@@ -21,19 +20,23 @@ function readStoredLanguage() {
   );
 }
 
+function subscribeToStoredLanguage(notify: () => void) {
+  window.addEventListener("edsync-language-change", notify);
+  window.addEventListener("storage", notify);
+  return () => {
+    window.removeEventListener("edsync-language-change", notify);
+    window.removeEventListener("storage", notify);
+  };
+}
+
 export function usePublicLanguagePreference() {
   const searchParams = useSearchParams();
   const queryLanguage = searchParams.get("language");
-  const [storedLanguage, setStoredLanguage] = useState<PublicLanguageName>(readStoredLanguage);
-
-  useEffect(() => {
-    const handleLanguageChange = (event: Event) => {
-      const nextLanguage = (event as CustomEvent<{ language?: string }>).detail?.language;
-      setStoredLanguage(normalizePublicLanguage(nextLanguage));
-    };
-    window.addEventListener("edsync-language-change", handleLanguageChange);
-    return () => window.removeEventListener("edsync-language-change", handleLanguageChange);
-  }, []);
+  const storedLanguage = useSyncExternalStore(
+    subscribeToStoredLanguage,
+    readStoredLanguage,
+    () => DEFAULT_PUBLIC_LANGUAGE,
+  );
 
   const language = useMemo(
     () => (queryLanguage ? normalizePublicLanguage(queryLanguage) : storedLanguage),
