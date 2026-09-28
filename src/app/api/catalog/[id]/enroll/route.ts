@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { enrollCatalogItem, getPublicCatalogItem } from "@/lib/catalog";
 import { validateCatalogProductId } from "@/lib/validation/catalog";
 import { publicLanguageQuerySuffix } from "@/lib/public/languages";
+import { isHttpError, routeErrorResponse } from "@/lib/security/http-errors";
 
 export async function POST(
   request: Request,
@@ -42,6 +43,7 @@ export async function POST(
 
     return NextResponse.json({ data: result, error: null });
   } catch (error) {
+    if (isHttpError(error)) return routeErrorResponse(error);
     if (error instanceof Error && error.message.includes("Catalog item id")) {
       return NextResponse.json({ data: null, error: error.message }, { status: 400 });
     }
