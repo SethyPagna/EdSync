@@ -1,254 +1,94 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import toast from "react-hot-toast";
-import { ArrowRight, BookOpenCheck, GraduationCap, UserRound, UsersRound } from "lucide-react";
+import { BookOpen, GraduationCap, Plus, UsersRound } from "lucide-react";
+import { Button, EmptyState, LinkButton, PageHeader, Sheet, Skeleton } from "@/components/ui";
+import { chunks } from "@/components/student-home/data";
 import { createClient } from "@/lib/edsync/client";
 import type { Class, Profile } from "@/types";
 
-type EnrollmentRow = {
-  class_id: string;
-};
-
-type ClassCard = Class & {
-  teacherName?: string;
-  lessonCount?: number;
-};
+type ClassCard = Class & { teacherName: string; lessonCount: number };
 
 export default function StudentClassesPage() {
-  const edsync = useMemo(() => createClient(), []);
+  const client = useMemo(() => createClient(), []);
   const [classes, setClasses] = useState<ClassCard[]>([]);
-  const [joinCode, setJoinCode] = useState("");
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [error, setError] = useState("");
+  const [joinError, setJoinError] = useState("");
 
-  const loadClasses = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const {
-        data: { user },
-      } = await edsync.auth.getUser();
-      if (!user) {
-        setClasses([]);
-        return;
-      }
-
-      const { data: enrollments } = await edsync
-        .from("class_enrollments")
-        .select("class_id")
-        .eq("student_id", user.id)
-        .eq("is_active", true);
-      const classIds = ((enrollments || []) as EnrollmentRow[]).map((row) => row.class_id);
-      if (classIds.length === 0) {
-        setClasses([]);
-        return;
-      }
-
-      const { data: classRows } = await edsync
-        .from("classes")
-        .select("*")
-        .in("id", classIds)
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false });
-      const activeClasses = (classRows || []) as Class[];
-      const teacherIds = Array.from(new Set(activeClasses.map((row) => row.teacher_id).filter(Boolean)));
-      const [teacherRes, assignmentRes] = await Promise.all([
-        teacherIds.length
-          ? edsync.from("profiles").select("id, full_name, email").in("id", teacherIds)
-          : Promise.resolve({ data: [] }),
-        edsync.from("lesson_assignments").select("class_id").in("class_id", classIds).eq("is_active", true),
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) throw new Error("Sign in to view your access.");
+      const enrollments = await client.from("class_enrollments").select("class_id").eq("student_id", user.id).eq("is_active", true);
+      if (enrollments.error) throw new Error(enrollments.error.message);
+      const ids = ((enrollments.data ?? []) as { class_id: string }[]).map((item) => item.class_id);
+      if (!ids.length) { setClasses([]); return; }
+      const classResults = await Promise.all(chunks(ids).map((group) => client.from("classes").select("*").in("id", group).eq("is_active", true)));
+      const classFailure = classResults.find((result) => result.error);
+      if (classFailure?.error) throw new Error(classFailure.error.message);
+      const rows = classResults.flatMap((result) => (result.data ?? []) as Class[]).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+      const teacherIds = Array.from(new Set(rows.map((row) => row.teacher_id)));
+      const [teachers, assignments] = await Promise.all([
+        Promise.all(chunks(teacherIds).map((group) => client.from("profiles").select("id, full_name, email").in("id", group))),
+        Promise.all(chunks(ids).map((group) => client.from("lesson_assignments").select("class_id, lesson_id").in("class_id", group).eq("is_active", true))),
       ]);
-
-      const teacherById = new Map(
-        ((teacherRes.data || []) as Pick<Profile, "id" | "full_name" | "email">[]).map((profile) => [
-          profile.id,
-          profile.full_name || profile.email,
-        ]),
-      );
-      const lessonCounts = new Map<string, number>();
-      ((assignmentRes.data || []) as { class_id: string }[]).forEach((assignment) => {
-        lessonCounts.set(assignment.class_id, (lessonCounts.get(assignment.class_id) || 0) + 1);
+      const detailFailure = [...teachers, ...assignments].find((result) => result.error);
+      if (detailFailure?.error) throw new Error(detailFailure.error.message);
+      const teacherNames = new Map(teachers.flatMap((result) => (result.data ?? []) as Pick<Profile, "id" | "full_name" | "email">[]).map((item) => [item.id, item.full_name || item.email]));
+      const lessonIds = new Map<string, Set<string>>();
+      assignments.flatMap((result) => (result.data ?? []) as { class_id: string; lesson_id: string }[]).forEach((item) => {
+        const current = lessonIds.get(item.class_id) ?? new Set<string>();
+        current.add(item.lesson_id);
+        lessonIds.set(item.class_id, current);
       });
+      setClasses(rows.map((row) => ({ ...row, teacherName: teacherNames.get(row.teacher_id) ?? "Teacher", lessonCount: lessonIds.get(row.id)?.size ?? 0 })));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Access could not load."); }
+    finally { setLoading(false); }
+  }, [client]);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
-      setClasses(
-        activeClasses.map((classItem) => ({
-          ...classItem,
-          teacherName: teacherById.get(classItem.teacher_id) || "Creator",
-          lessonCount: lessonCounts.get(classItem.id) || 0,
-        })),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [edsync]);
-
-  useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadClasses();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [loadClasses]);
-
-  const joinClass = async () => {
-    if (!joinCode.trim()) return;
+  const join = async () => {
+    const joinCode = code.trim().toUpperCase();
+    if (!joinCode || joining) return;
     setJoining(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) {
-      setJoining(false);
-      return;
-    }
-
-    const { data: classItem, error: classError } = await edsync
-      .from("classes")
-      .select("id, name")
-      .eq("join_code", joinCode.trim().toUpperCase())
-      .maybeSingle();
-
-    if (classError) {
-      toast.error(`Could not look up space: ${classError.message}`);
-      setJoining(false);
-      return;
-    }
-
-    if (!classItem) {
-      toast.error("Invalid access code. Ask for the current code.");
-      setJoining(false);
-      return;
-    }
-
-    const { error } = await edsync.from("class_enrollments").upsert(
-      { class_id: classItem.id, student_id: user.id, is_active: true },
-      { onConflict: "class_id,student_id" },
-    );
-
-    if (error) {
-      toast.error(`Could not add access: ${error.message}`);
-    } else {
-      toast.success(`Access added: ${classItem.name}.`);
-      setJoinCode("");
-      await loadClasses();
-    }
-    setJoining(false);
+    setJoinError("");
+    try {
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) throw new Error("Sign in to join a class.");
+      const lookup = await client.from("classes").select("id, name").eq("join_code", joinCode).maybeSingle();
+      if (lookup.error) throw new Error(lookup.error.message);
+      if (!lookup.data) throw new Error("Code not found. Check with your teacher.");
+      const result = await client.from("class_enrollments").upsert({ class_id: lookup.data.id, student_id: user.id, join_code: joinCode, is_active: true }, { onConflict: "class_id,student_id" });
+      if (result.error) throw new Error(result.error.message);
+      setCode("");
+      setOpen(false);
+      await load();
+    } catch (cause) { setJoinError(cause instanceof Error ? cause.message : "Could not join this class."); }
+    finally { setJoining(false); }
   };
 
   return (
-    <div className="page-shell space-y-5">
-      <header className="premium-panel group rounded-2xl p-4 sm:p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">Course access</p>
-        <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold">Course Access</h1>
-            <p className="edsync-hover-detail max-w-2xl">
-              Enter an organization access code, see who manages the space, and open linked courses.
-            </p>
-          </div>
-          <div className="flex w-full max-w-md gap-2">
-            <input
-              value={joinCode}
-              onChange={(event) => setJoinCode(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && joinClass()}
-              placeholder="Access code"
-              className="edsync-input min-w-0 flex-1 py-2 font-mono uppercase"
-            />
-            <button
-              type="button"
-              onClick={joinClass}
-              disabled={joining || !joinCode.trim()}
-              className="btn-primary flex-none justify-center px-4 py-2"
-            >
-              Enter
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="metric-card">
-          <UsersRound className="h-5 w-5 text-edsync-blue" />
-          <span>{classes.length}</span>
-          <p>Active courses</p>
-        </div>
-        <div className="metric-card">
-          <BookOpenCheck className="h-5 w-5 text-edsync-emerald" />
-          <span>{classes.reduce((total, classItem) => total + (classItem.lessonCount || 0), 0)}</span>
-          <p>Linked courses</p>
-        </div>
-        <div className="metric-card">
-          <GraduationCap className="h-5 w-5 text-edsync-amber" />
-          <span>{new Set(classes.map((classItem) => classItem.teacher_id)).size}</span>
-          <p>Creators</p>
-        </div>
-      </section>
-
-      <section className="premium-surface group rounded-2xl p-4 sm:p-5">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="font-display text-xl font-bold">Your access</h2>
-            <p className="edsync-hover-detail">Courses, creator context, and linked work.</p>
-          </div>
-          <Link href="/student/lessons" className="btn-secondary px-3 py-2 text-sm">
-            Courses <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {[...Array(4)].map((_, index) => (
-              <div key={index} className="h-40 animate-pulse rounded-2xl bg-edsync-surface" />
-            ))}
-          </div>
-        ) : classes.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-surface p-8 text-center">
-            <UsersRound className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-            <p className="font-semibold text-edsync-text">No access yet</p>
-            <p className="mt-1 text-sm text-edsync-subtle">Use an access code.</p>
-            <Link href="/catalog" className="btn-secondary mx-auto mt-4 w-fit px-4 py-2 text-sm">
-              Browse catalog <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {classes.map((classItem) => (
-              <article key={classItem.id} className="premium-card group rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-edsync-blue/10 text-edsync-blue">
-                    <GraduationCap className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-display text-xl font-bold text-edsync-text">{classItem.name}</h3>
-                    <p className="edsync-hover-detail">
-                      {classItem.description || `${classItem.subject || "Course"} access`}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-2 text-sm text-edsync-subtle sm:grid-cols-2">
-                  <span className="inline-flex items-center gap-2 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2">
-                    <UserRound className="h-4 w-4" />
-                    {classItem.teacherName}
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2">
-                    <BookOpenCheck className="h-4 w-4" />
-                    {classItem.lessonCount} courses
-                  </span>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
-                    {classItem.subject || "General"}
-                  </span>
-                  {classItem.grade_level && (
-                    <span className="badge bg-edsync-blue/10 text-edsync-blue">{classItem.grade_level}</span>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+    <div className="page">
+      <PageHeader title="Access" count={classes.length} actions={<Button icon={Plus} variant="primary" size="sm" onClick={() => setOpen(true)}>Join code</Button>} />
+      {error && <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-danger-soft p-3 text-sm text-danger"><span>{error}</span><Button size="sm" onClick={() => void load()}>Retry</Button></div>}
+      {loading ? <div className="grid gap-3 sm:grid-cols-2">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-32 rounded-xl" />)}</div> : classes.length ? (
+        <div className="grid gap-3 sm:grid-cols-2">{classes.map((item) => <article key={item.id} className="rounded-xl border border-line bg-surface p-4">
+          <div className="flex items-start gap-3"><div aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><GraduationCap className="size-5" /></div><div className="min-w-0 flex-1"><h2 className="truncate text-base font-medium text-fg">{item.name}</h2><p className="mt-0.5 truncate text-xs text-fg-muted">{item.subject ?? "Course"}{item.grade_level ? ` · ${item.grade_level}` : ""}</p></div></div>
+          <div className="mt-4 flex flex-wrap gap-3 text-xs text-fg-muted"><span className="inline-flex items-center gap-1"><UsersRound className="size-3.5" />{item.teacherName}</span><span className="inline-flex items-center gap-1"><BookOpen className="size-3.5" />{item.lessonCount} courses</span></div>
+        </article>)}</div>
+      ) : !error ? <EmptyState icon={UsersRound} title="No class access yet" action={<Button variant="primary" icon={Plus} onClick={() => setOpen(true)}>Join with code</Button>} /> : null}
+      {!loading && <div className="mt-6"><LinkButton href="/student/lessons" variant="secondary">View courses</LinkButton></div>}
+      <Sheet open={open} onClose={() => { setOpen(false); setJoinError(""); }} title="Join a class" description="Enter the code from your teacher." footer={<Button variant="primary" loading={joining} disabled={!code.trim()} onClick={() => void join()}>Join class</Button>}>
+        <label htmlFor="class-code" className="mb-2 block text-sm font-medium text-fg">Access code</label>
+        <input id="class-code" className="input w-full font-mono uppercase" autoComplete="off" value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void join(); } }} placeholder="e.g. BIOLOGY8" />
+        {joinError && <p role="alert" className="mt-3 rounded-lg bg-danger-soft p-3 text-sm text-danger">{joinError}</p>}
+      </Sheet>
     </div>
   );
 }
