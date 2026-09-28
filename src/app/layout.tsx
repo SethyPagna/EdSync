@@ -1,16 +1,27 @@
 import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "@/styles/globals.css";
 import "@/styles/workspace.css";
 import { Toaster } from "react-hot-toast";
 import PwaRegister from "@/components/PwaRegister";
+import { ConfirmProvider } from "@/components/ui/Confirm";
 import { DEFAULT_PUBLIC_LANGUAGE, EDSYNC_LANGUAGES } from "@/lib/public/languages";
+import { THEMES, appearanceBootScript } from "@/lib/ui/theme";
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap", preload: false });
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: "italic",
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
 
 const publicLanguages = JSON.stringify(EDSYNC_LANGUAGES);
-const preferenceScript = `
+const languageScript = `
 (() => {
   try {
-    const theme = window.localStorage.getItem("edsync-theme");
-    document.documentElement.classList.toggle("dark", theme === "dark");
     const queryLanguage = new URLSearchParams(window.location.search).get("language");
     const cookieLanguage = document.cookie.split("; ").find((row) => row.startsWith("edsync-language="))?.split("=")[1];
     const cookieLanguageCode = document.cookie.split("; ").find((row) => row.startsWith("edsync-language-code="))?.split("=")[1];
@@ -22,6 +33,7 @@ const preferenceScript = `
   } catch {}
 })();
 `;
+const preferenceScript = appearanceBootScript + languageScript;
 
 export const metadata: Metadata = {
   title: {
@@ -37,6 +49,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: THEMES.filter((theme) => theme.id === "porcelain" || theme.id === "graphite").map((theme) => ({
+    media: `(prefers-color-scheme: ${theme.mode})`,
+    color: theme.swatch.bg,
+  })),
 };
 
 export default function RootLayout({
@@ -45,29 +61,31 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: preferenceScript }} />
       </head>
-      <body
-        className="min-h-screen bg-edsync-bg font-body text-edsync-text antialiased"
-        suppressHydrationWarning
-      >
-        {children}
+      <body className="min-h-screen bg-bg font-sans text-fg antialiased" suppressHydrationWarning>
+        <ConfirmProvider>{children}</ConfirmProvider>
         <PwaRegister />
         <Toaster
           position="top-right"
           toastOptions={{
             style: {
-              background: "var(--overlay-strong)",
+              background: "var(--elevated)",
               color: "var(--text)",
               border: "1px solid var(--border)",
-              borderRadius: "14px",
-              boxShadow: "var(--shadow-menu)",
-              fontFamily: "Instrument Sans, sans-serif",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-lg)",
+              fontFamily: "var(--font-sans)",
+              fontSize: "13px",
             },
-            success: { iconTheme: { primary: "var(--emerald)", secondary: "var(--surface)" } },
-            error: { iconTheme: { primary: "var(--red)", secondary: "var(--surface)" } },
+            success: { iconTheme: { primary: "var(--success)", secondary: "var(--elevated)" } },
+            error: { iconTheme: { primary: "var(--danger)", secondary: "var(--elevated)" } },
           }}
         />
       </body>
