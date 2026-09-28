@@ -90,14 +90,15 @@ async function canPublish(
   return permissions.has(PERMISSIONS.coursesPublish);
 }
 
-async function assertOwnerOrAdmin(documentId: string, tenantId: string, userId: string, isAdmin: boolean) {
+async function ownerError(documentId: string, tenantId: string, userId: string, isAdmin: boolean) {
   const [row] = await d1Query<Pick<StudioDocumentRow, "id" | "tenant_id" | "owner_id">>(
     "SELECT id, tenant_id, owner_id FROM studio_documents WHERE id = ? LIMIT 1",
     [documentId],
   );
-  if (!row) throw new Error("Workspace item not found.");
-  if (row.tenant_id !== tenantId) throw new Error("Workspace item belongs to another tenant.");
-  if (!isAdmin && row.owner_id !== userId) throw new Error("You cannot modify this workspace item.");
+  if (!row || row.tenant_id !== tenantId || (!isAdmin && row.owner_id !== userId)) {
+    return errorResponse("Design not found.", 404);
+  }
+  return null;
 }
 
 async function recordStudioEvent(input: {
@@ -131,12 +132,14 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const kind = params.get("kind");
   const historyId = params.get("historyId");
+  const itemId = params.get("id");
   const includeArchived = params.get("includeArchived") === "true";
   const normalizedKind = kind ? normalizeStudioKind(kind) : null;
   const isAdmin = user.user_metadata.role === "admin";
 
   if (historyId) {
-    await assertOwnerOrAdmin(historyId, context.tenant.id, user.id, isAdmin);
+    const denial = await ownerError(historyId, context.tenant.id, user.id, isAdmin);
+    if (denial) return denial;
     const events = await d1Query<StudioEventRow>(
       `SELECT id, actor_id, event_type, payload, created_at
          FROM learning_events
@@ -148,6 +151,15 @@ export async function GET(request: Request) {
       [context.tenant.id, historyId],
     );
     return jsonResponse({ events: events.map(serializeEvent) });
+  }
+
+  if (itemId) {
+    const [row] = await d1Query<StudioDocumentRow>(
+      `SELECT * FROM studio_documents WHERE id = ? AND tenant_id = ? AND ${isAdmin ? "1 = 1" : "owner_id = ?"} LIMIT 1`,
+      [itemId, context.tenant.id, ...(isAdmin ? [] : [user.id])],
+    );
+    if (!row || (row.status === "archived" && !includeArchived)) return errorResponse("Design not found.", 404);
+    return jsonResponse({ item: serializeRow(row) });
   }
 
   const where = [
@@ -287,7 +299,8 @@ export async function PATCH(request: Request) {
     metadata?: Record<string, unknown>;
   };
   if (!body.id) return errorResponse("Workspace item id is required.", 400);
-  await assertOwnerOrAdmin(body.id, context.tenant.id, user.id, user.user_metadata.role === "admin");
+  const denial = await ownerError(body.id, context.tenant.id, user.id, user.user_metadata.role === "admin");
+  if (denial) return denial;
   let status: "draft" | "published" | "archived" | null = null;
   if (body.status !== undefined) {
     try {
@@ -374,7 +387,8 @@ export async function DELETE(request: Request) {
   const hard = params.get("hard") === "true";
   if (!id) return errorResponse("Workspace item id is required.", 400);
 
-  await assertOwnerOrAdmin(id, context.tenant.id, user.id, user.user_metadata.role === "admin");
+  const denial = await ownerError(id, context.tenant.id, user.id, user.user_metadata.role === "admin");
+  if (denial) return denial;
   if (hard) {
     await recordStudioEvent({
       tenantId: context.tenant.id,
