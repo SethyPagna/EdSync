@@ -67,6 +67,11 @@ function parsePreferences(value: string | null) {
   }
 }
 
+function timestamp(value: unknown) {
+  const parsed = Date.parse(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function classScopeParams(tenantId: string) {
   return tenantObjectParams({ objectTable: "classes", tenantId });
 }
@@ -281,41 +286,60 @@ export async function GET(request: Request) {
       ? [classScopeParams(context.tenant.id)[0], user.id, ...classPredicateParams(context.tenant.id), classId]
       : [classScopeParams(context.tenant.id)[0], user.id, ...classPredicateParams(context.tenant.id)],
   );
-  const classIds = classRows.map((row) => row.id);
+  const classIds = Array.from(new Set(classRows.map((row) => row.id)));
   if (classIds.length === 0) {
-    return NextResponse.json({ data: { announcements: [], events: [] }, error: null });
-  }
-
-  const classPlaceholders = sqlInPlaceholders(classIds);
-  const eventWhere = classId
-    ? `e.class_id IN (${classPlaceholders}) AND e.visibility IN ('class', 'student')`
-    : `(e.class_id IN (${classPlaceholders}) AND e.visibility IN ('class', 'student'))
-           OR (e.owner_id = ? AND e.visibility = 'student')`;
-  const eventParams = classId ? classIds : [...classIds, user.id];
-
-  const [announcements, events] = await Promise.all([
-    d1Query(
-      `SELECT a.*, c.name AS class_name
-         FROM announcements a
-         LEFT JOIN classes c ON c.id = a.class_id
-        WHERE a.class_id IN (${classPlaceholders})
-          AND datetime(a.publish_at) <= datetime('now')
-          AND (a.expires_at IS NULL OR datetime(a.expires_at) >= datetime('now'))
-        ORDER BY datetime(a.publish_at) DESC, datetime(a.created_at) DESC
-        LIMIT 20`,
-      classIds,
-    ),
-    d1Query(
+    const events = classId ? [] : await d1Query(
       `SELECT e.*, c.name AS class_name, l.title AS lesson_title
          FROM schedule_events e
          LEFT JOIN classes c ON c.id = e.class_id
          LEFT JOIN lessons l ON l.id = e.lesson_id
-        WHERE ${eventWhere}
+        WHERE e.owner_id = ? AND e.visibility = 'student'
         ORDER BY COALESCE(e.due_at, e.starts_at, e.created_at) ASC
         LIMIT 30`,
-      eventParams,
-    ),
-  ]);
+      [user.id],
+    );
+    return NextResponse.json({ data: { announcements: [], events }, error: null });
+  }
+
+  const chunks = Array.from({ length: Math.ceil(classIds.length / 99) }, (_, index) =>
+    classIds.slice(index * 99, (index + 1) * 99));
+  const results = await Promise.all(chunks.map(async (ids, index) => {
+    const placeholders = sqlInPlaceholders(ids);
+    const includePersonal = !classId && index === 0;
+    const eventWhere = `(e.class_id IN (${placeholders}) AND e.visibility IN ('class', 'student'))`
+      + (includePersonal ? " OR (e.owner_id = ? AND e.visibility = 'student')" : "");
+    return Promise.all([
+      d1Query(
+        `SELECT a.*, c.name AS class_name
+           FROM announcements a
+           LEFT JOIN classes c ON c.id = a.class_id
+          WHERE a.class_id IN (${placeholders})
+            AND datetime(a.publish_at) <= datetime('now')
+            AND (a.expires_at IS NULL OR datetime(a.expires_at) >= datetime('now'))
+          ORDER BY datetime(a.publish_at) DESC, datetime(a.created_at) DESC
+          LIMIT 20`,
+        ids,
+      ),
+      d1Query(
+        `SELECT e.*, c.name AS class_name, l.title AS lesson_title
+           FROM schedule_events e
+           LEFT JOIN classes c ON c.id = e.class_id
+           LEFT JOIN lessons l ON l.id = e.lesson_id
+          WHERE ${eventWhere}
+          ORDER BY COALESCE(e.due_at, e.starts_at, e.created_at) ASC
+          LIMIT 30`,
+        includePersonal ? [...ids, user.id] : ids,
+      ),
+    ]);
+  }));
+  const announcements = results.flatMap(([rows]) => rows)
+    .sort((left, right) => timestamp(right.publish_at) - timestamp(left.publish_at) ||
+      timestamp(right.created_at) - timestamp(left.created_at))
+    .slice(0, 20);
+  const events = results.flatMap(([, rows]) => rows)
+    .sort((left, right) => timestamp(left.due_at ?? left.starts_at ?? left.created_at) -
+      timestamp(right.due_at ?? right.starts_at ?? right.created_at))
+    .slice(0, 30);
 
   return NextResponse.json({ data: { announcements, events }, error: null });
 }
