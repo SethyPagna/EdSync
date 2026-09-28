@@ -47,6 +47,14 @@ describe("notification validation", () => {
     expect(() => normalizeNotificationInput({ title: "Title", message: "Body", metadata: { value: "x".repeat(NOTIFICATION_METADATA_MAX_LENGTH + 1) } })).toThrow("metadata");
   });
 
+  it("rejects action paths that browsers resolve off-site", () => {
+    for (const url of ["/\\evil.example", "/\t/evil.example", "/\n/evil.example", "/ /evil.example", "/path\\..\\x", "/a\u0000b", "https://evil.example"]) {
+      expect(() => validateNotificationActionUrl(url), url).toThrow("internal");
+    }
+    expect(validateNotificationActionUrl(" /student/lessons/lesson-1?tab=work#top ")).toBe("/student/lessons/lesson-1?tab=work#top");
+    expect(validateNotificationActionUrl("")).toBeNull();
+  });
+
   it("defaults priorities and channels safely", () => {
     expect(validateNotificationPriority("urgent")).toBe("normal");
     expect(normalizeNotificationChannels(["email", "email"])).toEqual(["email"]);
