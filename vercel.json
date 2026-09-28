@@ -2,5 +2,8 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "regions": ["hkg1"]
+  "regions": ["hkg1"],
+  "git": {
+    "deploymentEnabled": false
+  }
 }
