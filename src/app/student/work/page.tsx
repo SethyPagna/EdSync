@@ -3,318 +3,181 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CalendarDays, CheckCircle2, CircleAlert, Clock3, MessageSquareText, Send } from "lucide-react";
 import toast from "react-hot-toast";
-import { BookOpenCheck, CalendarClock, CheckCircle2, MessageSquareText, Send, TimerReset, type LucideIcon } from "lucide-react";
 import { ALL_CLASSES_SCOPE, classScopeFromSearchParams } from "@/lib/classes/class-scope";
 import { normalizeWorkGradingSettings, workGradingLabel } from "@/lib/work/grading";
+import { evaluateWorkSubmission, normalizeWorkSubmissionPolicy } from "@/lib/work/policy";
+import { Button, EmptyState, PageHeader, Segmented, Sheet, Skeleton } from "@/components/ui";
 
 type WorkItem = {
-  id: string;
-  title: string;
-  work_type: string;
-  instructions: string | null;
-  due_at: string | null;
-  points_possible: number;
-  settings: unknown;
-  class_name: string | null;
-  submission_status: string | null;
-  submission_percent: number | null;
-  submission_feedback: string | null;
+  id: string; title: string; work_type: string; instructions: string | null; due_at: string | null;
+  allow_late: number | null; points_possible: number; settings: unknown; class_name: string | null;
+  submission_status: string | null; submission_percent: number | null; submission_feedback: string | null;
 };
-
+type Submission = { work_item_id: string; attempt_count: number | null; is_late: number | null };
+type ApiResponse<T> = { data?: T; error?: string | { message?: string } | null };
 type WorkFilter = "open" | "dueSoon" | "submitted" | "feedback" | "discussions" | "all";
-
-const FILTERS: Array<{ key: WorkFilter; label: string; icon: LucideIcon }> = [
-  { key: "open", label: "To do", icon: TimerReset },
-  { key: "dueSoon", label: "Due soon", icon: CalendarClock },
-  { key: "submitted", label: "Submitted", icon: CheckCircle2 },
-  { key: "feedback", label: "Feedback", icon: MessageSquareText },
-  { key: "discussions", label: "Discuss", icon: BookOpenCheck },
-  { key: "all", label: "All", icon: CheckCircle2 },
+const FILTERS: { value: WorkFilter; label: string }[] = [
+  { value: "open", label: "To do" }, { value: "dueSoon", label: "Due soon" },
+  { value: "submitted", label: "Submitted" }, { value: "feedback", label: "Feedback" },
+  { value: "discussions", label: "Discuss" }, { value: "all", label: "All" },
 ];
-
-function classScopeFromLocation() {
-  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
-  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+function apiError(value: ApiResponse<unknown>["error"], fallback: string) {
+  return typeof value === "string" ? value : value?.message || fallback;
 }
-
-function assessmentFilterFromLocation(): WorkFilter {
-  if (typeof window === "undefined") return "open";
-  const filter = new URLSearchParams(window.location.search).get("filter");
-  return FILTERS.some((item) => item.key === filter) ? (filter as WorkFilter) : "open";
-}
-
 function dueLabel(value: string | null) {
   if (!value) return "No due date";
-  return new Date(value).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Due date" : date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
-
-function isSubmitted(item: WorkItem) {
-  return item.submission_status === "submitted" || item.submission_status === "graded";
-}
-
-function dueState(value: string | null) {
-  if (!value) return { label: "No due date", tone: "bg-edsync-surface text-edsync-subtle", urgent: false };
+function dueSoon(value: string | null, now: number) {
+  if (!value || !now) return false;
   const time = new Date(value).getTime();
-  if (Number.isNaN(time)) return { label: "Due date", tone: "bg-edsync-surface text-edsync-subtle", urgent: false };
-  const delta = time - Date.now();
-  if (delta < 0) return { label: "Overdue", tone: "bg-edsync-red/10 text-edsync-red", urgent: true };
-  if (delta <= 24 * 60 * 60 * 1000) return { label: "Due today", tone: "bg-edsync-amber/10 text-edsync-amber", urgent: true };
-  if (delta <= 7 * 24 * 60 * 60 * 1000) return { label: "This week", tone: "bg-edsync-blue/10 text-edsync-blue", urgent: true };
-  return { label: "Scheduled", tone: "bg-edsync-emerald/10 text-edsync-emerald", urgent: false };
+  return Number.isFinite(time) && time <= now + 7 * 24 * 60 * 60 * 1000;
 }
+function submitted(item: WorkItem) { return item.submission_status === "submitted" || item.submission_status === "graded"; }
 
 export default function StudentWorkPage() {
   const router = useRouter();
   const [items, setItems] = useState<WorkItem[]>([]);
-  const [responses, setResponses] = useState<Record<string, string>>({});
-  const [filter, setFilter] = useState<WorkFilter>(assessmentFilterFromLocation);
+  const [submissions, setSubmissions] = useState<Record<string, Submission>>({});
+  const [filter, setFilter] = useState<WorkFilter>("open");
+  const [requestedClassId, setRequestedClassId] = useState(ALL_CLASSES_SCOPE);
+  const [scopeReady, setScopeReady] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [requestedClassId] = useState(classScopeFromLocation);
+  const [error, setError] = useState("");
+  const [now, setNow] = useState(0);
+  const [active, setActive] = useState<WorkItem | null>(null);
+  const [responseText, setResponseText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const load = useCallback(() => {
-    setLoading(true);
-    const query = requestedClassId === ALL_CLASSES_SCOPE ? "" : `?classId=${encodeURIComponent(requestedClassId)}`;
-    fetch(`/api/work${query}`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => setItems(payload.data ?? []))
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setRequestedClassId(classScopeFromSearchParams(params));
+      const selected = params.get("filter");
+      if (FILTERS.some((option) => option.value === selected)) setFilter(selected as WorkFilter);
+      setScopeReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      const query = requestedClassId === ALL_CLASSES_SCOPE ? "" : `?classId=${encodeURIComponent(requestedClassId)}`;
+      const [workResponse, submissionResponse] = await Promise.all([
+        fetch(`/api/work${query}`, { cache: "no-store", credentials: "include" }),
+        fetch("/api/work/submissions", { cache: "no-store", credentials: "include" }),
+      ]);
+      const work = (await workResponse.json()) as ApiResponse<WorkItem[]>;
+      const attempts = (await submissionResponse.json()) as ApiResponse<Submission[]>;
+      if (!workResponse.ok || work.error) throw new Error(apiError(work.error, "Assessments could not load."));
+      if (!submissionResponse.ok || attempts.error) throw new Error(apiError(attempts.error, "Submission status could not load."));
+      setItems(work.data ?? []);
+      setSubmissions(Object.fromEntries((attempts.data ?? []).map((item) => [item.work_item_id, item])));
+      setNow(Date.now());
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Assessments could not load."); }
+    finally { setLoading(false); }
   }, [requestedClassId]);
 
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      load();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [load]);
+    if (!scopeReady) return;
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load, scopeReady]);
 
-  const submit = async (workItemId: string) => {
-    const responseText = responses[workItemId] || "";
-    if (!responseText.trim()) {
-      toast.error("Write a response first.");
-      return;
-    }
-
-    const response = await fetch("/api/work/submissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workItemId, response: { text: responseText } }),
-    });
-    if (!response.ok) {
-      toast.error("Submission was not saved.");
-      return;
-    }
-    toast.success("Submitted.");
-    setResponses((current) => ({ ...current, [workItemId]: "" }));
-    load();
+  const chooseFilter = (next: WorkFilter) => {
+    setFilter(next);
+    const params = new URLSearchParams(window.location.search);
+    if (next === "open") params.delete("filter"); else params.set("filter", next);
+    router.replace(`/student/work${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
   };
-
-  const chooseFilter = (nextFilter: WorkFilter) => {
-    setFilter(nextFilter);
-    const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
-    if (nextFilter === "open") {
-      params.delete("filter");
-    } else {
-      params.set("filter", nextFilter);
-    }
-    const query = params.toString();
-    router.replace(query ? `/student/work?${query}` : "/student/work", { scroll: false });
-  };
-
-  const filteredItems = useMemo(() => {
-    if (filter === "submitted") return items.filter(isSubmitted);
-    if (filter === "dueSoon") return items.filter((item) => !isSubmitted(item) && dueState(item.due_at).urgent);
-    if (filter === "open") return items.filter((item) => !isSubmitted(item));
+  const filtered = useMemo(() => {
+    if (filter === "submitted") return items.filter(submitted);
+    if (filter === "dueSoon") return items.filter((item) => !submitted(item) && dueSoon(item.due_at, now));
+    if (filter === "open") return items.filter((item) => !submitted(item));
     if (filter === "feedback") return items.filter((item) => Boolean(item.submission_feedback));
     if (filter === "discussions") return items.filter((item) => item.work_type === "discussion");
-    return [...items].sort((left, right) => {
-      const leftTime = left.due_at ? new Date(left.due_at).getTime() : Number.MAX_SAFE_INTEGER;
-      const rightTime = right.due_at ? new Date(right.due_at).getTime() : Number.MAX_SAFE_INTEGER;
-      return leftTime - rightTime;
-    });
-  }, [filter, items]);
+    return items;
+  }, [filter, items, now]);
+  const decisionFor = (item: WorkItem) => evaluateWorkSubmission({
+    now, dueAt: item.due_at, allowLate: Number(item.allow_late ?? 1) !== 0,
+    policy: normalizeWorkSubmissionPolicy(item.settings),
+    existing: item.submission_status ? { status: item.submission_status, attempts: Number(submissions[item.id]?.attempt_count ?? 0) } : null,
+  });
+  const openComposer = (item: WorkItem) => { setActive(item); setResponseText(""); setSubmitError(""); };
+  const submit = async () => {
+    if (!active) return;
+    if (!responseText.trim()) { setSubmitError("Write a response first."); return; }
+    setSaving(true); setSubmitError("");
+    try {
+      const response = await fetch("/api/work/submissions", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ workItemId: active.id, response: { text: responseText } }),
+      });
+      const payload = (await response.json()) as ApiResponse<{ attemptNumber: number; late: boolean }>;
+      if (!response.ok || payload.error) { setSubmitError(apiError(payload.error, "Submission was not saved.")); return; }
+      toast.success(payload.data?.late ? "Submitted late." : "Submitted.");
+      setActive(null); setResponseText(""); await load();
+    } catch { setSubmitError("Submission was not saved. Try again."); }
+    finally { setSaving(false); }
+  };
+  const openCount = items.filter((item) => !submitted(item)).length;
+  const activeDecision = active ? decisionFor(active) : null;
 
-  const openCount = items.filter((item) => !isSubmitted(item)).length;
-  const submittedCount = items.length - openCount;
-  const filterCounts = useMemo<Record<WorkFilter, number>>(
-    () => ({
-      open: items.filter((item) => !isSubmitted(item)).length,
-      dueSoon: items.filter((item) => !isSubmitted(item) && dueState(item.due_at).urgent).length,
-      submitted: items.filter(isSubmitted).length,
-      feedback: items.filter((item) => Boolean(item.submission_feedback)).length,
-      discussions: items.filter((item) => item.work_type === "discussion").length,
-      all: items.length,
-    }),
-    [items],
-  );
-
-  return (
-    <div className="page-shell max-w-6xl space-y-5">
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-              Assessments
-            </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">My assessments</h1>
-            <p className="mt-1 text-sm text-edsync-subtle">
-              {openCount} to do, {submittedCount} submitted
-              {requestedClassId !== ALL_CLASSES_SCOPE ? " in this space" : ""}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)]">
-        <aside className="edsync-scrollbar-none overflow-x-auto rounded-xl border border-edsync-border bg-edsync-card p-2 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
-          <div className="flex gap-2 lg:flex-col">
-            {FILTERS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => chooseFilter(item.key)}
-                  className={`flex min-w-40 items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-black transition lg:min-w-0 ${
-                    filter === item.key
-                      ? "bg-edsync-emerald text-white shadow-sm"
-                      : "text-edsync-subtle hover:bg-edsync-surface hover:text-edsync-text"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  <span className={filter === item.key ? "text-white/80" : "text-edsync-subtle"}>{filterCounts[item.key]}</span>
-                </button>
-              );
-            })}
-          </div>
-          {requestedClassId !== ALL_CLASSES_SCOPE && (
-            <Link href="/student/work" className="btn-secondary mt-2 w-full justify-center px-3 py-2 text-sm">
-              All assessments
-            </Link>
-          )}
-        </aside>
-
-        <div className="min-w-0">
-      {loading ? (
-        <div className="grid gap-3">
-          {[...Array(4)].map((_, index) => (
-            <div key={index} className="h-32 rounded-xl bg-edsync-card shimmer" />
-          ))}
-        </div>
-      ) : filteredItems.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card p-10 text-center">
-          <CheckCircle2 className="mx-auto mb-4 h-10 w-10 text-edsync-emerald" />
-          <p className="font-semibold text-edsync-text">
-            {filter === "open" ? "Nothing due right now" : "No assessments in this view"}
-          </p>
-          <p className="mt-2 text-sm text-edsync-subtle">No new assessments.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {filteredItems.map((item) => {
-              const grading = normalizeWorkGradingSettings(item.settings);
-              return (
-                <article key={item.id} className="rounded-xl border border-edsync-border bg-edsync-card p-4">
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem]">
-                    <div className="min-w-0">
-                      {(() => {
-                        const state = dueState(item.due_at);
-                        return (
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <span className={`badge ${state.tone}`}>{state.label}</span>
-                            {item.submission_feedback && (
-                              <span className="badge bg-edsync-amber/10 text-edsync-amber">feedback ready</span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                          {item.work_type}
-                        </span>
-                        <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
-                          {workGradingLabel(grading, item.points_possible)}
-                        </span>
-                        {!grading.countsTowardGrade && (
-                          <span className="badge bg-edsync-surface text-edsync-subtle">feedback evidence</span>
-                        )}
-                        {isSubmitted(item) && (
-                          <span className="badge bg-edsync-amber/10 text-edsync-amber">
-                            {item.submission_percent ?? 0}%
-                          </span>
-                        )}
-                      </div>
-                      <h2 className="truncate font-display text-xl font-bold">{item.title}</h2>
-                      <p className="mt-1 text-sm text-edsync-subtle">
-                        {item.class_name || "Independent course"}
-                      </p>
-                      {item.instructions && (
-                        <p className="mt-3 line-clamp-2 text-sm leading-6 text-edsync-text">
-                          {item.instructions}
-                        </p>
-                      )}
-                      {item.submission_feedback && (
-                        <div className="mt-3 rounded-xl border border-edsync-amber/25 bg-edsync-amber/10 p-3">
-                          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">Creator feedback</p>
-                          <p className="mt-1 text-sm leading-6 text-edsync-text">{item.submission_feedback}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm">
-                      <p className="flex items-center gap-2 font-semibold text-edsync-text">
-                        <CalendarClock className="h-4 w-4 text-edsync-blue" />
-                        {dueLabel(item.due_at)}
-                      </p>
-                      <p className="mt-2 flex items-center gap-2 text-edsync-subtle">
-                        {isSubmitted(item) ? (
-                          <CheckCircle2 className="h-4 w-4 text-edsync-emerald" />
-                        ) : (
-                          <TimerReset className="h-4 w-4 text-edsync-amber" />
-                        )}
-                        {item.submission_status || "not submitted"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {!isSubmitted(item) && (
-                    <details className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3">
-                      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-edsync-text marker:hidden">
-                        <BookOpenCheck className="h-4 w-4 text-edsync-blue" />
-                        Write response
-                      </summary>
-                      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
-                        <textarea
-                          className="edsync-input min-h-24"
-                          value={responses[item.id] ?? ""}
-                          onChange={(event) =>
-                            setResponses((current) => ({ ...current, [item.id]: event.target.value }))
-                          }
-                          placeholder="Write your response or reflection..."
-                        />
-                        <button
-                          type="button"
-                          onClick={() => submit(item.id)}
-                          className="btn-primary self-end justify-center"
-                        >
-                          <Send className="h-4 w-4" />
-                          Submit
-                        </button>
-                      </div>
-                    </details>
-                  )}
-                </article>
-              );
-          })}
-        </div>
-      )}
-        </div>
-      </div>
+  return <div className="page-shell max-w-5xl">
+    <PageHeader title="Assessments" icon={CheckCircle2} count={items.length}>
+      <p className="text-sm text-fg-muted">{openCount} to do · {items.length - openCount} submitted</p>
+    </PageHeader>
+    <div className="mb-5 flex flex-wrap items-center gap-2">
+      <Segmented<WorkFilter> value={filter} onChange={chooseFilter} ariaLabel="Assessment filter" size="sm" options={FILTERS} className="max-w-full overflow-x-auto" />
+      {requestedClassId !== ALL_CLASSES_SCOPE && <Link href="/student/work" className="text-sm font-medium text-accent hover:underline">All classes</Link>}
     </div>
-  );
+    {loading ? <div className="space-y-3">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-28" />)}</div> :
+      error ? <EmptyState icon={CircleAlert} title="Assessments unavailable" hint={error} action={<Button onClick={() => void load()}>Try again</Button>} /> :
+      filtered.length === 0 ? <EmptyState icon={CheckCircle2} title={filter === "open" ? "All caught up" : "Nothing in this view"} hint="Your assessments will appear here." /> :
+      <div className="space-y-2.5">{filtered.map((item) => {
+        const attempt = submissions[item.id];
+        const policy = normalizeWorkSubmissionPolicy(item.settings);
+        const decision = decisionFor(item);
+        const grading = normalizeWorkGradingSettings(item.settings);
+        return <article key={item.id} className="rounded-xl border border-line bg-surface p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-fg-muted">
+                <span className="rounded-full bg-surface-2 px-2 py-1 capitalize">{item.work_type}</span>
+                <span>{item.class_name || "Independent course"}</span>
+                {attempt?.is_late === 1 && <span className="rounded-full bg-warning-soft px-2 py-1 text-warning">Submitted late</span>}
+              </div>
+              <h2 className="truncate text-base font-semibold text-fg">{item.title}</h2>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
+                <span className="inline-flex items-center gap-1"><CalendarDays size={13} />{dueLabel(item.due_at)}</span>
+                <span>{workGradingLabel(grading, item.points_possible)}</span>
+                {Number(attempt?.attempt_count ?? 0) > 0 && <span>{attempt?.attempt_count} {Number(attempt?.attempt_count) === 1 ? "attempt" : "attempts"}{policy.maxAttempts ? ` / ${policy.maxAttempts}` : ""}</span>}
+              </p>
+              {item.submission_feedback && <p className="mt-3 rounded-lg bg-surface-2 p-3 text-sm text-fg"><MessageSquareText size={14} className="mr-1 inline text-accent" />{item.submission_feedback}</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${item.submission_status === "graded" ? "bg-success-soft text-success" : submitted(item) ? "bg-accent-soft text-accent" : "bg-surface-2 text-fg-muted"}`}>
+                {submitted(item) ? <CheckCircle2 size={13} /> : <Clock3 size={13} />}
+                {item.submission_status === "graded" ? (item.submission_percent === null ? "Graded" : `${item.submission_percent}%`) : submitted(item) ? "Submitted" : "To do"}
+              </span>
+              {decision.ok && <Button size="sm" onClick={() => openComposer(item)}>{submitted(item) ? "Resubmit" : "Open"}</Button>}
+            </div>
+          </div>
+        </article>;
+      })}</div>}
+    <Sheet open={active !== null} onClose={() => { if (!saving) setActive(null); }} title={active?.title ?? "Submit work"} description={active ? `${active.class_name || "Independent course"} · ${dueLabel(active.due_at)}` : undefined} footer={<><Button onClick={() => setActive(null)} disabled={saving}>Cancel</Button><Button variant="primary" icon={Send} loading={saving} onClick={() => void submit()} disabled={!activeDecision?.ok}>Submit response</Button></>}>
+      {active && <div className="space-y-5">
+        {active.instructions && <div className="rounded-lg bg-surface-2 p-4"><p className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">Instructions</p><p className="whitespace-pre-wrap text-sm leading-6 text-fg">{active.instructions}</p></div>}
+        <label className="block text-sm font-semibold text-fg">Your response<textarea autoFocus className="input mt-2 min-h-48 w-full" value={responseText} onChange={(event) => setResponseText(event.target.value)} placeholder="Write your answer or reflection…" /></label>
+        {activeDecision && !activeDecision.ok && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{activeDecision.error}</p>}
+        {submitError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{submitError}</p>}
+        {submissions[active.id] && <p className="text-xs text-fg-muted">Attempt {Number(submissions[active.id].attempt_count ?? 0) + 1}{normalizeWorkSubmissionPolicy(active.settings).maxAttempts ? ` of ${normalizeWorkSubmissionPolicy(active.settings).maxAttempts}` : ""}</p>}
+      </div>}
+    </Sheet>
+  </div>;
 }
