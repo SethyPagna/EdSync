@@ -10,7 +10,16 @@ import {
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  readJson,
+  withRoute,
+} from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { isOwnerScoped, ownerScope } from "@/lib/tenancy/ownership";
 
 async function seedDefaultAutomations(tenantId: string, userId: string) {
   for (const rule of AUTOMATION_RECIPES) {
@@ -31,31 +40,40 @@ async function seedDefaultAutomations(tenantId: string, userId: string) {
   }
 }
 
-export async function GET() {
-  const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
-  const context = await resolveTenantContext(user);
+function parsed<T>(parse: () => T, fallback: string): T {
   try {
-    await requirePermission(user, context, PERMISSIONS.reportsView);
-  } catch {
-    return NextResponse.json({ data: null, error: "Missing reports permission." }, { status: 403 });
+    return parse();
+  } catch (error) {
+    throw new BadRequestError(error instanceof Error ? error.message : fallback);
   }
-  await seedDefaultAutomations(context.tenant.id, user.id);
-  const rows = await d1Query("SELECT * FROM automation_rules WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]);
-  const rules = rows.map((row) => deserializeRow("automation_rules", row));
-  return NextResponse.json({ data: { rules, context }, error: null });
 }
 
-export async function POST(request: Request) {
+export const GET = withRoute(async () => {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
-  try {
-    await requirePermission(user, context, PERMISSIONS.coursesPublish);
-  } catch {
-    return NextResponse.json({ data: null, error: "Missing publish permission." }, { status: 403 });
-  }
-  const body = (await request.json()) as {
+  await requirePermission(user, context, PERMISSIONS.reportsView).catch(() => {
+    throw new ForbiddenError("Missing reports permission.");
+  });
+  // Tenant-wide default rules are only seeded by someone who can see the whole tenant.
+  if (!isOwnerScoped(user, context)) await seedDefaultAutomations(context.tenant.id, user.id);
+  const owner = ownerScope(user, context, "created_by");
+  const rows = await d1Query(
+    `SELECT * FROM automation_rules WHERE tenant_id = ?${owner.sql} ORDER BY updated_at DESC`,
+    [context.tenant.id, ...owner.params],
+  );
+  const rules = rows.map((row) => deserializeRow("automation_rules", row));
+  return NextResponse.json({ data: { rules, context }, error: null });
+});
+
+export const POST = withRoute(async (request) => {
+  const user = await getSessionUser();
+  if (!user) throw new UnauthorizedError();
+  const context = await resolveTenantContext(user);
+  await requirePermission(user, context, PERMISSIONS.coursesPublish).catch(() => {
+    throw new ForbiddenError("Missing publish permission.");
+  });
+  const body = await readJson<{
     action?: "create" | "update" | "delete" | "toggle";
     id?: string;
     title?: string;
@@ -63,59 +81,42 @@ export async function POST(request: Request) {
     conditions?: Record<string, unknown>;
     actions?: Array<Record<string, unknown>>;
     enabled?: boolean;
-  };
+  }>(request);
+  const owner = ownerScope(user, context, "created_by");
 
   if (body.action === "delete") {
-    let id: string;
-    try {
-      id = validateAutomationRuleId(body.id);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Rule is required.";
-      return NextResponse.json({ data: null, error: message }, { status: 400 });
-    }
-    await d1Query("DELETE FROM automation_rules WHERE tenant_id = ? AND id = ?", [context.tenant.id, id]);
+    const id = parsed(() => validateAutomationRuleId(body.id), "Rule is required.");
+    const [deleted] = await d1Query<{ id: string }>(
+      `DELETE FROM automation_rules WHERE tenant_id = ? AND id = ?${owner.sql} RETURNING id`,
+      [context.tenant.id, id, ...owner.params],
+    );
+    if (!deleted) throw new NotFoundError("Rule not found.");
     return NextResponse.json({ data: { id }, error: null });
   }
 
   if (body.action === "toggle") {
-    let id: string;
-    let enabled: boolean;
-    try {
-      id = validateAutomationRuleId(body.id);
-      enabled = normalizeAutomationEnabled(body.enabled);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Rule is required.";
-      return NextResponse.json({ data: null, error: message }, { status: 400 });
-    }
-    await d1Query("UPDATE automation_rules SET enabled = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?", [
-      enabled ? 1 : 0,
-      context.tenant.id,
-      id,
-    ]);
+    const { id, enabled } = parsed(
+      () => ({ id: validateAutomationRuleId(body.id), enabled: normalizeAutomationEnabled(body.enabled) }),
+      "Rule is required.",
+    );
+    const [updated] = await d1Query<{ id: string }>(
+      `UPDATE automation_rules SET enabled = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?${owner.sql} RETURNING id`,
+      [enabled ? 1 : 0, context.tenant.id, id, ...owner.params],
+    );
+    if (!updated) throw new NotFoundError("Rule not found.");
     const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.toggled", payload: { ruleId: id } });
     return NextResponse.json({ data: { id, jobId }, error: null });
   }
 
-  let normalized;
-  try {
-    normalized = normalizeAutomationRulePayload(body);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Automation rule is invalid.";
-    return NextResponse.json({ data: null, error: message }, { status: 400 });
-  }
+  const normalized = parsed(() => normalizeAutomationRulePayload(body), "Automation rule is invalid.");
 
   if (body.action === "update") {
-    let id: string;
-    try {
-      id = validateAutomationRuleId(body.id);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Rule is required.";
-      return NextResponse.json({ data: null, error: message }, { status: 400 });
-    }
-    await d1Query(
+    const id = parsed(() => validateAutomationRuleId(body.id), "Rule is required.");
+    const [updated] = await d1Query<{ id: string }>(
       `UPDATE automation_rules
        SET title = ?, trigger_key = ?, conditions = ?, actions = ?, enabled = ?, updated_at = datetime('now')
-       WHERE tenant_id = ? AND id = ?`,
+       WHERE tenant_id = ? AND id = ?${owner.sql}
+       RETURNING id`,
       [
         normalized.title,
         normalized.triggerKey,
@@ -124,8 +125,10 @@ export async function POST(request: Request) {
         normalized.enabled ? 1 : 0,
         context.tenant.id,
         id,
+        ...owner.params,
       ],
     );
+    if (!updated) throw new NotFoundError("Rule not found.");
     const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.updated", payload: { ruleId: id } });
     return NextResponse.json({ data: { id, jobId }, error: null });
   }
@@ -147,4 +150,4 @@ export async function POST(request: Request) {
   );
   const jobId = await enqueueAutomationJob({ tenantId: context.tenant.id, jobType: "automation_rule.created", payload: { ruleId: id } });
   return NextResponse.json({ data: { id, jobId }, error: null });
-}
+});
