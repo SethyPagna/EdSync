@@ -179,85 +179,67 @@ function SignupForm() {
     }
 
     setLoading(true);
-    const { data, error } = await edsync.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role,
-          account_type: accountType,
-          organization_mode: accountType === "organization" ? organizationMode : undefined,
-          organization_name: accountType === "organization" && organizationMode === "create" ? organizationName : undefined,
-          organization_code: accountType === "organization" && organizationMode === "join" ? organizationCode : undefined,
-        },
-        emailRedirectTo: `${window.location.origin}/auth/login${querySuffix}`,
-      },
-    });
-
-    if (error) {
-      const message = error.message.toLowerCase();
-      if (
-        error.status === 401 ||
-        message.includes("invalid api key") ||
-        message.includes("apikey")
-      ) {
-        toast.error("edsync anon key is invalid. Check .env.local.", {
-          duration: 9000,
-        });
-      } else if (message.includes("already registered")) {
-        toast.error(authCopy.emailAlreadyRegistered);
-      } else {
-        toast.error(error.message);
-      }
-      setLoading(false);
-      return;
-    }
-
-    if (data.user && !data.session) {
-      setEmailSent(true);
-      setLoading(false);
-      return;
-    }
-
-    if (data.session && data.user) {
-      const tenantSlug = data.user.user_metadata?.tenant_slug || normalizeOrganizationCode(organizationCode);
-      await edsync.from("profiles").upsert(
-        {
-          id: data.user.id,
-          email,
-          full_name: fullName,
-          role,
-          preferences: {
-            theme: "light",
-            text_size: "medium",
-            onboarding_space: accountType,
-            onboarding_organization: accountType === "organization"
-              ? organizationMode === "create"
-                ? organizationName
-                : organizationCode
-              : null,
+    try {
+      const { data, error } = await edsync.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role,
+            account_type: accountType,
+            organization_mode: accountType === "organization" ? organizationMode : undefined,
+            organization_name: accountType === "organization" && organizationMode === "create" ? organizationName : undefined,
+            organization_code: accountType === "organization" && organizationMode === "join" ? organizationCode : undefined,
           },
-          subjects: [],
-          interests: [],
+          emailRedirectTo: `${window.location.origin}/auth/login${querySuffix}`,
         },
-        { onConflict: "id" },
-      );
+      });
 
-      window.localStorage.setItem(
-        "edsync-auth-workspace",
-        JSON.stringify({
-          type: accountType,
-          organizationCode: accountType === "organization" ? tenantSlug : null,
-          organizationName: data.user.user_metadata?.tenant_name || organizationName || null,
-          signedInAt: new Date().toISOString(),
-        }),
-      );
+      if (error) {
+        const message = error.message.toLowerCase();
+        if (error.status === 401 || message.includes("invalid api key") || message.includes("apikey")) {
+          toast.error("EdSync could not connect. Please try again shortly.");
+        } else if (message.includes("already registered")) {
+          toast.error(authCopy.emailAlreadyRegistered);
+        } else {
+          toast.error(error.message);
+        }
+        return;
+      }
 
-      toast.success(authCopy.accountCreated);
-      const destination = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
-      router.push(accountType === "organization" && tenantSlug ? `${destination}?tenant=${encodeURIComponent(tenantSlug)}` : destination);
-      router.refresh();
+      if (data.user && !data.session) {
+        setEmailSent(true);
+        return;
+      }
+
+      if (data.session && data.user) {
+        const tenantSlug = data.user.user_metadata?.tenant_slug || normalizeOrganizationCode(organizationCode);
+        try {
+          window.localStorage.setItem(
+            "edsync-auth-workspace",
+            JSON.stringify({
+              type: accountType,
+              organizationCode: accountType === "organization" ? tenantSlug : null,
+              organizationName: data.user.user_metadata?.tenant_name || organizationName || null,
+              signedInAt: new Date().toISOString(),
+            }),
+          );
+        } catch {
+          // Session data is saved server-side; browser storage is optional.
+        }
+        toast.success(authCopy.accountCreated);
+        const destination = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
+        router.push(accountType === "organization" && tenantSlug ? `${destination}?tenant=${encodeURIComponent(tenantSlug)}` : destination);
+        router.refresh();
+        return;
+      }
+
+      toast.error("Could not finish creating your account. Please try again.");
+    } catch {
+      toast.error("Could not connect. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -582,51 +564,10 @@ function SignupLoginLink() {
   );
 }
 
-function SignupSidePanelCopy() {
-  const { language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
-
-  return (
-    <>
-      <h1 className="max-w-xl font-display text-5xl font-bold leading-tight">
-        {copy.createRightSpaceTitle}
-      </h1>
-      <p className="sr-only">{copy.signupPanelCopy}</p>
-    </>
-  );
-}
-
-function SignupOrganizationBenefits() {
-  const { language } = usePublicLanguagePreference();
-  const copy = useMemo(() => getPublicAuthCopy(language), [language]);
-
-  return <>{copy.organizationBenefits}</>;
-}
-
 export default function SignupPage() {
   return (
-    <main className="auth-revamp premium-shell grid min-h-screen overflow-x-hidden lg:grid-cols-[minmax(0,1fr)_560px]">
-      <section className="hidden border-r border-edsync-border bg-edsync-surface/70 px-12 py-10 lg:flex lg:flex-col lg:justify-center lg:gap-8">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-display text-xl font-bold">EdSync</span>
-        </Link>
-        <div className="premium-panel rounded-[1.65rem] p-7">
-          <Suspense fallback={null}>
-            <SignupSidePanelCopy />
-          </Suspense>
-        </div>
-        <p className="text-sm text-edsync-subtle">
-          <Suspense fallback={<span>Individuals stay simple. Organizations get scoped portals, catalogs, and role controls.</span>}>
-            <SignupOrganizationBenefits />
-          </Suspense>
-        </p>
-      </section>
-
-      <section className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-5 sm:py-10">
-        <div className="w-full max-w-[22rem] min-w-0 sm:max-w-md">
+    <main className="auth-revamp premium-shell flex min-h-screen items-center justify-center overflow-x-hidden px-4 py-10 sm:px-6">
+      <section className="w-full max-w-[32rem]">
           <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-edsync-blue to-edsync-emerald shadow-sm">
@@ -639,7 +580,7 @@ export default function SignupPage() {
               <LanguageMenu compact />
             </div>
           </div>
-          <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 sm:rounded-[1.65rem] sm:p-7">
+          <div className="premium-panel animate-reveal-soft rounded-[1.35rem] p-5 shadow-xl sm:rounded-[1.65rem] sm:p-8">
             <Suspense fallback={<h2 className="font-display text-3xl font-bold">Create workspace</h2>}>
               <SignupPanelTitle />
             </Suspense>
@@ -656,7 +597,6 @@ export default function SignupPage() {
               <SignupLoginLink />
             </Suspense>
           </div>
-        </div>
       </section>
     </main>
   );
