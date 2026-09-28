@@ -9,8 +9,6 @@ import {
   Clock3,
   GraduationCap,
   Languages,
-  ShieldCheck,
-  UserRound,
 } from "lucide-react";
 import CatalogEnrollButton from "@/components/CatalogEnrollButton";
 import PublicTopbar from "@/components/public/PublicTopbar";
@@ -132,32 +130,29 @@ export default async function CatalogDetailPage({
               </div>
             </div>
             <div className="p-5">
-              <h1 className="mt-4 font-display text-4xl font-bold leading-tight">{item.title}</h1>
-              <p className="mt-4 text-base leading-7 text-edsync-subtle">
+              <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{item.title}</h1>
+              <p className="mt-3 line-clamp-3 text-sm leading-6 text-edsync-subtle">
                 {previewSummary}
               </p>
             </div>
           </div>
 
-          <section className="grid gap-3 md:grid-cols-3">
-            <div className="premium-card rounded-2xl p-4">
-              <Clock3 className="mb-3 h-5 w-5 text-edsync-blue" />
-              <p className="font-semibold">{copy.anyDuration}</p>
-              <p className="text-sm text-edsync-subtle">
-                {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} min` : copy.anyDuration}
-              </p>
-            </div>
-            <div className="premium-card rounded-2xl p-4">
-              <GraduationCap className="mb-3 h-5 w-5 text-edsync-emerald" />
-              <p className="font-semibold">{copy.difficulty}</p>
-              <p className="text-sm text-edsync-subtle">{item.metadata.difficulty || item.lesson.gradeLevel || copy.start}</p>
-            </div>
-            <div className="premium-card rounded-2xl p-4">
-              <Languages className="mb-3 h-5 w-5 text-edsync-amber" />
-              <p className="font-semibold">{copy.language}</p>
-              <p className="text-sm text-edsync-subtle">{item.metadata.language}</p>
-            </div>
-          </section>
+          <div className="flex flex-wrap gap-2 text-xs text-edsync-subtle">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
+              <Clock3 className="h-3.5 w-3.5" />
+              {item.lesson.durationMinutes ? `${item.lesson.durationMinutes} min` : copy.anyDuration}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
+              <GraduationCap className="h-3.5 w-3.5" />
+              {item.metadata.difficulty || item.lesson.gradeLevel || copy.difficulty}
+            </span>
+            {item.metadata.language && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-edsync-border bg-edsync-surface px-3 py-1.5">
+                <Languages className="h-3.5 w-3.5" />
+                {item.metadata.language}
+              </span>
+            )}
+          </div>
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
@@ -172,9 +167,8 @@ export default async function CatalogDetailPage({
             </div>
           )}
           <div className="premium-panel rounded-2xl p-5">
-            <p className="text-sm font-semibold text-edsync-subtle">{copy.start}</p>
-            <p className="mt-2 font-display text-4xl font-bold">{displayPrice}</p>
-            <div className="mt-5">
+            <p className="font-display text-3xl font-semibold">{displayPrice}</p>
+            <div className="mt-4">
               <CatalogEnrollButton
                 productId={item.id}
                 isFree={item.price.isFree}
@@ -183,51 +177,14 @@ export default async function CatalogDetailPage({
                 labels={enrollLabels}
               />
             </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="premium-card rounded-2xl p-4">
-              <div className="flex items-start gap-3">
-                <UserRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-blue" />
-                <div>
-                  <p className="font-semibold">{copy.signIn}</p>
-                </div>
-              </div>
-            </div>
-            <div className="premium-card rounded-2xl p-4">
-              <div className="flex items-start gap-3">
-                <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-edsync-emerald" />
-                <div>
-                  <p className="font-semibold">{copy.academies}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="premium-card rounded-2xl p-5">
-            <div className="flex gap-3">
-              <Building2 className="h-5 w-5 flex-shrink-0 text-edsync-blue" />
-              <div>
-                <p className="font-semibold">{item.organization.name}</p>
-                <p className="mt-1 text-sm text-edsync-subtle">
-                  {item.portal ? `${item.portal.name} - ${item.portal.audience}` : copy.catalogLabel}
-                </p>
-                {item.portal && (
-                  <Link href={`/org/${item.portal.slug}${languageQuery}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-edsync-blue hover:underline">
-                    {copy.academies}
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="premium-surface rounded-2xl p-4">
-            <div className="flex gap-3">
-              <ShieldCheck className="h-5 w-5 flex-shrink-0 text-edsync-emerald" />
-              <p className="text-sm leading-6 text-edsync-subtle">
-                Secure enrollment.
-              </p>
+            <div className="mt-5 flex items-center gap-2 border-t border-edsync-border pt-4 text-sm">
+              <Building2 className="h-4 w-4 shrink-0 text-edsync-blue" />
+              <span className="min-w-0 flex-1 truncate text-edsync-subtle">{item.portal?.name || item.organization.name}</span>
+              {item.portal && (
+                <Link href={`/org/${item.portal.slug}${languageQuery}`} className="inline-flex items-center gap-1 text-edsync-blue hover:underline" aria-label={`${copy.academies}: ${item.portal.name}`}>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           </div>
         </aside>
