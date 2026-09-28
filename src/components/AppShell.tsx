@@ -8,6 +8,7 @@ import CommandMenu from "@/components/CommandMenu";
 import NotificationMenu from "@/components/NotificationMenu";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle, { type ThemePreference } from "@/components/ThemeToggle";
+import { hasStoredTheme, normalizeThemePreference, setAppearance } from "@/lib/ui/theme";
 import {
   SECTION_ORDER_EVENT,
   type SectionOrderEventDetail,
@@ -553,9 +554,6 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
           : BookOpenCheck;
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("edsync-theme");
-    const useDark = stored === "dark";
-    document.documentElement.classList.toggle("dark", useDark);
     queueMicrotask(() => {
       setCollapsed(sidebarCollapsedFromStorage());
       setStorageReady(true);
@@ -634,12 +632,8 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
         .maybeSingle()
         .then(({ data }) => {
           setProfile(data);
-          const theme = data?.preferences?.theme;
-          if (theme === "dark" || theme === "light") {
-            const useDark = theme === "dark";
-            document.documentElement.classList.toggle("dark", useDark);
-            window.localStorage.setItem("edsync-theme", theme);
-          }
+          const theme = normalizeThemePreference(data?.preferences?.theme);
+          if (theme && !hasStoredTheme()) setAppearance({ theme });
         });
     });
   }, [edsync]);
@@ -699,14 +693,19 @@ export default function AppShell({ role, children, navItems }: AppShellProps) {
     }
   };
 
-  const handleThemeChange = (theme: ThemePreference) => {
-    if (profile) {
+  const handleThemeChange = async (theme: ThemePreference) => {
+    if (!profile) return;
+    try {
+      // Re-read so preferences saved elsewhere (e.g. the profile page) since mount are not overwritten.
+      const { data } = await edsync.from("profiles").select("preferences").eq("id", profile.id).maybeSingle();
       const preferences = {
-        ...(profile.preferences ?? { text_size: "medium" }),
+        ...(data?.preferences ?? profile.preferences ?? { text_size: "medium" }),
         theme,
       };
       setProfile({ ...profile, preferences });
-      edsync.from("profiles").update({ preferences }).eq("id", profile.id);
+      await edsync.from("profiles").update({ preferences }).eq("id", profile.id);
+    } catch {
+      // The appearance is already applied locally; profile sync is best effort.
     }
   };
 
