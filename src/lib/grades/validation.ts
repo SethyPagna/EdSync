@@ -3,18 +3,28 @@ import { validateEarnedWorkPoints, validateWorkPoints } from "@/lib/work/validat
 export const GRADE_CATEGORY_NAME_MAX_LENGTH = 80;
 export const GRADE_TITLE_MAX_LENGTH = 160;
 export const GRADE_FEEDBACK_MAX_LENGTH = 4_000;
-export const GRADE_SOURCE_TYPE_MAX_LENGTH = 80;
 export const GRADE_CATEGORY_WEIGHT_MAX = 100;
 
-const GRADE_SOURCE_TYPE_PATTERN = /^[a-z0-9_.:-]+$/i;
+// Must match the gradebook_scores CHECK constraints in infra/database/migrations/0005_portal_expansion.sql.
+export const GRADE_SOURCE_TYPES = ["lesson_quiz", "quiz", "test", "task", "discussion", "activity", "manual"] as const;
+export const GRADE_STATUSES = ["draft", "submitted", "graded", "excused", "missing"] as const;
+
+export type GradeSourceType = (typeof GRADE_SOURCE_TYPES)[number];
+export type GradeStatus = (typeof GRADE_STATUSES)[number];
+
+const GRADE_SOURCE_TYPE_SET: ReadonlySet<string> = new Set(GRADE_SOURCE_TYPES);
 
 export type NormalizedManualGradeInput = {
   title: string;
-  sourceType: string;
+  sourceType: GradeSourceType;
   pointsEarned: number;
   pointsPossible: number;
   feedback: string | null;
 };
+
+export function isGradeSourceType(value: unknown): value is GradeSourceType {
+  return typeof value === "string" && GRADE_SOURCE_TYPE_SET.has(value);
+}
 
 export function validateGradeText(value: unknown, label: string, maxLength: number, required = true) {
   const text = String(value ?? "").trim();
@@ -31,17 +41,17 @@ export function validateGradeCategoryWeight(value: unknown) {
   return Math.min(GRADE_CATEGORY_WEIGHT_MAX, Math.max(0, weight));
 }
 
-export function validateGradeSourceType(value: unknown) {
-  const sourceType = String(value ?? "manual").trim() || "manual";
-  if (sourceType.length > GRADE_SOURCE_TYPE_MAX_LENGTH || !GRADE_SOURCE_TYPE_PATTERN.test(sourceType)) {
-    throw new Error("Grade source type must be a short identifier.");
+export function validateGradeSourceType(value: unknown): GradeSourceType {
+  const sourceType = String(value ?? "").trim() || "manual";
+  if (!isGradeSourceType(sourceType)) {
+    throw new Error(`Grade source must be one of: ${GRADE_SOURCE_TYPES.join(", ")}.`);
   }
   return sourceType;
 }
 
 export function validateGradePercent(value: unknown) {
   const score = Number(value);
-  if (!Number.isFinite(score)) throw new Error("Score must be a valid number.");
+  if (value === null || value === "" || !Number.isFinite(score)) throw new Error("Score must be a valid number.");
   return Math.min(100, Math.max(0, score));
 }
 
