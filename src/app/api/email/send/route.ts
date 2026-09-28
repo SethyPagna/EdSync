@@ -14,11 +14,22 @@ import {
 import { queueEmail } from "@/lib/engagement/server";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  TooManyRequestsError,
+  UnauthorizedError,
+  readJson,
+  withRoute,
+} from "@/lib/security/http-errors";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import {
   tenantObjectJoin,
   tenantObjectParams,
   tenantObjectPredicate,
 } from "@/lib/tenancy/object-scope";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { canContactUser } from "@/lib/tenancy/ownership";
 
 type EmailStatus = "queued" | "composed" | "sent" | "failed" | "skipped";
 
@@ -34,17 +45,24 @@ function summarizeStatus(results: Array<{ status: string }>): EmailStatus {
   return "queued";
 }
 
-export async function POST(request: Request) {
-  const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
-  const context = await resolveTenantContext(user);
+function validated<T>(parse: () => T, fallback: string): T {
   try {
-    await requirePermission(user, context, PERMISSIONS.coursesAuthor);
-  } catch {
-    return NextResponse.json({ data: null, error: "Missing authoring permission." }, { status: 403 });
+    return parse();
+  } catch (error) {
+    throw new BadRequestError(error instanceof Error ? error.message : fallback);
   }
+}
 
-  const body = (await request.json()) as {
+export const POST = withRoute(async (request) => {
+  const user = await getSessionUser();
+  if (!user) throw new UnauthorizedError();
+  const context = await resolveTenantContext(user);
+  await requirePermission(user, context, PERMISSIONS.coursesAuthor).catch(() => {
+    throw new ForbiddenError("Missing authoring permission.");
+  });
+  const isPlatformAdmin = user.user_metadata.role === "admin";
+
+  const body = await readJson<{
     to?: string;
     subject?: string;
     text?: string;
@@ -53,31 +71,26 @@ export async function POST(request: Request) {
     senderDisplay?: string | null;
     replyTo?: string | null;
     metadata?: Record<string, unknown>;
-  };
+  }>(request);
 
-  let subject: string;
-  let text: string;
-  let html: string | null;
-  let replyTo: string;
-  let senderDisplay: string;
-  let classId: string | null;
-  let metadata: Record<string, unknown>;
-  try {
-    subject = validateEmailSubject(body.subject);
-    text = validateEmailBody(body.text);
-    html = validateEmailHtml(body.html);
-    replyTo = validateEmailAddress(body.replyTo ?? user.email, "Reply-to email");
-    senderDisplay = normalizeEmailDisplay(body.senderDisplay, user.email);
-    classId = normalizeOptionalEmailRecordId(body.classId, "Class");
-    metadata = normalizeEmailMetadata(body.metadata);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Email payload is invalid.";
-    return NextResponse.json({ data: null, error: message }, { status: 400 });
-  }
+  const { subject, text, html, replyTo, senderDisplay, classId, metadata } = validated(
+    () => ({
+      subject: validateEmailSubject(body.subject),
+      text: validateEmailBody(body.text),
+      html: validateEmailHtml(body.html),
+      // Only platform admins may route replies somewhere other than their own inbox.
+      replyTo: validateEmailAddress(isPlatformAdmin ? body.replyTo ?? user.email : user.email, "Reply-to email"),
+      senderDisplay: normalizeEmailDisplay(body.senderDisplay, user.email),
+      classId: normalizeOptionalEmailRecordId(body.classId, "Class"),
+      metadata: normalizeEmailMetadata(body.metadata),
+    }),
+    "Email payload is invalid.",
+  );
+  const directEmail = body.to ? validated(() => validateEmailAddress(body.to, "Recipient email"), "Recipient email is invalid.") : null;
+  if (!directEmail && !classId) throw new BadRequestError("Recipient or class is required.");
 
-  if (!body.to && !classId) {
-    return NextResponse.json({ data: null, error: "Recipient or class is required." }, { status: 400 });
-  }
+  const rate = await enforceRateLimit({ request, scope: "email_send", limit: 20, windowSeconds: 3600, userId: user.id });
+  if (!rate.allowed) throw new TooManyRequestsError("Too many emails sent. Try again later.", rate.retryAfter);
 
   const classRecipients = classId
     ? await d1Query<{ id: string; email: string }>(
@@ -94,23 +107,28 @@ export async function POST(request: Request) {
         [
           ...tenantObjectParams({ objectTable: "classes", tenantId: context.tenant.id }),
           classId,
-          user.user_metadata.role === "admin" ? 1 : 0,
+          isPlatformAdmin ? 1 : 0,
           user.id,
         ],
       )
     : [];
-  if (classId && classRecipients.length === 0 && !body.to) {
-    return NextResponse.json({ data: null, error: "No active recipients were found for this class." }, { status: 404 });
+  if (classId && classRecipients.length === 0 && !directEmail) {
+    throw new NotFoundError("No active recipients were found for this class.");
   }
 
-  let recipients: Array<{ id: string | null; email: string }>;
-  try {
-    const directRecipients = body.to ? [{ id: null, email: validateEmailAddress(body.to, "Recipient email") }] : [];
-    recipients = validateRecipientList([...classRecipients, ...directRecipients]);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Recipient list is invalid.";
-    return NextResponse.json({ data: null, error: message }, { status: 400 });
+  const directRecipients: Array<{ id: string | null; email: string }> = [];
+  if (directEmail) {
+    const [profile] = await d1Query<{ id: string }>("SELECT id FROM profiles WHERE lower(email) = lower(?) LIMIT 1", [directEmail]);
+    if (!isPlatformAdmin && (!profile || !(await canContactUser({ sender: user, context, recipientId: profile.id })))) {
+      throw new ForbiddenError("You can only email members of your organization or classes.");
+    }
+    directRecipients.push({ id: profile?.id ?? null, email: directEmail });
   }
+
+  const recipients = validated(
+    () => validateRecipientList<{ id: string | null; email: string }>([...classRecipients, ...directRecipients]),
+    "Recipient list is invalid.",
+  );
 
   const results = await Promise.all(
     recipients.map((recipient) =>
@@ -157,4 +175,4 @@ export async function POST(request: Request) {
   );
 
   return NextResponse.json({ data: { count: results.length, composeUrl, messages: results }, error: null });
-}
+});
