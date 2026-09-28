@@ -8,6 +8,7 @@ import {
   tenantObjectParams,
   tenantObjectPredicate,
 } from "@/lib/tenancy/object-scope";
+import { BadRequestError, readJson, withRoute } from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
 import {
   PLANNER_BODY_MAX_LENGTH,
@@ -22,8 +23,8 @@ import {
 
 type PlannerPayload = {
   kind?: "announcement" | "event";
-  classId?: string | null;
-  lessonId?: string | null;
+  classId?: unknown;
+  lessonId?: unknown;
   title?: string;
   body?: string;
   description?: string | null;
@@ -49,7 +50,13 @@ type StudentRow = {
 };
 
 function jsonError(message: string, status: number) {
-  return NextResponse.json({ data: null, error: { message } }, { status });
+  return NextResponse.json({ data: null, error: message }, { status });
+}
+
+function optionalId(value: unknown, label: string) {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string" || value.length > 160) throw new BadRequestError(`${label} is invalid.`);
+  return value;
 }
 
 function parsePreferences(value: string | null) {
@@ -82,6 +89,14 @@ async function getTeacherClass(userId: string, tenantId: string, classId?: strin
     [...classScopeParams(tenantId), classId, userId],
   );
   return row ?? null;
+}
+
+async function isClassLesson(input: { lessonId: string; classId: string; teacherId: string }) {
+  const [row] = await d1Query<{ id: string }>(
+    "SELECT id FROM lessons WHERE id = ? AND (teacher_id = ? OR class_id = ?) LIMIT 1",
+    [input.lessonId, input.teacherId, input.classId],
+  );
+  return Boolean(row);
 }
 
 async function canManageAnnouncement(input: {
@@ -202,7 +217,7 @@ export async function GET(request: Request) {
   const classId = new URL(request.url).searchParams.get("classId");
 
   const role = user.user_metadata.role;
-  if (role === "teacher") {
+  if (role === "teacher" || role === "admin") {
     const [announcements, events] = await Promise.all([
       d1Query(
         `SELECT a.*, c.name AS class_name
@@ -305,12 +320,14 @@ export async function GET(request: Request) {
   return NextResponse.json({ data: { announcements, events }, error: null });
 }
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request) => {
   const user = await getSessionUser();
   if (!user) return jsonError("Authentication required.", 401);
   const context = await resolveTenantContext(user);
 
-  const body = (await request.json()) as PlannerPayload;
+  const body = await readJson<PlannerPayload>(request);
+  const classId = optionalId(body.classId, "Class");
+  const lessonId = optionalId(body.lessonId, "Lesson");
   let title: string;
   let bodyText: string | null;
   let description: string | null;
@@ -361,8 +378,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { id: eventId }, error: null });
   }
 
-  const classRow = await getTeacherClass(user.id, context.tenant.id, body.classId);
+  const classRow = await getTeacherClass(user.id, context.tenant.id, classId);
   if (!classRow) return jsonError("Choose one of your active classes.", 400);
+  if (lessonId && !(await isClassLesson({ lessonId, classId: classRow.id, teacherId: user.id }))) {
+    return jsonError("Choose one of your lessons for this class.", 400);
+  }
 
   const students = await getClassStudents(classRow.id, context.tenant.id);
   if (body.kind === "announcement") {
@@ -413,7 +433,7 @@ export async function POST(request: Request) {
       eventId,
       user.id,
       classRow.id,
-      body.lessonId ?? null,
+      lessonId,
       title,
       description,
       eventType,
@@ -440,7 +460,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ data: { id: eventId, notified: students.length }, error: null });
-}
+});
 
 export async function DELETE(request: Request) {
   const user = await getSessionUser();
