@@ -44,15 +44,10 @@ export default async function PublicTopbar({
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link href="/" className="group flex min-w-0 items-center gap-2 sm:gap-3">
-            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-edsync-blue text-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-lg sm:h-11 sm:w-11">
-              <GraduationCap className="h-5 w-5" />
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-edsync-blue text-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
+              <GraduationCap className="h-4 w-4" />
             </span>
-            <span className="min-w-0">
-              <span className="block truncate font-display text-lg font-bold leading-none sm:text-xl">EdSync</span>
-              <span className="mt-1 hidden truncate text-xs font-semibold text-edsync-subtle sm:block">
-                {organizationName || copy.brandSubhead}
-              </span>
-            </span>
+            <span className="truncate font-display text-lg font-semibold">EdSync</span>
           </Link>
 
           {organizationName && (
