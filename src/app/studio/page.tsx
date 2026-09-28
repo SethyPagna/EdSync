@@ -1,4 +1,5 @@
-import FabricLessonStudio from "@/components/studio/FabricLessonStudio";
+import { Suspense } from "react";
+import StudioWorkspace from "@/components/studio/StudioWorkspace";
 
 export const metadata = {
   title: "Course Studio",
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function StudioPage() {
-  return <FabricLessonStudio />;
+  return <Suspense fallback={<div className="p-6 text-sm text-fg-muted">Opening Studio…</div>}><StudioWorkspace /></Suspense>;
 }
