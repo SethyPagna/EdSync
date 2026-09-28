@@ -1,4 +1,5 @@
 import { d1Query } from "@/lib/db/d1";
+import { HttpError, NotFoundError } from "@/lib/security/http-errors";
 import type { PaymentProvider } from "@/types";
 
 export type CheckoutRequest = {
@@ -28,7 +29,7 @@ export async function createCheckout(input: CheckoutRequest): Promise<CheckoutRe
     currency: string;
     billing_interval: string;
   }>("SELECT * FROM billing_prices WHERE id = ? AND tenant_id = ? AND active = 1 LIMIT 1", [input.priceId, input.tenantId]);
-  if (!price) throw new Error("Price not found.");
+  if (!price) throw new NotFoundError("Price not found.");
 
   const transactionId = crypto.randomUUID();
   const selectedProvider = provider();
@@ -71,8 +72,20 @@ export async function createCheckout(input: CheckoutRequest): Promise<CheckoutRe
       "metadata[user_id]": input.userId,
     }),
   });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload?.error?.message || "Stripe checkout failed.");
+  const payload = (await response.json().catch(() => null)) as {
+    id?: string;
+    url?: string | null;
+    error?: { type?: string; message?: string };
+  } | null;
+  // Stripe's own error text can expose account configuration, so it is logged and the buyer sees a generic message.
+  if (!response.ok || !payload?.id) {
+    console.error("Stripe checkout failed", {
+      status: response.status,
+      type: payload?.error?.type ?? null,
+      message: payload?.error?.message ?? null,
+    });
+    throw new HttpError(502, "Payment provider is unavailable.");
+  }
   await d1Query(
     "UPDATE billing_transactions SET provider_transaction_id = ?, updated_at = datetime('now') WHERE id = ?",
     [payload.id, transactionId],
@@ -87,10 +100,100 @@ export async function grantEntitlement(input: {
   sourceType: string;
   sourceId: string;
 }) {
-  await d1Query(
+  const [created] = await d1Query<{ id: string }>(
     `INSERT INTO entitlements (
        id, tenant_id, user_id, product_id, source_type, source_id, status, starts_at, metadata, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), '{}', datetime('now'), datetime('now'))`,
-    [crypto.randomUUID(), input.tenantId, input.userId, input.productId, input.sourceType, input.sourceId],
+     )
+     SELECT ?, ?, ?, ?, ?, ?, 'active', datetime('now'), '{}', datetime('now'), datetime('now')
+      WHERE NOT EXISTS (
+        SELECT 1
+          FROM entitlements
+         WHERE tenant_id = ?
+           AND user_id = ?
+           AND product_id = ?
+           AND source_id = ?
+      )
+     RETURNING id`,
+    [
+      crypto.randomUUID(),
+      input.tenantId,
+      input.userId,
+      input.productId,
+      input.sourceType,
+      input.sourceId,
+      input.tenantId,
+      input.userId,
+      input.productId,
+      input.sourceId,
+    ],
   );
+  return { granted: Boolean(created), entitlementId: created?.id ?? null };
+}
+
+type TransactionRow = {
+  id: string;
+  product_id: string | null;
+  status: "pending" | "paid" | "failed" | "refunded" | "void";
+  metadata: string | null;
+};
+
+export type CompleteTransactionResult =
+  | { status: "paid"; transactionId: string; userId: string; productId: string | null; entitlementGranted: boolean }
+  | { status: "not_found" | "user_mismatch" | "not_payable" };
+
+function transactionOwner(metadata: string | null) {
+  try {
+    const parsed = metadata ? (JSON.parse(metadata) as { userId?: unknown }) : {};
+    return typeof parsed.userId === "string" && parsed.userId ? parsed.userId : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Marks a checkout transaction paid and grants its product to the buyer who started it.
+ * Safe to repeat: a paid transaction only re-checks the (idempotent) entitlement.
+ */
+export async function completeTransaction(input: {
+  tenantId: string;
+  transactionId: string;
+  expectedUserId?: string | null;
+  sourceType: string;
+}): Promise<CompleteTransactionResult> {
+  const [transaction] = await d1Query<TransactionRow>(
+    "SELECT id, product_id, status, metadata FROM billing_transactions WHERE id = ? AND tenant_id = ? LIMIT 1",
+    [input.transactionId, input.tenantId],
+  );
+  if (!transaction) return { status: "not_found" };
+  const owner = transactionOwner(transaction.metadata);
+  if (!owner || (input.expectedUserId && input.expectedUserId !== owner)) return { status: "user_mismatch" };
+  if (transaction.status !== "pending" && transaction.status !== "paid") return { status: "not_payable" };
+
+  if (transaction.status === "pending") {
+    const [updated] = await d1Query<{ status: string }>(
+      `UPDATE billing_transactions
+          SET status = 'paid', updated_at = datetime('now')
+        WHERE id = ? AND tenant_id = ? AND status IN ('pending', 'paid')
+        RETURNING status`,
+      [transaction.id, input.tenantId],
+    );
+    if (!updated) return { status: "not_payable" };
+  }
+
+  const grant = transaction.product_id
+    ? await grantEntitlement({
+        tenantId: input.tenantId,
+        userId: owner,
+        productId: transaction.product_id,
+        sourceType: input.sourceType,
+        sourceId: transaction.id,
+      })
+    : { granted: false };
+  return {
+    status: "paid",
+    transactionId: transaction.id,
+    userId: owner,
+    productId: transaction.product_id,
+    entitlementGranted: grant.granted,
+  };
 }
