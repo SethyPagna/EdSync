@@ -6,7 +6,9 @@ import { appendLearningEvent } from "@/lib/learning-events";
 import type { NormalizedLearningEventInput } from "@/lib/validation/learning-events";
 import { normalizeLearningEventInput } from "@/lib/validation/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import { BadRequestError, NotFoundError, UnauthorizedError, readJson, withRoute } from "@/lib/security/http-errors";
 import { resolveTenantContext, type TenantContext } from "@/lib/tenancy";
+import { isOwnerScoped } from "@/lib/tenancy/ownership";
 import {
   tenantObjectJoin,
   tenantObjectParams,
@@ -180,41 +182,42 @@ async function canReferenceLearningEventSource(input: {
   return true;
 }
 
-export async function GET() {
+export const GET = withRoute(async () => {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
   await requirePermission(user, context, PERMISSIONS.reportsView);
+  const scoped = isOwnerScoped(user, context);
   const events = await d1Query(
-    "SELECT * FROM learning_events WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 100",
-    [context.tenant.id],
+    `SELECT *
+       FROM learning_events
+      WHERE tenant_id = ?
+        ${scoped ? "AND (actor_id = ? OR student_id = ? OR class_id IN (SELECT id FROM classes WHERE teacher_id = ?))" : ""}
+      ORDER BY created_at DESC
+      LIMIT 100`,
+    scoped ? [context.tenant.id, user.id, user.id, user.id] : [context.tenant.id],
   );
   return NextResponse.json({ data: { events, context }, error: null });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request) => {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
-  const body = (await request.json()) as {
+  const body = await readJson<{
     sourceType?: string;
     sourceId?: string | null;
     eventType?: string;
     payload?: Record<string, unknown>;
-  };
+  }>(request);
   let event;
   try {
     event = normalizeLearningEventInput(body);
   } catch (error) {
-    return NextResponse.json(
-      { data: null, error: error instanceof Error ? error.message : "Invalid learning event." },
-      { status: 400 },
-    );
+    throw new BadRequestError(error instanceof Error ? error.message : "Invalid learning event.");
   }
   const canReferenceSource = await canReferenceLearningEventSource({ user, context, event });
-  if (!canReferenceSource) {
-    return NextResponse.json({ data: null, error: "Event source not found." }, { status: 404 });
-  }
+  if (!canReferenceSource) throw new NotFoundError("Event source not found.");
   const id = await appendLearningEvent({
     tenantId: context.tenant.id,
     actorId: user.id,
@@ -225,4 +228,4 @@ export async function POST(request: Request) {
     payload: event.payload,
   });
   return NextResponse.json({ data: { id }, error: null });
-}
+});
