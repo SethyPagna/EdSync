@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { loadAccessibleLesson } from "@/lib/lessons/access";
 import { appendLearningEvent } from "@/lib/learning-events";
 import type { NormalizedLearningEventInput } from "@/lib/validation/learning-events";
 import { normalizeLearningEventInput } from "@/lib/validation/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
-import { BadRequestError, NotFoundError, UnauthorizedError, readJson, withRoute } from "@/lib/security/http-errors";
+import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError, readJson, withRoute } from "@/lib/security/http-errors";
 import { resolveTenantContext, type TenantContext } from "@/lib/tenancy";
 import { isOwnerScoped } from "@/lib/tenancy/ownership";
 import {
@@ -16,7 +17,6 @@ import {
 } from "@/lib/tenancy/object-scope";
 
 const CLASS_TABLE = "classes";
-const LESSON_TABLE = "lessons";
 const WORK_ITEM_TABLE = "learning_work_items";
 
 function predicateParams(objectTable: string, tenantId: string) {
@@ -62,41 +62,12 @@ async function canReferenceLesson(input: {
   context: TenantContext;
   sourceId: string;
 }) {
-  const isAdmin = input.user.user_metadata.role === "admin";
-  const [row] = await d1Query<{ id: string }>(
-    `SELECT l.id
-       FROM lessons l
-       ${tenantObjectJoin({ objectTable: LESSON_TABLE, objectAlias: "l", linkAlias: "lesson_link" })}
-       LEFT JOIN classes c ON c.id = l.class_id
-       ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
-      WHERE l.id = ?
-        AND (${tenantObjectPredicate({ linkAlias: "lesson_link" })}
-          OR (l.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
-        AND (
-          ? = 1
-          OR l.teacher_id = ?
-          OR l.class_id IS NULL
-          OR EXISTS (
-            SELECT 1
-              FROM class_enrollments ce
-             WHERE ce.class_id = l.class_id
-               AND ce.student_id = ?
-               AND ce.is_active = 1
-          )
-        )
-      LIMIT 1`,
-    [
-      LESSON_TABLE,
-      CLASS_TABLE,
-      input.sourceId,
-      ...predicateParams(LESSON_TABLE, input.context.tenant.id),
-      ...predicateParams(CLASS_TABLE, input.context.tenant.id),
-      isAdmin ? 1 : 0,
-      input.user.id,
-      input.user.id,
-    ],
-  );
-  return Boolean(row);
+  return Boolean(await loadAccessibleLesson({
+    lessonId: input.sourceId,
+    tenantId: input.context.tenant.id,
+    tenantMember: Boolean(input.context.membership),
+    user: input.user,
+  }));
 }
 
 async function canReferenceWorkItem(input: {
@@ -215,6 +186,9 @@ export const POST = withRoute(async (request) => {
     event = normalizeLearningEventInput(body);
   } catch (error) {
     throw new BadRequestError(error instanceof Error ? error.message : "Invalid learning event.");
+  }
+  if (/^grade\./i.test(event.eventType)) {
+    throw new ForbiddenError("Grade events are recorded by the server.");
   }
   const canReferenceSource = await canReferenceLearningEventSource({ user, context, event });
   if (!canReferenceSource) throw new NotFoundError("Event source not found.");
