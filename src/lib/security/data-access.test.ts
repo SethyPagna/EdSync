@@ -279,34 +279,34 @@ describe("guarded writes", () => {
     expect(rowOf(db, "classes", "class-2")).toMatchObject({ teacher_id: OTHER_TEACHER.id, name: "Art 7" });
   });
 
-  it("rejects an upsert that would overwrite someone else's row", async () => {
+  it("keeps progress writes on the lesson progress route", async () => {
     const result = await run(BUYER, {
       table: "student_progress",
       action: "upsert",
       values: { id: "progress-2", lesson_id: "lesson-4", status: "completed", score: 100 },
     });
 
-    expect(result).toMatchObject({ status: 403, error: "That record belongs to someone else." });
+    expect(result).toMatchObject({ status: 403, error: "Use the lesson progress route to save activity." });
     expect(rowOf(db, "student_progress", "progress-2")).toMatchObject({ student_id: OTHER_STUDENT.id, score: null });
   });
 
   it("pins upsert conflict targets to the primary key or a declared unique key", async () => {
     const result = await run(STUDENT, {
-      table: "student_progress",
+      table: "class_enrollments",
       action: "upsert",
-      onConflict: "lesson_id",
-      values: { lesson_id: "lesson-1", status: "completed" },
+      onConflict: "class_id",
+      values: { class_id: "class-1", join_code: "JOIN1111", is_active: true },
     });
     expect(result.status).toBe(400);
 
     const own = await run(STUDENT, {
-      table: "student_progress",
+      table: "class_enrollments",
       action: "upsert",
-      onConflict: "student_id,lesson_id",
-      values: { lesson_id: "lesson-1", status: "completed", score: 95 },
+      onConflict: "class_id,student_id",
+      values: { class_id: "class-1", join_code: "JOIN1111", is_active: true },
       single: true,
     });
-    expect(own).toMatchObject({ status: 200, data: { id: "progress-1", score: 95 } });
+    expect(own).toMatchObject({ status: 200, data: { class_id: "class-1", student_id: STUDENT.id } });
   });
 
   it("keeps lesson content and sharing inside owned lessons and classes", async () => {
@@ -345,13 +345,20 @@ describe("guarded writes", () => {
     ).toBe(403);
   });
 
-  it("only lets students record progress on lessons they can open", async () => {
+  it("rejects direct student progress and quiz attempt writes", async () => {
     const result = await run(STUDENT, {
       table: "student_progress",
       action: "insert",
       values: { lesson_id: "lesson-3", status: "in_progress" },
     });
-    expect(result).toMatchObject({ status: 403, error: "That lesson is not available to you." });
+    expect(result).toMatchObject({ status: 403, error: "Use the lesson progress route to save activity." });
+    const attempt = await run(STUDENT, {
+      table: "quiz_attempts",
+      action: "insert",
+      values: { lesson_id: "lesson-1", question_id: "question-1", attempt_number: 999, is_correct: true },
+    });
+    expect(attempt.status).toBe(403);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM quiz_attempts").get()).toMatchObject({ n: 0 });
   });
 });
 
