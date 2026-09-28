@@ -4,10 +4,8 @@ import { notFound } from "next/navigation";
 import {
   ArrowRight,
   BookOpenCheck,
-  Globe2,
   Search,
   SlidersHorizontal,
-  UsersRound,
 } from "lucide-react";
 import CatalogCourseCard from "@/components/catalog/CatalogCourseCard";
 import PublicTopbar from "@/components/public/PublicTopbar";
@@ -41,7 +39,7 @@ export default async function OrganizationPortalPage({
 }) {
   const { portalSlug } = await params;
   const resolvedSearchParams = await searchParams;
-  const portal = await getOrganizationPortal(portalSlug);
+  const portal = await getOrganizationPortal(portalSlug, resolvedSearchParams?.tenant);
   if (!portal) notFound();
 
   const filters = normalizeCatalogFilters({
@@ -51,9 +49,10 @@ export default async function OrganizationPortalPage({
   });
   const copy = getPublicCopy(filters.language);
   const hasFilters = hasCatalogFilters({ ...filters, portalSlug: null, tenantSlug: null });
-  const items = await listPublicCatalog({
+  const catalogResult = await listPublicCatalog({
     ...filters,
-  });
+  }).then((value) => ({ items: value, unavailable: false }), () => ({ items: [], unavailable: true }));
+  const { items, unavailable } = catalogResult;
   const cardLabels = {
     featured: copy.featured,
     free: copy.free,
@@ -78,17 +77,17 @@ export default async function OrganizationPortalPage({
       />
 
       <section className="mx-auto max-w-7xl px-4 py-8">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div>
           <div className="premium-panel animate-reveal-soft overflow-hidden rounded-[1.65rem]">
             <div className="p-5 sm:p-7">
-              <h1 className="mt-4 font-display text-4xl font-bold leading-tight sm:text-5xl">
+              <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">
                 {portal.name}
               </h1>
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <span className="badge bg-edsync-blue/10 text-edsync-blue">{portal.audience}</span>
                 <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{items.length} {copy.courses.toLowerCase()}</span>
               </div>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Link
                   href={loginHref}
                   className="btn-primary justify-center"
@@ -165,16 +164,6 @@ export default async function OrganizationPortalPage({
               </div>
             </form>
           </div>
-          <div className="grid gap-3">
-            <div className="premium-card rounded-2xl p-5">
-              <Globe2 className="mb-3 h-8 w-8 text-edsync-blue" />
-              <p className="font-semibold">{copy.academies}</p>
-            </div>
-            <div className="premium-card rounded-2xl p-5">
-              <UsersRound className="mb-3 h-8 w-8 text-edsync-emerald" />
-              <p className="font-semibold">{copy.signIn}</p>
-            </div>
-          </div>
         </div>
 
         <section className="mt-8">
@@ -202,10 +191,10 @@ export default async function OrganizationPortalPage({
         {items.length === 0 && (
           <div className="premium-surface mt-8 rounded-2xl border-dashed p-10 text-center">
             <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
-            <p className="font-semibold text-edsync-text">{copy.emptyTitle}</p>
-            <p className="mt-2 text-sm text-edsync-subtle">{copy.emptyCopy}</p>
-            <Link href={`/catalog${languageQuery}`} className="btn-primary mx-auto mt-5 w-fit">
-              {copy.catalogLabel}
+            <p className="font-semibold text-edsync-text">{unavailable ? "Courses are temporarily unavailable" : copy.emptyTitle}</p>
+            <p className="mt-2 text-sm text-edsync-subtle">{unavailable ? "Please try again in a moment." : copy.emptyCopy}</p>
+            <Link href={unavailable ? portalHref : `/catalog${languageQuery}`} className="btn-secondary mx-auto mt-5 w-fit">
+              {unavailable ? "Try again" : copy.catalogLabel}
             </Link>
           </div>
         )}
