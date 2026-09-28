@@ -212,14 +212,15 @@ export async function GET(request: Request) {
           ],
     );
     const categoryIds = referencedCategoryIds(scores);
-    const categories = categoryIds.length
-      ? await d1Query<{ id: string; class_id: string; name: string; weight: number }>(
-          `SELECT id, class_id, name, weight
-             FROM gradebook_categories
-            WHERE id IN (${sqlInPlaceholders(categoryIds)})`,
-          categoryIds,
-        )
-      : [];
+    const categoryChunks = Array.from({ length: Math.ceil(categoryIds.length / 100) }, (_, index) =>
+      categoryIds.slice(index * 100, (index + 1) * 100));
+    const categories = (await Promise.all(categoryChunks.map((ids) =>
+      d1Query<{ id: string; class_id: string; name: string; weight: number }>(
+        `SELECT id, class_id, name, weight
+           FROM gradebook_categories
+          WHERE id IN (${sqlInPlaceholders(ids)})`,
+        ids,
+      )))).flat();
     // Category weights only mean something inside their own class: weight each class like the teacher's
     // class view, then give every class (and the class-less scores) an equal share of the overall.
     const scoresByClass = new Map<string | null, GradebookScoreRow[]>();
