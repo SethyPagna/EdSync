@@ -3,6 +3,14 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { deserializeRow } from "@/lib/db/schema";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  readJson,
+  withRoute,
+} from "@/lib/security/http-errors";
 import { parseStandardsManifest } from "@/lib/standards";
 import {
   normalizeStandardsLaunchPath,
@@ -12,6 +20,7 @@ import {
   validateStandardsTitle,
 } from "@/lib/validation/standards";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import { ownerScope } from "@/lib/tenancy/ownership";
 
 const STANDARDS_PACKAGE_TABLE = "standards_packages";
 const STORAGE_OBJECT_TABLE = "storage_objects";
@@ -37,25 +46,27 @@ async function canUseStorageObject(input: {
   return Boolean(row);
 }
 
-export async function GET() {
+export const GET = withRoute(async () => {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
-  const rows = await d1Query("SELECT * FROM standards_packages WHERE tenant_id = ? ORDER BY updated_at DESC", [context.tenant.id]);
+  const owner = ownerScope(user, context, "owner_id");
+  const rows = await d1Query(
+    `SELECT * FROM standards_packages WHERE tenant_id = ?${owner.sql} ORDER BY updated_at DESC`,
+    [context.tenant.id, ...owner.params],
+  );
   const packages = rows.map((row) => deserializeRow("standards_packages", row));
   return NextResponse.json({ data: { packages, context }, error: null });
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request) => {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
-  try {
-    await requirePermission(user, context, PERMISSIONS.coursesAuthor);
-  } catch {
-    return NextResponse.json({ data: null, error: "Missing authoring permission." }, { status: 403 });
-  }
-  const body = (await request.json()) as {
+  await requirePermission(user, context, PERMISSIONS.coursesAuthor).catch(() => {
+    throw new ForbiddenError("Missing authoring permission.");
+  });
+  const body = await readJson<{
     action?: "parse" | "update" | "delete";
     id?: string;
     title?: string;
@@ -64,35 +75,43 @@ export async function POST(request: Request) {
     fileName?: string;
     manifestText?: string;
     storageObjectId?: string | null;
-  };
+  }>(request);
+  const owner = ownerScope(user, context, "owner_id");
 
   if (body.action === "delete") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Package is required." }, { status: 400 });
+    if (!body.id) throw new BadRequestError("Package is required.");
+    const [deleted] = await d1Query<{ id: string }>(
+      `DELETE FROM standards_packages WHERE tenant_id = ? AND id = ?${owner.sql} RETURNING id`,
+      [context.tenant.id, body.id, ...owner.params],
+    );
+    if (!deleted) throw new NotFoundError("Package not found.");
     await d1Query("DELETE FROM tenant_object_links WHERE tenant_id = ? AND object_table = ? AND object_id = ?", [
       context.tenant.id,
       STANDARDS_PACKAGE_TABLE,
       body.id,
     ]);
-    await d1Query("DELETE FROM standards_packages WHERE tenant_id = ? AND id = ?", [context.tenant.id, body.id]);
     return NextResponse.json({ data: { id: body.id }, error: null });
   }
 
   if (body.action === "update") {
-    if (!body.id) return NextResponse.json({ data: null, error: "Package is required." }, { status: 400 });
+    if (!body.id) throw new BadRequestError("Package is required.");
     let title: string;
     let launchPath: string | null;
     try {
       title = validateStandardsTitle(body.title);
       launchPath = normalizeStandardsLaunchPath(body.launchPath);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Standards package is invalid.";
-      return NextResponse.json({ data: null, error: message }, { status: 400 });
+      throw new BadRequestError(error instanceof Error ? error.message : "Standards package is invalid.");
     }
     const status = normalizeStandardsStatus(body.status);
-    await d1Query(
-      "UPDATE standards_packages SET title = ?, launch_path = ?, status = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?",
-      [title, launchPath, status, context.tenant.id, body.id],
+    const [updated] = await d1Query<{ id: string }>(
+      `UPDATE standards_packages
+          SET title = ?, launch_path = ?, status = ?, updated_at = datetime('now')
+        WHERE tenant_id = ? AND id = ?${owner.sql}
+        RETURNING id`,
+      [title, launchPath, status, context.tenant.id, body.id, ...owner.params],
     );
+    if (!updated) throw new NotFoundError("Package not found.");
     return NextResponse.json({ data: { id: body.id }, error: null });
   }
 
@@ -102,8 +121,7 @@ export async function POST(request: Request) {
     fileName = validateStandardsFileName(body.fileName);
     manifestText = validateStandardsManifestText(body.manifestText);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Standards manifest is invalid.";
-    return NextResponse.json({ data: null, error: message }, { status: 400 });
+    throw new BadRequestError(error instanceof Error ? error.message : "Standards manifest is invalid.");
   }
   const parsed = parseStandardsManifest({ fileName, manifestText });
   if (
@@ -113,7 +131,7 @@ export async function POST(request: Request) {
       storageObjectId: body.storageObjectId,
     }))
   ) {
-    return NextResponse.json({ data: null, error: "Storage object not found." }, { status: 404 });
+    throw new NotFoundError("Storage object not found.");
   }
   const id = crypto.randomUUID();
   await d1Query(
@@ -134,4 +152,4 @@ export async function POST(request: Request) {
   );
   await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: STANDARDS_PACKAGE_TABLE, objectId: id });
   return NextResponse.json({ data: { id, parsed }, error: null });
-}
+});
