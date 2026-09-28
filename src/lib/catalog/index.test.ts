@@ -80,4 +80,15 @@ describe("public catalog pricing", () => {
     const free = await listPublicCatalog({ price: "free" });
     expect(free.map((item) => item.id)).toEqual(["free-mode"]);
   });
+
+  it("loads prices for a full catalog without exceeding D1's parameter limit", async () => {
+    mocks.products = Array.from({ length: 200 }, (_, index) => product(`course-${index}`, "paid"));
+    mocks.prices = mocks.products.map((row, index) => price(String(row.id), 1000 + index));
+    const items = await listPublicCatalog();
+    expect(items).toHaveLength(200);
+    expect(items.every((item) => item.price.id)).toBe(true);
+    const priceQueries = mocks.query.mock.calls.filter(([sql]) => String(sql).includes("FROM billing_prices"));
+    expect(priceQueries).toHaveLength(2);
+    expect(priceQueries.every(([, params]) => (params as unknown[]).length <= 100)).toBe(true);
+  });
 });
