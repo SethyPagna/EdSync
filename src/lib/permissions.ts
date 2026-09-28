@@ -1,5 +1,6 @@
 import { deserializeRow } from "@/lib/db/schema";
 import { d1Query } from "@/lib/db/d1";
+import { ForbiddenError } from "@/lib/security/http-errors";
 import type { SessionUser } from "@/lib/auth/session";
 import type { TenantContext } from "@/lib/tenancy";
 import type { RoleProfile } from "@/types";
@@ -47,7 +48,7 @@ export async function getPermissionSet(user: SessionUser, context: TenantContext
 export async function requirePermission(user: SessionUser, context: TenantContext, permission: string) {
   const permissions = await getPermissionSet(user, context);
   if (!permissions.has(permission)) {
-    throw new Error(`Missing permission: ${permission}`);
+    throw new ForbiddenError(`Missing permission: ${permission}`);
   }
   return permissions;
 }
