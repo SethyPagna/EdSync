@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session";
-import { d1Query } from "@/lib/db/d1";
+import { d1Batch, d1Query } from "@/lib/db/d1";
+import type { D1Statement } from "@/lib/db/d1-adapter";
 import {
   createReviewCards,
   summarizePracticeAttempt,
@@ -13,6 +14,13 @@ import {
   buildPracticeReviewContext,
 } from "@/lib/practice/attempt-context";
 import { isPracticeMode, normalizePracticeMode } from "@/lib/practice/modes";
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+  readJson,
+  withRoute,
+} from "@/lib/security/http-errors";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
 import {
   tenantObjectJoin,
@@ -25,14 +33,20 @@ const ATTEMPT_TABLE = "practice_attempts";
 const CLASS_TABLE = "classes";
 const LESSON_TABLE = "lessons";
 const LOCAL_PRACTICE_SOURCE_ID = "local-practice";
+const MAX_PRACTICE_ITEMS = 200;
+const MAX_ANSWER_OPTIONS = 50;
+const MAX_TEXT_LENGTH = 4_000;
+const MAX_ID_LENGTH = 160;
+const MAX_POINTS = 1_000;
+const MAX_SECONDS = 7 * 24 * 60 * 60;
 
 type PracticeAttemptBody = {
   mode?: string;
-  sourceType?: string;
-  sourceId?: string;
-  elapsedSeconds?: number;
-  targetSeconds?: number | null;
-  items?: PracticeItem[];
+  sourceType?: unknown;
+  sourceId?: unknown;
+  elapsedSeconds?: unknown;
+  targetSeconds?: unknown;
+  items?: unknown;
 };
 
 function predicateParams(objectTable: string, tenantId: string) {
@@ -117,40 +131,85 @@ async function canUsePracticeSource(input: {
   return true;
 }
 
-export async function POST(request: Request) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ data: null, error: "Authentication required." }, { status: 401 });
-  }
+function isAnswer(value: unknown): value is PracticeItem["answer"] {
+  if (typeof value === "string") return value.length <= MAX_TEXT_LENGTH;
+  if (typeof value === "boolean") return true;
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_ANSWER_OPTIONS &&
+    value.every((entry) => typeof entry === "string" && entry.length <= MAX_TEXT_LENGTH)
+  );
+}
 
-  const body = (await request.json()) as PracticeAttemptBody;
-  if (!body.mode || !Array.isArray(body.items) || body.items.length === 0) {
-    return NextResponse.json({ data: null, error: "Practice mode and items are required." }, { status: 400 });
+function optionalText(value: unknown, label: string, maxLength: number) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || value.length > maxLength) {
+    throw new BadRequestError(`${label} must be text of ${maxLength} characters or fewer.`);
   }
-  if (!isPracticeMode(body.mode)) {
-    return NextResponse.json({ data: null, error: "Choose a supported practice mode." }, { status: 400 });
+  return value;
+}
+
+function seconds(value: unknown, label: string) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > MAX_SECONDS) {
+    throw new BadRequestError(`${label} must be a number of seconds between 0 and ${MAX_SECONDS}.`);
   }
+  return value;
+}
+
+function practiceItems(value: unknown): PracticeItem[] {
+  if (!Array.isArray(value) || value.length === 0) throw new BadRequestError("Practice mode and items are required.");
+  if (value.length > MAX_PRACTICE_ITEMS) {
+    throw new BadRequestError(`Practice attempts can include up to ${MAX_PRACTICE_ITEMS} items.`);
+  }
+  return value.map((raw) => {
+    const item = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+    const id = optionalText(item.id, "Practice item id", MAX_ID_LENGTH);
+    const prompt = optionalText(item.prompt, "Practice prompt", MAX_TEXT_LENGTH);
+    if (!id || !prompt) throw new BadRequestError("Each practice item needs an id and a prompt.");
+    const response = item.response ?? undefined;
+    if (!isAnswer(item.answer) || (response !== undefined && !isAnswer(response))) {
+      throw new BadRequestError("Practice answers must be text, true/false, or a list of text.");
+    }
+    const points = item.points ?? undefined;
+    if (points !== undefined && (typeof points !== "number" || !Number.isFinite(points) || points < 0 || points > MAX_POINTS)) {
+      throw new BadRequestError(`Practice item points must be between 0 and ${MAX_POINTS}.`);
+    }
+    return {
+      id,
+      prompt,
+      answer: item.answer,
+      response,
+      explanation: optionalText(item.explanation, "Practice explanation", MAX_TEXT_LENGTH),
+      points,
+    };
+  });
+}
+
+export const POST = withRoute(async (request) => {
+  const user = await getSessionUser();
+  if (!user) throw new UnauthorizedError("Authentication required.");
+
+  const body = await readJson<PracticeAttemptBody>(request);
+  if (!body.mode) throw new BadRequestError("Practice mode and items are required.");
+  if (!isPracticeMode(body.mode)) throw new BadRequestError("Choose a supported practice mode.");
+  const items = practiceItems(body.items);
+  const elapsedSeconds = seconds(body.elapsedSeconds, "Elapsed time") ?? 0;
+  const targetSeconds = seconds(body.targetSeconds, "Target time");
 
   const context = await resolveTenantContext(user);
   const mode: PracticeMode = normalizePracticeMode(body.mode);
   const attemptId = crypto.randomUUID();
-  const sourceType = body.sourceType || "studio";
-  const sourceId = body.sourceId || null;
+  const sourceType = optionalText(body.sourceType, "Practice source type", MAX_ID_LENGTH) ?? "studio";
+  const sourceId = optionalText(body.sourceId, "Practice source", MAX_ID_LENGTH) ?? null;
   const canUseSource = await canUsePracticeSource({
     user,
     context,
     sourceType,
     sourceId,
   });
-  if (!canUseSource) {
-    return NextResponse.json({ data: null, error: "Practice source not found." }, { status: 404 });
-  }
-  const summary = summarizePracticeAttempt({
-    mode,
-    items: body.items,
-    elapsedSeconds: Number(body.elapsedSeconds ?? 0),
-    targetSeconds: body.targetSeconds ?? null,
-  });
+  if (!canUseSource) throw new NotFoundError("Practice source not found.");
+  const summary = summarizePracticeAttempt({ mode, items, elapsedSeconds, targetSeconds });
   const attemptContext = buildPracticeAttemptContext({
     mode,
     sourceType,
@@ -185,36 +244,37 @@ export async function POST(request: Request) {
     objectId: attemptId,
   });
 
-  const reviewCards = createReviewCards(body.items, attemptId);
-  for (const item of body.items) {
+  // One batch instead of a round trip per item keeps large attempts fast and all-or-nothing.
+  const reviewCards = new Map(createReviewCards(items, attemptId).map((card) => [card.id, card]));
+  const statements: D1Statement[] = [];
+  for (const item of items) {
     const itemId = crypto.randomUUID();
-    const response = item.response === undefined ? null : JSON.stringify(item.response);
     const isCorrect = !summary.reviewCardIds.includes(item.id);
-    await d1Query(
-      `INSERT INTO practice_attempt_items (
+    statements.push({
+      sql: `INSERT INTO practice_attempt_items (
         id, attempt_id, prompt, expected_answer, response, is_correct, points, explanation, metadata
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+      params: [
         itemId,
         attemptId,
         item.prompt,
         JSON.stringify(item.answer),
-        response,
+        item.response === undefined ? null : JSON.stringify(item.response),
         isCorrect ? 1 : 0,
         item.points ?? 1,
         item.explanation ?? null,
         JSON.stringify(buildPracticeItemContext({ item, mode, isCorrect })),
       ],
-    );
+    });
 
-    const card = reviewCards.find((entry) => entry.id === item.id);
+    const card = reviewCards.get(item.id);
     if (card) {
-      await d1Query(
-        `INSERT INTO practice_review_cards (
+      statements.push({
+        sql: `INSERT INTO practice_review_cards (
           id, tenant_id, user_id, attempt_item_id, source_type, source_id,
           prompt, correct_answer, explanation, mastery, next_review_at, metadata
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
+        params: [
           crypto.randomUUID(),
           context.tenant.id,
           user.id,
@@ -228,15 +288,15 @@ export async function POST(request: Request) {
           card.nextReviewAt,
           JSON.stringify(buildPracticeReviewContext({ item, mode })),
         ],
-      );
+      });
     }
   }
 
-  await d1Query(
-    `INSERT INTO learning_events (
+  statements.push({
+    sql: `INSERT INTO learning_events (
       id, tenant_id, actor_id, student_id, source_type, source_id, event_type, event_version, payload, created_at
     ) VALUES (?, ?, ?, ?, 'practice', ?, 'practice.attempt.completed', 1, ?, datetime('now'))`,
-    [
+    params: [
       crypto.randomUUID(),
       context.tenant.id,
       user.id,
@@ -244,7 +304,8 @@ export async function POST(request: Request) {
       attemptId,
       JSON.stringify({ summary, context: attemptContext }),
     ],
-  );
+  });
+  await d1Batch(statements);
 
   return NextResponse.json({ data: { attemptId, summary, context: attemptContext }, error: null });
-}
+});
