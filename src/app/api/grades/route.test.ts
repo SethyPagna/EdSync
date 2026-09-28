@@ -163,6 +163,30 @@ describe("POST /api/grades (manual scores)", () => {
     expect(Object.keys(withClassless.data?.overallByClass as object)).toHaveLength(2);
   });
 
+  it("loads more than 100 referenced categories in bounded D1 queries", async () => {
+    const categories = Array.from({ length: 101 }, (_, index) => ({
+      id: `cat-many-${index}`, class_id: "class-1", teacher_id: TEACHER.id,
+      name: `Category ${index}`, weight: 1,
+    }));
+    insertRows(db, "gradebook_categories", categories);
+    insertRows(db, "gradebook_scores", categories.map((category, index) => ({
+      id: `score-many-${index}`, class_id: "class-1", student_id: STUDENT.id,
+      teacher_id: TEACHER.id, category_id: category.id, source_type: "manual",
+      source_id: `source-many-${index}`, title: `Score ${index}`,
+      points_earned: 10, points_possible: 10, percent: 100, status: "graded",
+    })));
+    const adapter = sqliteAdapter(db);
+    const query = vi.spyOn(adapter, "query");
+    state.adapter = adapter;
+    state.user = STUDENT;
+    const response = await readJson(await GET(new Request("http://localhost/api/grades")));
+    expect((response.data?.categories as unknown[]).length).toBe(101);
+    expect(response.data?.overall).toBe(100);
+    const categoryQueries = query.mock.calls.filter(([sql]) => sql.includes("FROM gradebook_categories"));
+    expect(categoryQueries).toHaveLength(2);
+    expect(categoryQueries.every(([, params]) => (params ?? []).length <= 100)).toBe(true);
+  });
+
   it("keeps the category when a later write does not send one, and clears it when sent as null", async () => {
     const created = await readJson(await grade({ categoryId: "cat-tests" }));
     const sourceId = String(created.data?.sourceId);
