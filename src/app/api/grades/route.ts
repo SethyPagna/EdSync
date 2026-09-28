@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { sqlInPlaceholders } from "@/lib/db/sql";
+import { errorMessage, jsonError, optionalId, readJsonObject } from "@/lib/grades/http";
 import {
   GRADE_CATEGORY_NAME_MAX_LENGTH,
   normalizeManualGradeInput,
   validateGradeCategoryWeight,
   validateGradeText,
+  type GradeSourceType,
 } from "@/lib/grades/validation";
+import { referencedCategoryIds, weightedAverage } from "@/lib/grades/weighting";
 import { recordGradeEvent } from "@/lib/learning-events";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
 import {
@@ -21,6 +25,7 @@ const CATEGORY_TABLE = "gradebook_categories";
 const SCORE_TABLE = "gradebook_scores";
 
 type GradebookScoreRow = {
+  class_id: string | null;
   category_id: string | null;
   percent: number | null;
   status: string;
@@ -167,34 +172,9 @@ async function resolveGradeCategory(input: {
   return category ?? null;
 }
 
-function weightedAverage(
-  scores: GradebookScoreRow[],
-  categories: Array<{ id: string; weight: number }>,
-) {
-  const byCategory = new Map(categories.map((category) => [category.id, Number(category.weight || 0)]));
-  const grouped = new Map<string, number[]>();
-
-  for (const score of scores) {
-    if (score.status !== "graded" || score.percent === null || score.percent === undefined) continue;
-    const key = score.category_id || "uncategorized";
-    grouped.set(key, [...(grouped.get(key) ?? []), Number(score.percent)]);
-  }
-
-  let weightedTotal = 0;
-  let weightTotal = 0;
-  for (const [categoryId, values] of Array.from(grouped.entries())) {
-    const average = values.reduce((sum: number, value: number) => sum + value, 0) / values.length;
-    const weight = byCategory.get(categoryId) ?? 1;
-    weightedTotal += average * weight;
-    weightTotal += weight;
-  }
-
-  return weightTotal > 0 ? Math.round((weightedTotal / weightTotal) * 100) / 100 : null;
-}
-
 export async function GET(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) return jsonError("Unauthorized", 401);
   const context = await resolveTenantContext(user);
 
   const params = new URL(request.url).searchParams;
@@ -231,17 +211,44 @@ export async function GET(request: Request) {
             ...predicateParams(CLASS_TABLE, context.tenant.id),
           ],
     );
+    const categoryIds = referencedCategoryIds(scores);
+    const categories = categoryIds.length
+      ? await d1Query<{ id: string; class_id: string; name: string; weight: number }>(
+          `SELECT id, class_id, name, weight
+             FROM gradebook_categories
+            WHERE id IN (${sqlInPlaceholders(categoryIds)})`,
+          categoryIds,
+        )
+      : [];
+    // Category weights only mean something inside their own class: weight each class like the teacher's
+    // class view, then give every class (and the class-less scores) an equal share of the overall.
+    const scoresByClass = new Map<string | null, GradebookScoreRow[]>();
+    for (const score of scores) {
+      const key = score.class_id || null;
+      scoresByClass.set(key, [...(scoresByClass.get(key) ?? []), score]);
+    }
+    const averageByClass = Array.from(scoresByClass, ([scoreClassId, classScores]) => ({
+      classId: scoreClassId,
+      average: weightedAverage(classScores, categories),
+    }));
+    const overallByClass = Object.fromEntries(
+      averageByClass.flatMap(({ classId: scoreClassId, average }) => (scoreClassId ? [[scoreClassId, average]] : [])),
+    );
+    const classAverages = averageByClass.flatMap(({ average }) => (average === null ? [] : [average]));
+    const overall = classAverages.length
+      ? Math.round((classAverages.reduce((sum, value) => sum + value, 0) / classAverages.length) * 100) / 100
+      : null;
     return NextResponse.json({
-      data: { scores, overall: weightedAverage(scores, []) },
+      data: { scores, categories, overall, overallByClass },
       error: null,
     });
   }
 
   if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
-    return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
+    return jsonError("Teacher access required.", 403);
   }
   if (classId && !(await canManageClass({ user, context, classId }))) {
-    return NextResponse.json({ data: null, error: "Class not found." }, { status: 404 });
+    return jsonError("Class not found.", 404);
   }
 
   const categoryParams = user.user_metadata.role === "admin" ? [] : [user.id];
@@ -330,36 +337,91 @@ export async function GET(request: Request) {
   return NextResponse.json({ data: { categories, scores, rows }, error: null });
 }
 
+async function classTeacherId(classId: string | null) {
+  if (!classId) return null;
+  const [row] = await d1Query<{ teacher_id: string }>("SELECT teacher_id FROM classes WHERE id = ? LIMIT 1", [classId]);
+  return row?.teacher_id ?? null;
+}
+
+/**
+ * Resolves the gradebook source a teacher is grading. Manual scores get a server-generated id; any
+ * client-supplied sourceId must already belong to the class being graded, so one class can never
+ * overwrite another class's score.
+ */
+async function resolveManualGradeSource(input: {
+  user: SessionUser;
+  studentId: string;
+  classId: string | null;
+  sourceType: GradeSourceType;
+  sourceId: string | null;
+}): Promise<{ sourceId: string; teacherId: string } | null> {
+  const { user, classId, sourceId } = input;
+  const isAdmin = user.user_metadata.role === "admin" ? 1 : 0;
+
+  if (input.sourceType === "manual") {
+    if (!sourceId) {
+      return { sourceId: crypto.randomUUID(), teacherId: (await classTeacherId(classId)) ?? user.id };
+    }
+    const [row] = await d1Query<{ teacher_id: string }>(
+      `SELECT teacher_id
+         FROM gradebook_scores
+        WHERE student_id = ?
+          AND source_type = 'manual'
+          AND source_id = ?
+          AND class_id IS ?
+          AND (? = 1 OR teacher_id = ?)
+        LIMIT 1`,
+      [input.studentId, sourceId, classId, isAdmin, user.id],
+    );
+    return row ? { sourceId, teacherId: row.teacher_id } : null;
+  }
+
+  if (!sourceId) return null;
+  const [row] =
+    input.sourceType === "lesson_quiz"
+      ? await d1Query<{ teacher_id: string }>(
+          `SELECT l.teacher_id
+             FROM lessons l
+            WHERE l.id = ?
+              AND ((? IS NOT NULL AND (l.class_id = ? OR EXISTS (
+                     SELECT 1
+                       FROM lesson_assignments la
+                      WHERE la.lesson_id = l.id
+                        AND la.class_id = ?
+                        AND la.is_active = 1)))
+                OR (? IS NULL AND l.class_id IS NULL AND (? = 1 OR l.teacher_id = ?)))
+            LIMIT 1`,
+          [sourceId, classId, classId, classId, classId, isAdmin, user.id],
+        )
+      : await d1Query<{ teacher_id: string }>(
+          `SELECT wi.teacher_id
+             FROM learning_work_items wi
+            WHERE wi.id = ?
+              AND wi.work_type = ?
+              AND ((? IS NOT NULL AND wi.class_id = ?)
+                OR (? IS NULL AND wi.class_id IS NULL AND (? = 1 OR wi.teacher_id = ?)))
+            LIMIT 1`,
+          [sourceId, input.sourceType, classId, classId, classId, isAdmin, user.id],
+        );
+  return row ? { sourceId, teacherId: row.teacher_id } : null;
+}
+
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
+  if (!user) return jsonError("Unauthorized", 401);
   if (user.user_metadata.role !== "teacher" && user.user_metadata.role !== "admin") {
-    return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
+    return jsonError("Teacher access required.", 403);
   }
-  const context = await resolveTenantContext(user);
 
-  const body = (await request.json()) as {
-    kind?: "category" | "score";
-    classId?: string;
-    name?: string;
-    weight?: number;
-    studentId?: string;
-    categoryId?: string | null;
-    sourceType?: string;
-    sourceId?: string | null;
-    title?: string;
-    pointsEarned?: number;
-    pointsPossible?: number;
-    feedback?: string | null;
-    status?: "draft" | "graded";
-  };
+  const body = await readJsonObject(request);
+  if (!body) return jsonError("Send a JSON object body.", 400);
+  const context = await resolveTenantContext(user);
+  const bodyClassId = optionalId(body.classId);
 
   if (body.kind === "category") {
-    if (!body.classId) {
-      return NextResponse.json({ data: null, error: "Class is required." }, { status: 400 });
-    }
-    if (!(await canManageClass({ user, context, classId: body.classId }))) {
-      return NextResponse.json({ data: null, error: "Class not found." }, { status: 404 });
+    if (!bodyClassId) return jsonError("Class is required.", 400);
+    if (!(await canManageClass({ user, context, classId: bodyClassId }))) {
+      return jsonError("Class not found.", 404);
     }
     let categoryName: string;
     let categoryWeight: number;
@@ -367,16 +429,13 @@ export async function POST(request: Request) {
       categoryName = validateGradeText(body.name, "Category name", GRADE_CATEGORY_NAME_MAX_LENGTH);
       categoryWeight = validateGradeCategoryWeight(body.weight);
     } catch (error) {
-      return NextResponse.json(
-        { data: null, error: error instanceof Error ? error.message : "Invalid grade category." },
-        { status: 400 },
-      );
+      return jsonError(errorMessage(error, "Invalid grade category."), 400);
     }
     const id = crypto.randomUUID();
     await d1Query(
       `INSERT INTO gradebook_categories (id, class_id, teacher_id, name, weight, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [id, body.classId, user.id, categoryName, categoryWeight],
+      [id, bodyClassId, user.id, categoryName, categoryWeight],
     );
     await linkTenantObject({
       tenantId: context.tenant.id,
@@ -387,47 +446,66 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { id }, error: null });
   }
 
-  if (!body.studentId) {
-    return NextResponse.json({ data: null, error: "Student is required." }, { status: 400 });
-  }
+  const studentId = optionalId(body.studentId);
+  if (!studentId) return jsonError("Student is required.", 400);
 
   let grade;
   try {
     grade = normalizeManualGradeInput(body);
   } catch (error) {
-    return NextResponse.json(
-      { data: null, error: error instanceof Error ? error.message : "Invalid grade score." },
-      { status: 400 },
-    );
+    return jsonError(errorMessage(error, "Invalid grade score."), 400);
   }
-  const category = await resolveGradeCategory({ user, context, categoryId: body.categoryId });
-  if (body.categoryId && !category) {
-    return NextResponse.json({ data: null, error: "Category not found." }, { status: 404 });
+  const requestedSourceId = optionalId(body.sourceId);
+  if (grade.sourceType !== "manual" && !requestedSourceId) {
+    return jsonError("Choose the graded item for this score.", 400);
   }
-  if (category && body.classId && category.class_id !== body.classId) {
-    return NextResponse.json({ data: null, error: "Category does not belong to this class." }, { status: 400 });
+
+  const categoryId = optionalId(body.categoryId);
+  const category = await resolveGradeCategory({ user, context, categoryId });
+  if (categoryId && !category) return jsonError("Category not found.", 404);
+  if (category && bodyClassId && category.class_id !== bodyClassId) {
+    return jsonError("Category does not belong to this class.", 400);
   }
-  const classId = body.classId ?? category?.class_id ?? null;
-  if (!(await canGradeStudent({ user, context, studentId: body.studentId, classId }))) {
-    return NextResponse.json({ data: null, error: "Student not found." }, { status: 404 });
+  const classId = bodyClassId ?? category?.class_id ?? null;
+  if (!(await canGradeStudent({ user, context, studentId, classId }))) {
+    return jsonError("Student not found.", 404);
   }
-  const id = crypto.randomUUID();
+
+  const source = await resolveManualGradeSource({
+    user,
+    studentId,
+    classId,
+    sourceType: grade.sourceType,
+    sourceId: requestedSourceId,
+  });
+  if (!source) return jsonError("Graded item not found in this class.", 404);
+
   const result = await recordGradeEvent({
     tenantId: context.tenant.id,
     actorId: user.id,
-    studentId: body.studentId,
+    studentId,
     classId,
     sourceType: grade.sourceType,
-    sourceId: body.sourceId ?? id,
+    sourceId: source.sourceId,
     eventType: "grade.manual.recorded",
-    teacherId: user.id,
+    writer: "teacher",
+    teacherId: source.teacherId,
     title: grade.title,
     pointsEarned: grade.pointsEarned,
     pointsPossible: grade.pointsPossible,
     feedback: grade.feedback,
     status: body.status === "draft" ? "draft" : "graded",
-    payload: { categoryId: body.categoryId ?? null },
+    categoryId: body.categoryId === undefined ? undefined : (category?.id ?? null),
   });
 
-  return NextResponse.json({ data: { id, eventId: result.eventId }, error: null });
+  return NextResponse.json({
+    data: {
+      id: source.sourceId,
+      sourceId: source.sourceId,
+      sourceType: grade.sourceType,
+      scoreId: result.scoreId,
+      eventId: result.eventId,
+    },
+    error: null,
+  });
 }
