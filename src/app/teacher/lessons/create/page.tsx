@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Course Studio",
-  description: "Redirects to the unified EdSync studio.",
+  title: "Create course",
+  description: "Redirects to the course creation workspace.",
 };
 
 export default function CreateLessonPage() {
-  redirect("/studio");
+  redirect("/teacher/lessons?new=1");
 }
