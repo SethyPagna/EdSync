@@ -566,7 +566,7 @@ function SignupLoginLink() {
 
 export default function SignupPage() {
   return (
-    <main className="auth-revamp premium-shell flex min-h-screen items-center justify-center overflow-x-hidden px-4 py-10 sm:px-6">
+    <main className="auth-revamp premium-shell flex min-h-screen items-start justify-center overflow-x-hidden px-4 py-6 sm:items-center sm:px-6 sm:py-10">
       <section className="w-full max-w-[32rem]">
           <div className="mb-8 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
