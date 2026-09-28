@@ -1,1149 +1,300 @@
 "use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/edsync/client";
-import {
-  fetchTeacherPracticeReviewSignal,
-  summarizeTeacherPracticeReviews,
-  type TeacherPracticeReviewSignal,
-} from "@/lib/practice/teacher-review-signals";
-import type { Lesson } from "@/types";
+import { fetchTeacherPracticeReviewSignal, summarizeTeacherPracticeReviews, type TeacherPracticeReviewSignal } from "@/lib/practice/teacher-review-signals";
+import { buildInsights, type InsightInteraction, type InsightProfile, type InsightProgress } from "@/components/teacher-home/insights";
+import { Badge, Button, Card, EmptyState, InfoPopover, LinkButton, PageHeader, ProgressBar, Section, Skeleton, StatTile, Tabs, Toolbar } from "@/components/ui";
+import type { Class, Lesson } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
+import { Activity, ArrowRight, BookOpen, ChartNoAxesCombined, CircleHelp, Lightbulb, MessageCircle, ShieldAlert, Sparkles, UsersRound } from "lucide-react";
 
-interface StudentStat {
-  id: string;
-  name: string;
-  email: string;
-  lessonsCompleted: number;
-  avgScore: number | null;
-  aiInteractions: number;
-  reflectionCount: number;
-  lowConfidenceReflections: number;
-  status: "on_track" | "at_risk" | "advanced";
-}
-
-interface LessonStat {
-  id: string;
-  title: string;
-  studentsStarted: number;
-  studentsCompleted: number;
-  avgScore: number | null;
-  knowledgeGaps: string[];
-}
-
-interface SocraticEntry {
-  id: string;
-  student_name: string;
-  student_question: string;
-  created_at: string;
-  lesson_title?: string;
-}
-
-interface ReflectionEntry {
-  id: string;
-  student_name: string;
-  lesson_title?: string;
-  notes_preview: string;
-  confidence: number;
-  guiding_question: string;
-  created_at: string;
-}
-
-type ReflectionMetadataEntry = {
-  id?: string;
-  confidence?: unknown;
-  notes?: unknown;
-  advice?: { guidingQuestion?: unknown };
-  created_at?: unknown;
+type AnalyticsData = {
+  classes: Class[];
+  lessons: Lesson[];
+  progress: InsightProgress[];
+  interactions: InsightInteraction[];
+  profiles: InsightProfile[];
+  reviewSignal: TeacherPracticeReviewSignal;
 };
 
-type AnalyticsProgressRow = {
-  id: string;
-  student_id: string;
-  lesson_id: string;
-  status: string;
-  score: number | null;
-  knowledge_gaps?: string[] | null;
-  metadata?: { reflections?: ReflectionMetadataEntry[] } | null;
-  last_active: string;
+const EMPTY_DATA: AnalyticsData = {
+  classes: [], lessons: [], progress: [], interactions: [], profiles: [],
+  reviewSignal: summarizeTeacherPracticeReviews([]),
 };
 
-type SocraticRow = {
-  id: string;
-  student_id: string;
-  lesson_id: string;
-  student_question: string;
-  created_at: string;
-};
+type View = "overview" | "learners" | "map" | "activity" | "ideas";
+type ActivityView = "reflections" | "questions";
 
-type AnalyticsProfileRow = {
-  id: string;
-  full_name: string | null;
-  email: string;
-};
-
-type Tab =
-  | "overview"
-  | "heatmap"
-  | "students"
-  | "reflections"
-  | "socratic"
-  | "interventions";
+function scoreTone(score: number | null): "neutral" | "danger" | "success" | "warning" {
+  return score === null ? "neutral" : score < 60 ? "danger" : score >= 80 ? "success" : "warning";
+}
 
 export default function TeacherAnalytics() {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [lessonStats, setLessonStats] = useState<LessonStat[]>([]);
-  const [studentStats, setStudentStats] = useState<StudentStat[]>([]);
-  const [socraticLog, setSocraticLog] = useState<SocraticEntry[]>([]);
-  const [reflectionLog, setReflectionLog] = useState<ReflectionEntry[]>([]);
-  const [tab, setTab] = useState<Tab>("overview");
-  const [selectedLesson, setSelectedLesson] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [gettingSuggestions, setGettingSuggestions] = useState(false);
-  const [reviewSignal, setReviewSignal] = useState<TeacherPracticeReviewSignal>(
-    summarizeTeacherPracticeReviews([]),
-  );
   const edsync = useMemo(() => createClient(), []);
+  const [data, setData] = useState<AnalyticsData>(EMPTY_DATA);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [classId, setClassId] = useState("all");
+  const [view, setView] = useState<View>("overview");
+  const [activityView, setActivityView] = useState<ActivityView>("reflections");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionError, setSuggestionError] = useState("");
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const {
-        data: { user },
-      } = await edsync.auth.getUser();
-      if (!user) return;
-
-      const [lessonResult, nextReviewSignal] = await Promise.all([
-        edsync
-          .from("lessons")
-          .select("*")
-          .eq("teacher_id", user.id)
-          .order("created_at", { ascending: false }),
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to view insights.");
+      const [classesRes, lessonsRes, reviewSignal] = await Promise.all([
+        edsync.from("classes").select("*").eq("teacher_id", user.id).eq("is_active", true).order("name", { ascending: true }),
+        edsync.from("lessons").select("*").eq("teacher_id", user.id).order("created_at", { ascending: false }),
         fetchTeacherPracticeReviewSignal(),
       ]);
-
-      const myLessons: Lesson[] = lessonResult.data || [];
-      setLessons(myLessons);
-      setReviewSignal(nextReviewSignal);
-
-      if (myLessons.length === 0) {
-        setLessonStats([]);
-        setStudentStats([]);
-        setSocraticLog([]);
-        setReflectionLog([]);
+      if (classesRes.error || lessonsRes.error) throw new Error("Could not load your courses.");
+      const classes = (classesRes.data || []) as Class[];
+      const lessons = (lessonsRes.data || []) as Lesson[];
+      if (lessons.length === 0) {
+        setData({ classes, lessons, progress: [], interactions: [], profiles: [], reviewSignal });
         return;
       }
-
-      const lessonIds = myLessons.map((lesson) => lesson.id);
-      const titleMap = new Map(myLessons.map((lesson) => [lesson.id, lesson.title]));
-
-      const [{ data: progressRows }, { data: socraticRows }] = await Promise.all([
-        edsync.from("student_progress").select("*").in("lesson_id", lessonIds),
-        edsync
-          .from("socratic_interactions")
-          .select("id, student_question, created_at, student_id, lesson_id")
-          .in("lesson_id", lessonIds)
-          .order("created_at", { ascending: false })
-          .limit(30),
+      const ids = lessons.map((lesson) => lesson.id);
+      const [progressRes, interactionsRes] = await Promise.all([
+        edsync.from("student_progress").select("*").in("lesson_id", ids),
+        edsync.from("socratic_interactions").select("id, student_question, created_at, student_id, lesson_id").in("lesson_id", ids).order("created_at", { ascending: false }).limit(30),
       ]);
-
-      const progressData = (progressRows || []) as AnalyticsProgressRow[];
-      const socraticData = (socraticRows || []) as SocraticRow[];
-      const allStudentIds = Array.from(
-        new Set([
-          ...progressData.map((progress) => progress.student_id),
-          ...socraticData.map((entry) => entry.student_id),
-        ]),
-      );
-
-      const profileMap = new Map<string, { full_name: string | null; email: string }>();
-      if (allStudentIds.length > 0) {
-        const { data: profileData } = await edsync
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", allStudentIds);
-        ((profileData || []) as AnalyticsProfileRow[]).forEach((profile) =>
-          profileMap.set(profile.id, { full_name: profile.full_name, email: profile.email }),
-        );
+      if (progressRes.error || interactionsRes.error) throw new Error("Could not load learning activity.");
+      const progress = (progressRes.data || []) as InsightProgress[];
+      const interactions = (interactionsRes.data || []) as InsightInteraction[];
+      const studentIds = [...new Set([...progress.map((row) => row.student_id), ...interactions.map((row) => row.student_id)])];
+      let profiles: InsightProfile[] = [];
+      if (studentIds.length) {
+        const profilesRes = await edsync.from("profiles").select("id, full_name, email").in("id", studentIds);
+        if (profilesRes.error) throw new Error("Could not load learner details.");
+        profiles = (profilesRes.data || []) as InsightProfile[];
       }
-
-      const progressByLesson = new Map<string, AnalyticsProgressRow[]>();
-      progressData.forEach((progress) => {
-        const rows = progressByLesson.get(progress.lesson_id) || [];
-        rows.push(progress);
-        progressByLesson.set(progress.lesson_id, rows);
-      });
-
-      const lStats: LessonStat[] = myLessons.map((lesson) => {
-        const lessonProgress = progressByLesson.get(lesson.id) || [];
-        const scores = lessonProgress
-          .map((progress) => progress.score)
-          .filter((score): score is number => typeof score === "number");
-        const gapCounts = new Map<string, number>();
-        lessonProgress
-          .flatMap((progress) => progress.knowledge_gaps || [])
-          .forEach((gap) => {
-            gapCounts.set(gap, (gapCounts.get(gap) || 0) + 1);
-          });
-        const topGaps = Array.from(gapCounts.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([gap]) => gap);
-        return {
-          id: lesson.id,
-          title: lesson.title,
-          studentsStarted: lessonProgress.filter((progress) => progress.status !== "not_started")
-            .length,
-          studentsCompleted: lessonProgress.filter((progress) => progress.status === "completed")
-            .length,
-          avgScore:
-            scores.length > 0
-              ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-              : null,
-          knowledgeGaps: topGaps,
-        };
-      });
-      setLessonStats(lStats);
-
-      const studentMap = new Map<string, StudentStat>();
-      const reflectionEntries: ReflectionEntry[] = [];
-
-      for (const progress of progressData) {
-        const profile = profileMap.get(progress.student_id);
-        const existing = studentMap.get(progress.student_id) ?? {
-          id: progress.student_id,
-          name: profile?.full_name || "Unknown",
-          email: profile?.email || "",
-          lessonsCompleted: 0,
-          avgScore: null,
-          aiInteractions: 0,
-          reflectionCount: 0,
-          lowConfidenceReflections: 0,
-          status: "on_track" as const,
-        };
-        if (progress.status === "completed") existing.lessonsCompleted++;
-        if (progress.score !== null) {
-          existing.avgScore =
-            existing.avgScore === null
-              ? progress.score
-              : Math.round((existing.avgScore + progress.score) / 2);
-        }
-
-        const reflections = Array.isArray(progress.metadata?.reflections)
-          ? progress.metadata.reflections
-          : [];
-
-        if (reflections.length > 0) {
-          existing.reflectionCount += reflections.length;
-
-          reflections.forEach((entry, index) => {
-            const confidenceValue = Number(entry?.confidence);
-            const confidence = Number.isFinite(confidenceValue)
-              ? Math.min(5, Math.max(1, Math.round(confidenceValue)))
-              : 3;
-
-            if (confidence <= 2) {
-              existing.lowConfidenceReflections++;
-            }
-
-            const notes =
-              typeof entry?.notes === "string" && entry.notes.trim()
-                ? entry.notes.trim()
-                : "No notes provided.";
-
-            reflectionEntries.push({
-              id: typeof entry?.id === "string" ? entry.id : `${progress.id}-${index}`,
-              student_name: profile?.full_name || "Unknown",
-              lesson_title: titleMap.get(progress.lesson_id),
-              notes_preview:
-                notes.length > 180 ? `${notes.slice(0, 180)}...` : notes,
-              confidence,
-              guiding_question:
-                typeof entry?.advice?.guidingQuestion === "string"
-                  ? entry.advice.guidingQuestion
-                  : "No guiding question captured.",
-              created_at:
-                typeof entry?.created_at === "string"
-                  ? entry.created_at
-                  : progress.last_active,
-            });
-          });
-        }
-
-        studentMap.set(progress.student_id, existing);
-      }
-      for (const entry of socraticData) {
-        const student = studentMap.get(entry.student_id);
-        if (student) {
-          student.aiInteractions++;
-          studentMap.set(entry.student_id, student);
-        }
-      }
-      const students = Array.from(studentMap.values()).map((student) => ({
-        ...student,
-        status: (student.avgScore === null
-          ? "on_track"
-          : student.avgScore >= 80
-            ? "advanced"
-            : student.avgScore < 60
-              ? "at_risk"
-              : "on_track") as StudentStat["status"],
-      }));
-      setStudentStats(students);
-      setReflectionLog(
-        reflectionEntries
-          .sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          )
-          .slice(0, 40),
-      );
-
-      setSocraticLog(
-        socraticData.map((entry) => ({
-          id: entry.id,
-          student_name: profileMap.get(entry.student_id)?.full_name || "Unknown",
-          student_question: entry.student_question,
-          created_at: entry.created_at,
-          lesson_title: titleMap.get(entry.lesson_id),
-        })),
-      );
+      setData({ classes, lessons, progress, interactions, profiles, reviewSignal });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not load insights.");
     } finally {
       setLoading(false);
     }
   }, [edsync]);
 
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadData();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
+    const timer = window.setTimeout(() => { void loadData(); }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadData]);
 
-  const getInterventions = async () => {
-    setGettingSuggestions(true);
+  const courses = useMemo(
+    () => classId === "all" ? data.lessons : data.lessons.filter((lesson) => lesson.class_id === classId),
+    [classId, data.lessons],
+  );
+  const insights = useMemo(
+    () => buildInsights(courses, data.progress, data.interactions, data.profiles),
+    [courses, data.progress, data.interactions, data.profiles],
+  );
+  const atRisk = insights.students.filter((student) => student.status === "at_risk");
+  const advanced = insights.students.filter((student) => student.status === "advanced");
+  const lowConfidence = insights.students.reduce((total, student) => total + student.lowConfidence, 0);
+
+  const getSuggestions = async () => {
+    setSuggestionsLoading(true);
+    setSuggestionError("");
     try {
-      const res = await fetch("/api/ai/analytics", {
+      const response = await fetch("/api/ai/analytics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentStats, lessonStats, reviewSignal }),
+        body: JSON.stringify({
+          studentStats: insights.students.map((student, index) => ({
+            name: `Learner ${index + 1}`,
+            avgScore: student.average,
+            reflectionCount: student.reflections,
+            lowConfidenceReflections: student.lowConfidence,
+          })),
+          lessonStats: insights.lessons.map((lesson) => ({ knowledgeGaps: lesson.gaps })),
+          reviewSignal: data.reviewSignal,
+        }),
       });
-      const data = await res.json();
-      if (data.suggestions) setAiSuggestions(data.suggestions);
-      else setAiSuggestions(["No specific interventions needed at this time."]);
-    } catch {
-      setAiSuggestions([
-        "Could not load AI suggestions. Check your AI provider configuration.",
-      ]);
+      const payload = (await response.json()) as { suggestions?: unknown; error?: string };
+      const list = Array.isArray(payload.suggestions)
+        ? payload.suggestions.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
+      if (!response.ok || payload.error || list.length === 0 || list.some((item) => /^(Could not generate|Unauthorized|Too many analytics requests)/i.test(item))) {
+        throw new Error(payload.error || list[0] || "Could not generate insights.");
+      }
+      setSuggestions(list);
+    } catch (reason) {
+      setSuggestionError(reason instanceof Error ? reason.message : "Could not generate insights.");
+    } finally {
+      setSuggestionsLoading(false);
     }
-    setGettingSuggestions(false);
   };
 
-  const filteredLessonStats =
-    selectedLesson === "all"
-      ? lessonStats
-      : lessonStats.filter((l) => l.id === selectedLesson);
-  const atRisk = studentStats.filter((s) => s.status === "at_risk");
-  const advanced = studentStats.filter((s) => s.status === "advanced");
-  const onTrack = studentStats.filter((s) => s.status === "on_track");
-  const totalReflections = reflectionLog.length;
-  const lowConfidenceReflections = reflectionLog.filter(
-    (entry) => entry.confidence <= 2,
-  ).length;
-  const avgScore =
-    studentStats.filter((s) => s.avgScore !== null).length > 0
-      ? Math.round(
-          studentStats
-            .filter((s) => s.avgScore !== null)
-            .reduce((a, s) => a + (s.avgScore || 0), 0) /
-            studentStats.filter((s) => s.avgScore !== null).length,
-        )
-      : 0;
-  const allGaps = lessonStats.flatMap((l) => l.knowledgeGaps);
-  const gapCounts: Record<string, number> = {};
-  allGaps.forEach((g) => {
-    gapCounts[g] = (gapCounts[g] || 0) + 1;
-  });
-  const topGaps = Object.entries(gapCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-
-  const chartData = filteredLessonStats.map((l) => ({
-    name: l.title.length > 16 ? l.title.slice(0, 14) + "..." : l.title,
-    Started: l.studentsStarted,
-    Completed: l.studentsCompleted,
-    Score: l.avgScore ?? 0,
-  }));
-
-  const TABS: { key: Tab; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "heatmap", label: "Map" },
-    { key: "students", label: "Learners" },
-    { key: "reflections", label: "Reflect" },
-    { key: "interventions", label: "Suggest" },
-    { key: "socratic", label: "AI Log" },
-  ];
-
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display font-bold text-3xl text-edsync-text">
-            Analytics Dashboard
-          </h1>
-          <p className="text-edsync-subtle">Real-time course insights</p>
-        </div>
-        <select
-          value={selectedLesson}
-          onChange={(e) => setSelectedLesson(e.target.value)}
-          className="edsync-input w-56 py-2"
-        >
-          <option value="all">All Courses</option>
-          {lessons.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.title}
-            </option>
-          ))}
+    <div className="page space-y-6">
+      <PageHeader title="Insights" actions={<LinkButton href="/teacher/reports" variant="secondary" size="sm" icon={ArrowRight}>Reports</LinkButton>} />
+      <Toolbar>
+        <label htmlFor="insights-class" className="sr-only">Class</label>
+        <select id="insights-class" value={classId} onChange={(event) => setClassId(event.target.value)} className="select min-w-0 max-w-full sm:w-64">
+          <option value="all">All classes</option>
+          {data.classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
-      </div>
-
-      {/* Top stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        {[
-          {
-            label: "Total Learners",
-            value: loading ? "..." : studentStats.length,
-            icon: "STU",
-            color: "blue",
-          },
-          {
-            label: "Space Avg",
-            value: loading
-              ? "..."
-              : studentStats.length === 0
-                ? "N/A"
-                : `${avgScore}%`,
-            icon: "AVG",
-            color: "emerald",
-          },
-          {
-            label: "At Risk (<60%)",
-            value: loading ? "..." : atRisk.length,
-            icon: "RISK",
-            color: "red",
-          },
-          {
-            label: "AI Interactions",
-            value: loading
-              ? "..."
-              : studentStats.reduce((a, s) => a + s.aiInteractions, 0),
-            icon: "AI",
-            color: "purple",
-          },
-          {
-            label: "Reflections Logged",
-            value: loading ? "..." : totalReflections,
-            icon: "RFL",
-            color: "cyan",
-          },
-          {
-            label: "Practice Reviews",
-            value: loading ? "..." : reviewSignal.pendingCount,
-            icon: "REV",
-            color: "amber",
-          },
-        ].map((s, i) => (
-          <div key={i} className="edsync-card">
-            <span className="text-xl block mb-2">{s.icon}</span>
-            <p className="font-display font-bold text-2xl text-edsync-text">
-              {s.value}
-            </p>
-            <p className="text-edsync-subtle text-xs mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`min-w-[5.75rem] flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-all sm:flex-none ${
-              tab === t.key
-                ? "bg-edsync-blue text-white"
-                : "bg-edsync-card text-edsync-subtle hover:text-edsync-text border border-edsync-border"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 bg-edsync-card rounded-2xl shimmer" />
-          ))}
+        <InfoPopover>Scores use graded results. A missing score is excluded from the average; 0% counts.</InfoPopover>
+      </Toolbar>
+      {error ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft p-3 text-[13px] text-danger">
+          <span>{error}</span><button type="button" onClick={() => void loadData()} className="font-medium underline underline-offset-2">Retry</button>
         </div>
-      ) : lessons.length === 0 ? (
-        <div className="edsync-card text-center py-16">
-          <h2 className="font-display font-bold text-xl text-edsync-text mb-2">
-            No data yet
-          </h2>
-          <p className="text-edsync-subtle">Share courses to see data.</p>
-        </div>
-      ) : (
-        <>
-          {/* Overview */}
-          {tab === "overview" && (
-            <div className="animate-fade-in space-y-6">
-              <div className="edsync-card">
-                <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                  Lesson Completion
-                </h3>
-                {chartData.length > 0 ? (
-                  <div className="space-y-4">
-                    {chartData.map((row) => {
-                      const max = Math.max(row.Started, row.Completed, 1);
-                      return (
-                        <div key={row.name} className="rounded-xl border border-edsync-border bg-edsync-surface p-3">
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <p className="truncate text-sm font-semibold text-edsync-text">{row.name}</p>
-                            <p className="text-xs text-edsync-subtle">
-                              {row.Completed}/{row.Started} complete
-                            </p>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="h-2 rounded-full bg-edsync-muted/25">
-                              <div
-                                className="h-2 rounded-full bg-edsync-blue"
-                                style={{ width: `${(row.Started / max) * 100}%` }}
-                              />
-                            </div>
-                            <div className="h-2 rounded-full bg-edsync-muted/25">
-                              <div
-                                className="h-2 rounded-full bg-edsync-emerald"
-                                style={{ width: `${(row.Completed / max) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-edsync-subtle text-sm text-center py-8">No progress yet.</p>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredLessonStats.map((lesson) => (
-                  <div key={lesson.id} className="edsync-card">
-                    <p className="font-semibold text-edsync-text text-sm mb-3 truncate">
-                      {lesson.title}
-                    </p>
-                    <div className="space-y-2 text-sm mb-3">
-                      <div className="flex justify-between">
-                        <span className="text-edsync-subtle">Started</span>
-                        <span className="text-edsync-blue font-medium">
-                          {lesson.studentsStarted}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-edsync-subtle">Completed</span>
-                        <span className="text-edsync-emerald font-medium">
-                          {lesson.studentsCompleted}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-edsync-subtle">Avg Score</span>
-                        <span
-                          className={`font-bold ${lesson.avgScore === null ? "text-edsync-subtle" : lesson.avgScore >= 80 ? "text-edsync-emerald" : lesson.avgScore >= 60 ? "text-edsync-amber" : "text-edsync-red"}`}
-                        >
-                          {lesson.avgScore !== null
-                            ? `${lesson.avgScore}%`
-                            : "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                    {lesson.knowledgeGaps.length > 0 && (
-                      <div className="pt-2 border-t border-edsync-border">
-                        <p className="text-xs text-edsync-subtle mb-1">
-                          Top Gaps
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {lesson.knowledgeGaps.map((g) => (
-                            <span
-                              key={g}
-                              className="badge bg-edsync-red/10 text-edsync-red border-edsync-red/20 text-xs"
-                            >
-                              {g}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      ) : null}
 
-          {/* Heat map */}
-          {tab === "heatmap" && (
-            <div className="animate-fade-in space-y-6">
-              {/* Space readiness */}
-              <div className="edsync-card">
-                <div className="group mb-5">
-                  <h3 className="font-display font-semibold text-lg text-edsync-text">
-                    Course Readiness Map
-                  </h3>
-                  <p className="edsync-hover-detail">
-                    Color-coded concept readiness.
-                  </p>
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <StatTile label="Learners" value={loading ? "…" : insights.students.length} icon={UsersRound} tone="accent" />
+        <StatTile label="Average" value={loading ? "…" : insights.average === null ? "—" : `${insights.average}%`} icon={ChartNoAxesCombined} tone="success" />
+        <StatTile label="At risk" value={loading ? "…" : atRisk.length} icon={ShieldAlert} tone="danger" />
+        <StatTile label="Practice" value={loading ? "…" : data.reviewSignal.pendingCount} icon={Activity} tone="warning" />
+      </div>
+
+      <Tabs<View>
+        value={view}
+        onChange={setView}
+        ariaLabel="Insight views"
+        idPrefix="insights"
+        items={[
+          { value: "overview", label: "Overview" },
+          { value: "learners", label: "Learners" },
+          { value: "map", label: "Map" },
+          { value: "activity", label: "Activity" },
+          { value: "ideas", label: "Ideas" },
+        ]}
+      />
+
+      {loading ? <div className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
+        : courses.length === 0 ? <Card><EmptyState icon={BookOpen} title="No courses in this class" action={<LinkButton href="/teacher/lessons" size="sm">Courses</LinkButton>} /></Card>
+        : (
+          <div role="tabpanel" id={`insights-panel-${view}`} aria-labelledby={`insights-tab-${view}`} className="space-y-6">
+            {view === "overview" ? (
+              <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(270px,1fr)]">
+                <Section title="Course progress" count={insights.lessons.length}>
+                  <Card padding="none" className="overflow-hidden">
+                    {insights.lessons.map((lesson) => (
+                      <div key={lesson.id} className="border-b border-line p-4 last:border-0">
+                        <div className="mb-2 flex min-w-0 items-center gap-3">
+                          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg">{lesson.title}</span>
+                          <Badge tone={scoreTone(lesson.average)}>{lesson.average === null ? "—" : `${lesson.average}%`}</Badge>
+                        </div>
+                        <ProgressBar value={lesson.completed} max={Math.max(lesson.started, 1)} label={`${lesson.title} completion`} />
+                        <p className="mt-1.5 text-xs text-fg-faint">{lesson.completed} of {lesson.started} completed</p>
+                        {lesson.gaps.length ? <div className="mt-2 flex flex-wrap gap-1">{lesson.gaps.map((gap) => <Badge key={gap} tone="warning">{gap}</Badge>)}</div> : null}
+                      </div>
+                    ))}
+                  </Card>
+                </Section>
+                <div className="space-y-6">
+                  <Section title="At risk" count={atRisk.length}>
+                    <Card padding="none" className="overflow-hidden">
+                      {atRisk.length ? atRisk.slice(0, 5).map((student) => (
+                        <div key={student.id} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-0">
+                          <span className="min-w-0 flex-1 truncate text-[13px] text-fg">{student.name}</span>
+                          <Badge tone="danger">{student.average}%</Badge>
+                        </div>
+                      )) : <EmptyState compact icon={ShieldAlert} title="No at-risk learners" />}
+                    </Card>
+                  </Section>
+                  {insights.gaps.length ? (
+                    <Section title="Common gaps">
+                      <Card className="flex flex-wrap gap-1.5">{insights.gaps.slice(0, 6).map(([gap, count]) => <Badge key={gap} tone="warning">{gap} · {count}</Badge>)}</Card>
+                    </Section>
+                  ) : null}
                 </div>
-                {studentStats.length === 0 ? (
-                  <p className="text-edsync-subtle text-sm text-center py-8">No learner data yet.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[600px]">
-                      <thead>
-                        <tr className="border-b border-edsync-border">
-                          <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                            Learner
-                          </th>
-                          {filteredLessonStats.slice(0, 5).map((l) => (
-                            <th
-                              key={l.id}
-                              className="text-center text-xs text-edsync-subtle font-medium pb-3 px-2 max-w-[100px]"
-                            >
-                              <span className="block truncate">
-                                {l.title.slice(0, 14)}
-                                {l.title.length > 14 ? "..." : ""}
-                              </span>
-                            </th>
-                          ))}
-                          <th className="text-center text-xs text-edsync-subtle font-medium pb-3 px-2">
-                            Overall
-                          </th>
+              </div>
+            ) : null}
+
+            {view === "learners" ? (
+              <Section title="Learners" count={insights.students.length}>
+                <div className="mb-2 flex flex-wrap gap-2 text-xs text-fg-muted">
+                  <Badge tone="success">{advanced.length} advanced</Badge>
+                  <Badge tone="neutral">{insights.students.length - advanced.length - atRisk.length} on track</Badge>
+                  <Badge tone="danger">{atRisk.length} at risk</Badge>
+                </div>
+                <Card padding="none" className="overflow-hidden">
+                  {insights.students.length ? insights.students.map((student) => (
+                    <div key={student.id} className="flex min-w-0 items-center gap-3 border-b border-line px-4 py-3 last:border-0">
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium text-fg">{student.name}</span><span className="block truncate text-xs text-fg-faint">{student.completed} courses · {student.aiInteractions} AI chats · {student.reflections} reflections</span></span>
+                      <Badge tone={scoreTone(student.average)}>{student.average === null ? "—" : `${student.average}%`}</Badge>
+                    </div>
+                  )) : <EmptyState compact icon={UsersRound} title="No learner activity yet" />}
+                </Card>
+              </Section>
+            ) : null}
+
+            {view === "map" ? (
+              <Section title="Readiness map" count={insights.students.length}>
+                <Card padding="none" className="overflow-x-auto">
+                  {insights.students.length ? (
+                    <table className="w-full min-w-[520px] text-left text-[13px]">
+                      <thead><tr className="border-b border-line text-xs text-fg-muted"><th scope="col" className="px-4 py-3 font-medium">Learner</th>{insights.lessons.slice(0, 5).map((lesson) => <th key={lesson.id} scope="col" title={lesson.title} className="max-w-28 truncate px-2 py-3 text-center font-medium">{lesson.title}</th>)}<th scope="col" className="px-4 py-3 text-right font-medium">Overall</th></tr></thead>
+                      <tbody>{insights.students.map((student) => (
+                        <tr key={student.id} className="border-b border-line last:border-0">
+                          <th scope="row" className="max-w-44 truncate px-4 py-3 font-medium text-fg">{student.name}</th>
+                          {insights.lessons.slice(0, 5).map((lesson) => <td key={lesson.id} className="px-2 py-2 text-center"><Badge tone={scoreTone(student.scores[lesson.id] ?? null)}>{student.scores[lesson.id] === null || student.scores[lesson.id] === undefined ? "—" : `${student.scores[lesson.id]}%`}</Badge></td>)}
+                          <td className="px-4 py-2 text-right"><Badge tone={scoreTone(student.average)}>{student.average === null ? "—" : `${student.average}%`}</Badge></td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {studentStats.map((student) => (
-                          <tr
-                            key={student.id}
-                            className="border-b border-edsync-border/50 hover:bg-edsync-surface/50"
-                          >
-                            <td className="py-3 pr-4">
-                              <p className="text-sm font-medium text-edsync-text">
-                                {student.name}
-                              </p>
-                              <p className="text-xs text-edsync-subtle">
-                                {student.email}
-                              </p>
-                            </td>
-                            {filteredLessonStats.slice(0, 5).map((l) => {
-                              const score = l.avgScore;
-                              return (
-                                <td
-                                  key={l.id}
-                                  className="py-3 px-2 text-center"
-                                >
-                                  <div
-                                    className={`w-8 h-8 rounded-lg mx-auto flex items-center justify-center text-xs font-bold ${
-                                      score === null
-                                        ? "bg-edsync-muted/20 text-edsync-subtle"
-                                        : score >= 80
-                                          ? "bg-edsync-emerald/20 text-edsync-emerald border border-edsync-emerald/30"
-                                          : score >= 60
-                                            ? "bg-edsync-amber/20 text-edsync-amber border border-edsync-amber/30"
-                                            : "bg-edsync-red/20 text-edsync-red border border-edsync-red/30"
-                                    }`}
-                                  >
-                                    {score !== null ? `${score}` : "—"}
-                                  </div>
-                                </td>
-                              );
-                            })}
-                            <td className="py-3 px-2 text-center">
-                              <span
-                                className={`font-bold text-sm ${
-                                  student.status === "advanced"
-                                    ? "text-edsync-emerald"
-                                    : student.status === "at_risk"
-                                      ? "text-edsync-red"
-                                      : "text-edsync-amber"
-                                }`}
-                              >
-                                {student.avgScore !== null
-                                  ? `${student.avgScore}%`
-                                  : "—"}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
+                      ))}</tbody>
                     </table>
-                  </div>
-                )}
-                <div className="flex gap-4 mt-4 text-xs text-edsync-subtle">
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-edsync-emerald/20 border border-edsync-emerald/30 inline-block" />{" "}
-                    ≥80% Mastered
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-edsync-amber/20 border border-edsync-amber/30 inline-block" />{" "}
-                    60–79% Developing
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-edsync-red/20 border border-edsync-red/30 inline-block" />{" "}
-                    &lt;60% At Risk
-                  </span>
+                  ) : <EmptyState compact icon={ChartNoAxesCombined} title="No scored activity yet" />}
+                </Card>
+              </Section>
+            ) : null}
+
+            {view === "activity" ? (
+              <Section title="Learning activity">
+                <div className="segmented self-start" role="radiogroup" aria-label="Activity type">
+                  <button type="button" role="radio" aria-checked={activityView === "reflections"} data-active={activityView === "reflections"} onClick={() => setActivityView("reflections")} className="segmented-item">Reflections <span className="text-fg-faint">{insights.reflections.length}</span></button>
+                  <button type="button" role="radio" aria-checked={activityView === "questions"} data-active={activityView === "questions"} onClick={() => setActivityView("questions")} className="segmented-item">AI questions <span className="text-fg-faint">{insights.socratic.length}</span></button>
                 </div>
+                <Card padding="none" className="overflow-hidden">
+                  {activityView === "reflections"
+                    ? insights.reflections.length ? insights.reflections.map((item) => (
+                      <details key={item.id} className="border-b border-line px-4 py-3 last:border-0">
+                        <summary className="flex cursor-pointer items-center gap-3 text-[13px]"><span className="min-w-0 flex-1 truncate font-medium text-fg">{item.studentName} · {item.lessonTitle}</span><Badge tone={item.confidence <= 2 ? "warning" : "neutral"}>{item.confidence}/5</Badge><span className="text-xs text-fg-faint">{formatRelativeTime(item.createdAt)}</span></summary>
+                        <p className="mt-3 text-[13px] text-fg-muted">{item.notes}</p>{item.guidingQuestion ? <p className="mt-2 text-xs text-fg-faint">{item.guidingQuestion}</p> : null}
+                      </details>
+                    )) : <EmptyState compact icon={MessageCircle} title="No reflections yet" />
+                    : insights.socratic.length ? insights.socratic.map((item) => (
+                      <details key={item.id} className="border-b border-line px-4 py-3 last:border-0">
+                        <summary className="flex cursor-pointer items-center gap-3 text-[13px]"><span className="min-w-0 flex-1 truncate font-medium text-fg">{item.studentName} · {item.lessonTitle}</span><span className="text-xs text-fg-faint">{formatRelativeTime(item.createdAt)}</span></summary>
+                        <p className="mt-3 text-[13px] text-fg-muted">{item.question}</p>
+                      </details>
+                    )) : <EmptyState compact icon={CircleHelp} title="No AI questions yet" />}
+                </Card>
+              </Section>
+            ) : null}
+
+            {view === "ideas" ? (
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,1fr)]">
+                <Section title="Teaching ideas" action={<Button size="sm" variant="primary" icon={Sparkles} loading={suggestionsLoading} onClick={() => void getSuggestions()}>Generate</Button>}>
+                  <Card>
+                    {suggestionError ? <div role="alert" className="mb-3 text-[13px] text-danger">{suggestionError}</div> : null}
+                    {suggestions.length ? <ol className="space-y-3">{suggestions.map((item, index) => <li key={`${index}-${item}`} className="flex gap-3 text-[13px] text-fg"><span className="font-mono text-fg-faint">{String(index + 1).padStart(2, "0")}</span><span>{item}</span></li>)}</ol>
+                      : <EmptyState compact icon={Lightbulb} title="Generate ideas from class signals" />}
+                  </Card>
+                </Section>
+                <Section title="Signals">
+                  <Card className="space-y-3 text-[13px]">
+                    <div className="flex justify-between gap-3"><span className="text-fg-muted">At risk</span><strong className="font-medium text-fg">{atRisk.length}</strong></div>
+                    <div className="flex justify-between gap-3"><span className="text-fg-muted">Advanced</span><strong className="font-medium text-fg">{advanced.length}</strong></div>
+                    <div className="flex justify-between gap-3"><span className="text-fg-muted">Low confidence</span><strong className="font-medium text-fg">{lowConfidence}</strong></div>
+                    <div className="flex justify-between gap-3"><span className="text-fg-muted">Practice reviews</span><strong className="font-medium text-fg">{data.reviewSignal.pendingCount}</strong></div>
+                    {data.reviewSignal.pendingCount ? <p className="border-t border-line pt-3 text-xs text-fg-muted">{data.reviewSignal.copy}</p> : null}
+                  </Card>
+                </Section>
               </div>
-
-              {/* Knowledge gap summary */}
-              {topGaps.length > 0 && (
-                <div className="edsync-card">
-                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
-                    Course-Wide Knowledge Gaps
-                  </h3>
-                  <p className="text-edsync-subtle text-sm mb-4">
-                    Concepts where multiple learners are struggling
-                  </p>
-                  <div className="space-y-3">
-                    {topGaps.map(([gap, count]) => (
-                      <div key={gap} className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-edsync-text font-medium">
-                              {gap}
-                            </span>
-                            <span className="text-edsync-red text-xs font-bold">
-                              {count} learner{count > 1 ? "s" : ""}
-                            </span>
-                          </div>
-                          <div className="h-2 bg-edsync-muted/20 rounded-full">
-                            <div
-                              className="h-full bg-edsync-red/50 rounded-full"
-                              style={{
-                                width: `${Math.min(100, (count / Math.max(1, studentStats.length)) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Learners */}
-          {tab === "students" && (
-            <div className="animate-fade-in space-y-4">
-              <div className="grid grid-cols-3 gap-4 mb-2">
-                {[
-                  {
-                    label: "Advanced",
-                    count: advanced.length,
-                    color: "emerald",
-                    items: advanced,
-                  },
-                  {
-                    label: "On Track",
-                    count: onTrack.length,
-                    color: "blue",
-                    items: onTrack,
-                  },
-                  {
-                    label: "At Risk",
-                    count: atRisk.length,
-                    color: "red",
-                    items: atRisk,
-                  },
-                ].map((group, i) => (
-                  <div key={i} className="edsync-card py-3 px-4">
-                    <p className="text-xs text-edsync-subtle mb-1">
-                      {group.label}
-                    </p>
-                    <p
-                      className={`font-display font-bold text-2xl text-edsync-${group.color}`}
-                    >
-                      {group.count}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="edsync-card overflow-x-auto">
-                <table className="w-full min-w-[500px]">
-                  <thead>
-                    <tr className="text-left border-b border-edsync-border">
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                        Learner
-                      </th>
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
-                        Status
-                      </th>
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
-                        Completed
-                      </th>
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
-                        Avg Score
-                      </th>
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
-                        AI Chats
-                      </th>
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
-                        Reflections
-                      </th>
-                      <th className="text-xs text-edsync-subtle font-medium pb-3 px-3 text-center">
-                        Low Conf.
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {studentStats.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="py-8 text-center text-edsync-subtle text-sm"
-                        >
-                          No learners have started your courses yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      studentStats
-                        .sort((a, b) => (b.avgScore || 0) - (a.avgScore || 0))
-                        .map((s) => (
-                          <tr
-                            key={s.id}
-                            className="border-b border-edsync-border/50 hover:bg-edsync-surface/50"
-                          >
-                            <td className="py-3 pr-4">
-                              <p className="font-medium text-edsync-text text-sm">
-                                {s.name}
-                              </p>
-                              <p className="text-xs text-edsync-subtle">
-                                {s.email}
-                              </p>
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <span
-                                className={`badge text-xs ${
-                                  s.status === "advanced"
-                                    ? "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20"
-                                    : s.status === "at_risk"
-                                      ? "bg-edsync-red/10 text-edsync-red border-edsync-red/20"
-                                      : "bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20"
-                                }`}
-                              >
-                                {s.status === "at_risk"
-                                  ? "At Risk"
-                                  : s.status === "advanced"
-                                    ? "Advanced"
-                                    : "On Track"}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center text-sm text-edsync-text font-medium">
-                              {s.lessonsCompleted}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              {s.avgScore !== null ? (
-                                <span
-                                  className={`font-bold text-sm ${s.avgScore >= 80 ? "text-edsync-emerald" : s.avgScore >= 60 ? "text-edsync-amber" : "text-edsync-red"}`}
-                                >
-                                  {s.avgScore}%
-                                </span>
-                              ) : (
-                                <span className="text-edsync-subtle text-xs">
-                                  No score
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <span
-                                className={`text-sm font-medium ${s.aiInteractions > 0 ? "text-edsync-purple" : "text-edsync-subtle"}`}
-                              >
-                                {s.aiInteractions}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <span
-                                className={`text-sm font-medium ${s.reflectionCount > 0 ? "text-edsync-cyan" : "text-edsync-subtle"}`}
-                              >
-                                {s.reflectionCount}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <span
-                                className={`text-sm font-medium ${s.lowConfidenceReflections > 0 ? "text-edsync-amber" : "text-edsync-subtle"}`}
-                              >
-                                {s.lowConfidenceReflections}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Reflections */}
-          {tab === "reflections" && (
-            <div className="animate-fade-in space-y-6">
-              <div className="edsync-card">
-                <div className="group mb-4">
-                  <h3 className="font-display font-semibold text-lg text-edsync-text">
-                    Learner Reflection Log
-                  </h3>
-                  <p className="edsync-hover-detail">
-                    What learners understood and where they feel uncertain.
-                  </p>
-                </div>
-
-                {reflectionLog.length === 0 ? (
-                  <p className="text-edsync-subtle text-sm text-center py-8">No reflections yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {reflectionLog.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="p-4 bg-edsync-surface rounded-xl border border-edsync-border"
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div>
-                            <p className="font-semibold text-edsync-text text-sm">
-                              {entry.student_name}
-                            </p>
-                            {entry.lesson_title && (
-                              <p className="text-xs text-edsync-subtle">
-                                {entry.lesson_title}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <span
-                              className={`badge text-xs ${
-                                entry.confidence <= 2
-                                  ? "bg-edsync-red/10 text-edsync-red border-edsync-red/20"
-                                  : entry.confidence === 3
-                                    ? "bg-edsync-amber/10 text-edsync-amber border-edsync-amber/20"
-                                    : "bg-edsync-emerald/10 text-edsync-emerald border-edsync-emerald/20"
-                              }`}
-                            >
-                              Confidence {entry.confidence}/5
-                            </span>
-                            <p className="text-xs text-edsync-subtle mt-1">
-                              {formatRelativeTime(entry.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-edsync-text mb-3">
-                          {entry.notes_preview}
-                        </p>
-                        <div className="p-3 rounded-xl bg-edsync-purple/5 border border-edsync-purple/20">
-                          <p className="text-xs text-edsync-purple font-medium mb-1">
-                            AI Guiding Question
-                          </p>
-                          <p className="text-sm text-edsync-subtle italic">
-                            {entry.guiding_question}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {lowConfidenceReflections > 0 && (
-                <div className="edsync-card border-edsync-amber/30 bg-edsync-amber/5">
-                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-2">
-                    Confidence Alert
-                  </h3>
-                  <p className="text-sm text-edsync-subtle">
-                    {lowConfidenceReflections} reflection
-                    {lowConfidenceReflections > 1
-                      ? "s indicate"
-                      : " indicates"}{" "}
-                    low confidence.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Interventions */}
-          {tab === "interventions" && (
-            <div className="animate-fade-in space-y-6">
-              {reviewSignal.pendingCount > 0 && (
-                <div className="edsync-card border-edsync-amber/30 bg-edsync-amber/5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-                        Practice review queue
-                      </p>
-                      <h3 className="mt-1 font-display text-lg font-semibold text-edsync-text">
-                        {reviewSignal.pendingCount} missed practice item
-                        {reviewSignal.pendingCount === 1 ? "" : "s"} need attention
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-edsync-subtle">
-                        {reviewSignal.copy}. Use this alongside confidence and score signals before assigning more work.
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-sm font-semibold text-edsync-amber">
-                      {reviewSignal.topModeLabel}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="edsync-card">
-                <div className="group mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-display font-semibold text-lg text-edsync-text">
-                      AI Suggestions
-                    </h3>
-                    <p className="edsync-hover-detail">
-                      Personalized actions based on class data.
-                    </p>
-                  </div>
-                  <button
-                    onClick={getInterventions}
-                    disabled={gettingSuggestions}
-                    className="btn-primary text-sm py-2 flex-shrink-0"
-                  >
-                    {gettingSuggestions ? "Analyzing..." : "Suggest"}
-                  </button>
-                </div>
-                {aiSuggestions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-edsync-subtle text-sm">Run suggestions.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {aiSuggestions.map((s, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-3 p-4 bg-edsync-blue/5 border border-edsync-blue/20 rounded-xl"
-                      >
-                        <span className="text-edsync-blue font-bold text-sm flex-shrink-0 mt-0.5">
-                          {i + 1}.
-                        </span>
-                        <p className="text-edsync-text text-sm">{s}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* At-risk students quick view */}
-              {atRisk.length > 0 && (
-                <div className="edsync-card group">
-                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                    Learners Needing Support
-                  </h3>
-                  <div className="space-y-3">
-                    {atRisk.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center gap-4 p-3 bg-edsync-red/5 border border-edsync-red/20 rounded-xl"
-                      >
-                        <div className="w-9 h-9 rounded-full bg-edsync-red/20 text-edsync-red flex items-center justify-center font-bold text-sm flex-shrink-0">
-                          {s.name.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-edsync-text text-sm">
-                            {s.name}
-                          </p>
-                          <p className="text-xs text-edsync-subtle">{s.email}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-edsync-red">
-                            {s.avgScore}%
-                          </p>
-                          <p className="text-xs text-edsync-subtle">
-                            {s.aiInteractions} AI chats
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Advanced students */}
-              {advanced.length > 0 && (
-                <div className="edsync-card">
-                  <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                    Advanced Learners
-                  </h3>
-                  <p className="edsync-hover-detail mb-3">Enrichment and peer support candidates.</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {advanced.map((s) => (
-                      <div
-                        key={s.id}
-                        className="p-3 bg-edsync-emerald/5 border border-edsync-emerald/20 rounded-xl text-center"
-                      >
-                        <p className="font-medium text-edsync-text text-sm">
-                          {s.name}
-                        </p>
-                        <p className="font-bold text-edsync-emerald">
-                          {s.avgScore}%
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Socratic log */}
-          {tab === "socratic" && (
-            <div className="animate-fade-in edsync-card">
-              <h3 className="font-display font-semibold text-lg text-edsync-text mb-4">
-                Learner-AI Interactions
-              </h3>
-              {socraticLog.length === 0 ? (
-                <p className="text-edsync-subtle text-sm text-center py-8">No AI interactions yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {socraticLog.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="p-4 bg-edsync-surface rounded-xl border border-edsync-border"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm text-edsync-text">
-                          {entry.student_name}
-                        </span>
-                        <div className="flex gap-2 items-center">
-                          {entry.lesson_title && (
-                            <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20 text-xs">
-                              {entry.lesson_title.slice(0, 20)}
-                              {entry.lesson_title.length > 20 ? "..." : ""}
-                            </span>
-                          )}
-                          <span className="text-xs text-edsync-subtle">
-                            {formatRelativeTime(entry.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-edsync-subtle italic">
-                        "{entry.student_question}"
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
+            ) : null}
+          </div>
+        )}
     </div>
   );
 }
