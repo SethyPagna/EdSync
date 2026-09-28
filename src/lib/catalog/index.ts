@@ -2,6 +2,7 @@ import { createCheckout, grantEntitlement } from "@/lib/billing";
 import { normalizeCatalogFilters, type CatalogFilters, type CatalogPriceFilter } from "@/lib/catalog/filters";
 import { d1Query } from "@/lib/db/d1";
 import { sqlInPlaceholders } from "@/lib/db/sql";
+import { ConflictError } from "@/lib/security/http-errors";
 import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import type { BillingPrice, BillingProduct, Tenant, TenantPortal } from "@/types";
 
@@ -96,6 +97,9 @@ function toPublicItem(row: CatalogRow, price?: BillingPrice | null): PublicCatal
   const fallbackThumb = metadata.thumbnailUrl || row.lesson_thumbnail_url || null;
   const safeMetadata = sanitizeCatalogMetadata({ ...metadata, thumbnailUrl: fallbackThumb });
   const amountCents = price?.amount_cents ?? 0;
+  // Mirrors enrollCatalogItem: without an active price only an explicitly free product can be enrolled.
+  const enrollFree = safeMetadata.enrollmentMode === "free";
+  const hasPrice = Boolean(price?.id);
 
   return {
     id: row.id,
@@ -124,8 +128,8 @@ function toPublicItem(row: CatalogRow, price?: BillingPrice | null): PublicCatal
       amountCents,
       currency: price?.currency ?? "usd",
       interval: price?.billing_interval ?? "one_time",
-      label: priceLabel(price),
-      isFree: amountCents <= 0 || safeMetadata.enrollmentMode === "free",
+      label: hasPrice || enrollFree ? priceLabel(price) : "Unavailable",
+      isFree: enrollFree || (hasPrice && amountCents <= 0),
     },
     detailUrl: `/catalog/${row.id}`,
   };
@@ -274,7 +278,9 @@ export async function enrollCatalogItem(input: {
   );
   if (existing[0]) return { mode: "active" as const, url: null, entitlementId: existing[0].id };
 
-  if (input.item.price.isFree || !input.item.price.id) {
+  // A missing or deactivated price must not turn a paid product into a free one.
+  const hasFreePrice = Boolean(input.item.price.id) && input.item.price.amountCents <= 0;
+  if (input.item.metadata.enrollmentMode === "free" || hasFreePrice) {
     await grantEntitlement({
       tenantId: input.item.organization.id,
       userId: input.userId,
@@ -284,6 +290,7 @@ export async function enrollCatalogItem(input: {
     });
     return { mode: "enrolled" as const, url: null, entitlementId: null };
   }
+  if (!input.item.price.id) throw new ConflictError("This course is not open for enrollment.");
 
   return createCheckout({
     tenantId: input.item.organization.id,
