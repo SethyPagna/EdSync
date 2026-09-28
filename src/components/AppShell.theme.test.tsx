@@ -13,6 +13,7 @@ const db = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/student/dashboard",
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
 }));
 vi.mock("next/link", () => ({
@@ -82,18 +83,20 @@ async function renderShell() {
       <p>Dashboard</p>
     </AppShell>,
   );
-  await screen.findAllByText("Ada Learner");
+  await waitFor(() => expect(db.selects).toEqual(["*"]));
+  fireEvent.click(screen.getAllByRole("button", { name: "Account menu" })[0]);
+  await screen.findByText("Ada Learner");
+  fireEvent.click(screen.getByText("Appearance"));
 }
 
 describe("AppShell theme sync", () => {
   it("merges the theme into the latest saved preferences instead of the mount-time snapshot", async () => {
     await renderShell();
 
-    // The profile page saves other preferences after AppShell has mounted.
     db.stored = { text_size: "large", theme: "system", email_notifications: false };
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Dark theme" }));
+      fireEvent.click(screen.getByRole("radio", { name: "Graphite" }));
     });
 
     await waitFor(() => expect(db.updates).toHaveLength(1));
@@ -107,7 +110,7 @@ describe("AppShell theme sync", () => {
     db.stored = null;
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Dark theme" }));
+      fireEvent.click(screen.getByRole("radio", { name: "Graphite" }));
     });
 
     await waitFor(() => expect(db.updates).toHaveLength(1));
