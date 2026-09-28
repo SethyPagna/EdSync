@@ -2,6 +2,7 @@ import { validateDisplayName } from "@/lib/auth/display-name";
 import type { SessionUser } from "@/lib/auth/session";
 import { d1Query, type DataFilter, type DataOrder, type DataRequest, type SqlScope } from "@/lib/db/d1";
 import { TABLES, type TableName } from "@/lib/db/schema";
+import { lessonReadPredicate } from "@/lib/lessons/access";
 
 type Role = SessionUser["user_metadata"]["role"];
 type Row = Record<string, unknown>;
@@ -68,21 +69,15 @@ const ownLessonIds = (userId: string) => sql`SELECT ol.id FROM lessons ol WHERE 
 const ownClassIds = (userId: string) => sql`SELECT oc.id FROM classes oc WHERE oc.teacher_id = ${userId}`;
 const enrolledClassIds = (userId: string) =>
   sql`SELECT ec.class_id FROM class_enrollments ec WHERE ec.student_id = ${userId} AND ec.is_active = 1`;
-const assignedLessonIds = (userId: string) =>
-  sql`SELECT al.lesson_id FROM lesson_assignments al
-       WHERE al.is_active = 1 AND (al.student_id = ${userId} OR al.class_id IN (${enrolledClassIds(userId)}))`;
-const entitledLessonIds = (userId: string) =>
-  sql`SELECT ep.course_id FROM entitlements ee
-        JOIN billing_products ep ON ep.id = ee.product_id AND ep.tenant_id = ee.tenant_id
-        JOIN tenants et ON et.id = ee.tenant_id
-       WHERE ee.user_id = ${userId} AND ee.status = 'active' AND ep.status = 'active' AND et.status = 'active'
-         AND ep.course_id IS NOT NULL
-         AND (ee.starts_at IS NULL OR datetime(ee.starts_at) <= datetime('now'))
-         AND (ee.ends_at IS NULL OR datetime(ee.ends_at) > datetime('now'))`;
-const readableLessonIds = (userId: string) =>
-  sql`SELECT rl.id FROM lessons rl
-       WHERE rl.teacher_id = ${userId}
-          OR (rl.status = 'published' AND (rl.id IN (${assignedLessonIds(userId)}) OR rl.id IN (${entitledLessonIds(userId)})))`;
+const readableLessonIds = (userId: string) => {
+  const learner = lessonReadPredicate("rl", {
+    id: userId,
+    email: "",
+    user_metadata: { role: "student" },
+  });
+  return sql`SELECT rl.id FROM lessons rl
+       WHERE rl.teacher_id = ${userId} OR (${new Sql(learner.sql, learner.params)})`;
+};
 
 const ownedByStudent = ({ userId }: Context) => sql`student_id = ${userId}`;
 const studentOrLessonOwner = ({ userId }: Context) => sql`student_id = ${userId} OR lesson_id IN (${ownLessonIds(userId)})`;
@@ -159,8 +154,11 @@ function isSafeImageUrl(value: unknown) {
   return /^https?:\/\//i.test(trimmed) || !/^[a-z][a-z0-9+.-]*:/i.test(trimmed);
 }
 
-function validateProfileRows(_ctx: Context, rows: Row[]): Denial | null {
+function validateProfileRows(ctx: Context, rows: Row[]): Denial | null {
   for (const row of rows) {
+    if (ctx.role === "student" && ("streak_days" in row || "last_active_at" in row)) {
+      return forbidden("Your activity streak is updated by the server.");
+    }
     if ("full_name" in row) {
       try {
         row.full_name = validateDisplayName(row.full_name);
@@ -254,6 +252,11 @@ const PROGRESS_COLUMNS = [
   "started_at",
   "completed_at",
   "last_active",
+] as const;
+
+const STUDENT_QUIZ_COLUMNS = [
+  "id", "lesson_id", "section_id", "question_text", "question_type", "points",
+  "is_diagnostic", "is_micro_check", "is_final_quiz", "order_index", "created_at",
 ] as const;
 
 /**
@@ -417,15 +420,6 @@ const POLICIES: Partial<Record<TableName, TablePolicy>> = {
   },
   quiz_attempts: {
     read: studentOrLessonOwner,
-    write: {
-      roles: ANY_ROLE,
-      actions: ["insert"],
-      owner: "student_id",
-      createOnly: ["lesson_id", "question_id"],
-      columns: ["answer", "is_correct", "time_taken", "attempt_number"],
-      scope: ownedByStudent,
-      prepare: requireReadableLesson(true),
-    },
   },
   socratic_interactions: {
     read: studentOrLessonOwner,
@@ -517,9 +511,25 @@ export async function authorizeDataRequest(user: SessionUser, request: DataReque
 
   const ctx: Context = { userId: user.id, email: user.email, role: user.user_metadata.role, request };
   if (request.action === "select") {
+    if (ctx.role === "student" && request.table === "quiz_questions") {
+      const requested = request.columns?.trim() && request.columns.trim() !== "*"
+        ? request.columns.split(",").map((column) => column.trim())
+        : [...STUDENT_QUIZ_COLUMNS];
+      const safeColumn = (column: string) => STUDENT_QUIZ_COLUMNS.includes(column as typeof STUDENT_QUIZ_COLUMNS[number]);
+      if (requested.some((column) => !safeColumn(column)) ||
+          request.filters?.some((filter) => !safeColumn(filter.column)) ||
+          request.order?.some((order) => !safeColumn(order.column))) {
+        return { allowed: false, ...forbidden("Quiz answer keys are available only after submission.") };
+      }
+      request = { ...request, columns: requested.join(",") || "id" };
+    }
     return { allowed: true, request, scope: ctx.role === "admin" ? null : policy.read(ctx) };
   }
   if (request.action === "rpc") return { allowed: false, ...invalid("Unsupported action.") };
+
+  if (ctx.role === "student" && request.table === "student_progress") {
+    return { allowed: false, ...forbidden("Use the lesson progress route to save activity.") };
+  }
 
   const write = policy.write;
   if (!write || !write.actions.includes(request.action) || !write.roles.includes(ctx.role)) {
