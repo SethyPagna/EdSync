@@ -1,200 +1,64 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ClipboardList, Eye, EyeOff, MessageSquareText, TrendingUp } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Award, Check, Eye, EyeOff, MessageSquareText, TrendingUp } from "lucide-react";
+import { Badge, Button, EmptyState, PageHeader, Skeleton, StatTile, usePersistentState } from "@/components/ui";
+import { createClient } from "@/lib/edsync/client";
+import { chunks } from "@/components/student-home/data";
 
-type Score = {
-  id: string;
-  title: string;
-  source_type: string;
-  points_earned: number;
-  points_possible: number;
-  percent: number | null;
-  feedback: string | null;
-  category_name?: string | null;
-  updated_at: string;
-};
-type GradeVisibility = {
-  overall: boolean;
-  scores: boolean;
-  feedback: boolean;
-};
+type Score = { id: string; title: string; source_type: string; status: string; class_id: string | null; points_earned: number; points_possible: number; percent: number | null; feedback: string | null; category_name?: string | null; updated_at: string };
+type GradeData = { scores: Score[]; overall: number | null; overallByClass: Record<string, number | null> };
+type Visibility = { overall: boolean; scores: boolean; feedback: boolean };
+const DEFAULT_VISIBILITY: Visibility = { overall: true, scores: true, feedback: true };
 
-const defaultVisibility: GradeVisibility = {
-  overall: true,
-  scores: true,
-  feedback: true,
-};
-
-function readGradeVisibility() {
-  if (typeof window === "undefined") return defaultVisibility;
-  try {
-    const saved = JSON.parse(window.localStorage.getItem("edsync-student-grade-visibility") || "null") as
-      | Partial<GradeVisibility>
-      | null;
-    return saved ? { ...defaultVisibility, ...saved } : defaultVisibility;
-  } catch {
-    return defaultVisibility;
-  }
-}
-
-function percentText(value: number | null) {
-  return value === null ? "Not scored" : `${value}%`;
-}
+function percent(value: number | null) { return value === null ? "Pending" : `${Math.round(value)}%`; }
 
 export default function StudentGradesPage() {
-  const [scores, setScores] = useState<Score[]>([]);
-  const [overall, setOverall] = useState<number | null>(null);
-  const [visibility, setVisibility] = useState<GradeVisibility>(readGradeVisibility);
+  const client = useMemo(() => createClient(), []);
+  const [data, setData] = useState<GradeData>({ scores: [], overall: null, overallByClass: {} });
+  const [classNames, setClassNames] = useState<Record<string, string>>({});
+  const [selectedClass, setSelectedClass] = useState("all");
+  const [visibility, setVisibility] = usePersistentState<Visibility>("edsync-student-grade-visibility", DEFAULT_VISIBILITY);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetch("/api/grades", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => {
-        setScores(payload.data?.scores ?? []);
-        setOverall(payload.data?.overall ?? null);
-      });
-  }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/grades", { credentials: "include", cache: "no-store" });
+      const payload = await response.json().catch(() => null) as { data?: GradeData; error?: string | { message?: string } } | null;
+      if (!response.ok || !payload?.data) throw new Error(typeof payload?.error === "string" ? payload.error : payload?.error?.message ?? "Progress could not load.");
+      const gradeData = payload.data;
+      setData(gradeData);
+      const ids = Object.keys(gradeData.overallByClass ?? {});
+      if (ids.length) {
+        const results = await Promise.all(chunks(ids).map((group) => client.from("classes").select("id, name").in("id", group)));
+        const failed = results.find((result) => result.error);
+        if (failed?.error) throw new Error(failed.error.message);
+        setClassNames(Object.fromEntries(results.flatMap((result) => (result.data ?? []) as { id: string; name: string }[]).map((item) => [item.id, item.name])));
+      } else setClassNames({});
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Progress could not load."); }
+    finally { setLoading(false); }
+  }, [client]);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
-  const toggleVisibility = (key: keyof GradeVisibility) => {
-    setVisibility((current) => {
-      const next = { ...current, [key]: !current[key] };
-      window.localStorage.setItem("edsync-student-grade-visibility", JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const gradedScores = useMemo(() => scores.filter((score) => score.percent !== null), [scores]);
-  const feedbackCount = useMemo(() => scores.filter((score) => Boolean(score.feedback)).length, [scores]);
+  const scores = data.scores.filter((score) => selectedClass === "all" || score.class_id === selectedClass);
+  const gradedCount = data.scores.filter((score) => score.percent !== null).length;
+  const feedbackCount = data.scores.filter((score) => Boolean(score.feedback)).length;
+  const toggle = (key: keyof Visibility) => setVisibility((current) => ({ ...current, [key]: !current[key] }));
 
   return (
-    <div className="page-shell max-w-5xl space-y-5">
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-center">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-emerald">
-              Progress
-            </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Progress</h1>
-            <p className="mt-1 text-sm text-edsync-subtle">
-              {gradedScores.length} result{gradedScores.length !== 1 ? "s" : ""}, {feedbackCount} with feedback
-            </p>
-          </div>
-          <div className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-center">
-            <p className="text-sm font-semibold text-edsync-subtle">Overall</p>
-            <p className="mt-2 font-display text-4xl font-bold">{visibility.overall ? percentText(overall) : "Hidden"}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="group rounded-xl border border-edsync-border bg-edsync-card p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-display text-lg font-bold">Progress visibility</h2>
-            <p className="edsync-hover-detail">Choose what appears on this page. This only changes your view.</p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {[
-              ["overall", "Overall"],
-              ["scores", "Results"],
-              ["feedback", "Feedback"],
-            ].map(([key, label]) => {
-              const typedKey = key as keyof GradeVisibility;
-              const Icon = visibility[typedKey] ? Eye : EyeOff;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleVisibility(typedKey)}
-                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                    visibility[typedKey]
-                      ? "border-edsync-blue/35 bg-edsync-blue/10 text-edsync-blue"
-                      : "border-edsync-border bg-edsync-surface text-edsync-subtle"
-                  }`}
-                  aria-pressed={visibility[typedKey]}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    {label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <SummaryTile icon={TrendingUp} label="Current overall" value={visibility.overall ? percentText(overall) : "Hidden"} tone="text-edsync-blue" />
-        <SummaryTile icon={CheckCircle2} label="Results" value={gradedScores.length} tone="text-edsync-emerald" />
-        <SummaryTile icon={MessageSquareText} label="Feedback" value={feedbackCount} tone="text-edsync-amber" />
-      </section>
-
-      <section className="rounded-xl border border-edsync-border bg-edsync-card">
-        <div className="border-b border-edsync-border p-4 sm:p-5">
-          <h2 className="font-display text-xl font-bold">Progress history</h2>
-        </div>
-        <div className="divide-y divide-edsync-border">
-          {scores.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No progress results yet.</p>
-          ) : (
-            scores.map((score) => (
-              <article key={score.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center">
-                <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    <span className="badge bg-edsync-blue/10 text-edsync-blue">{score.source_type}</span>
-                    <span className="badge bg-edsync-surface text-edsync-subtle">{score.category_name || "uncategorized"}</span>
-                  </div>
-                  <h3 className="truncate font-display text-lg font-bold">{score.title}</h3>
-                  <p className="mt-1 text-sm text-edsync-subtle">
-                    {score.points_earned} / {score.points_possible} points
-                  </p>
-                  {visibility.feedback && score.feedback && (
-                    <p className="mt-3 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm leading-6">
-                      {score.feedback}
-                    </p>
-                  )}
-                  {!visibility.feedback && score.feedback && (
-                    <p className="mt-3 text-sm font-semibold text-edsync-subtle">Feedback hidden</p>
-                  )}
-                </div>
-                <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-center">
-                  <p className="font-display text-2xl font-bold">{visibility.scores ? percentText(score.percent) : "Hidden"}</p>
-                  <p className="mt-1 text-xs text-edsync-subtle">
-                    {new Date(score.updated_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function SummaryTile({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: typeof ClipboardList;
-  label: string;
-  value: React.ReactNode;
-  tone: string;
-}) {
-  return (
-    <div className="rounded-xl border border-edsync-border bg-edsync-card p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-edsync-subtle">{label}</p>
-          <p className="mt-2 font-display text-2xl font-bold">{value}</p>
-        </div>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-current/10 ${tone}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader title="Progress" actions={<details className="relative"><summary className="btn btn-secondary btn-sm cursor-pointer list-none"><Eye className="size-4" />Visibility</summary><div className="absolute right-0 z-10 mt-2 min-w-44 rounded-lg border border-line bg-elevated p-2 shadow-soft">{(["overall", "scores", "feedback"] as const).map((key) => <button key={key} type="button" aria-pressed={visibility[key]} onClick={() => toggle(key)} className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-fg hover:bg-surface-2">{visibility[key] ? <Eye className="size-4" /> : <EyeOff className="size-4" />}{key[0].toUpperCase() + key.slice(1)}</button>)}</div></details>} />
+      {error && <div role="alert" className="mb-4 flex items-center justify-between gap-2 rounded-lg bg-danger-soft p-3 text-sm text-danger"><span>{error}</span><Button size="sm" onClick={() => void load()}>Retry</Button></div>}
+      {loading ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3">{[1, 2, 3].map((item) => <Skeleton key={item} className="h-24 rounded-xl" />)}</div><Skeleton className="h-48 rounded-xl" /></div> : (
+        <>
+          <div className="mb-6 grid gap-3 sm:grid-cols-3"><StatTile icon={TrendingUp} label="Overall" value={visibility.overall ? percent(data.overall) : "Hidden"} /><StatTile icon={Award} label="Results" value={gradedCount} /><StatTile icon={MessageSquareText} label="Feedback" value={feedbackCount} /></div>
+          {Object.keys(data.overallByClass ?? {}).length > 0 && <section className="mb-6"><h2 className="mb-3 text-sm font-medium text-fg">By class</h2><div className="flex flex-wrap gap-2"><button type="button" aria-pressed={selectedClass === "all"} onClick={() => setSelectedClass("all")} className="chip" data-active={selectedClass === "all"}>All</button>{Object.entries(data.overallByClass).map(([id, average]) => <button key={id} type="button" aria-pressed={selectedClass === id} onClick={() => setSelectedClass(id)} className="chip" data-active={selectedClass === id}>{classNames[id] ?? "Class"} · {visibility.overall ? percent(average) : "Hidden"}</button>)}</div></section>}
+          <section><h2 className="mb-3 text-sm font-medium text-fg">Results</h2>{scores.length ? <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">{scores.map((score) => <article key={score.id} className="flex flex-wrap items-start gap-3 p-4 sm:flex-nowrap"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="min-w-0 truncate text-sm font-medium text-fg">{score.title}</h3><Badge tone={score.status === "graded" ? "success" : "warning"}>{score.status === "graded" ? "Graded" : "To review"}</Badge></div><p className="mt-1 text-xs text-fg-muted">{classNames[score.class_id ?? ""] ?? score.category_name ?? score.source_type} · {new Date(score.updated_at).toLocaleDateString()}</p>{visibility.feedback && score.feedback && <p className="mt-2 text-sm text-fg-muted">{score.feedback}</p>}</div><div className="text-right"><p className="text-lg font-semibold tabular-nums text-fg">{visibility.scores ? percent(score.percent) : "Hidden"}</p>{visibility.scores && <p className="text-xs tabular-nums text-fg-muted">{score.points_earned}/{score.points_possible} pts</p>}</div></article>)}</div> : <EmptyState icon={Check} title="No results yet" compact />}</section>
+        </>
+      )}
     </div>
   );
 }
