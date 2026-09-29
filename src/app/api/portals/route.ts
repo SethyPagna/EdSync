@@ -10,6 +10,7 @@ import {
   validatePortalId,
 } from "@/lib/validation/portal";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -41,7 +42,7 @@ export async function GET() {
     address: portalAddress(context.tenant.slug, String(row.slug), baseDomain),
   }));
   return NextResponse.json({
-    data: { portals, domains, context, baseDomain },
+    data: { portals, domains, context: toClientTenantContext(context), baseDomain },
     error: null,
   });
 }
