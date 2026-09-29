@@ -14,7 +14,15 @@ export type AIChatOptions = {
   maxTokens?: number;
   temperature?: number;
   model?: string;
+  jsonMode?: boolean;
 };
+
+export class TruncatedError extends Error {
+  constructor(provider: string) {
+    super(`${provider} stopped before finishing its response. Try a shorter request.`);
+    this.name = "TruncatedError";
+  }
+}
 
 type RuntimeState = {
   requestTimestamps: number[];
@@ -167,6 +175,14 @@ function extractOpenAiText(payload: unknown) {
   return "";
 }
 
+function chatModel(provider: RuntimeProvider, requested?: string) {
+  const model = requested || provider.default_model || PROVIDER_META[provider.provider as AIProviderKey]?.defaultModel;
+  if (provider.provider === "groq" && (model === "groq/compound" || model === "groq/compound-mini" || model === "qwen/qwen3.6-27b")) {
+    return "qwen/qwen3.8-27b";
+  }
+  return model;
+}
+
 async function callOpenAiCompatible(provider: RuntimeProvider, options: AIChatOptions): Promise<ProviderResult> {
   const response = await fetch(provider.endpoint, {
     method: "POST",
@@ -178,15 +194,19 @@ async function callOpenAiCompatible(provider: RuntimeProvider, options: AIChatOp
     },
     signal: AbortSignal.timeout ? AbortSignal.timeout(Number(provider.timeout_ms || 25000)) : undefined,
     body: JSON.stringify({
-      model: options.model || provider.default_model || PROVIDER_META[provider.provider as AIProviderKey]?.defaultModel,
+      model: chatModel(provider, options.model),
       messages: options.messages,
       max_tokens: clamp(Number(options.maxTokens || provider.max_completion_tokens || 1800), 128, 8192),
       temperature: typeof options.temperature === "number" ? options.temperature : 0.45,
       stream: false,
+      ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
     }),
   });
   const raw = await response.json().catch(async () => ({ error: await response.text().catch(() => "") }));
   if (!response.ok) throw new Error(raw?.error?.message || raw?.message || `AI request failed (${response.status})`);
+  if (readRecord((Array.isArray(raw?.choices) ? raw.choices[0] : null)).finish_reason === "length") {
+    throw new TruncatedError(provider.name);
+  }
   return { text: extractOpenAiText(raw), raw };
 }
 
@@ -210,11 +230,13 @@ async function callGoogle(provider: RuntimeProvider, options: AIChatOptions): Pr
       generationConfig: {
         temperature: typeof options.temperature === "number" ? options.temperature : 0.45,
         maxOutputTokens: clamp(Number(options.maxTokens || provider.max_completion_tokens || 1800), 128, 8192),
+        ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
       },
     }),
   });
   const raw = await response.json().catch(async () => ({ error: await response.text().catch(() => "") }));
   if (!response.ok) throw new Error(raw?.error?.message || `Google AI request failed (${response.status})`);
+  if (raw?.candidates?.[0]?.finishReason === "MAX_TOKENS") throw new TruncatedError(provider.name);
   const text = raw?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => trim(part.text)).filter(Boolean).join("\n") || "";
   return { text, raw };
 }
@@ -228,6 +250,7 @@ async function auditRun(input: {
   userId?: string | null;
   feature: string;
   provider: RuntimeProvider;
+  model?: string;
   success: boolean;
   latencyMs: number;
   errorMessage?: string | null;
@@ -243,7 +266,7 @@ async function auditRun(input: {
         input.userId ?? null,
         input.feature,
         input.provider.provider,
-        input.provider.default_model ?? null,
+        input.model ?? input.provider.default_model ?? null,
         input.success ? 1 : 0,
         input.latencyMs,
         input.errorMessage ?? null,
@@ -271,13 +294,23 @@ export async function aiGatewayChat(options: AIChatOptions) {
     attempted.add(provider.id);
     markStart(provider);
     try {
-      const result = await callProvider(provider, options);
+      let result: ProviderResult;
+      try {
+        result = await callProvider(provider, options);
+      } catch (error) {
+        if (!(error instanceof TruncatedError)) throw error;
+        const firstBudget = clamp(Number(options.maxTokens || provider.max_completion_tokens || 1800), 128, 8192);
+        const retryBudget = Math.min(8192, Math.max(firstBudget + 1024, Math.ceil(firstBudget * 1.8)));
+        if (retryBudget <= firstBudget) throw error;
+        result = await callProvider(provider, { ...options, maxTokens: retryBudget });
+      }
       if (!result.text) throw new Error("Provider returned an empty response.");
       markSuccess(provider);
       await auditRun({
         userId: options.userId,
         feature: options.feature || "chat",
         provider,
+        model: chatModel(provider, options.model),
         success: true,
         latencyMs: Date.now() - started,
         metadata: { failovers },
@@ -295,6 +328,7 @@ export async function aiGatewayChat(options: AIChatOptions) {
         userId: options.userId,
         feature: options.feature || "chat",
         provider,
+        model: chatModel(provider, options.model),
         success: false,
         latencyMs: Date.now() - started,
         errorMessage: error instanceof Error ? error.message : "Provider failed",
@@ -303,6 +337,7 @@ export async function aiGatewayChat(options: AIChatOptions) {
     }
   }
 
+  if (lastError instanceof TruncatedError) throw lastError;
   throw new Error(lastError instanceof Error ? lastError.message : "All AI providers are busy or unavailable.");
 }
 
