@@ -16,14 +16,16 @@ describe("public demo write guard", () => {
     expect(proxy(request("edsync.learn-app.workers.dev", "/api/lessons", "POST")).status).toBe(200);
   });
 
-  it("allows only the two session actions on the exact demo host", () => {
+  it("allows demo sessions, logout, and the guarded data-query route only on the exact host", () => {
     vi.stubEnv("EDSYNC_DEMO_MODE", "1");
     vi.stubEnv("EDSYNC_DEMO_HOSTNAME", "edsync-demo.learn-app.workers.dev");
 
     expect(proxy(request("edsync-demo.learn-app.workers.dev", "/api/demo/session", "POST")).status).toBe(200);
     expect(proxy(request("edsync-demo.learn-app.workers.dev", "/api/auth/logout", "POST")).status).toBe(200);
+    expect(proxy(request("edsync-demo.learn-app.workers.dev", "/api/data", "POST")).status).toBe(200);
     expect(proxy(request("edsync-demo.learn-app.workers.dev", "/api/lessons", "GET")).status).toBe(200);
     expect(proxy(request("preview.learn-app.workers.dev", "/api/demo/session", "POST")).status).toBe(403);
+    expect(proxy(request("preview.learn-app.workers.dev", "/api/data", "POST")).status).toBe(403);
     expect(proxy(request("edsync-demo.learn-app.workers.dev.attacker.test", "/api/demo/session", "POST")).status).toBe(403);
     expect(proxy(new NextRequest(`https://edsync-demo.learn-app.workers.dev/api/demo/session`, {
       method: "POST",
