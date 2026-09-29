@@ -19,6 +19,7 @@ import {
   withRoute,
 } from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 import { isOwnerScoped, ownerScope } from "@/lib/tenancy/ownership";
 
 async function seedDefaultAutomations(tenantId: string, userId: string) {
@@ -63,7 +64,7 @@ export const GET = withRoute(async () => {
     [context.tenant.id, ...owner.params],
   );
   const rules = rows.map((row) => deserializeRow("automation_rules", row));
-  return NextResponse.json({ data: { rules, context }, error: null });
+  return NextResponse.json({ data: { rules, context: toClientTenantContext(context) }, error: null });
 });
 
 export const POST = withRoute(async (request) => {
