@@ -16,7 +16,7 @@ import {
 } from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
 import { toClientTenantContext } from "@/lib/tenancy/client-context";
-import { isOwnerScoped, ownerScope } from "@/lib/tenancy/ownership";
+import { isOwnerScoped, isTenantOutsider, ownerScope } from "@/lib/tenancy/ownership";
 
 // certification_rules has no owner column, so the creator is kept in settings.ownerId.
 const RULE_OWNER = "CASE WHEN json_valid(settings) THEN json_extract(settings, '$.ownerId') END";
@@ -43,6 +43,7 @@ export const GET = withRoute(async (request) => {
   const user = await getSessionUser();
   if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) throw new ForbiddenError("Organization membership required.");
   const tenantId = context.tenant.id;
   const isStudent = user.user_metadata.role === "student";
   const scoped = isOwnerScoped(user, context);
