@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadAccessibleLesson } from "@/lib/lessons/access";
+import { resolveTenantContext } from "@/lib/tenancy";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), batch: vi.fn(), user: { id: "student-1", email: "student@example.com", user_metadata: { role: "student" } } }));
 
@@ -40,6 +41,7 @@ describe("practice attempts route", () => {
     mocks.user = { id: "student-1", email: "student@example.com", user_metadata: { role: "student" } };
     vi.mocked(loadAccessibleLesson).mockReset();
     vi.mocked(loadAccessibleLesson).mockResolvedValue(null);
+    vi.mocked(resolveTenantContext).mockReset().mockResolvedValue({ tenant: { id: "tenant_edsync_default" }, portal: null, membership: null } as never);
   });
 
   it("stores a valid local practice attempt with its items in one batch", async () => {
@@ -84,6 +86,15 @@ describe("practice attempts route", () => {
     const { status } = await post({ mode: "quiz", sourceType: "lesson", sourceId: "other-lesson", items: [item] });
     expect(status).toBe(404);
     expect(loadAccessibleLesson).toHaveBeenCalledWith(expect.objectContaining({ user: expect.objectContaining({ id: "student-1" }) }));
+    expect(mocks.batch).not.toHaveBeenCalled();
+  });
+
+  it("blocks a signed-in outsider from writing local practice into an organization", async () => {
+    vi.mocked(resolveTenantContext).mockResolvedValueOnce({ tenant: { id: "tenant-school" }, portal: null, membership: null } as never);
+    const { status, payload } = await post({ mode: "quiz", sourceId: "local-practice", items: [item] });
+    expect(status).toBe(403);
+    expect(payload.error).toBe("Organization membership required.");
+    expect(mocks.query).not.toHaveBeenCalled();
     expect(mocks.batch).not.toHaveBeenCalled();
   });
 
