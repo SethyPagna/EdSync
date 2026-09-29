@@ -44,8 +44,9 @@ export async function GET() {
         LIMIT 200`,
       [tenantId],
     ),
-    d1Query<{ invite_code: string | null; invites_enabled: number }>(
+    d1Query<{ invite_code: string | null; teacher_invite_code: string | null; invites_enabled: number }>(
       `SELECT json_extract(settings, '$.invite_code') AS invite_code,
+              json_extract(settings, '$.teacher_invite_code') AS teacher_invite_code,
               COALESCE(json_extract(settings, '$.invites_enabled'), 1) AS invites_enabled
          FROM tenants WHERE id = ? LIMIT 1`,
       [tenantId],
@@ -55,6 +56,7 @@ export async function GET() {
     data: {
       members,
       inviteCode: tenant[0]?.invite_code ?? null,
+      teacherInviteCode: tenant[0]?.teacher_invite_code ?? null,
       invitesEnabled: tenant[0]?.invites_enabled !== 0,
     },
     error: null,
@@ -65,18 +67,28 @@ export async function POST(request: Request) {
   const access = await authorizedTenant();
   if (access.error) return access.error;
   const body = (await request.json().catch(() => null)) as { action?: unknown } | null;
-  if (!body || typeof body !== "object" || Array.isArray(body) || !["rotate", "enable", "disable"].includes(String(body.action))) {
+  if (!body || typeof body !== "object" || Array.isArray(body) || !["rotate", "rotate_teacher", "enable", "disable"].includes(String(body.action))) {
     return NextResponse.json({ data: null, error: "Invalid invite action." }, { status: 400 });
   }
   if (body.action === "rotate") {
     const code = `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
     await d1Query(
       `UPDATE tenants
-          SET settings = json_set(COALESCE(settings, '{}'), '$.invite_code', ?, '$.invites_enabled', 1), updated_at = datetime('now')
+          SET settings = json_set(COALESCE(settings, '{}'), '$.invite_code', ?), updated_at = datetime('now')
         WHERE id = ?`,
       [code, access.tenantId],
     );
-    return NextResponse.json({ data: { inviteCode: code, invitesEnabled: true }, error: null });
+    return NextResponse.json({ data: { inviteCode: code }, error: null });
+  }
+  if (body.action === "rotate_teacher") {
+    const code = `teach-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+    await d1Query(
+      `UPDATE tenants
+          SET settings = json_set(COALESCE(settings, '{}'), '$.teacher_invite_code', ?), updated_at = datetime('now')
+        WHERE id = ?`,
+      [code, access.tenantId],
+    );
+    return NextResponse.json({ data: { teacherInviteCode: code }, error: null });
   }
   const enabled = body.action === "enable";
   if (enabled) {
