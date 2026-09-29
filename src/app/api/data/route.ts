@@ -30,6 +30,9 @@ export async function POST(request: Request) {
 
     const parsed = parseDataRequest(payload);
     if (!parsed.ok) return failure(parsed.error, 400);
+    if (process.env.EDSYNC_DEMO_MODE === "1" && parsed.request.action !== "select") {
+      return failure("This sample workspace is read-only. Explore the pages or switch demo roles.", 403, { "Cache-Control": "no-store" });
+    }
 
     const rate = await enforceRateLimit({
       request,
