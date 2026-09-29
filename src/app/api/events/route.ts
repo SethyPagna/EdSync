@@ -9,6 +9,7 @@ import { normalizeLearningEventInput } from "@/lib/validation/learning-events";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError, readJson, withRoute } from "@/lib/security/http-errors";
 import { resolveTenantContext, type TenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 import { isOwnerScoped } from "@/lib/tenancy/ownership";
 import {
   tenantObjectJoin,
@@ -168,7 +169,7 @@ export const GET = withRoute(async () => {
       LIMIT 100`,
     scoped ? [context.tenant.id, user.id, user.id, user.id] : [context.tenant.id],
   );
-  return NextResponse.json({ data: { events, context }, error: null });
+  return NextResponse.json({ data: { events, context: toClientTenantContext(context) }, error: null });
 });
 
 export const POST = withRoute(async (request) => {
