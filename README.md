@@ -233,8 +233,8 @@ security audit, which always checks current advisories.
 - `npm.cmd run check:ci` fails if GitHub Actions stops installing with
   `npm ci`, stops running `verify`, references missing package scripts, or uses
   a Node major below the package engine.
-- `npm.cmd run check:cloudflare` fails if Wrangler resource names stop using
-  the single EdSync Worker and EdSync-owned D1, R2, Queue, or Vectorize names.
+- `npm.cmd run check:cloudflare` fails if the official and demo Workers reuse
+  each other's D1 or other resources, or reference non-EdSync resources.
 - `npm.cmd run check:assets` fails if referenced public assets are missing,
   image extensions do not match file content, or showcase screenshots are
   replaced with tiny placeholder files.
@@ -275,6 +275,26 @@ When you own a domain:
 4. For a separate custom domain, save its hostname in the portal. The UI shows a pending state and a unique `_edsync-verification.<hostname>` TXT record. An operator must verify that exact token using authoritative DNS, provision HTTPS and the Worker route (or Cloudflare for SaaS for customer-owned zones), then mark that exact `tenant_domains` row active through the trusted deployment/database workflow. Merely entering a hostname never activates it. Saving unrelated portal settings preserves verification.
 
 No DNS records, domain purchases, or live Cloudflare changes are performed by the portal editor. Automatic DNS/TLS provisioning and cross-domain SSO are not implemented.
+
+## Public sample workspace
+
+The [EdSync demo](https://edsync-demo.learn-app.workers.dev) runs as a separate Cloudflare Worker with its own D1 database. Visitors can browse four free sample courses and switch between fictional learner and teacher workspaces without credentials. The shared workspaces are read-only; they illustrate lessons, classes, assessments, progress, and Studio without changing the official EdSync tenant. The empty official catalog links to this populated demo.
+
+Build and deploy the demo with its own Wrangler config, never the production app or automation deploy command:
+
+```powershell
+npm.cmd run build:cloudflare -- --config infra/cloudflare/wrangler.demo.jsonc
+npx wrangler deploy --config infra/cloudflare/wrangler.demo.jsonc --keep-vars
+```
+
+For a **fresh, isolated** `edsync-demo-d1`, apply `infra/database/migrations/0001_edsync_core.sql` through `0010_grading_integrity.sql` in order, then export and import the fictional sample dataset:
+
+```powershell
+npx tsx ops/scripts/database/seed-local.ts --export-demo-sql .wrangler/demo-seed.sql
+npx wrangler d1 execute edsync-demo-d1 --remote --file .wrangler/demo-seed.sql
+```
+
+The generated SQL stays in ignored `.wrangler`; demo account passwords are random and discarded. Do not import the sample data into `edsync-prod-d1`.
 
 ## Workspace revamp
 
