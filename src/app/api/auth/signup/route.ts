@@ -159,12 +159,10 @@ export async function POST(request: Request) {
         `SELECT id, slug, name FROM tenants
           WHERE status = 'active'
             AND COALESCE(json_extract(settings, '$.invites_enabled'), 1) = 1
-            AND (
-              (json_extract(settings, '$.invite_code') IS NOT NULL AND lower(json_extract(settings, '$.invite_code')) = lower(?))
-              OR (json_extract(settings, '$.invite_code') IS NULL AND lower(slug) = lower(?))
-            )
+            AND json_extract(settings, '$.invite_code') IS NOT NULL
+            AND lower(json_extract(settings, '$.invite_code')) = lower(?)
           LIMIT 1`,
-        [organizationCode, organizationCode],
+        [organizationCode],
       )
     : [];
 
