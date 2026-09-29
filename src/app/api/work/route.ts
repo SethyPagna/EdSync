@@ -18,6 +18,7 @@ import {
   type WorkItemRecord,
   type WorkSettings,
 } from "@/lib/work/update";
+import { studentWorkQuestion, type StudentWorkQuestion, type WorkQuestionRow } from "@/lib/work/questions";
 
 const WORK_ITEM_TABLE = "learning_work_items";
 const THREAD_TABLE = "discussion_threads";
@@ -330,7 +331,7 @@ export async function GET(request: Request) {
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
 
   if (user.user_metadata.role === "student") {
-    const work = await d1Query(
+    const work = await d1Query<{ id: string } & Record<string, unknown>>(
       `SELECT wi.*,
               c.name AS class_name,
               ls.status AS submission_status,
@@ -339,7 +340,7 @@ export async function GET(request: Request) {
          FROM learning_work_items wi
          ${tenantObjectJoin({ objectTable: WORK_ITEM_TABLE, objectAlias: "wi", linkAlias: "work_link" })}
          LEFT JOIN classes c ON c.id = wi.class_id
-         LEFT JOIN class_enrollments ce ON ce.class_id = wi.class_id AND ce.student_id = ?
+         LEFT JOIN class_enrollments ce ON ce.class_id = wi.class_id AND ce.student_id = ? AND ce.is_active = 1
          LEFT JOIN learning_submissions ls ON ls.work_item_id = wi.id AND ls.student_id = ?
         WHERE ${tenantObjectPredicate({ linkAlias: "work_link" })}
           AND wi.status = 'published'
@@ -363,7 +364,23 @@ export async function GET(request: Request) {
             user.id,
           ],
     );
-    return NextResponse.json({ data: work, error: null });
+    const byWorkId = new Map<string, StudentWorkQuestion[]>();
+    for (let start = 0; start < work.length; start += 400) {
+      const workIds = work.slice(start, start + 400).map((item) => item.id);
+      const questions = await d1Query<WorkQuestionRow>(
+        `SELECT id, work_item_id, prompt, question_type, options, points, order_index
+           FROM learning_work_questions
+          WHERE work_item_id IN (${workIds.map(() => "?").join(", ")})
+          ORDER BY work_item_id, order_index, id`,
+        workIds,
+      );
+      for (const row of questions) {
+        const existing = byWorkId.get(row.work_item_id) ?? [];
+        existing.push(studentWorkQuestion(row));
+        byWorkId.set(row.work_item_id, existing);
+      }
+    }
+    return NextResponse.json({ data: work.map((item) => ({ ...item, questions: byWorkId.get(item.id) ?? [] })), error: null });
   }
 
   if (!isStaff(user)) return jsonError("Teacher access required.", 403);
