@@ -23,6 +23,7 @@ type OrganizationLookup = {
   name: string;
   portalName: string | null;
   ssoEnabled: boolean;
+  inviteRole: Role;
 };
 
 const roleIcons = {
@@ -143,6 +144,7 @@ function SignupForm() {
             return;
           }
           setOrganizationLookup(payload.data as OrganizationLookup);
+          setRole(payload.data.inviteRole === "teacher" ? "teacher" : "student");
           setOrganizationStatus("found");
         })
         .catch(() => {
@@ -357,7 +359,7 @@ function SignupForm() {
               />
               <p className="text-xs leading-5 text-edsync-subtle">
                 {organizationMode === "join"
-                  ? "Enter the shared code."
+                  ? "Enter the learner or teacher invite code from your organization."
                   : "Create your organization."}
               </p>
               {organizationMode === "join" && organizationStatus !== "idle" && (
@@ -437,8 +439,10 @@ function SignupForm() {
                 : `${authCopy.joiningOrganization}: ${organizationLabel}`}
             </div>
           )}
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-            {(["teacher", "student"] as const).map((item) => {
+          <div className={`grid gap-2 ${organizationMode === "join" && accountType === "organization" ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"}`}>
+            {(["teacher", "student"] as const).filter((item) =>
+              accountType !== "organization" || organizationMode !== "join" || item === organizationLookup?.inviteRole,
+            ).map((item) => {
               const Icon = roleIcons[item];
               const selected = role === item;
               const itemLabel = roleOptions[item].label;
@@ -462,6 +466,9 @@ function SignupForm() {
               );
             })}
           </div>
+          {accountType === "organization" && organizationMode === "join" && (
+            <p className="text-xs text-edsync-subtle">Your invite code determines this role. Ask your organization for a different code if needed.</p>
+          )}
           <div className="grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={() => setStep("space")} className="btn-secondary justify-center py-3">
               {authCopy.back}
