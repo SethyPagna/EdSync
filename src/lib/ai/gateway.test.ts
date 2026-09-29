@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AIProviderRow } from "./providers";
 import { listEnabledProviderRows } from "./providers";
+import { d1Query } from "@/lib/db/d1";
 import { aiGatewayChat } from "./gateway";
 
 const provider: AIProviderRow = {
@@ -37,5 +38,31 @@ describe("AI gateway", () => {
     vi.stubGlobal("fetch", fetchMock);
     await expect(aiGatewayChat({ messages: [{ role: "user", content: "Hi" }] })).resolves.toBe("OK");
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).model).toBe("openai/gpt-oss-120b");
+  });
+
+  it("stops after one provider when platform failover is disabled", async () => {
+    vi.mocked(listEnabledProviderRows).mockResolvedValueOnce([
+      { ...provider, id: "fallback-off-primary", priority: 1 },
+      { ...provider, id: "fallback-off-secondary", priority: 2 },
+    ]);
+    vi.mocked(d1Query).mockImplementationOnce(async () => [{ enabled: 0 }]);
+    const fetchMock = vi.fn().mockResolvedValue(new Response("Unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(aiGatewayChat({ messages: [{ role: "user", content: "Hi" }] })).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("tries a second provider while platform failover is enabled", async () => {
+    vi.mocked(listEnabledProviderRows).mockResolvedValueOnce([
+      { ...provider, id: "fallback-on-primary", priority: 1 },
+      { ...provider, id: "fallback-on-secondary", priority: 2 },
+    ]);
+    vi.mocked(d1Query).mockImplementationOnce(async () => [{ enabled: 1 }]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("Unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: "Recovered" } }] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(aiGatewayChat({ messages: [{ role: "user", content: "Hi" }] })).resolves.toBe("Recovered");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
