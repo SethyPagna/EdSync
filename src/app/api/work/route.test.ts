@@ -15,7 +15,7 @@ import {
   selectOne,
   sqliteAdapter,
 } from "@/lib/grades/test-support";
-import { DELETE, PATCH, POST } from "./route";
+import { DELETE, GET, PATCH, POST } from "./route";
 
 const state = vi.hoisted(() => ({
   adapter: null as unknown,
@@ -43,6 +43,15 @@ beforeEach(() => {
   db = createGradingDatabase();
   state.adapter = sqliteAdapter(db);
   state.user = TEACHER;
+});
+
+it("blocks assignment reads and writes when the global work flag is disabled", async () => {
+  insertRows(db, "feature_flags", [{ id: "flag-work", flag_key: "work_items", label: "Assignments", enabled: 0 }]);
+  expect((await create({ status: "draft" })).response.status).toBe(403);
+  state.user = STUDENT;
+  const response = await GET(new Request("http://localhost/api/work"));
+  expect(response.status).toBe(403);
+  expect((await readJson(response)).error).toBe("Assignments are unavailable.");
 });
 
 async function create(body: Record<string, unknown>) {
