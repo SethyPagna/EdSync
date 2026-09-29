@@ -5,7 +5,24 @@ import { fileURLToPath } from "node:url";
 import { commandForPlatform } from "../shared/ops";
 
 export const APP_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.app.jsonc";
+export const DEMO_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.demo.jsonc";
 const OPEN_NEXT_CONFIG_PATH = "infra/cloudflare/open-next.config.ts";
+const WORKER_CONFIG_PATHS = new Set([APP_WORKER_CONFIG_PATH, DEMO_WORKER_CONFIG_PATH]);
+const DEPLOYMENT_BUILD_KEYS = [
+  "CLOUDFLARE_D1_DATABASE_ID",
+  "CLOUDFLARE_D1_DATABASE_NAME",
+  "CLOUDFLARE_QUEUE_NAME",
+  "CLOUDFLARE_VECTORIZE_INDEX",
+  "DEFAULT_TENANT_SLUG",
+  "EDSYNC_DEMO_HOSTNAME",
+  "EDSYNC_DEMO_MODE",
+  "EMAIL_MODE",
+  "NEXT_PUBLIC_DEMO_MODE",
+  "PAYMENT_PROVIDER",
+  "R2_BUCKET",
+  "R2_PUBLIC_BASE_URL",
+  "TENANT_ROUTING_MODE",
+] as const;
 const PRIVATE_ENV_FILES = [
   ".env",
   ".env.local",
@@ -22,12 +39,27 @@ type CloudflareAppConfig = {
   vars?: Record<string, unknown>;
 };
 
-export function applyPublicBuildVars(vars: Record<string, unknown>, targetEnv: NodeJS.ProcessEnv) {
+export function applyPublicBuildVars(vars: Record<string, unknown>, targetEnv: NodeJS.ProcessEnv, overwriteExisting = false) {
   for (const [key, value] of Object.entries(vars)) {
-    if (key.startsWith("NEXT_PUBLIC_") && typeof value === "string" && targetEnv[key] === undefined) {
+    if (key.startsWith("NEXT_PUBLIC_") && typeof value === "string" && (overwriteExisting || targetEnv[key] === undefined)) {
       targetEnv[key] = value;
     }
   }
+}
+
+export function applyDeploymentBuildVars(vars: Record<string, unknown>, targetEnv: NodeJS.ProcessEnv) {
+  for (const key of DEPLOYMENT_BUILD_KEYS) {
+    const value = vars[key];
+    if (typeof value === "string") targetEnv[key] = value;
+    else delete targetEnv[key];
+  }
+  applyPublicBuildVars(vars, targetEnv, true);
+}
+
+export function workerConfigPathFromArgs(args: string[]) {
+  if (args.length === 0) return APP_WORKER_CONFIG_PATH;
+  if (args.length === 2 && args[0] === "--config" && WORKER_CONFIG_PATHS.has(args[1])) return args[1];
+  throw new Error(`Use --config ${APP_WORKER_CONFIG_PATH} or --config ${DEMO_WORKER_CONFIG_PATH}.`);
 }
 
 function activeProcess(pid: number) {
@@ -174,8 +206,8 @@ function buildChildEnvironment() {
   return env;
 }
 
-function runOpenNextBuild() {
-  const args = ["opennextjs-cloudflare", "build", "--config", APP_WORKER_CONFIG_PATH, "--openNextConfigPath", OPEN_NEXT_CONFIG_PATH];
+function runOpenNextBuild(configPath: string) {
+  const args = ["opennextjs-cloudflare", "build", "--config", configPath, "--openNextConfigPath", OPEN_NEXT_CONFIG_PATH];
   const result = spawnSync(commandForPlatform("npx"), args, {
     env: buildChildEnvironment(),
     shell: process.platform === "win32",
@@ -185,16 +217,17 @@ function runOpenNextBuild() {
   if (result.status !== 0) throw new Error(`OpenNext build exited with status ${result.status ?? "unknown"}.`);
 }
 
-export function buildCloudflareApp() {
-  const config = JSON.parse(readFileSync(APP_WORKER_CONFIG_PATH, "utf8")) as CloudflareAppConfig;
-  applyPublicBuildVars(config.vars ?? {}, process.env);
+export function buildCloudflareApp(configPath = APP_WORKER_CONFIG_PATH) {
+  if (!WORKER_CONFIG_PATHS.has(configPath)) throw new Error(`Unsupported Cloudflare Worker config: ${configPath}`);
+  const config = JSON.parse(readFileSync(configPath, "utf8")) as CloudflareAppConfig;
+  applyDeploymentBuildVars(config.vars ?? {}, process.env);
   const root = resolve(".");
   withPrivateEnvFilesHidden(root, (values) => {
-    runOpenNextBuild();
+    runOpenNextBuild(configPath);
     assertSafeOpenNextBuild(join(root, ".open-next"), values);
   });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  buildCloudflareApp();
+  buildCloudflareApp(workerConfigPathFromArgs(process.argv.slice(2)));
 }
