@@ -3,7 +3,15 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import test, { type TestContext } from "node:test";
-import { applyPublicBuildVars, assertSafeOpenNextBuild, withPrivateEnvFilesHidden } from "./cloudflare-build";
+import {
+  APP_WORKER_CONFIG_PATH,
+  DEMO_WORKER_CONFIG_PATH,
+  applyDeploymentBuildVars,
+  applyPublicBuildVars,
+  assertSafeOpenNextBuild,
+  withPrivateEnvFilesHidden,
+  workerConfigPathFromArgs,
+} from "./cloudflare-build";
 
 type CloudflareAppConfig = { vars?: Record<string, unknown> };
 
@@ -20,6 +28,49 @@ test("Cloudflare public variables are present at Next build time", () => {
   assert.equal(env.R2_BUCKET, undefined);
   assert.equal(env.APP_ENCRYPTION_KEY, undefined);
   assert.equal(env.SESSION_SECRET, undefined);
+});
+
+test("demo build selects its own D1 and clears inherited production resource values", () => {
+  const config = JSON.parse(readFileSync(DEMO_WORKER_CONFIG_PATH, "utf8")) as CloudflareAppConfig;
+  const env: NodeJS.ProcessEnv = {
+    NODE_ENV: "test",
+    NEXT_PUBLIC_APP_URL: "https://edsync.learn-app.workers.dev",
+    NEXT_PUBLIC_R2_PUBLIC_BASE_URL: "https://production-assets.example.com",
+    CLOUDFLARE_D1_DATABASE_ID: "production-database-id",
+    R2_BUCKET: "edsync-assets-prod",
+    CLOUDFLARE_QUEUE_NAME: "edsync-automation-prod",
+    CLOUDFLARE_VECTORIZE_INDEX: "edsync-learning-prod",
+  };
+
+  applyDeploymentBuildVars(config.vars ?? {}, env);
+
+  assert.equal(workerConfigPathFromArgs(["--config", DEMO_WORKER_CONFIG_PATH]), DEMO_WORKER_CONFIG_PATH);
+  assert.equal(env.NEXT_PUBLIC_APP_URL, "https://edsync-demo.learn-app.workers.dev");
+  assert.equal(env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL, "");
+  assert.equal(env.CLOUDFLARE_D1_DATABASE_ID, config.vars?.CLOUDFLARE_D1_DATABASE_ID);
+  assert.equal(env.EDSYNC_DEMO_MODE, "1");
+  assert.equal(env.R2_BUCKET, undefined);
+  assert.equal(env.CLOUDFLARE_QUEUE_NAME, undefined);
+  assert.equal(env.CLOUDFLARE_VECTORIZE_INDEX, undefined);
+});
+
+test("production build clears inherited demo mode", () => {
+  const config = JSON.parse(readFileSync(APP_WORKER_CONFIG_PATH, "utf8")) as CloudflareAppConfig;
+  const env: NodeJS.ProcessEnv = {
+    NODE_ENV: "test",
+    EDSYNC_DEMO_MODE: "1",
+    EDSYNC_DEMO_HOSTNAME: "edsync-demo.learn-app.workers.dev",
+    NEXT_PUBLIC_DEMO_MODE: "true",
+  };
+
+  applyDeploymentBuildVars(config.vars ?? {}, env);
+
+  assert.equal(workerConfigPathFromArgs([]), APP_WORKER_CONFIG_PATH);
+  assert.equal(env.EDSYNC_DEMO_MODE, undefined);
+  assert.equal(env.EDSYNC_DEMO_HOSTNAME, undefined);
+  assert.equal(env.NEXT_PUBLIC_DEMO_MODE, undefined);
+  assert.equal(env.CLOUDFLARE_D1_DATABASE_ID, config.vars?.CLOUDFLARE_D1_DATABASE_ID);
+  assert.throws(() => workerConfigPathFromArgs(["--config", "infra/cloudflare/wrangler.automation.jsonc"]), /Use --config/);
 });
 
 function temporaryRoot(t: TestContext) {
