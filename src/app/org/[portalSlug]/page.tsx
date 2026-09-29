@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
@@ -41,6 +42,9 @@ export default async function OrganizationPortalPage({
   const resolvedSearchParams = await searchParams;
   const portal = await getOrganizationPortal(portalSlug, resolvedSearchParams?.tenant);
   if (!portal) notFound();
+  const host = (await headers()).get("host")?.trim().toLowerCase().split(":")[0];
+  const isDemoSite = process.env.EDSYNC_DEMO_MODE === "1" &&
+    Boolean(host && host === process.env.EDSYNC_DEMO_HOSTNAME?.trim().toLowerCase());
 
   const filters = normalizeCatalogFilters({
     ...resolvedSearchParams,
@@ -88,7 +92,9 @@ export default async function OrganizationPortalPage({
                 <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{items.length} {copy.courses.toLowerCase()}</span>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
-                <Link
+                {isDemoSite ? <Link href="/catalog#demo-roles" className="btn-primary justify-center">
+                  Explore sample workspace <ArrowRight className="h-4 w-4" />
+                </Link> : <><Link
                   href={loginHref}
                   className="btn-primary justify-center"
                 >
@@ -100,7 +106,7 @@ export default async function OrganizationPortalPage({
                   className="btn-secondary justify-center"
                 >
                   {copy.start}
-                </Link>
+                </Link></>}
               </div>
             </div>
             <form className="border-t border-edsync-border bg-edsync-surface/85 p-3">
