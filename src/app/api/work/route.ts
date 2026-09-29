@@ -365,8 +365,8 @@ export async function GET(request: Request) {
           ],
     );
     const byWorkId = new Map<string, StudentWorkQuestion[]>();
-    for (let start = 0; start < work.length; start += 400) {
-      const workIds = work.slice(start, start + 400).map((item) => item.id);
+    for (let start = 0; start < work.length; start += 100) {
+      const workIds = work.slice(start, start + 100).map((item) => item.id);
       const questions = await d1Query<WorkQuestionRow>(
         `SELECT id, work_item_id, prompt, question_type, options, points, order_index
            FROM learning_work_questions
