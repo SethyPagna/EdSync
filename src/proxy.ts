@@ -33,6 +33,21 @@ const ADMIN_VIEW_MODE_HEADER = "x-edsync-admin-view-mode";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (process.env.EDSYNC_DEMO_MODE === "1" && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+    const demoHostname = process.env.EDSYNC_DEMO_HOSTNAME?.trim().toLowerCase();
+    const requestHostname = request.nextUrl.hostname.toLowerCase();
+    const headerHostname = request.headers.get("host")?.split(":")[0]?.toLowerCase();
+    const allowedDemoHost = Boolean(demoHostname && requestHostname === demoHostname &&
+      (!headerHostname || headerHostname === demoHostname));
+    const allowedDemoAction = request.method === "POST" &&
+      (pathname === "/api/demo/session" || pathname === "/api/auth/logout");
+    if (!allowedDemoHost || !allowedDemoAction) {
+      return withSecurityHeaders(NextResponse.json(
+        { error: "This sample workspace is read-only. Explore the pages or switch demo roles." },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      ));
+    }
+  }
   const requestedAdminViewMode = normalizeAdminViewMode(request.nextUrl.searchParams.get("adminView"));
   const isProtected = startsWithAny(pathname, PROTECTED_ROUTE_PREFIXES);
   const isAuthPage = startsWithAny(pathname, AUTH_ROUTE_PREFIXES);
@@ -165,6 +180,7 @@ function withSecurityHeaders(response: NextResponse) {
 
 export const config = {
   matcher: [
+    "/api/:path*",
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
