@@ -24,9 +24,10 @@ describe("tenant creation invites", () => {
     expect(response.status).toBe(200);
     const data = (await response.json()).data;
     expect(data.inviteCode).toMatch(/^join-[0-9a-f]{20}$/);
+    expect(data.teacherInviteCode).toMatch(/^teach-[0-9a-f]{20}$/);
     const tenantWrite = mocks.query.mock.calls.find(([sql]) => String(sql).includes("INSERT INTO tenants"));
     if (!tenantWrite) throw new Error("Tenant insert was not recorded.");
-    expect(JSON.parse(tenantWrite[1][6])).toEqual({ invite_code: data.inviteCode, invites_enabled: true });
+    expect(JSON.parse(tenantWrite[1][6])).toEqual({ invite_code: data.inviteCode, teacher_invite_code: data.teacherInviteCode, invites_enabled: true });
   });
 
   it("does not create a tenant without portal management permission", async () => {
