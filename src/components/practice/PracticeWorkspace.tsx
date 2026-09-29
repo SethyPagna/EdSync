@@ -1,433 +1,168 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  CheckCircle2,
-  Clock3,
-  Flame,
-  HelpCircle,
-  Pause,
-  Play,
-  RotateCcw,
-  Save,
-  Sparkles,
-  Trophy,
-  Trash2,
-  XCircle,
-} from "lucide-react";
-import AiPromptBuilder from "@/components/ai/AiPromptBuilder";
-import { AI_PROMPT_CONTRACTS, PRACTICE_MODES } from "@/lib/studio/catalog";
-import {
-  missedPracticeItems,
-  summarizePracticeAttempt,
-  targetSecondsFromMinutes,
-  type PracticeItem,
-} from "@/lib/practice/engine";
+import { BookOpen, Check, ChevronLeft, ChevronRight, Clock3, Layers3, RotateCcw, Sparkles, Zap } from "lucide-react";
+import OutlineComposer from "@/components/compose/OutlineComposer";
+import { deriveFlashcards, derivePracticeItems, outlineFromText, type LessonOutline } from "@/lib/compose";
+import { createClient } from "@/lib/edsync/client";
+import { isPracticeItemCorrect, missedPracticeItems, summarizePracticeAttempt, type PracticeItem } from "@/lib/practice/engine";
 import { normalizePracticeMode } from "@/lib/practice/modes";
-import {
-  deletePracticeReview,
-  listPracticeReviews,
-  updatePracticeReview,
-  type PracticeReviewCardRow,
-} from "@/lib/practice/reviews";
-import type { PracticeAttemptSummary, PracticeMode } from "@/types";
+import { listPracticeReviews, type PracticeReviewCardRow } from "@/lib/practice/reviews";
+import type { Lesson, LessonSection, PracticeAttemptSummary, PracticeMode } from "@/types";
 
-type PracticeWorkspaceProps = {
-  initialAiOpen?: boolean;
-  initialAiTask?: string;
-  initialMode?: PracticeMode;
-};
+type PracticeWorkspaceProps = { initialAiOpen?: boolean; initialAiTask?: string; initialMode?: PracticeMode };
+type Mode = "quiz" | "flashcards" | "sprint";
+type LessonOption = Pick<Lesson, "id" | "title">;
 
-const starterItems: PracticeItem[] = [
-  {
-    id: "item-1",
-    prompt: "What is the first step in an effective learning loop?",
-    answer: "import",
-    explanation: "Add source content first.",
-    points: 2,
-  },
-  {
-    id: "item-2",
-    prompt: "True or false: missed answers should become review cards.",
-    answer: true,
-    explanation: "Misses become review prompts.",
-    points: 1,
-  },
-  {
-    id: "item-3",
-    prompt: "Name one EdSync source that can generate practice.",
-    answer: "notes",
-    explanation: "Notes, docs, sheets, slides, or lessons work.",
-    points: 2,
-  },
-];
+function modeFromParam(mode?: PracticeMode): Mode {
+  const value = normalizePracticeMode(mode);
+  return value === "flashcards" ? "flashcards" : value === "sprint" || value === "exam" ? "sprint" : "quiz";
+}
 
 export default function PracticeWorkspace({ initialAiOpen = false, initialAiTask, initialMode }: PracticeWorkspaceProps) {
-  const [mode, setMode] = useState<PracticeMode>(normalizePracticeMode(initialMode));
-  const [aiOpen, setAiOpen] = useState(initialAiOpen);
-  const [items, setItems] = useState<PracticeItem[]>(starterItems);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [targetMinutes, setTargetMinutes] = useState(() => normalizePracticeMode(initialMode) === "exam" ? 30 : 8);
+  const client = useMemo(() => createClient(), []);
+  const [mode, setMode] = useState<Mode>(() => modeFromParam(initialMode));
+  const [creatorOpen, setCreatorOpen] = useState(initialAiOpen || !!initialAiTask);
+  const [outline, setOutline] = useState<LessonOutline | null>(null);
+  const [items, setItems] = useState<PracticeItem[]>([]);
+  const [lessons, setLessons] = useState<LessonOption[]>([]);
+  const [selectedLesson, setSelectedLesson] = useState("");
+  const [sourceId, setSourceId] = useState("local-practice");
+  const [sourceType, setSourceType] = useState("local");
+  const [cardIndex, setCardIndex] = useState(0);
+  const [cardRatings, setCardRatings] = useState<Record<number, boolean>>({});
+  const [flipped, setFlipped] = useState(false);
   const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [summary, setSummary] = useState<PracticeAttemptSummary | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [reviewCards, setReviewCards] = useState<PracticeReviewCardRow[]>([]);
-  const startedRef = useRef<number | null>(null);
+  const [reviews, setReviews] = useState<PracticeReviewCardRow[]>([]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const startedAt = useRef(0);
 
-  const modeConfig = useMemo(
-    () => PRACTICE_MODES.find((entry) => entry.mode === mode) ?? PRACTICE_MODES[0],
-    [mode],
-  );
-  const targetSeconds = targetSecondsFromMinutes(targetMinutes || modeConfig.targetMinutes);
-  const liveSummary = summarizePracticeAttempt({ mode, items, elapsedSeconds, targetSeconds });
-  const missed = missedPracticeItems(items);
+  const cards = useMemo(() => outline ? deriveFlashcards(outline) : [], [outline]);
+  const flashcardItems: PracticeItem[] = cards.map((card, index) => ({ id: `flashcard-${index + 1}`, prompt: card.front, answer: card.back, response: cardRatings[index] === undefined ? undefined : cardRatings[index] ? card.back : "", points: 1 }));
+  const activeItems = mode === "flashcards" ? flashcardItems : items;
+  const targetSeconds = mode === "sprint" ? 300 : null;
+  const liveSummary = summarizePracticeAttempt({ mode, items: activeItems, elapsedSeconds: elapsed, targetSeconds });
+
+  useEffect(() => {
+    let active = true;
+    client.from("lessons").select("id,title").eq("status", "published").limit(50).then(({ data }) => { if (active) setLessons((data ?? []) as LessonOption[]); });
+    listPracticeReviews().then((data) => { if (active) setReviews(data ?? []); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [client]);
 
   useEffect(() => {
     if (!running) return;
     const timer = window.setInterval(() => {
-      if (startedRef.current) setElapsedSeconds(Math.floor((Date.now() - startedRef.current) / 1000));
-    }, 1000);
+      const next = Math.floor((Date.now() - startedAt.current) / 1000);
+      setElapsed(mode === "sprint" ? Math.min(300, next) : next);
+      if (mode === "sprint" && next >= 300) setRunning(false);
+    }, 500);
     return () => window.clearInterval(timer);
-  }, [running]);
+  }, [running, mode]);
 
-  useEffect(() => {
-    listPracticeReviews()
-      .then((cards) => setReviewCards(cards ?? []))
-      .catch(() => setReviewCards([]));
-  }, []);
-
-  const updateResponse = (itemId: string, response: string | boolean) => {
-    setItems((current) =>
-      current.map((item) => (item.id === itemId ? { ...item, response } : item)),
-    );
+  const applyOutline = (next: LessonOutline, lessonId?: string) => {
+    setOutline(next);
+    setItems(derivePracticeItems(next).map((item) => ({ ...item, response: undefined })));
+    setCardIndex(0);
+    setCardRatings({});
+    setFlipped(false);
     setSummary(null);
-    setSaveError(null);
+    setElapsed(0);
+    setRunning(false);
+    setSourceType(lessonId ? "lesson" : "local");
+    setSourceId(lessonId || "local-practice");
+    setCreatorOpen(false);
+    setError("");
   };
 
-  const submit = async () => {
-    const nextSummary = summarizePracticeAttempt({ mode, items, elapsedSeconds, targetSeconds });
-    setSummary(nextSummary);
+  const loadLesson = async (lessonId: string) => {
+    setSelectedLesson(lessonId);
+    if (!lessonId) return;
+    setPending(true);
+    setError("");
+    try {
+      const [lessonResult, sectionsResult] = await Promise.all([
+        client.from("lessons").select("id,title").eq("id", lessonId).single(),
+        client.from("lesson_sections").select("title,content").eq("lesson_id", lessonId).order("order_index"),
+      ]);
+      if (lessonResult.error || sectionsResult.error || !lessonResult.data) throw new Error("This lesson is unavailable.");
+      const lesson = lessonResult.data as LessonOption;
+      const sections = (sectionsResult.data ?? []) as Pick<LessonSection, "title" | "content">[];
+      const source = `${lesson.title}\n\n${sections.map((section) => `## ${section.title}\n${section.content || ""}`).join("\n\n")}`;
+      applyOutline(outlineFromText(source, { title: lesson.title }), lessonId);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not load this lesson.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const answer = (itemId: string, value: string | boolean) => {
+    setItems((current) => current.map((item) => item.id === itemId ? { ...item, response: value } : item));
+    setSummary(null);
+  };
+
+  const start = () => {
+    startedAt.current = Date.now() - elapsed * 1000;
+    setRunning(true);
+  };
+
+  const submit = async (submittedItems = activeItems) => {
+    if (!submittedItems.length) return;
     setRunning(false);
-    setSaving(true);
-    setSaveError(null);
+    setSummary(summarizePracticeAttempt({ mode, items: submittedItems, elapsedSeconds: elapsed, targetSeconds }));
+    setPending(true);
+    setError("");
     try {
       const response = await fetch("/api/practice/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          mode,
-          sourceType: "studio",
-          sourceId: "local-practice",
-          elapsedSeconds,
-          targetSeconds,
-          items,
-        }),
+        body: JSON.stringify({ mode, sourceType, sourceId, items: submittedItems, elapsedSeconds: elapsed, targetSeconds }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error || "Attempt could not be saved.");
-      const cards = await listPracticeReviews();
-      setReviewCards(cards ?? []);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Attempt could not be saved.");
+      setReviews(await listPracticeReviews() ?? []);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Attempt could not be saved.");
     } finally {
-      setSaving(false);
+      setPending(false);
     }
   };
 
-  const retryMissed = () => {
-    setItems(missed.map((item) => ({ ...item, response: undefined })));
+  const retry = () => {
+    if (mode === "flashcards") {
+      setCardRatings({});
+      setCardIndex(0);
+    } else {
+      setItems(missedPracticeItems(items).map((item) => ({ ...item, response: undefined })));
+    }
     setSummary(null);
-    setSaveError(null);
-    setElapsedSeconds(0);
-    startedRef.current = Date.now();
-    setRunning(true);
-  };
-
-  const restart = () => {
-    setItems(starterItems.map((item) => ({ ...item, response: undefined })));
-    setElapsedSeconds(0);
-    setSummary(null);
-    setSaveError(null);
-    startedRef.current = null;
+    setElapsed(0);
     setRunning(false);
   };
 
-  const toggleRunning = () => {
-    setRunning((current) => {
-      const next = !current;
-      if (next) {
-        startedRef.current = Date.now() - elapsedSeconds * 1000;
-      }
-      return next;
-    });
+  const gradeFlashcard = (known: boolean) => {
+    const card = cards[cardIndex];
+    if (!card) return;
+    setCardRatings((current) => ({ ...current, [cardIndex]: known }));
+    setFlipped(false);
+    setCardIndex((index) => Math.min(cards.length - 1, index + 1));
   };
 
-  const updateReviewMastery = async (id: string, mastery: "again" | "almost" | "mastered") => {
-    await updatePracticeReview({ id, mastery });
-    setReviewCards((current) => current.map((card) => (card.id === id ? { ...card, mastery } : card)));
-  };
-
-  const removeReviewCard = async (id: string) => {
-    await deletePracticeReview(id);
-    setReviewCards((current) => current.filter((card) => card.id !== id));
-  };
-
-  return (
-    <main className="min-h-screen bg-edsync-bg text-edsync-text">
-      <section className="mx-auto max-w-7xl px-4 py-6">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-4">
-            <div className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-              <p className="text-sm font-semibold text-edsync-blue">Practice</p>
-              <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div>
-                  <h1 className="font-display text-4xl font-bold">Practice</h1>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={toggleRunning} className="btn-primary px-3 py-2 text-sm">
-                    {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    {running ? "Pause" : "Start"}
-                  </button>
-                  <button type="button" onClick={restart} className="btn-secondary px-3 py-2 text-sm">
-                    <RotateCcw className="h-4 w-4" />
-                    Restart
-                  </button>
-                  <button type="button" onClick={submit} className="btn-secondary px-3 py-2 text-sm">
-                    <Save className="h-4 w-4" />
-                    {saving ? "Saving..." : "Save"}
-                  </button>
-                  <button type="button" onClick={() => setAiOpen((value) => !value)} className="btn-secondary px-3 py-2 text-sm">
-                    <Sparkles className="h-4 w-4" />
-                    {aiOpen ? "Hide" : "AI"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {aiOpen && (
-              <section className="rounded-xl border border-edsync-blue/25 bg-edsync-card p-4 shadow-sm">
-                <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-edsync-blue">AI</p>
-                    <h2 className="mt-1 font-display text-2xl font-bold">Generate</h2>
-                  </div>
-                  <button type="button" onClick={() => setAiOpen(false)} className="btn-ghost px-3 py-2 text-sm">
-                    Close
-                  </button>
-                </div>
-                <AiPromptBuilder contracts={AI_PROMPT_CONTRACTS} initialTask={initialAiTask ?? "generate-practice"} />
-              </section>
-            )}
-
-            <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-4">
-              {PRACTICE_MODES.map((entry) => (
-                <button
-                  key={entry.mode}
-                  type="button"
-                  onClick={() => {
-                    setMode(entry.mode);
-                    setTargetMinutes(entry.targetMinutes);
-                    setSummary(null);
-                    setSaveError(null);
-                  }}
-                  aria-label={`${entry.label}: ${entry.description} ${entry.loop.join(", ")}`}
-                  title={`${entry.description} ${entry.loop.join(" -> ")}`}
-                  className={`rounded-lg border p-3 text-left transition ${
-                    mode === entry.mode
-                      ? "border-edsync-blue bg-edsync-blue/10 text-edsync-text"
-                      : "border-edsync-border bg-edsync-card text-edsync-subtle hover:border-edsync-blue/40"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold">{entry.label}</p>
-                    <span className="rounded-full bg-edsync-surface px-2 py-0.5 text-[11px] font-bold text-edsync-subtle">
-                      {entry.targetMinutes}m
-                    </span>
-                  </div>
-                  <span className="edsync-practice-mode-detail">
-                    {entry.description} {entry.loop.join(" -> ")}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              {items.map((item, index) => (
-                <section key={item.id} className="rounded-lg border border-edsync-border bg-edsync-card p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-edsync-subtle">Question {index + 1}</p>
-                    <span className="rounded-full bg-edsync-blue/10 px-2 py-1 text-xs font-semibold text-edsync-blue">
-                      {item.points ?? 1} pts
-                    </span>
-                  </div>
-                  <h2 className="font-display text-xl font-bold">{item.prompt}</h2>
-                  {typeof item.answer === "boolean" ? (
-                    <div className="mt-4 flex gap-2">
-                      {[true, false].map((value) => (
-                        <button
-                          key={String(value)}
-                          type="button"
-                          onClick={() => updateResponse(item.id, value)}
-                          className={`btn-secondary px-4 py-2 ${item.response === value ? "border-edsync-blue text-edsync-blue" : ""}`}
-                        >
-                          {value ? "True" : "False"}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <input
-                      className="edsync-input mt-4"
-                      value={typeof item.response === "string" ? item.response : ""}
-                      onChange={(event) => updateResponse(item.id, event.target.value)}
-                      placeholder="Type your answer"
-                    />
-                  )}
-                  {summary && (
-                    <div className={`mt-4 rounded-lg border p-3 text-sm ${
-                      summary.reviewCardIds.includes(item.id)
-                        ? "border-edsync-amber/30 bg-edsync-amber/10 text-edsync-amber"
-                        : "border-edsync-emerald/30 bg-edsync-emerald/10 text-edsync-emerald"
-                    }`}>
-                      <div className="flex items-start gap-2">
-                        {summary.reviewCardIds.includes(item.id) ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                        <p>{item.explanation}</p>
-                      </div>
-                    </div>
-                  )}
-                </section>
-              ))}
-            </div>
-          </div>
-
-          <aside className="space-y-4">
-            <section className="group rounded-xl border border-edsync-border bg-edsync-card p-5" tabIndex={0} title={`${modeConfig.bestFor} ${modeConfig.output}`}>
-              <div className="mb-4 flex items-center gap-2">
-                <Clock3 className="h-5 w-5 text-edsync-blue" />
-                <h2 className="font-semibold">Timing</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Metric label="Target" value={`${Math.round(targetSeconds / 60)}m`} />
-                <Metric label="Elapsed" value={`${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, "0")}`} />
-              </div>
-              <label className="mt-4 block">
-                <span className="text-xs font-semibold text-edsync-subtle">Target minutes</span>
-                <input
-                  className="edsync-input mt-2"
-                  type="number"
-                  min={1}
-                  max={180}
-                  value={targetMinutes}
-                  onChange={(event) => setTargetMinutes(Math.max(1, Number(event.target.value || 1)))}
-                />
-              </label>
-              <div className="mt-4 rounded-lg border border-edsync-border bg-edsync-surface p-3 text-xs leading-5 text-edsync-subtle">
-                <p className="font-semibold text-edsync-text">{modeConfig.bestFor}</p>
-                <p className="edsync-hover-detail">{modeConfig.output}</p>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-edsync-amber" />
-                <h2 className="font-semibold">Summary</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Metric label="Score" value={`${liveSummary.percent}%`} />
-                <Metric label="Correct" value={`${liveSummary.correctItems}/${liveSummary.totalItems}`} />
-                <Metric label="Missed" value={String(liveSummary.missedItems)} />
-                <Metric label="Points" value={`${liveSummary.pointsEarned}/${liveSummary.pointsPossible}`} />
-              </div>
-              <button type="button" onClick={retryMissed} disabled={missed.length === 0} className="btn-primary mt-4 w-full justify-center py-2 text-sm disabled:opacity-50">
-                <Flame className="h-4 w-4" />
-                Retry missed
-              </button>
-              {summary && !saveError && (
-                <p className="mt-3 rounded-lg border border-edsync-emerald/30 bg-edsync-emerald/10 p-2 text-xs font-semibold text-edsync-emerald">
-                  Saved. Misses queued.
-                </p>
-              )}
-              {saveError && (
-                <p className="mt-3 rounded-lg border border-edsync-red/30 bg-edsync-red/10 p-2 text-xs font-semibold text-edsync-red">
-                  {saveError}
-                </p>
-              )}
-            </section>
-
-            <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-edsync-blue" />
-                <h2 className="font-semibold">Loop</h2>
-              </div>
-              <div className="space-y-2 text-sm text-edsync-subtle">
-                {modeConfig.loop.map((step, index) => (
-                  <div key={step} className="flex items-center gap-2 rounded-lg border border-edsync-border bg-edsync-surface p-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-edsync-blue/10 text-xs font-bold text-edsync-blue">{index + 1}</span>
-                    {step}
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-edsync-emerald" />
-                <h2 className="font-semibold">Reviews</h2>
-              </div>
-              <div className="space-y-2">
-                {reviewCards.length === 0 && (
-                  <p className="text-sm leading-6 text-edsync-subtle">No reviews yet.</p>
-                )}
-                {reviewCards.slice(0, 5).map((card) => (
-                  <div key={card.id} className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold">{card.prompt}</p>
-                      {card.mode_label && (
-                        <span className="rounded-full bg-edsync-blue/10 px-2 py-0.5 text-[11px] font-bold text-edsync-blue">
-                          {card.mode_label}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-xs capitalize text-edsync-subtle">{card.mastery}</p>
-                    {card.loop.length > 0 && (
-                      <p className="mt-2 line-clamp-1 text-[11px] font-semibold text-edsync-blue">
-                        {card.loop.join(" -> ")}
-                      </p>
-                    )}
-                    {card.next_action && (
-                      <p className="mt-1 line-clamp-2 text-xs text-edsync-subtle">{card.next_action}</p>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "again")}>
-                        Again
-                      </button>
-                      <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "almost")}>
-                        Almost
-                      </button>
-                      <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => updateReviewMastery(card.id, "mastered")}>
-                        Mastered
-                      </button>
-                      <button type="button" className="rounded-lg p-1 text-edsync-red hover:bg-edsync-red/10" onClick={() => removeReviewCard(card.id)} aria-label="Delete review card">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </aside>
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3">
-      <p className="text-xs text-edsync-subtle">{label}</p>
-      <p className="mt-1 font-display text-2xl font-bold">{value}</p>
-    </div>
-  );
+  return <main className="mx-auto w-full max-w-5xl space-y-4 px-4 py-5 text-edsync-text sm:px-6">
+    <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wider text-edsync-blue">Learn by doing</p><h1 className="font-display text-2xl font-bold">Practice</h1></div><button type="button" className="btn-secondary" onClick={() => setCreatorOpen((open) => !open)}><Sparkles className="h-4 w-4" />Create practice</button></header>
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_230px]"><div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Practice mode">{([ ["quiz", BookOpen], ["flashcards", Layers3], ["sprint", Zap] ] as const).map(([value, Icon]) => <button key={value} type="button" role="tab" aria-selected={mode === value} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold capitalize ${mode === value ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue" : "border-edsync-border bg-edsync-card text-edsync-subtle"}`} onClick={() => { setMode(value); setSummary(null); setElapsed(0); setRunning(false); }}><Icon className="h-4 w-4" />{value}</button>)}</div>
+      {creatorOpen && <section className="rounded-2xl border border-edsync-border bg-edsync-card p-3 sm:p-4"><div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-semibold">From a topic, notes, or file</h2><button type="button" className="text-xs text-edsync-subtle" onClick={() => setCreatorOpen(false)}>Close</button></div><OutlineComposer useLabel="Use for practice" compact onUse={(next) => applyOutline(next)} /></section>}
+      <section className="flex flex-wrap items-center gap-2 rounded-xl border border-edsync-border bg-edsync-card p-3"><label className="min-w-0 flex-1 text-xs text-edsync-subtle">Or use a lesson<select aria-label="Choose lesson" className="edsync-input mt-1 w-full" value={selectedLesson} onChange={(event) => void loadLesson(event.target.value)}><option value="">Choose an accessible lesson</option>{lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></label>{outline && <span className="max-w-44 truncate text-xs text-edsync-subtle">{outline.title}</span>}</section>
+      {!outline && !creatorOpen && <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center"><Sparkles className="mx-auto mb-3 h-8 w-8 text-edsync-blue" /><h2 className="font-semibold">Start with something to learn</h2><p className="mt-1 text-sm text-edsync-subtle">Choose a lesson or create practice from a topic.</p></div>}
+      {outline && mode !== "flashcards" && <div className="space-y-2">{items.length === 0 ? <p className="rounded-xl border border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle">No answerable questions yet. Add notes with facts or generate a richer topic outline.</p> : items.map((item, index) => <section key={item.id} className="rounded-xl border border-edsync-border bg-edsync-card p-4"><div className="mb-2 flex justify-between text-xs text-edsync-subtle"><span>Question {index + 1}</span><span>{item.points ?? 1} point</span></div><h2 className="font-semibold">{item.prompt}</h2>{typeof item.answer === "boolean" ? <div className="mt-3 flex gap-2">{[true, false].map((value) => <button key={String(value)} type="button" onClick={() => answer(item.id, value)} className={`btn-secondary ${item.response === value ? "border-edsync-blue text-edsync-blue" : ""}`}>{value ? "True" : "False"}</button>)}</div> : "choices" in item && Array.isArray(item.choices) && item.choices.length > 0 ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{item.choices.map((choice) => <button key={choice} type="button" className={`rounded-lg border p-2 text-left text-sm ${item.response === choice ? "border-edsync-blue bg-edsync-blue/10" : "border-edsync-border"}`} onClick={() => answer(item.id, choice)}>{choice}</button>)}</div> : <input className="edsync-input mt-3 w-full" aria-label={`Answer question ${index + 1}`} value={typeof item.response === "string" ? item.response : ""} onChange={(event) => answer(item.id, event.target.value)} placeholder="Your answer" />}{summary && <p className={`mt-3 text-sm ${isPracticeItemCorrect(item) ? "text-edsync-emerald" : "text-edsync-red"}`}>{isPracticeItemCorrect(item) ? "Correct" : `Review: ${Array.isArray(item.answer) ? item.answer.join(", ") : String(item.answer)}`}{item.explanation ? ` · ${item.explanation}` : ""}</p>}</section>)}</div>}
+      {outline && mode === "flashcards" && (cards.length ? <section className="space-y-3 rounded-2xl border border-edsync-border bg-edsync-card p-4"><div className="flex justify-between text-xs text-edsync-subtle"><span>Card {cardIndex + 1} of {cards.length}</span><span>{flipped ? "Answer" : "Prompt"}</span></div><button type="button" className="flex min-h-44 w-full flex-col items-center justify-center rounded-xl bg-edsync-surface p-6 text-center" onClick={() => setFlipped((value) => !value)}><span className="font-display text-xl font-semibold">{flipped ? cards[cardIndex]?.back : cards[cardIndex]?.front}</span><span className="mt-3 text-xs text-edsync-subtle">Tap to flip</span></button><div className="flex justify-between gap-2"><button type="button" className="btn-secondary" disabled={cardIndex === 0} onClick={() => { setCardIndex((index) => index - 1); setFlipped(false); }}><ChevronLeft className="h-4 w-4" />Previous</button><button type="button" className="btn-secondary" onClick={() => gradeFlashcard(false)}>Again</button><button type="button" className="btn-primary" onClick={() => gradeFlashcard(true)}><Check className="h-4 w-4" />Know it</button><button type="button" className="btn-secondary" disabled={cardIndex >= cards.length - 1} onClick={() => { setCardIndex((index) => index + 1); setFlipped(false); }}><ChevronRight className="h-4 w-4" />Next</button></div></section> : <p className="rounded-xl border border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle">No flashcards yet. Add terms or questions to your source.</p>)}
+      {outline && <div className="flex flex-wrap items-center gap-2"><button type="button" className="btn-primary" disabled={pending || !activeItems.length} onClick={() => void submit()}>{pending ? "Saving…" : "Finish & save"}</button>{summary && summary.missedItems > 0 && <button type="button" className="btn-secondary" onClick={retry}><RotateCcw className="h-4 w-4" />Retry missed</button>}{mode === "sprint" && <button type="button" className="btn-secondary" onClick={() => running ? setRunning(false) : start()}><Clock3 className="h-4 w-4" />{running ? "Pause" : elapsed ? "Resume" : "Start timer"}</button>}</div>}
+      {error && <p role="alert" className="rounded-xl bg-edsync-red/10 p-3 text-sm text-edsync-red">{error}</p>}
+    </div><aside className="space-y-3"><section className="rounded-xl border border-edsync-border bg-edsync-card p-4"><h2 className="text-sm font-semibold">Progress</h2><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><div><p className="text-xs text-edsync-subtle">Answered</p><p className="font-display text-xl font-bold">{activeItems.filter((item) => item.response !== undefined).length}/{activeItems.length}</p></div><div><p className="text-xs text-edsync-subtle">Time</p><p className="font-display text-xl font-bold">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</p></div></div>{summary && <div className="mt-3 rounded-lg bg-edsync-blue/10 p-3 text-sm"><p className="font-bold">{summary.percent}% score</p><p>{summary.correctItems} correct · {summary.missedItems} to retry</p></div>}{!summary && activeItems.length > 0 && <p className="mt-3 text-xs text-edsync-subtle">Current answers: {liveSummary.correctItems} correct</p>}</section><section className="rounded-xl border border-edsync-border bg-edsync-card p-4"><h2 className="text-sm font-semibold">Review queue</h2><p className="mt-1 text-xs text-edsync-subtle">Missed answers become review cards.</p><div className="mt-3 space-y-2">{reviews.length ? reviews.slice(0, 3).map((review) => <div key={review.id} className="rounded-lg bg-edsync-surface p-2 text-xs"><p className="line-clamp-2 font-medium">{review.prompt}</p><p className="mt-1 capitalize text-edsync-subtle">{review.mastery}</p></div>) : <p className="text-xs text-edsync-subtle">Nothing to review yet.</p>}</div></section></aside></div>
+  </main>;
 }
