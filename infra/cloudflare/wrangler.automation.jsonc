@@ -1,0 +1,32 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "edsync-automation",
+  "main": "./workers/automation.ts",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "EDSYNC_DB",
+      "database_name": "edsync-prod-d1",
+      "database_id": "cfa252cc-750f-4aaa-8e3a-624cbe56e6bd"
+    }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "edsync-automation-prod",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "retry_delay": 60
+      }
+    ]
+  },
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
