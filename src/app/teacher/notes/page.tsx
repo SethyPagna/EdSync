@@ -1,51 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import toast from "react-hot-toast";
-import {
-  Archive,
-  Copy,
-  Edit3,
-  ExternalLink,
-  Eye,
-  Grid2X2,
-  ImageIcon,
-  Link2,
-  List,
-  LockKeyhole,
-  Palette,
-  Plus,
-  Save,
-  Send,
-  StickyNote,
-  Trash2,
-  UploadCloud,
-  Video,
-  X,
-} from "lucide-react";
-import {
-  archiveStudioItem,
-  listStudioItems,
-  saveStudioItem,
-  updateStudioItem,
-  type StudioServerItem,
-} from "@/lib/studio/api";
-import {
-  NOTE_DESIGN_PRESETS,
-  noteDesignPresetById,
-  type NoteDesignPresetId,
-} from "@/lib/learning/creator-library";
-import { classifySafeMediaUrl, type SafeMediaUrl } from "@/lib/security/media";
+import { Archive, Copy, ExternalLink, Grid2X2, List, Paperclip, Plus, StickyNote, Trash2 } from "lucide-react";
+import { Badge, Button, EmptyState, Menu, PageHeader, SearchInput, Segmented, Skeleton, useConfirm } from "@/components/ui";
+import { archiveStudioItem, listStudioItems, saveStudioItem, updateStudioItem, type StudioServerItem } from "@/lib/studio/api";
+import { NOTE_DESIGN_PRESETS, noteDesignPresetById, type NoteDesignPresetId } from "@/lib/learning/creator-library";
+import { classifySafeMediaUrl } from "@/lib/security/media";
 import { readViewMode, writeViewMode, type ViewMode } from "@/lib/ui/view-preferences";
 
-type StudentRow = {
-  id: string;
-  full_name: string | null;
-  email: string;
-  class_id: string;
-  class_name: string;
-};
-type Note = {
+type StudentRow = { id: string; full_name: string | null; email: string; class_id: string; class_name: string };
+type LearnerNote = {
   id: string;
   student_id: string;
   class_id: string | null;
@@ -57,618 +22,371 @@ type Note = {
   student_email: string;
   created_at: string;
 };
-type PersonalDraft = {
-  title: string;
-  body: string;
-  mediaUrl: string;
-  design: NoteDesignPresetId;
-};
+type PersonalDraft = { title: string; body: string; mediaUrl: string; design: NoteDesignPresetId };
+type LearnerDraft = { studentKey: string; title: string; body: string; visibility: string; priority: string };
+type Tab = "personal" | "learners";
+type UploadResponse = { data: { publicUrl: string; assetType: string } | null; error: { message: string } | string | null };
 
-type UploadResponse = {
-  data: {
-    publicUrl: string;
-    assetType: string;
-    scanStatus: string;
-  } | null;
-  error: { message: string } | null;
-};
-
-const emptyPersonalDraft: PersonalDraft = {
-  title: "",
-  body: "",
-  mediaUrl: "",
-  design: "clean",
-};
-
-const TEACHER_NOTES_VIEW_KEY = "edsync-teacher-notes-view-mode";
-
+const tabs: Array<{ value: Tab; label: string }> = [{ value: "personal", label: "My notes" }, { value: "learners", label: "Learner notes" }];
 const designOptions = NOTE_DESIGN_PRESETS.filter((option) => ["clean", "planning", "feedback", "resource"].includes(option.id));
+const VIEW_KEY = "edsync-teacher-notes-view-mode";
+const emptyPersonal: PersonalDraft = { title: "", body: "", mediaUrl: "", design: "clean" };
+const emptyLearner: LearnerDraft = { studentKey: "", title: "", body: "", visibility: "student", priority: "normal" };
 
-function visibilityIcon(value: string) {
-  return value === "teacher" ? LockKeyhole : Eye;
-}
-
-function getPersonalMediaUrl(item: StudioServerItem) {
-  if (typeof item.metadata.media !== "object" || !item.metadata.media) return "";
-  return String((item.metadata.media as { url?: unknown }).url ?? "");
-}
-
-function getPersonalDesign(item: StudioServerItem): PersonalDraft["design"] {
-  return noteDesignPresetById(item.metadata.design, "clean").id;
-}
-
-function personalNoteText(item: StudioServerItem) {
+function personalText(item: StudioServerItem) {
   return item.plainText || (typeof item.content.body === "string" ? item.content.body : "");
 }
 
-function mediaIcon(media: SafeMediaUrl | null) {
-  if (media?.kind === "image") return ImageIcon;
-  if (media?.kind === "video") return Video;
-  return Link2;
+function personalMedia(item: StudioServerItem) {
+  const media = item.metadata.media;
+  return media && typeof media === "object" && "url" in media ? String(media.url || "") : "";
+}
+
+function errorText(value: unknown, fallback: string) {
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message;
+  if (value && typeof value === "object" && "message" in value && typeof value.message === "string") return value.message;
+  return fallback;
+}
+
+async function readData(response: Response) {
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.error || !payload) throw new Error(errorText(payload?.error, "Request failed."));
+  return payload.data;
+}
+
+function dateLabel(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Recently" : date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 export default function TeacherNotesPage() {
+  const confirm = useConfirm();
+  const [tab, setTab] = useState<Tab>("personal");
   const [students, setStudents] = useState<StudentRow[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [learnerNotes, setLearnerNotes] = useState<LearnerNote[]>([]);
   const [personalNotes, setPersonalNotes] = useState<StudioServerItem[]>([]);
-  const [personalOpen, setPersonalOpen] = useState(false);
-  const [personalDraft, setPersonalDraft] = useState<PersonalDraft>(emptyPersonalDraft);
-  const [editingPersonalId, setEditingPersonalId] = useState<string | null>(null);
-  const [savingPersonal, setSavingPersonal] = useState(false);
-  const [uploadingPersonal, setUploadingPersonal] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => readViewMode(TEACHER_NOTES_VIEW_KEY));
-  const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState({
-    studentId: "",
-    title: "",
-    body: "",
-    visibility: "student",
-    priority: "normal",
-  });
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedPersonalId, setSelectedPersonalId] = useState<string | null>(null);
+  const [selectedLearnerId, setSelectedLearnerId] = useState<string | null>(null);
+  const [personalDraft, setPersonalDraft] = useState<PersonalDraft>(emptyPersonal);
+  const [learnerDraft, setLearnerDraft] = useState<LearnerDraft>(emptyLearner);
+  const [editing, setEditing] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [personalError, setPersonalError] = useState("");
+  const [learnerError, setLearnerError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const load = () => {
-    fetch("/api/teacher/roster", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => setStudents(payload.data?.students ?? []));
-    fetch("/api/notes", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => setNotes(payload.data ?? []));
-    listStudioItems("note")
-      .then((items) => setPersonalNotes(items.filter((item) => item.metadata.source === "teacher_notes" || item.metadata.source === "student_notes" || !item.metadata.source)))
-      .catch(() => setPersonalNotes([]));
-  };
+  const selectedPersonal = personalNotes.find((item) => item.id === selectedPersonalId) || null;
+  const selectedLearner = learnerNotes.find((item) => item.id === selectedLearnerId) || null;
+  const safeMedia = useMemo(() => classifySafeMediaUrl(personalDraft.mediaUrl), [personalDraft.mediaUrl]);
+  const visiblePersonal = personalNotes.filter((item) => (item.title + " " + personalText(item)).toLowerCase().includes(search.trim().toLowerCase()));
+  const visibleLearner = learnerNotes.filter((item) => (item.title + " " + item.body + " " + (item.student_name || item.student_email)).toLowerCase().includes(search.trim().toLowerCase()));
 
-  useEffect(() => {
-    load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [personal, feedback, roster] = await Promise.allSettled([
+      listStudioItems("note"),
+      fetch("/api/notes", { cache: "no-store" }).then(readData),
+      fetch("/api/teacher/roster", { cache: "no-store" }).then(readData),
+    ]);
+    if (personal.status === "fulfilled") {
+      const items = personal.value.filter((item) => {
+        const source = item.metadata.source;
+        return source === "teacher_notes" || source === "student_notes" || source === undefined || source === null;
+      });
+      setPersonalNotes(items);
+      setSelectedPersonalId((current) => current && items.some((item) => item.id === current) ? current : items[0]?.id || null);
+      setPersonalError("");
+    } else {
+      setPersonalError(errorText(personal.reason, "Creator notes could not load."));
+    }
+    if (feedback.status === "fulfilled") {
+      const items = (feedback.value || []) as LearnerNote[];
+      setLearnerNotes(items);
+      setSelectedLearnerId((current) => current && items.some((item) => item.id === current) ? current : items[0]?.id || null);
+      setLearnerError("");
+    } else {
+      setLearnerError(errorText(feedback.reason, "Learner notes could not load."));
+    }
+    if (roster.status === "fulfilled") setStudents((roster.value?.students || []) as StudentRow[]);
+    else setLearnerError(errorText(roster.reason, "Learner roster could not load."));
+    setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setViewMode(readViewMode(VIEW_KEY, "list"));
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const guardChanges = async () => {
+    if (!editing || !dirty) return true;
+    return confirm({ title: "Discard unsaved changes?", body: "Changes in the open note will be lost.", confirmLabel: "Discard", danger: true });
+  };
+
+  const changeTab = async (next: Tab) => {
+    if (next === tab || !await guardChanges()) return;
+    setTab(next);
+    setEditing(false);
+    setCreating(false);
+    setDirty(false);
+    setSearch("");
+    setActionError("");
+  };
+
+  const selectPersonal = async (item: StudioServerItem) => {
+    if (!await guardChanges()) return;
+    setSelectedPersonalId(item.id);
+    setEditing(false);
+    setCreating(false);
+    setDirty(false);
+    setActionError("");
+  };
+
+  const selectLearner = async (item: LearnerNote) => {
+    if (!await guardChanges()) return;
+    setSelectedLearnerId(item.id);
+    setEditing(false);
+    setCreating(false);
+    setDirty(false);
+    setActionError("");
+  };
+
+  const newNote = async () => {
+    if (!await guardChanges()) return;
+    setCreating(true);
+    setEditing(true);
+    setDirty(false);
+    setActionError("");
+    if (tab === "personal") setPersonalDraft(emptyPersonal);
+    else setLearnerDraft(emptyLearner);
+  };
+
+  const editNote = () => {
+    setCreating(false);
+    setEditing(true);
+    setDirty(false);
+    setActionError("");
+    if (tab === "personal" && selectedPersonal) {
+      setPersonalDraft({
+        title: selectedPersonal.title,
+        body: personalText(selectedPersonal),
+        mediaUrl: personalMedia(selectedPersonal),
+        design: noteDesignPresetById(selectedPersonal.metadata.design, "clean").id,
+      });
+    }
+    if (tab === "learners" && selectedLearner) {
+      const row = students.find((item) => item.id === selectedLearner.student_id && item.class_id === selectedLearner.class_id);
+      setLearnerDraft({
+        studentKey: row ? row.class_id + ":" + row.id : "",
+        title: selectedLearner.title,
+        body: selectedLearner.body,
+        visibility: selectedLearner.visibility,
+        priority: selectedLearner.priority,
+      });
+    }
+  };
+
+  const changePersonal = <K extends keyof PersonalDraft>(key: K, value: PersonalDraft[K]) => {
+    setPersonalDraft((current) => ({ ...current, [key]: value }));
+    setDirty(true);
+    setActionError("");
+  };
+  const changeLearner = <K extends keyof LearnerDraft>(key: K, value: LearnerDraft[K]) => {
+    setLearnerDraft((current) => ({ ...current, [key]: value }));
+    setDirty(true);
+    setActionError("");
+  };
+
+  const uploadMedia = async (file: File | null) => {
+    if (!file || uploading) return;
+    setUploading(true);
+    setActionError("");
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("bucket", "teacher-notes");
+      form.set("path", Date.now() + "-" + file.name);
+      const response = await fetch("/api/storage/upload", { method: "POST", body: form });
+      const payload = await response.json().catch(() => null) as UploadResponse | null;
+      if (!response.ok || payload?.error || !payload?.data?.publicUrl) throw new Error(errorText(payload?.error, "Upload failed."));
+      changePersonal("mediaUrl", payload.data.publicUrl);
+      toast.success("Media uploaded");
+    } catch (cause) {
+      setActionError(errorText(cause, "Upload failed."));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const savePersonal = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving) return;
+    if (!personalDraft.title.trim() || !personalDraft.body.trim()) return setActionError("Add a title and note.");
+    if (personalDraft.mediaUrl.trim() && !safeMedia) return setActionError("Use a safe HTTPS image, video, or link.");
+    setSaving(true);
+    setActionError("");
+    try {
+      const content = {
+        type: "teacher_personal_note",
+        body: personalDraft.body.trim(),
+        blocks: [{ type: "paragraph", text: personalDraft.body.trim() }, ...(safeMedia ? [{ type: safeMedia.kind, url: safeMedia.url, embedUrl: safeMedia.embedUrl }] : [])],
+      };
+      const metadata = { design: personalDraft.design, media: safeMedia, source: "teacher_notes" };
+      const saved = creating
+        ? await saveStudioItem({ kind: "note", title: personalDraft.title.trim(), plainText: personalDraft.body.trim(), status: "draft", content, metadata })
+        : await updateStudioItem({ id: selectedPersonalId || "", title: personalDraft.title.trim(), plainText: personalDraft.body.trim(), status: "draft", content, metadata });
+      setPersonalNotes((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+      setSelectedPersonalId(saved.id);
+      setEditing(false);
+      setCreating(false);
+      setDirty(false);
+      toast.success("Note saved");
+    } catch (cause) {
+      setActionError(errorText(cause, "Note was not saved."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveLearner = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving) return;
+    const student = students.find((item) => item.class_id + ":" + item.id === learnerDraft.studentKey);
+    if (creating && !student) return setActionError("Choose a learner.");
+    setSaving(true);
+    setActionError("");
+    try {
+      const saved = await fetch("/api/notes", {
+        method: creating ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: creating ? undefined : selectedLearnerId,
+          studentId: creating ? student?.id : selectedLearner?.student_id,
+          classId: creating ? student?.class_id : undefined,
+          title: learnerDraft.title.trim(),
+          body: learnerDraft.body.trim(),
+          visibility: learnerDraft.visibility,
+          priority: learnerDraft.priority,
+        }),
+      }).then(readData);
+      toast.success(creating ? "Learner note sent" : "Learner note updated");
+      setEditing(false);
+      setCreating(false);
+      setDirty(false);
+      await load();
+      if (typeof saved?.id === "string") setSelectedLearnerId(saved.id);
+    } catch (cause) {
+      setActionError(errorText(cause, "Learner note was not saved."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const duplicatePersonal = async (item: StudioServerItem) => {
+    setActionError("");
+    try {
+      const copy = await saveStudioItem({
+        kind: "note", title: item.title + " copy", plainText: personalText(item), status: "draft",
+        content: item.content, metadata: { ...item.metadata, duplicatedFrom: item.id, source: "teacher_notes" },
+      });
+      setPersonalNotes((current) => [copy, ...current]);
+      setSelectedPersonalId(copy.id);
+      toast.success("Note duplicated");
+    } catch (cause) {
+      setActionError(errorText(cause, "Note was not duplicated."));
+    }
+  };
+
+  const archivePersonal = async (item: StudioServerItem) => {
+    if (!await confirm({ title: "Archive " + item.title + "?", body: "The note will leave this workspace.", confirmLabel: "Archive", danger: true })) return;
+    setActionError("");
+    try {
+      await archiveStudioItem(item.id);
+      const remaining = personalNotes.filter((note) => note.id !== item.id);
+      setPersonalNotes(remaining);
+      setSelectedPersonalId(remaining[0]?.id || null);
+      setEditing(false);
+      setCreating(false);
+      setDirty(false);
+      toast.success("Note archived");
+    } catch (cause) {
+      setActionError(errorText(cause, "Note was not archived."));
+    }
+  };
+
+  const deleteLearner = async (item: LearnerNote) => {
+    if (!await confirm({ title: "Delete " + item.title + "?", body: "This removes it for the learner too.", confirmLabel: "Delete", danger: true })) return;
+    setActionError("");
+    try {
+      await fetch("/api/notes?id=" + encodeURIComponent(item.id), { method: "DELETE" }).then(readData);
+      const remaining = learnerNotes.filter((note) => note.id !== item.id);
+      setLearnerNotes(remaining);
+      setSelectedLearnerId(remaining[0]?.id || null);
+      toast.success("Learner note deleted");
+    } catch (cause) {
+      setActionError(errorText(cause, "Learner note was not deleted."));
+    }
+  };
+
+  const selectedMedia = selectedPersonal ? classifySafeMediaUrl(personalMedia(selectedPersonal)) : null;
   const changeViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    writeViewMode(TEACHER_NOTES_VIEW_KEY, mode);
-  };
-
-  const visibleCount = useMemo(() => notes.filter((note) => note.visibility !== "teacher").length, [notes]);
-  const safePersonalMedia = useMemo(() => classifySafeMediaUrl(personalDraft.mediaUrl), [personalDraft.mediaUrl]);
-  const selectedPersonalDesign = designOptions.find((option) => option.id === personalDraft.design) ?? designOptions[0];
-
-  const resetForm = () => {
-    setForm({ studentId: "", title: "", body: "", visibility: "student", priority: "normal" });
-    setEditingId(null);
-    setFormOpen(false);
-  };
-
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const student = students.find((item) => item.id === form.studentId);
-    const method = editingId ? "PATCH" : "POST";
-    const response = await fetch("/api/notes", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        id: editingId ?? undefined,
-        classId: editingId ? undefined : student?.class_id ?? null,
-      }),
-    });
-    if (!response.ok) {
-      toast.error("Note was not saved.");
-      return;
-    }
-    toast.success(editingId ? "Note updated." : "Note saved.");
-    resetForm();
-    load();
-  };
-
-  const edit = (note: Note) => {
-    setForm({
-      studentId: note.student_id,
-      title: note.title,
-      body: note.body,
-      visibility: note.visibility,
-      priority: note.priority,
-    });
-    setEditingId(note.id);
-    setFormOpen(true);
-  };
-
-  const remove = async (note: Note) => {
-    const confirmed = window.confirm(`Delete "${note.title}"? This removes it for the teacher and student.`);
-    if (!confirmed) return;
-    const response = await fetch(`/api/notes?id=${encodeURIComponent(note.id)}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      toast.error("Note was not deleted.");
-      return;
-    }
-    toast.success("Note deleted.");
-    load();
-  };
-
-  const resetPersonal = () => {
-    setPersonalDraft(emptyPersonalDraft);
-    setEditingPersonalId(null);
-    setPersonalOpen(false);
-  };
-
-  const buildPersonalPayload = (media: SafeMediaUrl | null) => ({
-    content: {
-      type: "teacher_personal_note",
-      body: personalDraft.body,
-      blocks: [
-        { type: "paragraph", text: personalDraft.body },
-        ...(media ? [{ type: media.kind, url: media.url, embedUrl: media.embedUrl }] : []),
-      ],
-    },
-    metadata: {
-      design: personalDraft.design,
-      media,
-      source: "teacher_notes",
-    },
-  });
-
-  const savePersonalNote = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!personalDraft.title.trim() || !personalDraft.body.trim()) {
-      toast.error("Add a title and note body first.");
-      return;
-    }
-    if (personalDraft.mediaUrl.trim() && !safePersonalMedia) {
-      toast.error("Use a safe HTTPS image, video, YouTube, Vimeo, or normal link.");
-      return;
-    }
-    setSavingPersonal(true);
-    try {
-      const payload = buildPersonalPayload(safePersonalMedia);
-      if (editingPersonalId) {
-        await updateStudioItem({
-          id: editingPersonalId,
-          title: personalDraft.title,
-          plainText: personalDraft.body,
-          status: "draft",
-          ...payload,
-        });
-      } else {
-        await saveStudioItem({
-          kind: "note",
-          title: personalDraft.title,
-          plainText: personalDraft.body,
-          status: "draft",
-          ...payload,
-        });
-      }
-      toast.success(editingPersonalId ? "Creator note updated." : "Creator note saved.");
-      resetPersonal();
-      load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Creator note was not saved.");
-    } finally {
-      setSavingPersonal(false);
-    }
-  };
-
-  const uploadPersonalMedia = async (file: File | null) => {
-    if (!file) return;
-    setUploadingPersonal(true);
-    try {
-      const formData = new FormData();
-      formData.set("file", file);
-      formData.set("bucket", "teacher-notes");
-      formData.set("path", `${Date.now()}-${file.name}`);
-      const response = await fetch("/api/storage/upload", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-      const payload = (await response.json().catch(() => null)) as UploadResponse | null;
-      if (!response.ok || payload?.error || !payload?.data?.publicUrl) {
-        throw new Error(payload?.error?.message || "Upload failed.");
-      }
-      setPersonalDraft((current) => ({ ...current, mediaUrl: payload.data?.publicUrl ?? current.mediaUrl }));
-      toast.success(`${payload.data.assetType} uploaded and scanned.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed.");
-    } finally {
-      setUploadingPersonal(false);
-    }
-  };
-
-  const editPersonal = (note: StudioServerItem) => {
-    setPersonalDraft({
-      title: note.title,
-      body: personalNoteText(note),
-      mediaUrl: getPersonalMediaUrl(note),
-      design: getPersonalDesign(note),
-    });
-    setEditingPersonalId(note.id);
-    setPersonalOpen(true);
-  };
-
-  const duplicatePersonal = async (note: StudioServerItem) => {
-    const media = classifySafeMediaUrl(getPersonalMediaUrl(note));
-    try {
-      await saveStudioItem({
-        kind: "note",
-        title: `${note.title} copy`,
-        plainText: personalNoteText(note),
-        status: "draft",
-        content: note.content,
-        metadata: {
-          ...note.metadata,
-          media,
-          duplicatedFrom: note.id,
-          source: "teacher_notes",
-        },
-      });
-      toast.success("Creator note duplicated.");
-      load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Creator note was not duplicated.");
-    }
-  };
-
-  const archivePersonal = async (note: StudioServerItem) => {
-    const confirmed = window.confirm(`Archive "${note.title}"?`);
-    if (!confirmed) return;
-    try {
-      await archiveStudioItem(note.id);
-      toast.success("Creator note archived.");
-      load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Creator note was not archived.");
-    }
+    writeViewMode(VIEW_KEY, mode);
   };
 
   return (
-    <div className="page-shell max-w-6xl space-y-5">
-      <section className="premium-panel rounded-2xl p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-              Notes workspace
-            </p>
-            <h1 className="mt-1 font-display text-3xl font-bold">Notes</h1>
-            <p className="mt-1 text-sm text-edsync-subtle">
-              {personalNotes.length} creator drafts, {notes.length} learner notes, {visibleCount} shared.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formOpen && (
-              <button type="button" onClick={resetForm} className="btn-secondary justify-center">
-                <X className="h-4 w-4" />
-                Cancel
-              </button>
-            )}
-            <button type="button" onClick={() => setFormOpen(true)} className="btn-primary justify-center">
-              <Plus className="h-4 w-4" />
-              Learner note
-            </button>
-            <button type="button" onClick={() => setPersonalOpen(true)} className="btn-secondary justify-center">
-              <StickyNote className="h-4 w-4" />
-              Creator note
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {personalOpen && (
-        <form onSubmit={savePersonalNote} className="premium-surface rounded-2xl p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-lg font-bold">
-                {editingPersonalId ? "Edit creator note" : "New creator note"}
-              </h2>
-              <p className="text-sm text-edsync-subtle">
-                Save lesson ideas, references, media, links, and planning notes as editable drafts.
-              </p>
-            </div>
-            <Palette className="h-5 w-5 text-edsync-amber" />
-          </div>
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-            <div className="grid gap-3">
-              <input
-                className="edsync-input"
-                value={personalDraft.title}
-                onChange={(event) => setPersonalDraft({ ...personalDraft, title: event.target.value })}
-                placeholder="Creator note title"
-                required
-              />
-              <textarea
-                className="edsync-input min-h-32"
-                value={personalDraft.body}
-                onChange={(event) => setPersonalDraft({ ...personalDraft, body: event.target.value })}
-                placeholder="Plan, reference, link, rubric idea, media note, or follow-up..."
-                required
-              />
-              <input
-                className="edsync-input"
-                value={personalDraft.mediaUrl}
-                onChange={(event) => setPersonalDraft({ ...personalDraft, mediaUrl: event.target.value })}
-                placeholder="Optional HTTPS image, video, YouTube, Vimeo, or reference link"
-              />
-              <label className="flex flex-col gap-2 rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-4 text-sm text-edsync-subtle sm:flex-row sm:items-center sm:justify-between">
-                <span>
-                  <span className="font-semibold text-edsync-text">Upload media</span>
-                  <span className="block text-xs">Attach safe references, examples, videos, PDFs, or source docs.</span>
-                </span>
-                <span className="btn-secondary w-fit px-3 py-2 text-sm">
-                  <UploadCloud className="h-4 w-4" />
-                  {uploadingPersonal ? "Uploading..." : "Choose file"}
-                </span>
-                <input
-                  type="file"
-                  className="sr-only"
-                  disabled={uploadingPersonal}
-                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md,.csv"
-                  onChange={(event) => {
-                    void uploadPersonalMedia(event.target.files?.[0] ?? null);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
-            </div>
-            <aside className={`rounded-2xl border p-4 ${selectedPersonalDesign.className}`}>
-              <p className="text-xs font-bold uppercase tracking-wide text-edsync-subtle">Design</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {designOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setPersonalDraft({ ...personalDraft, design: option.id })}
-                    className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
-                      personalDraft.design === option.id
-                        ? "border-edsync-amber bg-edsync-amber text-white"
-                        : "border-edsync-border bg-edsync-surface text-edsync-subtle"
-                    }`}
-                    title={option.description}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-4 rounded-xl border border-edsync-border bg-edsync-card p-3">
-                <p className="font-display text-lg font-bold">{personalDraft.title || "Preview title"}</p>
-                <p className="mt-2 line-clamp-4 text-sm leading-6 text-edsync-subtle">
-                  {personalDraft.body || "Preview"}
-                </p>
-                {personalDraft.mediaUrl && (
-                  <p className={`mt-3 text-xs font-semibold ${safePersonalMedia ? "text-edsync-emerald" : "text-rose-600"}`}>
-                    {safePersonalMedia ? `Safe ${safePersonalMedia.kind} detected` : "Unsupported or unsafe URL"}
-                  </p>
-                )}
-              </div>
-              <button type="submit" disabled={savingPersonal} className="btn-primary mt-4 w-full justify-center">
-                <Save className="h-4 w-4" />
-                {savingPersonal ? "Saving..." : "Save"}
-              </button>
-            </aside>
-          </div>
-        </form>
-      )}
-
-      {formOpen && (
-        <form onSubmit={save} className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-          <div className="group mb-3">
-            <h2 className="font-display text-lg font-bold">{editingId ? "Edit feedback note" : "New feedback note"}</h2>
-            <p className="edsync-hover-detail">
-              Shared notes appear in the learner's personal notes workspace when visibility allows it.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-4">
-            <select
-              className="edsync-input"
-              value={form.studentId}
-              onChange={(event) => setForm({ ...form, studentId: event.target.value })}
-              disabled={Boolean(editingId)}
-              required
-            >
-              <option value="">Learner</option>
-              {students.map((student) => (
-                <option key={`${student.class_id}-${student.id}`} value={student.id}>
-                  {student.full_name || student.email} / {student.class_name}
-                </option>
-              ))}
-            </select>
-            <input
-              className="edsync-input"
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-              placeholder="Title"
-              required
-            />
-            <select
-              className="edsync-input"
-              value={form.visibility}
-              onChange={(event) => setForm({ ...form, visibility: event.target.value })}
-            >
-              <option value="student">Learner visible</option>
-              <option value="teacher">Creator only</option>
-              <option value="guardian">Learner/guardian</option>
-            </select>
-            <select
-              className="edsync-input"
-              value={form.priority}
-              onChange={(event) => setForm({ ...form, priority: event.target.value })}
-            >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-            </select>
-            <textarea
-              className="edsync-input min-h-24 md:col-span-3"
-              value={form.body}
-              onChange={(event) => setForm({ ...form, body: event.target.value })}
-              placeholder="Note..."
-              required
-            />
-            <button className="btn-primary justify-center" type="submit">
-              <Send className="h-4 w-4" />
-              {editingId ? "Update" : "Save"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="group">
-              <h2 className="font-display text-xl font-bold">Creator notes</h2>
-              <p className="edsync-hover-detail">Planning notes, links, media, and lesson ideas.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <div className="flex rounded-xl border border-edsync-border bg-edsync-card p-1">
-                {[
-                  { mode: "grid" as const, label: "Grid", icon: Grid2X2 },
-                  { mode: "list" as const, label: "List", icon: List },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.mode}
-                      type="button"
-                      onClick={() => changeViewMode(item.mode)}
-                      className={`rounded-lg px-2 py-1.5 text-xs font-bold transition ${
-                        viewMode === item.mode ? "bg-edsync-amber text-white" : "text-edsync-subtle hover:text-edsync-text"
-                      }`}
-                      aria-label={`${item.label} view`}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" onClick={() => setPersonalOpen(true)} className="btn-secondary px-3 py-2 text-sm">
-                New note
-              </button>
-            </div>
-          </div>
-          {personalNotes.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-edsync-border bg-edsync-card p-8 text-center">
-              <StickyNote className="mx-auto mb-3 h-8 w-8 text-edsync-subtle" />
-              <p className="font-semibold text-edsync-text">No creator notes yet</p>
-              <p className="mt-1 text-sm text-edsync-subtle">Start with one note.</p>
-            </div>
-          ) : (
-            <div className={viewMode === "grid" ? "grid gap-3 md:grid-cols-2" : "grid gap-3"}>
-              {personalNotes.map((note) => {
-                const media = classifySafeMediaUrl(getPersonalMediaUrl(note));
-                const Icon = mediaIcon(media);
-                return (
-                  <article key={note.id} className="premium-card rounded-2xl p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="mb-2 flex flex-wrap gap-2">
-                          <span className="badge bg-edsync-amber/10 text-edsync-amber">teacher</span>
-                          <span className="badge bg-edsync-blue/10 text-edsync-blue">{String(note.metadata.design ?? "clean")}</span>
-                        </div>
-                        <h3 className="truncate font-display text-lg font-bold">{note.title}</h3>
-                      </div>
-                      {media && <Icon className="h-5 w-5 text-edsync-blue" />}
-                    </div>
-                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-edsync-subtle">{personalNoteText(note)}</p>
-                    {media && (
-                      <a href={media.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-edsync-blue">
-                        Open {media.kind}
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => editPersonal(note)}>
-                        <Edit3 className="h-4 w-4" />
-                        Edit
-                      </button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => duplicatePersonal(note)}>
-                        <Copy className="h-4 w-4" />
-                        Duplicate
-                      </button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => archivePersonal(note)}>
-                        <Archive className="h-4 w-4" />
-                        Archive
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <aside className="space-y-3">
-          <div className="group">
-            <h2 className="font-display text-xl font-bold">Learner notes</h2>
-            <p className="edsync-hover-detail">Shared or private learner notes.</p>
-          </div>
-          <div className="rounded-2xl border border-edsync-border bg-edsync-card">
-        <div className="divide-y divide-edsync-border">
-          {notes.length === 0 ? (
-            <p className="p-5 text-sm text-edsync-subtle">No notes yet.</p>
-          ) : (
-            notes.map((note) => {
-              const Icon = visibilityIcon(note.visibility);
-              return (
-                <article key={note.id} className="grid gap-3 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-start">
-                  <div className="min-w-0">
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      <span className="badge bg-edsync-blue/10 text-edsync-blue">{note.visibility}</span>
-                      <span className="badge bg-edsync-amber/10 text-edsync-amber">{note.priority}</span>
-                    </div>
-                    <h2 className="truncate font-display text-lg font-bold">{note.title}</h2>
-                    <p className="mt-1 text-sm text-edsync-subtle">
-                      {note.student_name || note.student_email}
-                    </p>
-                    <p className="mt-3 line-clamp-3 text-sm leading-6">{note.body}</p>
-                  </div>
-                  <div className="rounded-lg border border-edsync-border bg-edsync-surface p-3 text-sm text-edsync-subtle">
-                    <p className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-edsync-blue" />
-                      {note.visibility}
-                    </p>
-                    <p className="mt-2 flex items-center gap-2">
-                      <StickyNote className="h-4 w-4 text-edsync-amber" />
-                      {new Date(note.created_at).toLocaleDateString()}
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs" onClick={() => edit(note)}>
-                        <Edit3 className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button type="button" className="btn-secondary justify-center px-3 py-2 text-xs text-edsync-red" onClick={() => remove(note)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })
-          )}
-        </div>
-          </div>
-        </aside>
-      </section>
-    </div>
+    <main className="page max-w-6xl">
+      <PageHeader title="Notes" icon={StickyNote} count={personalNotes.length + learnerNotes.length} actions={<Button variant="primary" size="sm" icon={Plus} onClick={() => void newNote()}>New note</Button>} />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Segmented ariaLabel="Note type" value={tab} onChange={(next) => void changeTab(next)} options={tabs} />
+        <span className="ml-auto text-xs text-fg-muted">{tab === "personal" ? personalNotes.length : learnerNotes.length} notes</span>
+      </div>
+      {tab === "personal" && personalError ? <div role="alert" className="mb-4 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger">{personalError} <Button size="sm" onClick={() => void load()}>Retry</Button></div> : null}
+      {tab === "learners" && learnerError ? <div role="alert" className="mb-4 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger">{learnerError} <Button size="sm" onClick={() => void load()}>Retry</Button></div> : null}
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(15rem,19rem)_minmax(0,1fr)]">
+        <section aria-label="Notes list" className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="flex items-center gap-1 border-b border-line p-3"><SearchInput value={search} onChange={setSearch} placeholder="Search notes" label="Search notes" className="min-w-0 flex-1" />{tab === "personal" ? <Menu label="View options" items={[{ label: "List", icon: List, onSelect: () => changeViewMode("list") }, { label: "Grid", icon: Grid2X2, onSelect: () => changeViewMode("grid") }]} /> : null}</div>
+          {loading ? <div className="space-y-2 p-3">{[0, 1, 2].map((index) => <Skeleton key={index} className="h-16" />)}</div> :
+            tab === "personal" ? visiblePersonal.length === 0 ? <EmptyState icon={StickyNote} title="No notes yet" hint={search ? "Try another search." : "Capture a teaching idea."} compact /> :
+              <div className={"max-h-80 overflow-y-auto lg:max-h-[calc(100vh-15rem)] " + (viewMode === "grid" ? "grid grid-cols-2 gap-1 p-1" : "")}>{visiblePersonal.map((item) => <button key={item.id} type="button" aria-current={selectedPersonalId === item.id && !creating ? "true" : undefined} onClick={() => void selectPersonal(item)} className={"block min-w-0 w-full border-b border-line px-3 py-3 text-left hover:bg-surface-2 " + (selectedPersonalId === item.id && !creating ? "bg-accent-soft" : "")}><span className="block truncate text-sm font-semibold text-fg">{item.title}</span><span className="mt-1 block truncate text-xs text-fg-muted">{personalText(item) || "Empty note"}</span><span className="mt-1 block text-[11px] text-fg-faint">{dateLabel(item.updatedAt)}</span></button>)}</div>
+            : visibleLearner.length === 0 ? <EmptyState icon={StickyNote} title="No learner notes" hint={search ? "Try another search." : "Write a note for a learner."} compact /> :
+              <div className="max-h-80 overflow-y-auto lg:max-h-[calc(100vh-15rem)]">{visibleLearner.map((item) => <button key={item.id} type="button" aria-current={selectedLearnerId === item.id && !creating ? "true" : undefined} onClick={() => void selectLearner(item)} className={"block w-full border-b border-line px-3 py-3 text-left hover:bg-surface-2 " + (selectedLearnerId === item.id && !creating ? "bg-accent-soft" : "")}><span className="block truncate text-sm font-semibold text-fg">{item.title}</span><span className="mt-1 block truncate text-xs text-fg-muted">{item.student_name || item.student_email}</span><span className="mt-1 block text-[11px] text-fg-faint">{dateLabel(item.created_at)}</span></button>)}</div>}
+        </section>
+        <section aria-label="Note detail" className="min-h-80 min-w-0 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+          {actionError ? <p role="alert" className="mb-4 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger">{actionError}</p> : null}
+          {editing && tab === "personal" ? <form onSubmit={savePersonal} className="space-y-4">
+            <div className="flex items-center justify-between"><h2 className="text-base font-semibold text-fg">{creating ? "New note" : "Edit note"}</h2><span className="text-xs text-fg-faint">{personalDraft.body.trim().split(/\s+/).filter(Boolean).length} words</span></div>
+            <label className="block text-sm font-medium text-fg">Title<input className="input mt-1 w-full" required maxLength={160} value={personalDraft.title} onChange={(event) => changePersonal("title", event.target.value)} /></label>
+            <label className="block text-sm font-medium text-fg">Note<textarea className="input mt-1 min-h-48 w-full" required value={personalDraft.body} onChange={(event) => changePersonal("body", event.target.value)} /></label>
+            <div><p className="mb-2 text-xs font-medium text-fg-muted">Style</p><div className="flex flex-wrap gap-2">{designOptions.map((option) => <button key={option.id} type="button" title={option.description} aria-pressed={personalDraft.design === option.id} onClick={() => changePersonal("design", option.id)} className={"rounded-lg border px-2.5 py-1 text-xs font-medium " + (personalDraft.design === option.id ? "border-accent bg-accent-soft text-accent" : "border-line text-fg-muted hover:text-fg")}>{option.label}</button>)}</div></div>
+            <div className="border-t border-line pt-3"><label className="block text-sm font-medium text-fg">Media or link<input className="input mt-1 w-full" type="url" value={personalDraft.mediaUrl} onChange={(event) => changePersonal("mediaUrl", event.target.value)} placeholder="Optional HTTPS link" /></label>{personalDraft.mediaUrl && !safeMedia ? <p className="mt-1 text-xs text-danger">This link is not supported.</p> : null}<label className="mt-2 inline-block cursor-pointer text-xs font-medium text-accent hover:underline"><Paperclip size={14} className="mr-1 inline" />{uploading ? "Uploading…" : "Upload a file"}<input type="file" className="sr-only" disabled={uploading} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md,.csv" onChange={(event) => { void uploadMedia(event.target.files?.[0] || null); event.target.value = ""; }} /></label></div>
+            <div className="flex justify-end gap-2 border-t border-line pt-3"><Button onClick={() => { setEditing(false); setCreating(false); setDirty(false); }}>Cancel</Button><Button type="submit" variant="primary" loading={saving} disabled={uploading}>Save note</Button></div>
+          </form> : editing && tab === "learners" ? <form onSubmit={saveLearner} className="space-y-4">
+            <h2 className="text-base font-semibold text-fg">{creating ? "New learner note" : "Edit learner note"}</h2>
+            <label className="block text-sm font-medium text-fg">Learner<select className="input mt-1 w-full" required disabled={!creating} value={learnerDraft.studentKey} onChange={(event) => changeLearner("studentKey", event.target.value)}><option value="">Choose learner</option>{students.map((item) => <option key={item.class_id + item.id} value={item.class_id + ":" + item.id}>{item.full_name || item.email} · {item.class_name}</option>)}</select></label>
+            <label className="block text-sm font-medium text-fg">Title<input className="input mt-1 w-full" required maxLength={160} value={learnerDraft.title} onChange={(event) => changeLearner("title", event.target.value)} /></label>
+            <label className="block text-sm font-medium text-fg">Note<textarea className="input mt-1 min-h-44 w-full" required value={learnerDraft.body} onChange={(event) => changeLearner("body", event.target.value)} /></label>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-fg">Visibility<select className="input mt-1 w-full" value={learnerDraft.visibility} onChange={(event) => changeLearner("visibility", event.target.value)}><option value="student">Learner visible</option><option value="teacher">Teacher only</option><option value="guardian">Learner / guardian</option></select></label><label className="block text-sm font-medium text-fg">Priority<select className="input mt-1 w-full" value={learnerDraft.priority} onChange={(event) => changeLearner("priority", event.target.value)}><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></label></div>
+            <div className="flex justify-end gap-2 border-t border-line pt-3"><Button onClick={() => { setEditing(false); setCreating(false); setDirty(false); }}>Cancel</Button><Button type="submit" variant="primary" loading={saving}>Save learner note</Button></div>
+          </form> : tab === "personal" && selectedPersonal ? <div className="space-y-4">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="text-xs text-fg-faint">{dateLabel(selectedPersonal.updatedAt)} · {noteDesignPresetById(selectedPersonal.metadata.design, "clean").label}</p><h2 className="mt-1 break-words text-xl font-semibold text-fg">{selectedPersonal.title}</h2></div><Menu label="Note actions" items={[{ label: "Edit", onSelect: editNote }, { label: "Duplicate", icon: Copy, onSelect: () => void duplicatePersonal(selectedPersonal) }, { separator: true }, { label: "Archive", icon: Archive, danger: true, onSelect: () => void archivePersonal(selectedPersonal) }]} /></div>
+            <p className="whitespace-pre-wrap break-words text-sm leading-7 text-fg">{personalText(selectedPersonal)}</p>
+            {selectedMedia ? <a href={selectedMedia.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"><Paperclip size={15} />Open attached {selectedMedia.kind}<ExternalLink size={13} /></a> : null}
+          </div> : tab === "learners" && selectedLearner ? <div className="space-y-4">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="text-xs text-fg-faint">{selectedLearner.student_name || selectedLearner.student_email} · {dateLabel(selectedLearner.created_at)}</p><h2 className="mt-1 break-words text-xl font-semibold text-fg">{selectedLearner.title}</h2></div><Menu label="Learner note actions" items={[{ label: "Edit", onSelect: editNote }, { separator: true }, { label: "Delete", icon: Trash2, danger: true, onSelect: () => void deleteLearner(selectedLearner) }]} /></div>
+            <div className="flex gap-2"><Badge>{selectedLearner.visibility}</Badge><Badge>{selectedLearner.priority}</Badge></div><p className="whitespace-pre-wrap break-words text-sm leading-7 text-fg">{selectedLearner.body}</p>
+          </div> : <EmptyState icon={StickyNote} title="Choose a note" hint="Select one from the list or start a new note." action={<Button size="sm" onClick={() => void newNote()}>New note</Button>} />}
+        </section>
+      </div>
+    </main>
   );
 }
