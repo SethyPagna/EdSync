@@ -282,4 +282,8 @@ The shared workspace has compact navigation, collapsible secondary sections, key
 
 Personal catalog enrollments load through a session-scoped endpoint, including entitlement start and expiry checks, and appear alongside assigned courses in the learner library. Portal/domain changes are saved in D1 batches; class rejoining preserves the original enrollment identity.
 
+Teachers can author choice, true/false, short-answer, and long-answer questions directly in an assignment or test. Learners answer each question in the work sheet, while teachers review structured responses; answer keys stay out of learner responses, and questions lock after a submission. Discussion work opens its thread for learner replies, with teacher-only and private posts filtered on the server.
+
+Organization owners manage separate private learner and teacher invitation codes in **Admin → Portals**. A code only grants its matching role; owners can rotate either code or pause invitations. A public workspace slug cannot be used to join. New organization creation is for teachers; learners can join with a learner code or create an individual account.
+
 For constrained local machines, the complete test suite can run with `npm.cmd test -- --maxWorkers=2`.
