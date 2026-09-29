@@ -743,6 +743,55 @@ describe("Popover", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("lets SearchInput clear on the first Escape before closing the Popover", async () => {
+    const user = userEvent.setup();
+    function SearchPopover() {
+      const [query, setQuery] = useState("biology");
+      return (
+        <Popover trigger={<Button>Find</Button>} label="Find courses">
+          <SearchInput value={query} onChange={setQuery} label="Search courses" />
+        </Popover>
+      );
+    }
+    render(<SearchPopover />);
+    const trigger = screen.getByRole("button", { name: "Find" });
+    await user.click(trigger);
+    const search = screen.getByRole("searchbox", { name: "Search courses" });
+    expect(search).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+    expect(screen.getByRole("dialog", { name: "Find courses" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Find courses" })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("closes and returns focus when Tab leaves the last or Shift-Tab leaves the first control", async () => {
+    const user = userEvent.setup();
+    render(
+      <Popover trigger={<Button>Actions</Button>} label="Actions">
+        <button type="button">First</button>
+        <button type="button">Last</button>
+      </Popover>,
+    );
+    const trigger = screen.getByRole("button", { name: "Actions" });
+    await user.click(trigger);
+    expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Last" })).toHaveFocus();
+    await user.tab();
+    expect(screen.queryByRole("dialog", { name: "Actions" })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+
+    await user.click(trigger);
+    expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.queryByRole("dialog", { name: "Actions" })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it("keeps the outer Popover open for a nested InfoPopover, and Escape closes only the inner one", async () => {
     const user = userEvent.setup();
     render(
