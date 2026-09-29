@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { studentWorkQuestion, validatedQuestionResponse, type WorkQuestionRow } from "./questions";
+import { editableWorkQuestions, studentWorkQuestion, validatedQuestionResponse, type WorkQuestionRow } from "./questions";
 
 const question = (fields: Partial<WorkQuestionRow> = {}): WorkQuestionRow => ({
   id: "q1",
@@ -13,6 +13,16 @@ const question = (fields: Partial<WorkQuestionRow> = {}): WorkQuestionRow => ({
 });
 
 describe("student work questions", () => {
+  it("validates editable question types, options and answer keys", () => {
+    expect(editableWorkQuestions([{ prompt: " Pick one ", questionType: "multiple_choice", options: ["A", "B"], correctAnswer: "A", points: 3 }])).toEqual([
+      { prompt: "Pick one", questionType: "multiple_choice", options: ["A", "B"], correctAnswer: "A", points: 3 },
+    ]);
+    expect(() => editableWorkQuestions([{ prompt: "Pick one", questionType: "multiple_choice", options: ["A", "A"], correctAnswer: "A" }])).toThrow("distinct options");
+    expect(() => editableWorkQuestions([{ prompt: "Pick one", questionType: "multiple_choice", options: ["A", "B"], correctAnswer: "C" }])).toThrow("answer key");
+    expect(() => editableWorkQuestions([{ prompt: "   " }])).toThrow("prompt");
+    expect(() => editableWorkQuestions(Array.from({ length: 51 }, () => ({ prompt: "Question" })))).toThrow("at most 50");
+  });
+
   it("exposes choices and prompts without an answer key", () => {
     const publicQuestion = studentWorkQuestion({ ...question(), correct_answer: "Oxygen" } as WorkQuestionRow);
     expect(publicQuestion).toEqual({
