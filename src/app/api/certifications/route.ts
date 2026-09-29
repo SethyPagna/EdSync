@@ -15,6 +15,7 @@ import {
   withRoute,
 } from "@/lib/security/http-errors";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 import { isOwnerScoped, ownerScope } from "@/lib/tenancy/ownership";
 
 // certification_rules has no owner column, so the creator is kept in settings.ownerId.
@@ -78,7 +79,7 @@ export const GET = withRoute(async (request) => {
           [tenantId, user.id],
         )
       : await d1Query("SELECT * FROM learner_certifications WHERE tenant_id = ? ORDER BY expires_at ASC LIMIT 100", [tenantId]);
-  return NextResponse.json({ data: { rules, certifications, context, nextCursor: issueResult?.nextCursor ?? null }, error: null });
+  return NextResponse.json({ data: { rules, certifications, context: toClientTenantContext(context), nextCursor: issueResult?.nextCursor ?? null }, error: null });
 });
 
 export const POST = withRoute(async (request) => {
