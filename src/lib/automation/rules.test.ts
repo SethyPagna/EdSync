@@ -55,4 +55,26 @@ describe("automation rule validation", () => {
       }),
     ).toThrow("true or false");
   });
+
+  it("accepts only executable actions and bounded trigger conditions", () => {
+    expect(() => normalizeAutomationRulePayload({
+      title: "Mastery",
+      triggerKey: "score.mastery",
+      conditions: { scoreGte: 101 },
+      actions: [{ type: "notify" }],
+    })).toThrow("between 0 and 100");
+    expect(() => normalizeAutomationRulePayload({
+      title: "Deadline",
+      triggerKey: "deadline.upcoming",
+      actions: [{ type: "award_badge", badge: "mastery" }],
+    })).toThrow("mastery scores");
+    expect(() => validateAutomationActions([{ type: "unlock", target: "optional_work" }])).toThrow("Unsupported");
+    expect(() => validateAutomationActions([{ type: "notify", channel: "email" }])).toThrow("in-app");
+    expect(normalizeAutomationRulePayload({
+      title: "Review",
+      triggerKey: "work.submitted",
+      conditions: { workTypes: ["task", "task", "discussion"], needsReview: true },
+      actions: [{ type: "notify" }],
+    }).conditions).toEqual({ workTypes: ["task", "discussion"], needsReview: true });
+  });
 });
