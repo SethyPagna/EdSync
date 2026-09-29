@@ -112,7 +112,31 @@ export function normalizeCertificationNotifyDays(value: unknown) {
 export function normalizeCertificationSettings(value: unknown) {
   if (value === undefined || value === null) return {};
   if (!isPlainObject(value)) throw new Error("Certification settings must be a JSON object.");
-  return value;
+  const settings = { ...value };
+  if (settings.evidence !== undefined) {
+    if (!Array.isArray(settings.evidence) || settings.evidence.length === 0 ||
+        settings.evidence.some((item) => item !== "completion" && item !== "score")) {
+      throw new Error("Choose completion or score evidence.");
+    }
+    settings.evidence = [...new Set(settings.evidence)];
+  }
+  if (settings.scoreGte !== undefined &&
+      (typeof settings.scoreGte !== "number" || !Number.isInteger(settings.scoreGte) || settings.scoreGte < 0 || settings.scoreGte > 100)) {
+    throw new Error("Minimum score must be between 0 and 100.");
+  }
+  if (settings.scoreGte !== undefined && Array.isArray(settings.evidence) && !settings.evidence.includes("score")) {
+    throw new Error("Score evidence is required when a minimum score is set.");
+  }
+  if (settings.renewal !== undefined && !["none", "annual", "biennial"].includes(String(settings.renewal))) {
+    throw new Error("Choose a supported renewal policy.");
+  }
+  if (settings.audit !== undefined && !["light", "standard", "required"].includes(String(settings.audit))) {
+    throw new Error("Choose a supported audit level.");
+  }
+  if (settings.audience !== undefined && !["internal", "external"].includes(String(settings.audience))) {
+    throw new Error("Choose a supported audience.");
+  }
+  return settings;
 }
 
 export function normalizeCertificationRulePayload(input: {
