@@ -1,24 +1,18 @@
-import { redirect } from "next/navigation";
+import StudentDiscussionWorkspace from "@/components/discussions/StudentDiscussionWorkspace";
 
-type RedirectPageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function appendSearchParams(target: string, params: Record<string, string | string[] | undefined>) {
-  const nextParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (key === "filter" || value === undefined) return;
-    if (Array.isArray(value)) {
-      value.forEach((item) => nextParams.append(key, item));
-      return;
-    }
-    nextParams.set(key, value);
-  });
-  nextParams.set("filter", "discussions");
-  return `${target}?${nextParams.toString()}`;
+function one(value: string | string[] | undefined) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-export default async function StudentDiscussionsRedirectPage({ searchParams }: RedirectPageProps) {
-  const resolvedSearchParams = (await searchParams) ?? {};
-  redirect(appendSearchParams("/student/work", resolvedSearchParams));
+export default async function StudentDiscussionsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  return <StudentDiscussionWorkspace
+    classId={one(params.classId)}
+    threadId={one(params.threadId)}
+    workItemId={one(params.workItemId)}
+  />;
 }
