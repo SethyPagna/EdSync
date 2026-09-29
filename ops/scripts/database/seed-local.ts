@@ -1,4 +1,7 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { D1Database } from "@cloudflare/workers-types";
 import { hashPassword } from "../../../src/lib/auth/password";
 import { validateSignupPassword } from "../../../src/lib/auth/password-validation";
@@ -16,6 +19,7 @@ const PORTAL_ID = "portal_edsync_default";
 const DAY_MS = 86_400_000;
 const NOW = Date.now();
 const BATCH_SIZE = 100;
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 const statements: Statement[] = [];
 // learning_submission_attempts arrives with migration 0010; older schemas simply skip attempt history.
@@ -118,7 +122,7 @@ async function resolveUserIds(db: D1Database) {
   for (const name of ROSTER) userIds.set(rosterKey(name), existing.get(rosterEmail(name)) ?? seedId(`user:${rosterKey(name)}`));
 }
 
-function seedPeople(passwordHash: string) {
+function seedPeople(passwordHash: string, demo = false) {
   const people = [
     ...ACCOUNTS.map((account) => ({ ...account, id: userId(account.key), passwordHash })),
     ...ROSTER.map((name, index) => ({
@@ -151,7 +155,7 @@ function seedPeople(passwordHash: string) {
       email: person.email,
       full_name: person.name,
       role: person.role,
-      school: "Riverside Middle School",
+      school: demo ? "Riverside Middle School · Sample" : "Riverside Middle School",
       grade_level: person.gradeLevel ?? null,
       subjects: person.subjects,
       interests: person.interests,
@@ -1128,18 +1132,24 @@ function seedInsights() {
 // ---------------------------------------------------------------------------
 // Catalog
 
-function seedCatalog() {
-  const products = [
+function seedCatalog(demo = false) {
+  const localProducts = [
     { key: "cells", lesson: "cells", title: "Cells & Life Starter", description: "A short, visual introduction to cells for curious learners.", amount: 0, interval: "one_time", enrollment: "free", category: "Science", difficulty: "Beginner", featured: true },
     { key: "algebra", lesson: "linear", title: "Algebra Foundations", description: "Master equations step by step with instant feedback.", amount: 2900, interval: "one_time", enrollment: "paid", category: "Mathematics", difficulty: "Beginner", featured: false },
   ];
+  const products = demo ? [
+    localProducts[0],
+    { key: "photosynthesis", lesson: "photosynthesis", title: "Photosynthesis in Action", description: "Follow light and energy through plants and living systems.", amount: 0, interval: "one_time", enrollment: "free", category: "Science", difficulty: "Intermediate", featured: true },
+    { ...localProducts[1], amount: 0, enrollment: "free" },
+    { key: "writing", lesson: "show-dont-tell", title: "Writing with Detail", description: "Bring a scene to life with sensory details and revision.", amount: 0, interval: "one_time", enrollment: "free", category: "English", difficulty: "Beginner", featured: false },
+  ] : localProducts;
   for (const product of products) {
     const id = seedId(`product:${product.key}`);
     put("billing_products", {
       id,
       tenant_id: TENANT_ID,
-      title: product.title,
-      description: product.description,
+      title: demo ? `Sample · ${product.title}` : product.title,
+      description: demo ? `Sample course. ${product.description}` : product.description,
       product_type: "course",
       course_id: lessonId(product.lesson),
       status: "active",
@@ -1150,7 +1160,7 @@ function seedCatalog() {
         category: product.category,
         difficulty: product.difficulty,
         language: "English",
-        previewSummary: product.description,
+        previewSummary: demo ? `Sample course. ${product.description}` : product.description,
       },
       created_at: sqlAt(-20),
       updated_at: sqlAt(-3),
@@ -1167,6 +1177,7 @@ function seedCatalog() {
       created_at: sqlAt(-20),
       updated_at: sqlAt(-20),
     });
+    if (demo) linkToTenant("billing_products", id);
   }
   put("entitlements", {
     id: seedId("entitlement:student:cells"),
@@ -1302,7 +1313,88 @@ async function assertMigrated(db: D1Database) {
   }
 }
 
+function populateSeed(passwordHash: string, demo = false) {
+  seedPeople(passwordHash, demo);
+  seedClasses();
+  seedLessons();
+  seedWork();
+  seedProgress();
+  seedPlanner();
+  seedNotes();
+  seedNotifications();
+  seedInsights();
+  seedCatalog(demo);
+  seedStudio();
+
+  if (demo) {
+    statements.push({
+      sql: "UPDATE tenants SET name = ?, updated_at = datetime('now') WHERE id = ?",
+      params: ["EdSync Demo Academy", TENANT_ID],
+    });
+    statements.push({
+      sql: "UPDATE tenant_portals SET name = ?, audience = 'public', catalog_settings = ?, updated_at = datetime('now') WHERE id = ?",
+      params: ["Demo Academy", JSON.stringify({ enabled: true }), PORTAL_ID],
+    });
+  }
+}
+
+function demoSqlOutputPath(value: string) {
+  if (!value.toLowerCase().endsWith(".sql")) throw new Error("Demo export path must end in .sql.");
+  const outputPath = resolve(value);
+  const repoRelative = relative(REPO_ROOT, outputPath);
+  const insideRepo = repoRelative === "" || (!repoRelative.startsWith(`..${sep}`) && repoRelative !== ".." && !isAbsolute(repoRelative));
+  if (insideRepo && !repoRelative.startsWith(`.wrangler${sep}`)) {
+    throw new Error("Write demo SQL outside the repository or inside its ignored .wrangler directory.");
+  }
+  return outputPath;
+}
+
+function sqlLiteral(value: SqlValue) {
+  if (value === null) return "NULL";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("Demo seed contains a non-finite number.");
+    return String(value);
+  }
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function renderSql(statement: Statement) {
+  let position = 0;
+  const sql = statement.sql.replace(/\?/g, () => {
+    if (position >= statement.params.length) throw new Error("Demo seed SQL parameter count does not match.");
+    return sqlLiteral(statement.params[position++]);
+  });
+  if (position !== statement.params.length) throw new Error("Demo seed SQL parameter count does not match.");
+  return `${sql.trim()};`;
+}
+
+async function exportDemoSql(output: string) {
+  const outputPath = demoSqlOutputPath(output);
+  const passwordHash = await hashPassword(randomBytes(32).toString("base64url"));
+  for (const account of ACCOUNTS) userIds.set(account.key, seedId(`user:${account.key}`));
+  for (const name of ROSTER) userIds.set(rosterKey(name), seedId(`user:${rosterKey(name)}`));
+  hasAttemptHistory = true;
+  populateSeed(passwordHash, true);
+  const sql = [
+    "-- EdSync fictional sample data for a fresh, migrated, isolated demo D1 database only.",
+    "-- Seed account passwords are random and discarded. Do not import this into production.",
+    ...statements.map(renderSql),
+    "",
+  ].join("\n");
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, sql, { encoding: "utf8", mode: 0o600 });
+  console.log(`Exported ${statements.length} demo SQL statements to ${outputPath}.`);
+}
+
 async function main() {
+  const args = process.argv.slice(2);
+  if (args.length > 0) {
+    if (args.length !== 2 || args[0] !== "--export-demo-sql" || !args[1]) {
+      throw new Error("Usage: tsx ops/scripts/database/seed-local.ts --export-demo-sql <output.sql>");
+    }
+    await exportDemoSql(args[1]);
+    return;
+  }
   loadEnvFile(".env.local");
   loadEnvFile(".env");
   const rawPassword = process.env.LOCAL_SEED_PASSWORD;
@@ -1318,17 +1410,7 @@ async function main() {
       await db.prepare("SELECT 1 AS found FROM sqlite_master WHERE type = 'table' AND name = 'learning_submission_attempts'").first(),
     );
     await resolveUserIds(db);
-    seedPeople(passwordHash);
-    seedClasses();
-    seedLessons();
-    seedWork();
-    seedProgress();
-    seedPlanner();
-    seedNotes();
-    seedNotifications();
-    seedInsights();
-    seedCatalog();
-    seedStudio();
+    populateSeed(passwordHash);
 
     for (let index = 0; index < statements.length; index += BATCH_SIZE) {
       const chunk = statements.slice(index, index + BATCH_SIZE);
