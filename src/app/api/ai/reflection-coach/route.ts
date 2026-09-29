@@ -36,63 +36,28 @@ function toAdvice(value: unknown): ReflectionAdvice | null {
     return null;
   }
   const obj = value as Record<string, unknown>;
-  const toList = (input: unknown, fallback: string[]) => {
-    if (!Array.isArray(input)) return fallback;
+  const toList = (input: unknown) => {
+    if (!Array.isArray(input)) return [];
     const list = input
       .filter((item) => typeof item === "string")
       .map((item) => item.trim())
       .filter(Boolean)
       .slice(0, 3);
-    return list.length > 0 ? list : fallback;
+    return list;
   };
-
-  const guidingQuestion =
-    typeof obj.guidingQuestion === "string" && obj.guidingQuestion.trim()
-      ? obj.guidingQuestion.trim()
-      : "Which concept from this lecture still feels hardest to explain in your own words?";
-
-  const encouragement =
-    typeof obj.encouragement === "string" && obj.encouragement.trim()
-      ? obj.encouragement.trim()
-      : "You are doing the right thing by reflecting on your understanding.";
+  const strengths = toList(obj.strengths);
+  const likelyGaps = toList(obj.likelyGaps);
+  const nextSteps = toList(obj.nextSteps);
+  const guidingQuestion = typeof obj.guidingQuestion === "string" ? obj.guidingQuestion.trim() : "";
+  const encouragement = typeof obj.encouragement === "string" ? obj.encouragement.trim() : "";
+  if (!strengths.length || !likelyGaps.length || !nextSteps.length || !guidingQuestion || !encouragement) return null;
 
   return {
-    strengths: toList(obj.strengths, [
-      "You identified key ideas from the lecture.",
-    ]),
-    likelyGaps: toList(obj.likelyGaps, [
-      "One or two core links between concepts may still be unclear.",
-    ]),
-    nextSteps: toList(obj.nextSteps, [
-      "Spend 10 minutes rewriting one concept using your own example.",
-    ]),
+    strengths,
+    likelyGaps,
+    nextSteps,
     guidingQuestion,
     encouragement,
-  };
-}
-
-function fallbackAdvice(confidence: number): ReflectionAdvice {
-  return {
-    strengths: [
-      "You paused to summarize what you learned, which improves memory and understanding.",
-    ],
-    likelyGaps:
-      confidence <= 2
-        ? [
-            "Your notes suggest low confidence, so focus on one concept at a time.",
-          ]
-        : [
-            "Try checking whether you can connect each section back to the lesson objectives.",
-          ],
-    nextSteps: [
-      "Pick one section and explain it in 3 sentences without looking at your notes.",
-      "Write one real-world example that applies this concept.",
-      "Ask Socratic for a hint on the part that still feels confusing.",
-    ],
-    guidingQuestion:
-      "If you had to teach this topic to a classmate in one minute, what would you say first?",
-    encouragement:
-      "Reflection like this is exactly how strong learners build long-term understanding.",
   };
 }
 
@@ -188,6 +153,9 @@ ${safeContext}`,
       ],
       maxTokens: 700,
       temperature: 0.4,
+      userId: user.id,
+      feature: "reflection-coach",
+      jsonMode: true,
     });
 
     let advice: ReflectionAdvice | null = null;
@@ -197,12 +165,11 @@ ${safeContext}`,
       advice = null;
     }
 
-    return NextResponse.json({
-      advice: advice ?? fallbackAdvice(confidenceScore),
-    });
+    if (!advice) return NextResponse.json({ error: "AI returned an invalid coaching response. Please try again." }, { status: 502 });
+    return NextResponse.json({ advice });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[reflection-coach]", message);
-    return NextResponse.json({ advice: fallbackAdvice(3) });
+    return NextResponse.json({ error: "Reflection coaching is unavailable right now. Please try again." }, { status: 502 });
   }
 }
