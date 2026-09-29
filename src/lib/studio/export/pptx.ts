@@ -2,6 +2,7 @@ import { chartSvg, getDeckTheme, getFontPair, iconSvg, resolvePaint, shapeSvg, t
 import type { SceneDeck, SceneElement } from "@/lib/studio/scene";
 import { renderPageImage } from "@/components/studio/fabric/render";
 import { deckPaint, elementBox, mapChart, mapShape, mapTable, mapText, slideSize } from "./pptx-map";
+import { loadBrowserPptx } from "./pptx-browser";
 
 function canvasImage(source: string, width: number, height: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -63,7 +64,7 @@ async function rasterElement(element: SceneElement, deck: SceneDeck): Promise<st
 }
 
 export async function buildNativePptx(deck: SceneDeck, onProgress?: (current: number, total: number) => void): Promise<Blob> {
-  const { default: PptxGenJS } = await import("pptxgenjs");
+  const PptxGenJS = await loadBrowserPptx();
   const pptx = new PptxGenJS();
   const size = slideSize(deck);
   pptx.defineLayout({ name: "EDSYNC", width: size.width, height: size.height });
