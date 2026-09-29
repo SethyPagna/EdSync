@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const cloudflareConfigFiles = ["infra/cloudflare/wrangler.app.jsonc"];
+const cloudflareConfigFiles = ["infra/cloudflare/wrangler.app.jsonc", "infra/cloudflare/wrangler.automation.jsonc"];
 
 const resourceKeys = new Set([
   "name",
@@ -27,7 +27,7 @@ type CloudflareAppEnv = {
   vars?: Record<string, string>;
   d1_databases?: Array<{ database_name?: string }>;
   r2_buckets?: Array<{ bucket_name?: string }>;
-  queues?: { producers?: Array<{ queue?: string }> };
+  queues?: { producers?: Array<{ queue?: string }>; consumers?: Array<{ queue?: string }> };
   vectorize?: Array<{ index_name?: string }>;
 };
 
@@ -61,6 +61,10 @@ function collectResourceValues(file: string): ResourceValue[] {
 
 function readCloudflareAppConfig() {
   return JSON.parse(readFileSync("infra/cloudflare/wrangler.app.jsonc", "utf8")) as CloudflareAppConfig;
+}
+
+function readCloudflareAutomationConfig() {
+  return JSON.parse(readFileSync("infra/cloudflare/wrangler.automation.jsonc", "utf8")) as CloudflareAppConfig;
 }
 
 function collectAppEnvironments(config: CloudflareAppConfig) {
@@ -102,7 +106,13 @@ const forbiddenResources = resources
   .sort((left, right) => `${left.file}:${left.key}`.localeCompare(`${right.file}:${right.key}`));
 const appResourceMismatches = collectAppResourceMismatches(readCloudflareAppConfig());
 const appConfig = readCloudflareAppConfig();
+const automationConfig = readCloudflareAutomationConfig();
+const automationResourceMismatches = [
+  compareResource("automation", "D1 database", appConfig.d1_databases?.[0]?.database_name, automationConfig.d1_databases?.[0]?.database_name),
+  compareResource("automation", "Queue consumer", appConfig.queues?.producers?.[0]?.queue, automationConfig.queues?.consumers?.[0]?.queue),
+].filter((check): check is ResourceMismatch => Boolean(check));
 const workerNameMismatch = appConfig.name === "edsync" ? null : appConfig.name;
+const automationWorkerNameMismatch = automationConfig.name === "edsync-automation" ? null : automationConfig.name;
 const serviceMismatches =
   appConfig.services
     ?.map((service) => service.service)
@@ -112,7 +122,9 @@ if (
   invalidResources.length > 0 ||
   forbiddenResources.length > 0 ||
   appResourceMismatches.length > 0 ||
+  automationResourceMismatches.length > 0 ||
   workerNameMismatch ||
+  automationWorkerNameMismatch ||
   serviceMismatches.length > 0
 ) {
   if (invalidResources.length > 0) {
@@ -127,14 +139,17 @@ if (
       console.error(`- ${resource.file} ${resource.key}=${resource.value}`);
     }
   }
-  if (appResourceMismatches.length > 0) {
-    console.error("Cloudflare app vars must match Wrangler bindings:");
-    for (const mismatch of appResourceMismatches) {
+  if (appResourceMismatches.length > 0 || automationResourceMismatches.length > 0) {
+    console.error("Cloudflare resource names must match Wrangler bindings:");
+    for (const mismatch of [...appResourceMismatches, ...automationResourceMismatches]) {
       console.error(`- ${mismatch.env} ${mismatch.label}: var=${mismatch.expected ?? "(missing)"} binding=${mismatch.actual ?? "(missing)"}`);
     }
   }
   if (workerNameMismatch) {
     console.error(`Cloudflare app Worker must stay named edsync, found ${workerNameMismatch}.`);
+  }
+  if (automationWorkerNameMismatch) {
+    console.error(`Cloudflare automation Worker must stay named edsync-automation, found ${automationWorkerNameMismatch}.`);
   }
   if (serviceMismatches.length > 0) {
     console.error("Cloudflare service bindings must point at the single edsync Worker:");
@@ -145,4 +160,4 @@ if (
   process.exit(1);
 }
 
-console.log("Cloudflare resource names and single Worker bindings are EdSync-specific.");
+console.log("Cloudflare app and automation Worker bindings are EdSync-specific.");
