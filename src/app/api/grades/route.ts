@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { sqlInPlaceholders } from "@/lib/db/sql";
 import { errorMessage, jsonError, optionalId, readJsonObject } from "@/lib/grades/http";
 import {
@@ -176,6 +177,7 @@ export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return jsonError("Unauthorized", 401);
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("gradebook"))) return jsonError("Gradebook is unavailable.", 403);
 
   const params = new URL(request.url).searchParams;
   const classId = params.get("classId");
@@ -417,6 +419,7 @@ export async function POST(request: Request) {
   const body = await readJsonObject(request);
   if (!body) return jsonError("Send a JSON object body.", 400);
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("gradebook"))) return jsonError("Gradebook is unavailable.", 403);
   const bodyClassId = optionalId(body.classId);
 
   if (body.kind === "category") {
