@@ -103,6 +103,32 @@ function attempts(workItemId: string) {
 }
 
 describe("POST /api/work/submissions", () => {
+  it("requires answers to the work item's own questions and saves a reviewable response", async () => {
+    workItem("w-quiz", { work_type: "quiz" });
+    insertRows(db, "learning_work_questions", [
+      { id: "q-choice", work_item_id: "w-quiz", prompt: "Which gas?", question_type: "multiple_choice", options: '["Oxygen","Nitrogen"]', correct_answer: "Oxygen", points: 5, order_index: 0 },
+      { id: "q-text", work_item_id: "w-quiz", prompt: "Explain it.", question_type: "short_answer", options: "[]", correct_answer: "Photosynthesis", points: 5, order_index: 1 },
+    ]);
+    const send = (answers: unknown) => POST(jsonRequest("/api/work/submissions", "POST", { workItemId: "w-quiz", response: { answers } }));
+    expect((await submit("w-quiz")).status).toBe(400);
+    expect((await send([{ questionId: "q-choice", answer: "Oxygen" }])).status).toBe(400);
+    expect((await send([{ questionId: "q-choice", answer: "Helium" }, { questionId: "q-text", answer: "Plants use light." }])).status).toBe(400);
+    expect((await send([{ questionId: "q-choice", answer: "Oxygen" }, { questionId: "outside", answer: "Plants use light." }])).status).toBe(400);
+    expect(attempts("w-quiz")).toEqual([]);
+
+    const response = await send([
+      { questionId: "q-text", prompt: "Forged", answer: " Plants use light. " },
+      { questionId: "q-choice", answer: "Oxygen" },
+    ]);
+    expect(response.status).toBe(200);
+    expect(JSON.parse(String(submissionRow("w-quiz")?.response))).toEqual({ answers: [
+      { questionId: "q-choice", prompt: "Which gas?", answer: "Oxygen" },
+      { questionId: "q-text", prompt: "Explain it.", answer: "Plants use light." },
+    ] });
+    expect(submissionRow("w-quiz")?.status).toBe("submitted");
+    expect(attempts("w-quiz")).toHaveLength(1);
+  });
+
   it("records the first attempt", async () => {
     workItem("w1");
     const response = await submit("w1");
