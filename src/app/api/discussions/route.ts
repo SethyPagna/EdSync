@@ -10,7 +10,7 @@ import {
   withRoute,
 } from "@/lib/security/http-errors";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
-import { isOwnerScoped } from "@/lib/tenancy/ownership";
+import { isOwnerScoped, isTenantOutsider } from "@/lib/tenancy/ownership";
 import {
   tenantObjectJoin,
   tenantObjectParams,
@@ -102,6 +102,9 @@ export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) {
+    return NextResponse.json({ data: null, error: "Organization membership required." }, { status: 403 });
+  }
 
   const params = new URL(request.url).searchParams;
   const threadId = params.get("threadId");
@@ -116,8 +119,10 @@ export async function GET(request: Request) {
          FROM discussion_posts dp
          JOIN profiles p ON p.id = dp.author_id
         WHERE dp.thread_id = ?
+          AND (dp.visibility = 'class' OR dp.author_id = ?
+            OR (dp.visibility = 'teacher' AND ? = 1))
         ORDER BY dp.created_at ASC`,
-      [threadId],
+      [threadId, user.id, canManageThread(user, thread.teacher_id) ? 1 : 0],
     );
     return NextResponse.json({ data: { posts }, error: null });
   }
@@ -135,6 +140,8 @@ export async function GET(request: Request) {
         AND ce.student_id = ?
         AND ce.is_active = 1
        LEFT JOIN discussion_posts dp ON dp.thread_id = dt.id
+         AND (dp.visibility = 'class' OR dp.author_id = ?
+           OR (dp.visibility = 'teacher' AND (? = 1 OR dt.teacher_id = ?)))
       WHERE (${tenantObjectPredicate({ linkAlias: "thread_link" })}
           OR (dt.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
         AND (? = 1 OR dt.teacher_id = ? OR (dt.class_id IS NULL AND ? = 1) OR ce.student_id = ?)
@@ -144,6 +151,9 @@ export async function GET(request: Request) {
     [
       THREAD_TABLE,
       CLASS_TABLE,
+      user.id,
+      user.id,
+      isAdmin ? 1 : 0,
       user.id,
       ...threadPredicateParams(context.tenant.id),
       ...classPredicateParams(context.tenant.id),
@@ -161,6 +171,7 @@ export const POST = withRoute(async (request) => {
   const user = await getSessionUser();
   if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) throw new ForbiddenError("Organization membership required.");
 
   const body = await readJson<{
     threadId?: unknown;
@@ -222,8 +233,12 @@ export const POST = withRoute(async (request) => {
   if (thread.is_locked && !canManageThread(user, thread.teacher_id)) throw new ForbiddenError("Discussion is locked.");
   if (parentId) {
     const [parent] = await d1Query<{ id: string }>(
-      "SELECT id FROM discussion_posts WHERE id = ? AND thread_id = ? LIMIT 1",
-      [parentId, threadId],
+      `SELECT id FROM discussion_posts
+        WHERE id = ? AND thread_id = ?
+          AND (visibility = 'class' OR author_id = ?
+            OR (visibility = 'teacher' AND ? = 1))
+        LIMIT 1`,
+      [parentId, threadId, user.id, canManageThread(user, thread.teacher_id) ? 1 : 0],
     );
     if (!parent) throw new BadRequestError("Reply target is not part of this discussion.");
   }
