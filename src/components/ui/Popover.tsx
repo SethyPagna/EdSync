@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type FocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
   type ReactElement,
   type ReactNode,
@@ -137,22 +138,12 @@ export function Popover({
       if (target instanceof Node && (content.contains(target) || anchor.contains(target))) return;
       dismiss(false);
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      const target = event.target;
-      if (target instanceof Element && content.contains(target) && target.closest(NESTED_LAYER) !== content) return;
-      event.preventDefault();
-      dismiss(true);
-    };
-
     document.addEventListener("pointerdown", onPointerDown, true);
-    document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("resize", schedulePlace);
     window.addEventListener("scroll", schedulePlace, true);
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("resize", schedulePlace);
       window.removeEventListener("scroll", schedulePlace, true);
     };
@@ -176,6 +167,29 @@ export function Popover({
     if (!(next instanceof Node)) return;
     if (event.currentTarget.contains(next) || anchor?.contains(next)) return;
     setOpen(false);
+  };
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
+    const content = contentRef.current;
+    if (!content || !(event.target instanceof Node) || !content.contains(event.target)) return;
+    if (event.target instanceof Element && event.target.closest(NESTED_LAYER) !== content) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close(true);
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(content.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (element) => !element.closest("[hidden], [inert]") &&
+        getComputedStyle(element).display !== "none" &&
+        getComputedStyle(element).visibility !== "hidden",
+    );
+    const boundary = event.shiftKey ? focusable[0] : focusable.at(-1);
+    if (!boundary || event.target === boundary) {
+      event.preventDefault();
+      close(true);
+    }
   };
 
   const triggerElement = cloneElement(trigger, {
@@ -205,6 +219,7 @@ export function Popover({
               data-popover-content=""
               data-side={side}
               onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
               className={cn("popover fixed left-0 top-0 z-50 max-w-[calc(100vw-16px)] outline-none", className)}
             >
               <PortalContainerContext.Provider value={contentNode}>
