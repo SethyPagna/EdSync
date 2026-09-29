@@ -88,6 +88,17 @@ describe("organization invitation signup", () => {
     expect(mocks.batch).not.toHaveBeenCalled();
   });
 
+  it("rejects student organization creation before writing an unusable owner account", async () => {
+    const response = await POST(new Request("https://edsync.test/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ email: "owner@example.com", password: "StrongPass123!", options: { data: { full_name: "Owner", role: "student", account_type: "organization", organization_mode: "create", organization_name: "New Academy" } } }),
+    }));
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.message).toBe("Create an organization with a teacher account.");
+    expect(mocks.query).not.toHaveBeenCalled();
+    expect(mocks.batch).not.toHaveBeenCalled();
+  });
+
   it("gives newly created organizations a private invite code", async () => {
     const response = await POST(new Request("https://edsync.test/api/auth/signup", {
       method: "POST",
