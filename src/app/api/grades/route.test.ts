@@ -48,6 +48,13 @@ beforeEach(() => {
   ]);
 });
 
+it("blocks gradebook reads and manual scores when its global flag is disabled", async () => {
+  insertRows(db, "feature_flags", [{ id: "flag-grades", flag_key: "gradebook", label: "Gradebook", enabled: 0 }]);
+  expect((await grade({ sourceType: "manual" })).status).toBe(403);
+  state.user = STUDENT;
+  expect((await GET(new Request("http://localhost/api/grades"))).status).toBe(403);
+});
+
 function grade(body: Record<string, unknown>) {
   return POST(
     jsonRequest("/api/grades", "POST", {
