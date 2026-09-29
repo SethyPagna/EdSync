@@ -40,7 +40,7 @@ export function proxy(request: NextRequest) {
     const allowedDemoHost = Boolean(demoHostname && requestHostname === demoHostname &&
       (!headerHostname || headerHostname === demoHostname));
     const allowedDemoAction = request.method === "POST" &&
-      (pathname === "/api/demo/session" || pathname === "/api/auth/logout");
+      (pathname === "/api/demo/session" || pathname === "/api/auth/logout" || pathname === "/api/data");
     if (!allowedDemoHost || !allowedDemoAction) {
       return withSecurityHeaders(NextResponse.json(
         { error: "This sample workspace is read-only. Explore the pages or switch demo roles." },
