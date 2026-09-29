@@ -4,18 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BookOpenCheck,
-  Check,
   CreditCard,
   Edit3,
   Eye,
   EyeOff,
   Globe2,
-  Save,
   Star,
   Trash2,
-  X,
+  Plus,
 } from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
+import { Sheet, useConfirm } from "@/components/ui";
+import { createClient } from "@/lib/edsync/client";
 import { safeCatalogImageUrl, safeCatalogVideoUrl } from "@/lib/security/media";
 import type { BillingPrice, BillingProduct, Entitlement, Tenant, TenantPortal } from "@/types";
 
@@ -43,6 +43,7 @@ type BillingPayload = {
   products: ProductRecord[];
   prices: BillingPrice[];
   entitlements: Entitlement[];
+  transactions: Array<{ id: string; product_id: string; price_id: string; provider: string; amount_cents: number; currency: string; status: string; metadata: { userId?: string } | null; created_at: string }>;
   portals: TenantPortal[];
   links: PortalLinkRecord[];
   context: { tenant: Tenant; portal: TenantPortal | null };
@@ -57,6 +58,7 @@ type ProductDraft = {
   title: string;
   description: string;
   productType: BillingProduct["product_type"];
+  courseId: string;
   portalId: string;
   status: "draft" | "active" | "archived";
   visibility: "private" | "public" | "portal";
@@ -81,6 +83,7 @@ const emptyProduct: ProductDraft = {
   title: "",
   description: "",
   productType: "course",
+  courseId: "",
   portalId: "",
   status: "draft",
   visibility: "private",
@@ -111,6 +114,7 @@ function productDraftFrom(item: ProductRecord, portalId = ""): ProductDraft {
     title: item.title ?? "",
     description: item.description ?? "",
     productType: item.product_type ?? "course",
+    courseId: item.course_id ?? "",
     portalId,
     status: item.status ?? "draft",
     visibility: metadata.visibility ?? "private",
@@ -161,9 +165,13 @@ export default function AdminBillingPage() {
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [createPanel, setCreatePanel] = useState<"product" | "price" | null>(null);
+  const [activeTab, setActiveTab] = useState<"products" | "orders" | "access">("products");
+  const [lessons, setLessons] = useState<Array<{ id: string; title: string; status: string }>>([]);
+  const confirm = useConfirm();
 
-  const load = useCallback(() => {
-    setLoading(true);
+  const load = useCallback((quiet = false) => {
+    if (!quiet) setLoading(true);
     setLoadError("");
     return fetch("/api/billing")
       .then((res) => res.json())
@@ -176,7 +184,7 @@ export default function AdminBillingPage() {
         setLoadError(error instanceof Error ? error.message : "Catalog and billing data unavailable.");
         setPayload(null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!quiet) setLoading(false); });
   }, []);
 
   useEffect(() => {
@@ -185,6 +193,13 @@ export default function AdminBillingPage() {
     }, 0);
     return () => window.clearTimeout(loadTimer);
   }, [load]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void createClient().from("lessons").select("id,title,status").order("title").then(({ data }) => setLessons((data ?? []) as Array<{ id: string; title: string; status: string }>));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const portalById = useMemo(() => new Map<string, TenantPortal>((payload?.portals ?? []).map((item) => [item.id, item])), [payload]);
   const linksByProduct = useMemo(
@@ -216,7 +231,7 @@ export default function AdminBillingPage() {
       if (!response.ok || json.error) throw new Error(json.error || "Request failed.");
       const warnings = Array.isArray(json.data?.warnings) ? json.data.warnings : [];
       setMessage(warnings.length > 0 ? `${success} ${warnings.join(" ")}` : success);
-      await load();
+      await load(true);
       return json.data ?? true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Request failed.");
@@ -245,18 +260,19 @@ export default function AdminBillingPage() {
         title: product.title,
         description: product.description,
         productType: product.productType,
+        courseId: product.courseId || null,
         portalId: product.portalId || null,
         metadata: metadataFrom(product),
       },
       "Product created.",
     );
-    if (ok) setProduct(emptyProduct);
+    if (ok) { setProduct(emptyProduct); setCreatePanel(null); }
   };
 
   const createPrice = async (event: React.FormEvent) => {
     event.preventDefault();
     const ok = await run({ action: "create_price", ...price }, "Price created.");
-    if (ok) setPrice({ ...emptyPrice, amountCents: 4900 });
+    if (ok) { setPrice({ ...emptyPrice, amountCents: 4900 }); setCreatePanel(null); }
   };
 
   const updateCatalog = async (
@@ -291,6 +307,7 @@ export default function AdminBillingPage() {
         title: productDraft.title,
         description: productDraft.description,
         productType: productDraft.productType,
+        courseId: productDraft.courseId || null,
         status: productDraft.status,
         portalId: productDraft.portalId || null,
         metadata: metadataFrom(productDraft),
@@ -301,7 +318,7 @@ export default function AdminBillingPage() {
   };
 
   const deleteProduct = async (item: ProductRecord) => {
-    if (!window.confirm(`Remove "${item.title}" from the catalog? Products with access history will be archived instead of permanently deleted.`)) return;
+    if (!await confirm({ title: `Remove ${item.title}?`, body: "Products with access history will be archived.", confirmLabel: "Remove product", danger: true })) return;
     const result = await run({ action: "delete_product", productId: item.id }, "Product removed.");
     if (result && typeof result === "object" && "mode" in result && result.mode === "archived") {
       setMessage("Product archived and hidden because learners or transactions are already attached.");
@@ -323,324 +340,133 @@ export default function AdminBillingPage() {
   };
 
   const deletePrice = async (item: BillingPrice) => {
-    if (!window.confirm("Remove this price? Prices with transaction history will be deactivated instead of permanently deleted.")) return;
+    if (!await confirm({ title: "Remove this price?", body: "Prices with transaction history will be deactivated.", confirmLabel: "Remove price", danger: true })) return;
     const result = await run({ action: "delete_price", priceId: item.id }, "Price removed.");
     if (result && typeof result === "object" && "mode" in result && result.mode === "deactivated") {
       setMessage("Price deactivated because transactions or subscriptions already reference it.");
     }
   };
 
+  const markPaid = async (transaction: BillingPayload["transactions"][number]) => {
+    if (!await confirm({ title: "Mark this order paid?", body: "This grants the learner access immediately. Confirm the payment outside EdSync first.", confirmLabel: "Mark paid" })) return;
+    await run({ action: "mark_paid", transactionId: transaction.id }, "Order marked paid and access granted.");
+  };
+
+  const selectedProduct = payload?.products.find((item) => item.id === editingProductId);
+  const selectedPrice = payload?.prices.find((item) => item.id === editingPriceId);
+  const selectedProductDraft = selectedProduct ? productDraft : product;
+  const selectedPriceDraft = selectedPrice ? priceDraft : price;
   return (
-    <div className="page-shell space-y-6">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="page-shell space-y-5">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Monetization</p>
-          <h1 className="font-display text-3xl font-bold text-edsync-text">Catalog & Billing</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Create products, attach prices, and manage whether each course appears globally, inside an organization portal, or stays private.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-edsync-blue">Monetization</p>
+          <h1 className="font-display text-2xl font-bold">Catalog & billing</h1>
         </div>
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle lg:max-w-md">
-          Drafts stay hidden. Public products appear globally. Portal products show only through organization portals.
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => { setPrice({ ...emptyPrice, productId: payload?.products[0]?.id ?? "" }); setCreatePanel("price"); }} disabled={!payload?.products.length}><CreditCard className="h-4 w-4" /> Add price</button>
+          <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => { setProduct(emptyProduct); setCreatePanel("product"); }}><Plus className="h-4 w-4" /> New product</button>
         </div>
       </header>
-
-      {message && (
-        <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">
-          {message}
-        </div>
-      )}
-
-      {loading && (
-        <div className="rounded-lg border border-edsync-border bg-edsync-card p-6 text-sm text-edsync-subtle">
-          Loading catalog and billing controls...
-        </div>
-      )}
-
-      {loadError && !loading && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>{loadError}</span>
-            <button type="button" className="btn-secondary w-fit px-3 py-2 text-sm" onClick={load}>
-              Retry
-            </button>
+      {message && <div role="status" className="rounded-xl border border-edsync-border bg-edsync-surface px-3 py-2 text-sm">{message}</div>}
+      {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-edsync-red/30 bg-edsync-red/10 px-3 py-2 text-sm text-edsync-red"><span>{loadError}</span><button type="button" className="underline" onClick={() => void load()}>Retry</button></div>}
+      {loading && <div className="h-32 animate-pulse rounded-xl bg-edsync-muted" aria-label="Loading billing" />}
+      {payload && (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="premium-card rounded-xl p-3"><p className="text-xs text-edsync-subtle">Products</p><p className="text-xl font-bold">{payload.products.length}</p></div>
+            <div className="premium-card rounded-xl p-3"><p className="text-xs text-edsync-subtle">Pending orders</p><p className="text-xl font-bold">{payload.transactions.filter((item) => item.status === "pending").length}</p></div>
+            <div className="premium-card rounded-xl p-3"><p className="text-xs text-edsync-subtle">Active access</p><p className="text-xl font-bold">{payload.entitlements.filter((item) => item.status === "active").length}</p></div>
           </div>
-        </div>
+          <div className="flex gap-1 overflow-x-auto border-b border-edsync-border" role="tablist" aria-label="Billing sections">
+            {(["products", "orders", "access"] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? "border-b-2 border-edsync-blue px-4 py-2 text-sm font-semibold text-edsync-blue" : "px-4 py-2 text-sm text-edsync-subtle"} onClick={() => setActiveTab(tab)}>{tab === "access" ? "Entitlements" : tab[0].toUpperCase() + tab.slice(1)}</button>)}
+          </div>
+          {activeTab === "products" && (
+            <section className="premium-surface divide-y divide-edsync-border overflow-visible rounded-xl">
+              {payload.products.map((item) => {
+                const metadata = metadataOf(item);
+                const itemPrices = pricesByProduct.get(item.id) ?? [];
+                const portalId = linksByProduct.get(item.id) || "";
+                return <article key={item.id} className="flex flex-col gap-3 p-3 sm:p-4">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="rounded-lg bg-edsync-blue/10 p-2 text-edsync-blue"><BookOpenCheck className="h-5 w-5" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2"><h2 className="min-w-0 truncate font-semibold">{item.title}</h2><span className="badge bg-edsync-blue/10 text-edsync-blue">{item.status}</span>{metadata.featured && <Star className="h-4 w-4 text-edsync-amber" />}</div>
+                      <p className="mt-1 truncate text-xs text-edsync-subtle">{item.product_type} · {metadata.visibility ?? "private"} · {portalById.get(portalId)?.name || "Default portal"}{item.course_id ? " · Linked course" : ""}</p>
+                    </div>
+                    <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startProductEdit(item)}><Edit3 className="h-4 w-4" /> Edit</button>
+                    <ActionMenu label={"Actions for " + item.title}>
+                      <button type="button" className="rounded-lg px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => void updateCatalog(item, { visibility: "public", enrollmentMode: itemPrices.some((entry) => entry.amount_cents > 0) ? "paid" : "free" }, "active", portalId || null)}><Globe2 className="mr-2 inline h-4 w-4" /> Publish globally</button>
+                      <button type="button" className="rounded-lg px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => void updateCatalog(item, { visibility: "portal" }, "active", portalId || null)}><Eye className="mr-2 inline h-4 w-4" /> Portal only</button>
+                      <button type="button" className="rounded-lg px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => void updateCatalog(item, { visibility: "private", enrollmentMode: "closed" }, "draft", portalId || null)}><EyeOff className="mr-2 inline h-4 w-4" /> Hide</button>
+                      <button type="button" className="rounded-lg px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => void updateCatalog(item, { featured: !metadata.featured }, item.status, portalId || null)}><Star className="mr-2 inline h-4 w-4" /> {metadata.featured ? "Unfeature" : "Feature"}</button>
+                      <button type="button" className="rounded-lg px-3 py-2 text-left text-sm text-edsync-red hover:bg-edsync-red/10" onClick={() => void deleteProduct(item)}><Trash2 className="mr-2 inline h-4 w-4" /> Remove</button>
+                    </ActionMenu>
+                    <Link href={"/catalog/" + item.id} className="btn-ghost px-3 py-2 text-sm">Preview</Link>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-11">
+                    {itemPrices.map((itemPrice) => <span key={itemPrice.id} className="inline-flex items-center gap-2 rounded-full border border-edsync-border px-2.5 py-1 text-xs"><strong>{money(itemPrice.amount_cents, itemPrice.currency)}</strong><span className="text-edsync-subtle">{itemPrice.billing_interval}</span>{itemPrice.active === false && <span className="text-edsync-amber">Inactive</span>}<button type="button" className="text-edsync-blue" aria-label={"Edit price " + itemPrice.id} onClick={() => startPriceEdit(itemPrice)}><Edit3 className="h-3.5 w-3.5" /></button><button type="button" className="text-edsync-red" aria-label={"Delete price " + itemPrice.id} onClick={() => void deletePrice(itemPrice)}><Trash2 className="h-3.5 w-3.5" /></button></span>)}
+                    {itemPrices.length === 0 && <span className="text-xs text-edsync-subtle">No price yet</span>}
+                    <button type="button" className="text-xs font-semibold text-edsync-blue" onClick={() => { setPrice({ ...emptyPrice, productId: item.id }); setCreatePanel("price"); }}>+ Price</button>
+                  </div>
+                </article>;
+              })}
+              {payload.products.length === 0 && <p className="p-6 text-sm text-edsync-subtle">No products yet. Create one to start your catalog.</p>}
+            </section>
+          )}
+          {activeTab === "orders" && <section className="premium-surface overflow-x-auto rounded-xl">
+            <table className="w-full min-w-[560px] text-left text-sm"><thead className="border-b border-edsync-border text-xs text-edsync-subtle"><tr><th scope="col" className="p-3 font-medium">Product / order</th><th scope="col" className="p-3 font-medium">Amount</th><th scope="col" className="p-3 font-medium">Status</th><th scope="col" className="p-3 font-medium">Action</th></tr></thead><tbody className="divide-y divide-edsync-border">
+              {payload.transactions.map((transaction) => <tr key={transaction.id}><td className="p-3"><span className="block font-semibold">{payload.products.find((item) => item.id === transaction.product_id)?.title || "Product"}</span><span className="text-xs text-edsync-subtle">{transaction.id} · {new Date(transaction.created_at).toLocaleDateString()}</span></td><td className="p-3 font-semibold">{money(transaction.amount_cents, transaction.currency)}</td><td className="p-3"><span className={transaction.status === "paid" ? "badge bg-edsync-emerald/10 text-edsync-emerald" : "badge bg-edsync-amber/10 text-edsync-amber"}>{transaction.status}</span></td><td className="p-3">{transaction.provider === "manual" && transaction.status === "pending" && <button type="button" className="btn-secondary px-3 py-2 text-xs" disabled={busy} onClick={() => void markPaid(transaction)}>Mark paid</button>}</td></tr>)}
+            </tbody></table>{payload.transactions.length === 0 && <p className="p-6 text-sm text-edsync-subtle">No orders yet.</p>}
+          </section>}
+          {activeTab === "access" && <section className="premium-surface overflow-x-auto rounded-xl">
+            <table className="w-full min-w-[480px] text-left text-sm"><thead className="border-b border-edsync-border text-xs text-edsync-subtle"><tr><th scope="col" className="p-3 font-medium">Product</th><th scope="col" className="p-3 font-medium">Learner</th><th scope="col" className="p-3 font-medium">Access</th></tr></thead><tbody className="divide-y divide-edsync-border">
+              {payload.entitlements.map((entitlement) => <tr key={entitlement.id}><td className="p-3 font-semibold">{payload.products.find((item) => item.id === entitlement.product_id)?.title || "Product access"}</td><td className="p-3 text-xs text-edsync-subtle">{entitlement.user_id}</td><td className="p-3"><span className={entitlement.status === "active" ? "badge bg-edsync-emerald/10 text-edsync-emerald" : "badge bg-edsync-muted text-edsync-subtle"}>{entitlement.status}</span></td></tr>)}
+            </tbody></table>{payload.entitlements.length === 0 && <p className="p-6 text-sm text-edsync-subtle">No entitlements yet.</p>}
+          </section>}
+        </>
       )}
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="edsync-card p-0">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <span>
-              <span className="font-display text-xl font-bold">Add product</span>
-              <span className="block text-sm text-edsync-subtle">Course, bundle, membership, or subscription.</span>
-            </span>
-          </div>
-          <form onSubmit={createProduct} className="grid gap-3 border-t border-edsync-border p-4">
-            <input className="edsync-input" value={product.title} onChange={(event) => setProduct({ ...product, title: event.target.value })} placeholder="Product title" required />
-            <textarea className="edsync-input min-h-24" value={product.description} onChange={(event) => setProduct({ ...product, description: event.target.value })} placeholder="Public summary" />
-            <div className="grid gap-3 md:grid-cols-3">
-              <select className="edsync-input" value={product.productType} onChange={(event) => setProduct({ ...product, productType: event.target.value as ProductDraft["productType"] })}>
-                <option value="course">Course</option>
-                <option value="bundle">Bundle</option>
-                <option value="membership">Membership</option>
-                <option value="subscription">Subscription</option>
-              </select>
-              <select className="edsync-input" value={product.visibility} onChange={(event) => setProduct({ ...product, visibility: event.target.value as ProductDraft["visibility"] })}>
-                <option value="private">Hidden draft</option>
-                <option value="public">Global catalog</option>
-                <option value="portal">Portal catalog</option>
-              </select>
-              <select className="edsync-input" value={product.enrollmentMode} onChange={(event) => setProduct({ ...product, enrollmentMode: event.target.value as ProductDraft["enrollmentMode"] })}>
-                <option value="closed">Closed</option>
-                <option value="free">Free enrollment</option>
-                <option value="paid">Paid checkout</option>
-              </select>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <select className="edsync-input" value={product.portalId} onChange={(event) => setProduct({ ...product, portalId: event.target.value })}>
-                <option value="">Default portal</option>
-                {(payload?.portals ?? []).map((portal) => <option key={portal.id} value={portal.id}>{portal.name}</option>)}
-              </select>
-              <input className="edsync-input" value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })} placeholder="Category" />
-              <input className="edsync-input" value={product.difficulty} onChange={(event) => setProduct({ ...product, difficulty: event.target.value })} placeholder="Difficulty" />
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <input className="edsync-input" value={product.thumbnailUrl} onChange={(event) => setProduct({ ...product, thumbnailUrl: event.target.value })} placeholder="HTTPS thumbnail URL or R2 public URL" />
-              <input className="edsync-input" value={product.previewVideoUrl} onChange={(event) => setProduct({ ...product, previewVideoUrl: event.target.value })} placeholder="YouTube, Vimeo, or direct HTTPS video" />
-            </div>
-            {productMediaWarnings.length > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                {productMediaWarnings.map((warning) => (
-                  <p key={warning}>{warning}</p>
-                ))}
-              </div>
-            )}
-            <label className="flex items-center gap-2 text-sm text-edsync-subtle">
-              <input type="checkbox" checked={product.featured} onChange={(event) => setProduct({ ...product, featured: event.target.checked })} />
-              Feature this product in portal highlights
-            </label>
-            <button className="btn-primary w-fit" type="submit" disabled={busy}>Create product</button>
-          </form>
-        </section>
-
-        <section className="edsync-card p-0">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <span>
-              <span className="font-display text-xl font-bold">Add price</span>
-              <span className="block text-sm text-edsync-subtle">Attach a free, paid, recurring, or invoice price.</span>
-            </span>
-            <CreditCard className="h-5 w-5 text-edsync-subtle" />
-          </div>
-          <form onSubmit={createPrice} className="grid gap-3 border-t border-edsync-border p-4">
-            <select className="edsync-input" value={price.productId} onChange={(event) => setPrice({ ...price, productId: event.target.value })} required>
-              <option value="">Select product</option>
-              {(payload?.products ?? []).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-            </select>
-            <div className="grid gap-3 md:grid-cols-3">
-              <input className="edsync-input" type="number" min="0" value={price.amountCents} onChange={(event) => setPrice({ ...price, amountCents: Number(event.target.value) })} />
-              <input className="edsync-input" value={price.currency} onChange={(event) => setPrice({ ...price, currency: event.target.value })} placeholder="usd" />
-              <select className="edsync-input" value={price.billingInterval} onChange={(event) => setPrice({ ...price, billingInterval: event.target.value as PriceDraft["billingInterval"] })}>
-                <option value="one_time">One time</option>
-                <option value="month">Monthly</option>
-                <option value="year">Yearly</option>
-                <option value="invoice">Invoice</option>
-              </select>
-            </div>
-            <button className="btn-primary w-fit" type="submit" disabled={busy}>Create price</button>
-          </form>
-        </section>
-      </div>
-
-      <div className="edsync-card overflow-visible p-0">
-        <div className="border-b border-edsync-border px-4 py-3">
-          <h2 className="font-display text-xl font-bold">Products</h2>
-          <p className="text-sm text-edsync-subtle">Edit, toggle, archive, or delete catalog records from one compact list.</p>
-        </div>
-        <div className="divide-y divide-edsync-border">
-          {(payload?.products ?? []).map((item) => {
-            const metadata = metadataOf(item);
-            const productPrices = pricesByProduct.get(item.id) ?? [];
-            const portalId = linksByProduct.get(item.id) || "";
-            const portal = portalById.get(portalId);
-            const editing = editingProductId === item.id;
-            return (
-              <section key={item.id} className="grid gap-3 px-4 py-4 text-sm">
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_190px] lg:items-start">
-                  <div className="min-w-0">
-                    {editing ? (
-                      <div className="grid gap-3">
-                        <input className="edsync-input" value={productDraft.title} onChange={(event) => setProductDraft({ ...productDraft, title: event.target.value })} />
-                        <textarea className="edsync-input min-h-20" value={productDraft.description} onChange={(event) => setProductDraft({ ...productDraft, description: event.target.value })} />
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-edsync-text">{item.title}</span>
-                          <span className="badge bg-edsync-blue/10 text-edsync-blue">{item.status}</span>
-                          <span className="badge bg-edsync-emerald/10 text-edsync-emerald">{metadata.enrollmentMode ?? "closed"}</span>
-                          {metadata.featured && <span className="badge bg-amber-100 text-amber-700"><Star className="h-3 w-3" /> Featured</span>}
-                        </div>
-                        <p className="mt-1 line-clamp-2 text-edsync-subtle">{item.description || "No public summary yet."}</p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="grid gap-1 text-edsync-subtle">
-                    {editing ? (
-                      <>
-                        <select className="edsync-input" value={productDraft.productType} onChange={(event) => setProductDraft({ ...productDraft, productType: event.target.value as ProductDraft["productType"] })}>
-                          <option value="course">Course</option>
-                          <option value="bundle">Bundle</option>
-                          <option value="membership">Membership</option>
-                          <option value="subscription">Subscription</option>
-                        </select>
-                        <select className="edsync-input" value={productDraft.status} onChange={(event) => setProductDraft({ ...productDraft, status: event.target.value as ProductDraft["status"] })}>
-                          <option value="draft">Draft</option>
-                          <option value="active">Active</option>
-                          <option value="archived">Archived</option>
-                        </select>
-                      </>
-                    ) : (
-                      <>
-                        <p className="capitalize">{item.product_type}</p>
-                        <p>{portal?.name || "Default portal"}</p>
-                        <p>{metadata.category || "Uncategorized"} / {metadata.difficulty || "All levels"}</p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 lg:justify-end">
-                    {editing ? (
-                      <>
-                        <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => saveProduct(item)} disabled={busy}>
-                          <Save className="h-4 w-4" /> Save
-                        </button>
-                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingProductId(null)}>
-                          <X className="h-4 w-4" /> Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startProductEdit(item)}>
-                          <Edit3 className="h-4 w-4" /> Edit
-                        </button>
-                        <ActionMenu label="More">
-                          <button type="button" className="rounded-md px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => updateCatalog(item, { visibility: "public", enrollmentMode: productPrices.some((entry) => entry.amount_cents > 0) ? "paid" : "free" }, "active", portalId || null)}>
-                            <Globe2 className="mr-2 inline h-4 w-4" /> Publish globally
-                          </button>
-                          <button type="button" className="rounded-md px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => updateCatalog(item, { visibility: "portal" }, "active", portalId || null)}>
-                            <Eye className="mr-2 inline h-4 w-4" /> Portal only
-                          </button>
-                          <button type="button" className="rounded-md px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => updateCatalog(item, { visibility: "private", enrollmentMode: "closed" }, "draft", portalId || null)}>
-                            <EyeOff className="mr-2 inline h-4 w-4" /> Hide
-                          </button>
-                          <button type="button" className="rounded-md px-3 py-2 text-left text-sm hover:bg-edsync-muted" onClick={() => updateCatalog(item, { featured: !metadata.featured }, item.status, portalId || null)}>
-                            <Star className="mr-2 inline h-4 w-4" /> {metadata.featured ? "Unfeature" : "Feature"}
-                          </button>
-                          <button type="button" className="rounded-md px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" onClick={() => deleteProduct(item)}>
-                            <Trash2 className="mr-2 inline h-4 w-4" /> Delete
-                          </button>
-                        </ActionMenu>
-                        <Link href={`/catalog/${item.id}`} className="btn-ghost px-3 py-2 text-sm">
-                          <BookOpenCheck className="h-4 w-4" /> Preview
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {editing && (
-                  <div className="grid gap-3 rounded-lg border border-edsync-border bg-edsync-card p-3 md:grid-cols-3">
-                    <select className="edsync-input" value={productDraft.visibility} onChange={(event) => setProductDraft({ ...productDraft, visibility: event.target.value as ProductDraft["visibility"] })}>
-                      <option value="private">Hidden draft</option>
-                      <option value="public">Global catalog</option>
-                      <option value="portal">Portal catalog</option>
-                    </select>
-                    <select className="edsync-input" value={productDraft.enrollmentMode} onChange={(event) => setProductDraft({ ...productDraft, enrollmentMode: event.target.value as ProductDraft["enrollmentMode"] })}>
-                      <option value="closed">Closed</option>
-                      <option value="free">Free enrollment</option>
-                      <option value="paid">Paid checkout</option>
-                    </select>
-                    <select className="edsync-input" value={productDraft.portalId} onChange={(event) => setProductDraft({ ...productDraft, portalId: event.target.value })}>
-                      <option value="">Default portal</option>
-                      {(payload?.portals ?? []).map((portalOption) => <option key={portalOption.id} value={portalOption.id}>{portalOption.name}</option>)}
-                    </select>
-                    <input className="edsync-input" value={productDraft.category} onChange={(event) => setProductDraft({ ...productDraft, category: event.target.value })} placeholder="Category" />
-                    <input className="edsync-input" value={productDraft.language} onChange={(event) => setProductDraft({ ...productDraft, language: event.target.value })} placeholder="Language" />
-                    <input className="edsync-input" value={productDraft.difficulty} onChange={(event) => setProductDraft({ ...productDraft, difficulty: event.target.value })} placeholder="Difficulty" />
-                    <input className="edsync-input md:col-span-2" value={productDraft.thumbnailUrl} onChange={(event) => setProductDraft({ ...productDraft, thumbnailUrl: event.target.value })} placeholder="Thumbnail URL" />
-                    <input className="edsync-input" value={productDraft.previewVideoUrl} onChange={(event) => setProductDraft({ ...productDraft, previewVideoUrl: event.target.value })} placeholder="Preview video URL" />
-                    {productDraftMediaWarnings.length > 0 && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200 md:col-span-3">
-                        {productDraftMediaWarnings.map((warning) => (
-                          <p key={warning}>{warning}</p>
-                        ))}
-                      </div>
-                    )}
-                    <label className="flex items-center gap-2 text-sm text-edsync-subtle">
-                      <input type="checkbox" checked={productDraft.featured} onChange={(event) => setProductDraft({ ...productDraft, featured: event.target.checked })} />
-                      Featured
-                    </label>
-                  </div>
-                )}
-
-                <div className="grid gap-2">
-                  {productPrices.map((priceItem) => {
-                    const editingPrice = editingPriceId === priceItem.id;
-                    return (
-                      <div key={priceItem.id} className="grid gap-2 rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 md:grid-cols-[1fr_auto] md:items-center">
-                        {editingPrice ? (
-                          <div className="grid gap-2 md:grid-cols-4">
-                            <input className="edsync-input" type="number" min="0" value={priceDraft.amountCents} onChange={(event) => setPriceDraft({ ...priceDraft, amountCents: Number(event.target.value) })} />
-                            <input className="edsync-input" value={priceDraft.currency} onChange={(event) => setPriceDraft({ ...priceDraft, currency: event.target.value })} />
-                            <select className="edsync-input" value={priceDraft.billingInterval} onChange={(event) => setPriceDraft({ ...priceDraft, billingInterval: event.target.value as PriceDraft["billingInterval"] })}>
-                              <option value="one_time">One time</option>
-                              <option value="month">Monthly</option>
-                              <option value="year">Yearly</option>
-                              <option value="invoice">Invoice</option>
-                            </select>
-                            <label className="flex items-center gap-2 text-sm text-edsync-subtle">
-                              <input type="checkbox" checked={priceDraft.active} onChange={(event) => setPriceDraft({ ...priceDraft, active: event.target.checked })} />
-                              Active
-                            </label>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold">{money(priceItem.amount_cents, priceItem.currency)}</span>
-                            <span className="capitalize text-edsync-subtle">{priceItem.billing_interval}</span>
-                            <span className={`badge ${priceItem.active === false ? "bg-slate-100 text-slate-500" : "bg-edsync-emerald/10 text-edsync-emerald"}`}>
-                              {priceItem.active === false ? "Inactive" : "Active"}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2 md:justify-end">
-                          {editingPrice ? (
-                            <>
-                              <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => savePrice(priceItem)}><Check className="h-4 w-4" /> Save</button>
-                              <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingPriceId(null)}><X className="h-4 w-4" /> Cancel</button>
-                            </>
-                          ) : (
-                            <>
-                              <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startPriceEdit(priceItem)}>Edit price</button>
-                              <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => togglePrice(priceItem)}>{priceItem.active === false ? "Activate" : "Deactivate"}</button>
-                              <button type="button" className="btn-ghost px-3 py-2 text-sm text-rose-600" onClick={() => deletePrice(priceItem)}>Delete</button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {productPrices.length === 0 && <p className="rounded-lg border border-dashed border-edsync-border px-3 py-2 text-sm text-edsync-subtle">No prices yet. Add a free or paid price before publishing checkout products.</p>}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-        {(payload?.products ?? []).length === 0 && (
-          <p className="px-4 py-5 text-sm text-edsync-subtle">No catalog products yet.</p>
-        )}
-      </div>
+      <Sheet open={createPanel === "product" || Boolean(selectedProduct)} onClose={() => { setCreatePanel(null); setEditingProductId(null); }} title={selectedProduct ? "Edit product" : "New product"} description="Choose the course, audience, and catalog visibility." size="lg">
+        <form className="space-y-4" onSubmit={selectedProduct ? (event) => { event.preventDefault(); void saveProduct(selectedProduct); } : createProduct}>
+          <ProductFields value={selectedProductDraft} onChange={selectedProduct ? setProductDraft : setProduct} portals={payload?.portals ?? []} lessons={lessons} warnings={selectedProduct ? productDraftMediaWarnings : productMediaWarnings} isNew={!selectedProduct} />
+          <button type="submit" className="btn-primary w-full justify-center" disabled={busy}>{busy ? "Saving…" : selectedProduct ? "Save product" : "Create product"}</button>
+        </form>
+      </Sheet>
+      <Sheet open={createPanel === "price" || Boolean(selectedPrice)} onClose={() => { setCreatePanel(null); setEditingPriceId(null); }} title={selectedPrice ? "Edit price" : "Add price"} description="Manual checkout is available without a payment provider.">
+        <form className="space-y-4" onSubmit={selectedPrice ? (event) => { event.preventDefault(); void savePrice(selectedPrice); } : createPrice}>
+          <label className="grid gap-1 text-sm font-medium">Product<select className="edsync-input" value={selectedPriceDraft.productId} onChange={(event) => (selectedPrice ? setPriceDraft : setPrice)({ ...selectedPriceDraft, productId: event.target.value })} required disabled={Boolean(selectedPrice)}><option value="">Select product</option>{(payload?.products ?? []).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-medium">Amount (cents)<input className="edsync-input" type="number" min="0" value={selectedPriceDraft.amountCents} onChange={(event) => (selectedPrice ? setPriceDraft : setPrice)({ ...selectedPriceDraft, amountCents: Number(event.target.value) })} required /></label>
+          <label className="grid gap-1 text-sm font-medium">Currency<input className="edsync-input" value={selectedPriceDraft.currency} onChange={(event) => (selectedPrice ? setPriceDraft : setPrice)({ ...selectedPriceDraft, currency: event.target.value })} required /></label>
+          <label className="grid gap-1 text-sm font-medium">Billing<select className="edsync-input" value={selectedPriceDraft.billingInterval} onChange={(event) => (selectedPrice ? setPriceDraft : setPrice)({ ...selectedPriceDraft, billingInterval: event.target.value as PriceDraft["billingInterval"] })}><option value="one_time">One time</option><option value="month">Monthly</option><option value="year">Yearly</option><option value="invoice">Invoice</option></select></label>
+          {selectedPrice && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selectedPriceDraft.active} onChange={(event) => setPriceDraft({ ...selectedPriceDraft, active: event.target.checked })} /> Active</label>}
+          <button type="submit" className="btn-primary w-full justify-center" disabled={busy}>{busy ? "Saving…" : selectedPrice ? "Save price" : "Create price"}</button>
+          {selectedPrice && <button type="button" className="btn-secondary w-full justify-center" disabled={busy} onClick={() => void togglePrice(selectedPrice)}>{selectedPrice.active ? "Deactivate" : "Activate"}</button>}
+        </form>
+      </Sheet>
     </div>
   );
+}
+
+function ProductFields({ value, onChange, portals, lessons, warnings, isNew }: { value: ProductDraft; onChange: (value: ProductDraft) => void; portals: TenantPortal[]; lessons: Array<{ id: string; title: string; status: string }>; warnings: string[]; isNew: boolean }) {
+  return <div className="grid gap-3">
+    <label className="grid gap-1 text-sm font-medium">Title<input className="edsync-input" value={value.title} onChange={(event) => onChange({ ...value, title: event.target.value })} required /></label>
+    <label className="grid gap-1 text-sm font-medium">Summary<textarea className="edsync-input min-h-20" value={value.description} onChange={(event) => onChange({ ...value, description: event.target.value })} /></label>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className="grid gap-1 text-sm font-medium">Product type<select className="edsync-input" value={value.productType} onChange={(event) => onChange({ ...value, productType: event.target.value as ProductDraft["productType"] })}><option value="course">Course</option><option value="bundle">Bundle</option><option value="membership">Membership</option><option value="subscription">Subscription</option></select></label>
+      {isNew ? <p className="self-end rounded-xl bg-edsync-muted px-3 py-2 text-xs text-edsync-subtle">Created as a draft</p> : <label className="grid gap-1 text-sm font-medium">Status<select className="edsync-input" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value as ProductDraft["status"] })}><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></label>}
+      <label className="grid gap-1 text-sm font-medium">Linked course{lessons.length > 0 ? <select className="edsync-input" value={value.courseId} onChange={(event) => onChange({ ...value, courseId: event.target.value })}><option value="">No course</option>{value.courseId && !lessons.some((lesson) => lesson.id === value.courseId) && <option value={value.courseId}>Current linked course</option>}{lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title} · {lesson.status}</option>)}</select> : <input className="edsync-input" value={value.courseId} onChange={(event) => onChange({ ...value, courseId: event.target.value })} placeholder="Optional course ID" />}</label>
+      <label className="grid gap-1 text-sm font-medium">Visibility<select className="edsync-input" value={value.visibility} onChange={(event) => onChange({ ...value, visibility: event.target.value as ProductDraft["visibility"] })}><option value="private">Private</option><option value="public">Public catalog</option><option value="portal">Portal catalog</option></select></label>
+      <label className="grid gap-1 text-sm font-medium">Enrollment<select className="edsync-input" value={value.enrollmentMode} onChange={(event) => onChange({ ...value, enrollmentMode: event.target.value as ProductDraft["enrollmentMode"] })}><option value="closed">Closed</option><option value="free">Free</option><option value="paid">Paid</option></select></label>
+      <label className="grid gap-1 text-sm font-medium">Portal<select className="edsync-input" value={value.portalId} onChange={(event) => onChange({ ...value, portalId: event.target.value })}><option value="">Default portal</option>{portals.map((portal) => <option key={portal.id} value={portal.id}>{portal.name}</option>)}</select></label>
+    </div>
+    <details className="rounded-xl border border-edsync-border p-3"><summary className="cursor-pointer text-sm font-semibold">Appearance & details</summary><div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <label className="grid gap-1 text-sm">Category<input className="edsync-input" value={value.category} onChange={(event) => onChange({ ...value, category: event.target.value })} /></label>
+      <label className="grid gap-1 text-sm">Language<input className="edsync-input" value={value.language} onChange={(event) => onChange({ ...value, language: event.target.value })} /></label>
+      <label className="grid gap-1 text-sm">Difficulty<input className="edsync-input" value={value.difficulty} onChange={(event) => onChange({ ...value, difficulty: event.target.value })} /></label>
+      <label className="grid gap-1 text-sm">Thumbnail URL<input className="edsync-input" value={value.thumbnailUrl} onChange={(event) => onChange({ ...value, thumbnailUrl: event.target.value })} /></label>
+      <label className="grid gap-1 text-sm sm:col-span-2">Preview video URL<input className="edsync-input" value={value.previewVideoUrl} onChange={(event) => onChange({ ...value, previewVideoUrl: event.target.value })} /></label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={value.featured} onChange={(event) => onChange({ ...value, featured: event.target.checked })} /> Feature product</label>
+    </div></details>
+    {warnings.length > 0 && <div role="alert" className="rounded-xl border border-edsync-amber/30 bg-edsync-amber/10 p-3 text-sm text-edsync-amber">{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div>}
+  </div>;
 }
