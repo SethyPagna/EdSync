@@ -1,240 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Award, Edit3, MoreVertical, Save, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Award, Plus, Trash2 } from "lucide-react";
 import type { CertificationRule } from "@/types";
-import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
 import { CERTIFICATION_RECIPES } from "@/lib/certifications/rules";
+import { Button, PageHeader, Sheet, useConfirm } from "@/components/ui";
 
-type CertificationsPayload = {
-  rules: CertificationRule[];
-};
-
-type RuleDraft = {
-  title: string;
-  description: string;
-  expiresAfterDays: number;
-  notifyBeforeDays: number;
-  settingsText: string;
-};
-
-const emptyRule: RuleDraft = {
-  title: "",
-  description: "",
-  expiresAfterDays: 365,
-  notifyBeforeDays: 30,
-  settingsText: "{}",
-};
-
-function draftFrom(rule: CertificationRule): RuleDraft {
-  return {
-    title: rule.title,
-    description: rule.description ?? "",
-    expiresAfterDays: rule.expires_after_days ?? 365,
-    notifyBeforeDays: rule.notify_before_days ?? 30,
-    settingsText: JSON.stringify(rule.settings ?? {}, null, 2),
-  };
-}
-
-function parseSettings(value: string) {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
-    return parsed as Record<string, unknown>;
-  } catch {
-    throw new Error("Settings must be a valid JSON object.");
-  }
-}
-
-function compactJson(value: unknown) {
-  return JSON.stringify(value);
-}
+type Draft = { title: string; description: string; courseId: string; expiresAfterDays: number; notifyBeforeDays: number; settings: Record<string, unknown> };
+const emptyDraft: Draft = { title: "", description: "", courseId: "", expiresAfterDays: 365, notifyBeforeDays: 30, settings: {} };
+function fromRule(rule: CertificationRule): Draft { return { title: rule.title, description: rule.description ?? "", courseId: rule.course_id ?? "", expiresAfterDays: rule.expires_after_days ?? 0, notifyBeforeDays: rule.notify_before_days, settings: { ...(rule.settings ?? {}) } }; }
+function fromRecipe(recipe: (typeof CERTIFICATION_RECIPES)[number]): Draft { return { title: recipe.title, description: recipe.description, courseId: "", expiresAfterDays: recipe.expiresAfterDays ?? 0, notifyBeforeDays: recipe.notifyBeforeDays, settings: { ...recipe.settings } }; }
 
 export default function AdminCertificationsPage() {
-  const [payload, setPayload] = useState<CertificationsPayload>({ rules: [] });
-  const [form, setForm] = useState<RuleDraft>(emptyRule);
+  const [rules, setRules] = useState<CertificationRule[]>([]);
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<RuleDraft>(emptyRule);
-  const [message, setMessage] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const confirm = useConfirm();
+  const load = useCallback(async () => { try { const response = await fetch("/api/certifications", { cache: "no-store" }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Could not load certifications."); setRules(payload.data?.rules ?? []); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load certifications."); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+  const run = async (body: Record<string, unknown>, success: string) => { setBusy(true); setError(""); try { const response = await fetch("/api/certifications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Certification could not be saved."); setNotice(success); await load(); return true; } catch (reason) { setError(reason instanceof Error ? reason.message : "Certification could not be saved."); return false; } finally { setBusy(false); } };
+  const create = (recipe?: (typeof CERTIFICATION_RECIPES)[number]) => { setEditingId(null); setDraft(recipe ? fromRecipe(recipe) : emptyDraft); setOpen(true); };
+  const edit = (rule: CertificationRule) => { setEditingId(rule.id); setDraft(fromRule(rule)); setOpen(true); };
+  const save = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const ok = await run({ action: editingId ? "update" : "create", ...(editingId ? { id: editingId } : {}), ...draft }, editingId ? "Certification saved." : "Certification created."); if (ok) setOpen(false); };
+  const remove = async (rule: CertificationRule) => { if (!await confirm({ title: `Delete ${rule.title}?`, body: "This removes the certification rule.", confirmLabel: "Delete rule", danger: true })) return; await run({ action: "delete", id: rule.id }, "Certification deleted."); };
+  const setSetting = (key: string, value: unknown) => setDraft((current) => ({ ...current, settings: { ...current.settings, [key]: value } }));
+  const evidence = Array.isArray(draft.settings.evidence) ? draft.settings.evidence as string[] : [];
 
-  const load = () =>
-    fetch("/api/certifications", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((json: { data?: CertificationsPayload }) => setPayload(json.data ?? { rules: [] }));
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const run = async (body: Record<string, unknown>, success: string) => {
-    setMessage("");
-    const response = await fetch("/api/certifications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const json = await response.json();
-    if (!response.ok || json.error) {
-      setMessage(json.error || "Request failed.");
-      return false;
-    }
-    setMessage(success);
-    load();
-    return true;
-  };
-
-  const bodyFrom = (source: RuleDraft) => ({
-    title: source.title,
-    description: source.description,
-    expiresAfterDays: source.expiresAfterDays,
-    notifyBeforeDays: source.notifyBeforeDays,
-    settings: parseSettings(source.settingsText),
-  });
-
-  const applyRecipe = (recipe: (typeof CERTIFICATION_RECIPES)[number]) => {
-    setForm({
-      title: recipe.title,
-      description: recipe.description,
-      expiresAfterDays: recipe.expiresAfterDays ?? 0,
-      notifyBeforeDays: recipe.notifyBeforeDays,
-      settingsText: JSON.stringify(recipe.settings, null, 2),
-    });
-    setMessage("Certification recipe loaded.");
-  };
-
-  const create = async (event: React.FormEvent) => {
-    event.preventDefault();
-    let body;
-    try {
-      body = bodyFrom(form);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Certification rule is invalid.");
-      return;
-    }
-    const ok = await run({ action: "create", ...body }, "Certification rule created.");
-    if (ok) setForm(emptyRule);
-  };
-
-  const save = async (rule: CertificationRule) => {
-    let body;
-    try {
-      body = bodyFrom(draft);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Certification rule is invalid.");
-      return;
-    }
-    const ok = await run({ action: "update", id: rule.id, ...body }, "Certification rule saved.");
-    if (ok) setEditingId(null);
-  };
-
-  const remove = async (rule: CertificationRule) => {
-    if (!window.confirm(`Delete "${rule.title}"?`)) return;
-    await run({ action: "delete", id: rule.id }, "Certification rule deleted.");
-  };
-
-  return (
-    <div className="page-shell space-y-5">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Governance</p>
-          <h1 className="font-display text-3xl font-bold text-edsync-text">Certifications</h1>
-        </div>
-        <InfoPopover label="Certification help">
-          Use expiry days for renewal cadence and notify days for reminder timing. Keep legal or safety programs longer.
-        </InfoPopover>
-      </header>
-
-      {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
-
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {CERTIFICATION_RECIPES.map((recipe) => (
-          <button
-            key={recipe.id}
-            type="button"
-            onClick={() => applyRecipe(recipe)}
-            className="rounded-lg border border-edsync-border bg-edsync-card p-4 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-surface"
-          >
-            <Award className="mb-3 h-5 w-5 text-edsync-blue" />
-            <span className="block font-semibold text-edsync-text">{recipe.title}</span>
-            <span className="mt-2 block text-xs text-edsync-subtle">
-              {recipe.expiresAfterDays ? `${recipe.expiresAfterDays} day expiry` : "No expiry"} · notify {recipe.notifyBeforeDays} days
-            </span>
-          </button>
-        ))}
-      </section>
-
-      <form onSubmit={create} className="edsync-card grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_160px_160px_auto]">
-        <input className="edsync-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Certification title" required />
-        <input className="edsync-input" type="number" min="0" value={form.expiresAfterDays} onChange={(event) => setForm({ ...form, expiresAfterDays: Number(event.target.value) })} aria-label="Expires after days" />
-        <input className="edsync-input" type="number" min="0" value={form.notifyBeforeDays} onChange={(event) => setForm({ ...form, notifyBeforeDays: Number(event.target.value) })} aria-label="Notify before days" />
-        <button className="btn-primary justify-center" type="submit">Create rule</button>
-        <textarea className="edsync-input lg:col-span-4" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Rule purpose and audit notes" />
-        <div className="lg:col-span-4">
-          <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setShowSettings((value) => !value)}>
-            {showSettings ? "Hide settings" : "Edit settings"}
-          </button>
-        </div>
-        {showSettings && (
-          <textarea className="edsync-input min-h-24 lg:col-span-4" value={form.settingsText} onChange={(event) => setForm({ ...form, settingsText: event.target.value })} aria-label="Certification settings JSON" />
-        )}
-      </form>
-
-      <div className="edsync-card overflow-hidden p-0">
-        <div className="border-b border-edsync-border px-4 py-3">
-          <h2 className="font-display text-xl font-bold">Certification rules</h2>
-        </div>
-        <div className="divide-y divide-edsync-border">
-          {payload.rules.map((rule) => {
-            const editing = editingId === rule.id;
-            return (
-              <section key={rule.id} className="grid gap-3 px-4 py-4 text-sm">
-                {editing ? (
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_160px]">
-                    <input className="edsync-input" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
-                    <input className="edsync-input" type="number" min="0" value={draft.expiresAfterDays} onChange={(event) => setDraft({ ...draft, expiresAfterDays: Number(event.target.value) })} />
-                    <input className="edsync-input" type="number" min="0" value={draft.notifyBeforeDays} onChange={(event) => setDraft({ ...draft, notifyBeforeDays: Number(event.target.value) })} />
-                    <textarea className="edsync-input lg:col-span-3" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
-                    <textarea className="edsync-input min-h-24 lg:col-span-3" value={draft.settingsText} onChange={(event) => setDraft({ ...draft, settingsText: event.target.value })} />
-                  </div>
-                ) : (
-                  <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_160px_160px] lg:items-center">
-                    <div>
-                      <p className="font-semibold text-edsync-text">{rule.title}</p>
-                      <p className="mt-1 text-edsync-subtle">{rule.description || "No description yet."}</p>
-                    </div>
-                    <span>{rule.expires_after_days || "No expiry"} days</span>
-                    <span>Notify {rule.notify_before_days} days</span>
-                  </div>
-                )}
-                <div className="flex flex-wrap justify-end gap-2">
-                  {editing ? (
-                    <>
-                      <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => save(rule)}><Save className="h-4 w-4" /> Save</button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
-                    </>
-                  ) : (
-                    <ActionMenu label={`${rule.title} actions`}>
-                      <button type="button" className="btn-secondary justify-start px-3 py-2 text-sm" onClick={() => { setEditingId(rule.id); setDraft(draftFrom(rule)); }}><Edit3 className="h-4 w-4" /> Edit</button>
-                      <button type="button" className="btn-ghost justify-start px-3 py-2 text-sm text-rose-600" onClick={() => remove(rule)}><Trash2 className="h-4 w-4" /> Delete</button>
-                    </ActionMenu>
-                  )}
-                </div>
-                {!editing && (
-                  <details className="rounded-lg border border-edsync-border bg-edsync-surface">
-                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-edsync-subtle">
-                      <MoreVertical className="h-3.5 w-3.5" />
-                      Audit settings
-                    </summary>
-                    <pre className="overflow-auto border-t border-edsync-border p-3 text-xs text-edsync-subtle">{compactJson(rule.settings ?? {})}</pre>
-                  </details>
-                )}
-              </section>
-            );
-          })}
-          {payload.rules.length === 0 && <p className="px-4 py-5 text-sm text-edsync-subtle">No certification rules yet.</p>}
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="page-shell space-y-4"><PageHeader title="Certifications" icon={Award} count={rules.length} actions={<Button variant="primary" onClick={() => create()}><Plus size={16} /> New rule</Button>} />
+    {error && <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm text-fg-muted">{notice}</p>}
+    <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold uppercase tracking-wide text-fg-faint">Start from a recipe</span>{CERTIFICATION_RECIPES.map((recipe) => <button key={recipe.id} type="button" onClick={() => create(recipe)} className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-fg-muted hover:border-accent hover:text-fg">{recipe.title}</button>)}</div>
+    <section className="card divide-y divide-line overflow-hidden">{rules.map((rule) => <div key={rule.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><Award size={17} /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-fg">{rule.title}</p><p className="truncate text-xs text-fg-muted">{rule.description || (rule.course_id ? `Course ${rule.course_id}` : "Certification rule")}</p></div><span className="text-xs text-fg-muted">{rule.expires_after_days ? `${rule.expires_after_days}d expiry` : "No expiry"} · {rule.notify_before_days}d notice</span><button type="button" className="rounded-md px-2 py-1.5 text-sm text-fg-muted hover:bg-surface-2" onClick={() => edit(rule)}>Edit</button><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-soft hover:text-danger" onClick={() => void remove(rule)} aria-label={`Delete ${rule.title}`}><Trash2 size={16} /></button></div>)}{rules.length === 0 && <p className="px-4 py-8 text-center text-sm text-fg-muted">No certification rules yet.</p>}</section>
+    <Sheet open={open} onClose={() => setOpen(false)} title={editingId ? "Edit certification" : "New certification"} size="lg" onSubmit={save} footer={<><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" variant="primary" disabled={busy}>{busy ? "Saving…" : "Save rule"}</Button></>}><div className="space-y-4">{error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      <label className="block space-y-1 text-sm font-medium text-fg">Title<input className="edsync-input w-full" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} maxLength={140} required /></label>
+      <label className="block space-y-1 text-sm font-medium text-fg">Description<textarea className="edsync-input min-h-20 w-full" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} maxLength={600} /></label>
+      <label className="block space-y-1 text-sm font-medium text-fg">Course ID (optional)<input className="edsync-input w-full" value={draft.courseId} onChange={(event) => setDraft({ ...draft, courseId: event.target.value })} /></label>
+      <div className="grid grid-cols-2 gap-3"><label className="block space-y-1 text-sm font-medium text-fg">Expires after days<input className="edsync-input w-full" type="number" min="0" max="3650" value={draft.expiresAfterDays} onChange={(event) => setDraft({ ...draft, expiresAfterDays: Number(event.target.value) })} /><span className="text-xs font-normal text-fg-faint">0 means no expiry</span></label><label className="block space-y-1 text-sm font-medium text-fg">Notify before days<input className="edsync-input w-full" type="number" min="0" max="365" value={draft.notifyBeforeDays} onChange={(event) => setDraft({ ...draft, notifyBeforeDays: Number(event.target.value) })} /></label></div>
+      <fieldset className="space-y-3 border-t border-line pt-4"><legend className="text-sm font-semibold text-fg">Evidence settings</legend><div className="flex flex-wrap gap-3">{["completion", "score"].map((item) => <label key={item} className="flex items-center gap-2 text-sm capitalize text-fg-muted"><input type="checkbox" checked={evidence.includes(item)} onChange={(event) => setSetting("evidence", event.target.checked ? [...evidence, item] : evidence.filter((value) => value !== item))} />{item}</label>)}</div><label className="block space-y-1 text-sm text-fg-muted">Audit level<select className="edsync-input w-full" value={String(draft.settings.audit ?? "standard")} onChange={(event) => setSetting("audit", event.target.value)}><option value="light">Light</option><option value="standard">Standard</option><option value="required">Required</option></select></label><label className="block space-y-1 text-sm text-fg-muted">Renewal<select className="edsync-input w-full" value={String(draft.settings.renewal ?? "none")} onChange={(event) => setSetting("renewal", event.target.value)}><option value="none">None</option><option value="annual">Annual</option><option value="biennial">Every two years</option></select></label><label className="block space-y-1 text-sm text-fg-muted">Minimum score (optional)<input className="edsync-input w-full" type="number" min="0" max="100" value={Number(draft.settings.scoreGte ?? 0)} onChange={(event) => setSetting("scoreGte", Number(event.target.value))} /></label><label className="block space-y-1 text-sm text-fg-muted">Audience<select className="edsync-input w-full" value={String(draft.settings.audience ?? "internal")} onChange={(event) => setSetting("audience", event.target.value)}><option value="internal">Internal</option><option value="external">External</option></select></label></fieldset>
+    </div></Sheet>
+  </div>;
 }
