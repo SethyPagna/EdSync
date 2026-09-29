@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import PptxGenJS from "pptxgenjs";
 import type { SceneDeck } from "@/lib/studio/scene";
 import { buildNativePptx } from "./pptx";
+
+beforeEach(() => vi.stubGlobal("PptxGenJS", PptxGenJS));
+afterEach(() => vi.unstubAllGlobals());
 
 describe("buildNativePptx", () => {
   it("packages editable slide content and notes as a PowerPoint file", async () => {
