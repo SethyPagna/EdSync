@@ -24,6 +24,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: null, error: message }, { status: 400 });
   }
 
+  if (url.searchParams.get("purpose") === "login") {
+    return NextResponse.json({ data: { slug: code, name: "Workspace", portalSlug: null, portalName: null, ssoEnabled: false }, error: null });
+  }
+
   const [row] = await d1Query<{
     tenant_id: string;
     tenant_slug: string;
@@ -42,10 +46,14 @@ export async function GET(request: Request) {
             tp.audience AS portal_audience
        FROM tenants t
        LEFT JOIN tenant_portals tp ON tp.tenant_id = t.id AND tp.is_default = 1
-      WHERE lower(t.slug) = lower(?)
+      WHERE COALESCE(json_extract(t.settings, '$.invites_enabled'), 1) = 1
+        AND (
+          (json_extract(t.settings, '$.invite_code') IS NOT NULL AND lower(json_extract(t.settings, '$.invite_code')) = lower(?))
+          OR (json_extract(t.settings, '$.invite_code') IS NULL AND lower(t.slug) = lower(?))
+        )
         AND t.status = 'active'
       LIMIT 1`,
-    [code],
+    [code, code],
   );
 
   if (!row) {
