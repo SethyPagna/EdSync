@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import {
   normalizeEmailDisplay,
   normalizeEmailMetadata,
@@ -60,6 +61,7 @@ export const POST = withRoute(async (request) => {
   await requirePermission(user, context, PERMISSIONS.coursesAuthor).catch(() => {
     throw new ForbiddenError("Missing authoring permission.");
   });
+  if (!(await isFeatureEnabled("email_outbox"))) throw new ForbiddenError("Course messages are unavailable.");
   const isPlatformAdmin = user.user_metadata.role === "admin";
 
   const body = await readJson<{
