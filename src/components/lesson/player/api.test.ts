@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PlayerQuestion } from "@/lib/lessons/quiz";
-import { allAnswered, checkAnswer, loadQuestions, questionsForSection, saveProgress, submitFinal } from "./api";
+import { allAnswered, checkAnswer, loadQuestions, loadRecordedFinal, questionsForSection, saveProgress, submitFinal } from "./api";
 
 const choice: PlayerQuestion = {
   id: "q1", sectionId: "s1", type: "mcq", prompt: "What changed?",
@@ -41,6 +41,18 @@ describe("lesson player API", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ lessonId: "l1", answers: { q1: "b" } });
     await saveProgress("l1", { completedSectionIds: ["s1"], completed: true });
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ completedSectionIds: ["s1"], completed: true });
+  });
+
+  it("loads only this lesson's previously recorded final result", async () => {
+    const grade = { score: 0, maxScore: 2, percent: 0, status: "graded", results: [], recorded: true };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: { grade, answers: { q1: "b" } }, error: null }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await loadRecordedFinal("lesson/1")).toEqual({ grade, answers: { q1: "b" } });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/grades/lesson-quiz?lessonId=lesson%2F1");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ credentials: "include", cache: "no-store" });
   });
 
   it("surfaces a server rejection instead of treating it as success", async () => {
