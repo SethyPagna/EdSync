@@ -4,6 +4,7 @@ import {
   missedPracticeItems,
   summarizePracticeAttempt,
   targetSecondsFromMinutes,
+  isPracticeItemCorrect,
 } from "@/lib/practice/engine";
 
 describe("practice engine", () => {
@@ -47,5 +48,11 @@ describe("practice engine", () => {
   it("enforces a minimum one-minute target", () => {
     expect(targetSecondsFromMinutes(0.1)).toBe(60);
     expect(targetSecondsFromMinutes(5)).toBe(300);
+  });
+
+  it("accepts configured answer variants across case, spacing, and accents", () => {
+    expect(isPracticeItemCorrect({ id: "1", prompt: "Capital", answer: "São Paulo", accept: ["Sao Paulo"], response: "  SAO   PAULO " })).toBe(true);
+    expect(isPracticeItemCorrect({ id: "2", prompt: "Color", answer: "blue", accept: ["azure"], response: "AZURE" })).toBe(true);
+    expect(isPracticeItemCorrect({ id: "3", prompt: "Color", answer: "blue", accept: ["azure"], response: "red" })).toBe(false);
   });
 });
