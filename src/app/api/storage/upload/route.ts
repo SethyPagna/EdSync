@@ -6,6 +6,7 @@ import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateObjectPath, validateUploadFile } from "@/lib/security/upload";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 
 const MEDIA_ASSET_TABLE = "media_assets";
 const STORAGE_OBJECT_TABLE = "storage_objects";
@@ -21,6 +22,12 @@ export async function POST(request: Request) {
     );
   }
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) {
+    return NextResponse.json(
+      { data: null, error: { message: "Organization membership required." } },
+      { status: 403 },
+    );
+  }
 
   const rate = await enforceRateLimit({
     request,
