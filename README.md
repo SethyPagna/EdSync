@@ -84,10 +84,16 @@ announcements, notes, notifications, catalog products, and Studio designs.
 - Cloudflare R2 bucket: `edsync-assets-prod`
 - Cloudflare Queue: `edsync-automation-prod`
 - Cloudflare Vectorize index: `edsync-learning-prod`
-- `npm.cmd run deploy:cloudflare` builds the app, deploys the automation queue
-  consumer and hourly recovery sweep, deploys the app Worker, then syncs
-  configured Worker secrets. Set `CLOUDFLARE_ACCOUNT_ID` for the EdSync account
-  and sign Wrangler into that account before running it.
+- `npm.cmd run deploy:cloudflare` builds the app with the public values in the
+  app Wrangler config, deploys the automation queue consumer and its phased
+  20-minute sweep, then deploys the app Worker. Set `CLOUDFLARE_ACCOUNT_ID` in
+  the process environment and sign Wrangler into the EdSync account first.
+  The command syncs local Worker secrets afterward unless
+  `CLOUDFLARE_SKIP_SECRET_SYNC=1` is set.
+- Keep the original production `APP_ENCRYPTION_KEY` when moving existing AI
+  provider records. A different key cannot decrypt their stored credentials.
+  If that key is unavailable, skip secret sync and use the enabled Cloudflare
+  Workers AI fallback until the original key or provider credentials are restored.
 - Real secrets belong in `.env.local`, Vercel environment variables, Cloudflare
   secrets, or CI secrets. They must not be committed.
 - `npm.cmd run db:local` starts the production-mode Docker self-hosting profile
