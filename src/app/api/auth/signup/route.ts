@@ -155,9 +155,16 @@ export async function POST(request: Request) {
   }
 
   const [joinedTenant] = accountType === "organization" && organizationMode === "join"
-    ? await d1Query<{ id: string; name: string }>(
-        "SELECT id, name FROM tenants WHERE lower(slug) = lower(?) AND status = 'active' LIMIT 1",
-        [organizationCode],
+    ? await d1Query<{ id: string; slug: string; name: string }>(
+        `SELECT id, slug, name FROM tenants
+          WHERE status = 'active'
+            AND COALESCE(json_extract(settings, '$.invites_enabled'), 1) = 1
+            AND (
+              (json_extract(settings, '$.invite_code') IS NOT NULL AND lower(json_extract(settings, '$.invite_code')) = lower(?))
+              OR (json_extract(settings, '$.invite_code') IS NULL AND lower(slug) = lower(?))
+            )
+          LIMIT 1`,
+        [organizationCode, organizationCode],
       )
     : [];
 
@@ -219,7 +226,7 @@ export async function POST(request: Request) {
           tenantSlug,
           organizationName,
           id,
-          JSON.stringify({ signup_source: "auth_signup", owner_role: role }),
+          JSON.stringify({ signup_source: "auth_signup", owner_role: role, invite_code: `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`, invites_enabled: true }),
         ],
       },
       {
@@ -234,7 +241,7 @@ export async function POST(request: Request) {
 
   if (joinedTenant && organizationCode) {
     statements.push({ sql: membershipSql, params: [crypto.randomUUID(), joinedTenant.id, id, roleProfileId] });
-    tenantContext = { id: joinedTenant.id, slug: organizationCode, name: joinedTenant.name };
+    tenantContext = { id: joinedTenant.id, slug: joinedTenant.slug, name: joinedTenant.name };
   }
 
   try {
