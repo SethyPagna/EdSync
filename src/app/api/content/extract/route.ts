@@ -6,6 +6,7 @@ import { scanUploadBuffer } from "@/lib/security/malware";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security/rate-limit";
 import { validateUploadFile } from "@/lib/security/upload";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 
 const CONTENT_EXTRACTION_TABLE = "content_extractions";
 
@@ -80,6 +81,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) {
+    return NextResponse.json({ error: "Organization membership required." }, { status: 403 });
+  }
 
   const rate = await enforceRateLimit({
     request,
