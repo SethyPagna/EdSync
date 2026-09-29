@@ -10,6 +10,7 @@ import {
   validateStudioTitle,
 } from "@/lib/studio/validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 import type { StudioItemKind } from "@/types";
 
 type StudioDocumentRow = {
@@ -129,6 +130,7 @@ export async function GET(request: Request) {
   if (!user) return errorResponse("Unauthorized", 401);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return errorResponse("Organization membership required.", 403);
   const params = new URL(request.url).searchParams;
   const kind = params.get("kind");
   const historyId = params.get("historyId");
@@ -194,6 +196,7 @@ export async function POST(request: Request) {
   if (!user) return errorResponse("Unauthorized", 401);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return errorResponse("Organization membership required.", 403);
   const body = (await request.json()) as {
     id?: string;
     kind?: StudioItemKind;
@@ -288,6 +291,7 @@ export async function PATCH(request: Request) {
   if (!user) return errorResponse("Unauthorized", 401);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return errorResponse("Organization membership required.", 403);
   const body = (await request.json()) as {
     id?: string;
     title?: string;
@@ -382,6 +386,7 @@ export async function DELETE(request: Request) {
   if (!user) return errorResponse("Unauthorized", 401);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return errorResponse("Organization membership required.", 403);
   const params = new URL(request.url).searchParams;
   const id = params.get("id");
   const hard = params.get("hard") === "true";
