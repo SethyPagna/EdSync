@@ -1,0 +1,41 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "edsync-demo",
+  "main": "../../.open-next/worker.js",
+  "compatibility_date": "2026-05-12",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "assets": {
+    "directory": "../../.open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "edsync-demo"
+    }
+  ],
+  "vars": {
+    "DEPLOYMENT_TARGET": "cloudflare",
+    "EDSYNC_DEMO_MODE": "1",
+    "EDSYNC_DEMO_HOSTNAME": "edsync-demo.learn-app.workers.dev",
+    "NEXT_PUBLIC_DEMO_MODE": "true",
+    "NEXT_PUBLIC_THEME_DEFAULT": "light",
+    "NEXT_PUBLIC_APP_URL": "https://edsync-demo.learn-app.workers.dev",
+    "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "",
+    "NEXT_PUBLIC_PWA_ENABLED": "false",
+    "EMAIL_MODE": "outbox",
+    "PAYMENT_PROVIDER": "manual",
+    "TENANT_ROUTING_MODE": "hybrid",
+    "DEFAULT_TENANT_SLUG": "edsync",
+    "CLOUDFLARE_D1_DATABASE_NAME": "edsync-demo-d1",
+    "CLOUDFLARE_D1_DATABASE_ID": "6717ba0e-c51e-4a6e-a1dd-7a647223dbc4"
+  },
+  "d1_databases": [
+    {
+      "binding": "EDSYNC_DB",
+      "database_name": "edsync-demo-d1",
+      "database_id": "6717ba0e-c51e-4a6e-a1dd-7a647223dbc4"
+    }
+  ]
+}
