@@ -1,247 +1,62 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import toast from "react-hot-toast";
-import { Mail, RefreshCw, Search, ShieldCheck, UserCog, UsersRound } from "lucide-react";
-import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Mail, RefreshCw, Search, UsersRound } from "lucide-react";
+import { Button, PageHeader, useConfirm } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 
-type AdminUser = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: "teacher" | "student";
-  is_admin: number;
-  last_active_at: string | null;
-};
-
-type UserGroupKey = "admins" | "teachers" | "students";
-
-const groupCopy: Record<UserGroupKey, { title: string; description: string }> = {
-  admins: {
-    title: "Owner admins",
-    description: "Global EdSync access for the platform owner team.",
-  },
-  teachers: {
-    title: "Org creators",
-    description: "Organization course creators and space managers.",
-  },
-  students: {
-    title: "Org learners",
-    description: "Organization learners with courses, progress, notes, and discussions.",
-  },
-};
-
-function groupFor(user: AdminUser): UserGroupKey {
-  if (user.is_admin) return "admins";
-  return user.role === "teacher" ? "teachers" : "students";
-}
+type AdminUser = { id: string; email: string; full_name: string | null; role: "teacher" | "student"; is_admin: number | boolean; last_active_at: string | null };
+type Filter = "all" | "admins" | "teachers" | "students";
 
 export default function AdminUsersPage() {
-  const skippedInitialDebounce = useRef(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
-  const [activeGroup, setActiveGroup] = useState<UserGroupKey | "all">("all");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const confirm = useConfirm();
 
-  const loadUsers = useCallback(async (searchTerm = "") => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/admin/users?q=${encodeURIComponent(searchTerm)}`, {
-        cache: "no-store",
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setError(payload.error || "Could not load users.");
-        setLoading(false);
-        return;
-      }
-      setUsers(payload.data ?? []);
-    } catch {
-      setError("Could not load users.");
-    } finally {
-      setLoading(false);
-    }
+  const load = useCallback(async (search: string) => {
+    setLoading(true); setError("");
+    try { const response = await fetch(`/api/admin/users?q=${encodeURIComponent(search)}`, { cache: "no-store" }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Could not load accounts."); setUsers(payload.data ?? []); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load accounts."); }
+    finally { setLoading(false); }
   }, []);
+  useEffect(() => { const timer = window.setTimeout(() => void load(query), 300); return () => window.clearTimeout(timer); }, [load, query]);
 
-  useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadUsers();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [loadUsers]);
+  const visible = useMemo(() => users.filter((user) => filter === "all" || (filter === "admins" ? Boolean(user.is_admin) : !user.is_admin && user.role === (filter === "teachers" ? "teacher" : "student"))), [filter, users]);
+  const selectedVisible = visible.filter((user) => selected.includes(user.id));
+  const toggleSelected = (id: string) => setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
 
-  useEffect(() => {
-    if (!skippedInitialDebounce.current) {
-      skippedInitialDebounce.current = true;
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      loadUsers(query);
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [loadUsers, query]);
-
-  const grouped = useMemo(() => {
-    return users.reduce<Record<UserGroupKey, AdminUser[]>>(
-      (collection, user) => {
-        collection[groupFor(user)].push(user);
-        return collection;
-      },
-      { admins: [], teachers: [], students: [] },
-    );
-  }, [users]);
-
-  const visibleGroups: UserGroupKey[] =
-    activeGroup === "all" ? ["admins", "teachers", "students"] : [activeGroup];
-
-  const toggleAdmin = async (userId: string, admin: boolean) => {
-    setBusyUserId(userId);
-    const response = await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, admin }),
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      toast.error(payload.error || "Could not update admin access.");
-      setBusyUserId(null);
-      return;
-    }
-    toast.success(admin ? "Platform admin access granted." : "Platform admin access removed.");
-    await loadUsers(query);
-    setBusyUserId(null);
+  const changeAdmin = async (targets: AdminUser[], admin: boolean) => {
+    if (!targets.length) return;
+    const agreed = await confirm({ title: admin ? `Grant admin access to ${targets.length} account${targets.length === 1 ? "" : "s"}?` : `Remove admin access from ${targets.length} account${targets.length === 1 ? "" : "s"}?`, body: "Platform admin can manage EdSync globally. This does not change tenant role profiles.", confirmLabel: admin ? "Grant access" : "Remove access", danger: !admin });
+    if (!agreed) return;
+    setBusy(true); setError(""); setNotice("");
+    let updated = 0;
+    try {
+      for (const user of targets) {
+        if (Boolean(user.is_admin) === admin) continue;
+        const response = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: user.id, admin }) });
+        const payload = await response.json();
+        if (!response.ok || payload.error) throw new Error(payload.error || `Could not update ${user.email}.`);
+        updated += 1;
+      }
+      setNotice(`${updated} account${updated === 1 ? "" : "s"} updated.`);
+      setSelected([]);
+    } catch (reason) { setError(`${updated} updated. ${reason instanceof Error ? reason.message : "Update failed."}`); }
+    finally { await load(query); setBusy(false); }
   };
 
-  return (
-    <div className="space-y-5 p-5 lg:p-8">
-      <div className="premium-panel rounded-2xl p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">People and access</p>
-          <h1 className="font-display text-3xl font-bold">Accounts</h1>
-          <p className="mt-2 max-w-3xl text-sm text-edsync-subtle">
-            Platform admin is for EdSync ownership. Organization managers stay tenant-scoped.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <InfoPopover label="User access help">
-            Global admin unlocks the owner console. Organization owners and managers stay inside their own tenant permissions.
-          </InfoPopover>
-          <button
-            type="button"
-            onClick={() => loadUsers(query)}
-            className="btn-secondary justify-center px-3 py-2 text-sm"
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        </div>
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            loadUsers(query);
-          }}
-          className="mt-4 flex flex-col gap-2 sm:flex-row"
-        >
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-edsync-subtle" />
-            <input
-              className="edsync-input w-full pl-9 sm:w-72"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search users"
-            />
-          </div>
-          <button className="btn-secondary justify-center" type="submit">Search</button>
-        </form>
-        {error && (
-          <div className="mt-4 rounded-2xl border border-edsync-red/25 bg-edsync-red/10 px-4 py-3 text-sm font-semibold text-edsync-red">
-            {error}
-          </div>
-        )}
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        {(["admins", "teachers", "students"] as UserGroupKey[]).map((group) => (
-          <button
-            key={group}
-            type="button"
-            onClick={() => setActiveGroup(activeGroup === group ? "all" : group)}
-            className={`premium-card flex items-center justify-between rounded-2xl p-4 text-left transition hover:-translate-y-0.5 ${
-              activeGroup === group ? "border-edsync-blue bg-edsync-blue/10" : ""
-            }`}
-          >
-            <span>
-              <span className="block text-sm font-semibold text-edsync-subtle">{groupCopy[group].title}</span>
-              <span className="block text-3xl font-bold text-edsync-text">{grouped[group].length}</span>
-            </span>
-            {group === "admins" ? <UserCog className="h-5 w-5 text-edsync-blue" /> : <UsersRound className="h-5 w-5 text-edsync-subtle" />}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-4">
-        {visibleGroups.map((group) => (
-          <section key={group} className="premium-surface overflow-hidden rounded-2xl p-0">
-            <div className="border-b border-edsync-border px-4 py-3">
-              <h2 className="font-display text-xl font-bold">{groupCopy[group].title}</h2>
-              <p className="text-sm text-edsync-subtle">{groupCopy[group].description}</p>
-            </div>
-            <div className="divide-y divide-edsync-border">
-              {loading &&
-                [...Array(3)].map((_, index) => (
-                  <div key={index} className="grid gap-3 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_220px_150px_88px]">
-                    <span className="h-10 animate-pulse rounded-xl bg-edsync-muted" />
-                    <span className="h-10 animate-pulse rounded-xl bg-edsync-muted" />
-                    <span className="h-10 animate-pulse rounded-xl bg-edsync-muted" />
-                    <span className="h-10 animate-pulse rounded-xl bg-edsync-muted" />
-                  </div>
-                ))}
-              {grouped[group].map((user) => (
-                <div key={user.id} className="grid gap-3 px-4 py-3 text-sm lg:grid-cols-[minmax(0,1fr)_220px_150px_88px] lg:items-center">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{user.full_name || "Unnamed"}</p>
-                    <p className="truncate text-edsync-subtle">{user.email}</p>
-                  </div>
-                  <p className="capitalize text-edsync-subtle">{user.is_admin ? "owner admin" : user.role === "teacher" ? "org creator" : "org learner"}</p>
-                  <p className="text-edsync-subtle">
-                    {user.last_active_at ? formatDate(user.last_active_at) : "Never active"}
-                  </p>
-                  <div className="flex justify-start lg:justify-end">
-                    <ActionMenu label={`Actions for ${user.email}`}>
-                      <a
-                        href={`mailto:${user.email}`}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text"
-                      >
-                        <Mail className="h-4 w-4" />
-                        Email user
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => toggleAdmin(user.id, !user.is_admin)}
-                        disabled={busyUserId === user.id}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-edsync-subtle hover:bg-edsync-muted hover:text-edsync-text disabled:opacity-50"
-                      >
-                        <ShieldCheck className="h-4 w-4" />
-                        {user.is_admin ? "Remove owner admin" : "Grant owner admin"}
-                      </button>
-                    </ActionMenu>
-                  </div>
-                </div>
-              ))}
-              {!loading && grouped[group].length === 0 && (
-                <p className="px-4 py-5 text-sm text-edsync-subtle">No users in this group.</p>
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="page-shell space-y-4">
+    <PageHeader title="Accounts" icon={UsersRound} count={users.length} actions={<Button variant="secondary" onClick={() => void load(query)} disabled={loading}><RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh</Button>} />
+    <div className="flex flex-wrap items-center gap-2"><label className="relative min-w-[200px] flex-1 sm:max-w-xs"><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" /><span className="sr-only">Search accounts</span><input className="edsync-input w-full pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or email" /></label><select className="edsync-input w-auto" value={filter} onChange={(event) => setFilter(event.target.value as Filter)} aria-label="Filter accounts"><option value="all">All roles</option><option value="admins">Platform admins</option><option value="teachers">Creators</option><option value="students">Learners</option></select></div>
+    {selectedVisible.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-sm"><span className="mr-auto font-medium text-fg">{selectedVisible.length} selected</span><Button size="sm" variant="secondary" disabled={busy} onClick={() => void changeAdmin(selectedVisible, true)}>Grant admin</Button><Button size="sm" variant="secondary" disabled={busy} onClick={() => void changeAdmin(selectedVisible, false)}>Remove admin</Button><button className="px-2 text-fg-muted" onClick={() => setSelected([])}>Clear</button></div>}
+    {error && <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm text-fg-muted">{notice}</p>}
+    <div className="card overflow-x-auto"><table className="w-full min-w-[650px] text-left text-sm"><thead className="border-b border-line bg-surface-2 text-xs font-semibold text-fg-muted"><tr><th className="w-10 px-3 py-2"><input type="checkbox" aria-label="Select visible accounts" checked={visible.length > 0 && visible.every((user) => selected.includes(user.id))} onChange={(event) => setSelected(event.target.checked ? Array.from(new Set([...selected, ...visible.map((user) => user.id)])) : selected.filter((id) => !visible.some((user) => user.id === id)))} /></th><th className="px-3 py-2">Account</th><th className="px-3 py-2">Access</th><th className="px-3 py-2">Last active</th><th className="px-3 py-2 text-right">Actions</th></tr></thead><tbody className="divide-y divide-line">{visible.map((user) => <tr key={user.id} className="hover:bg-surface-2"><td className="px-3 py-3"><input type="checkbox" aria-label={`Select ${user.email}`} checked={selected.includes(user.id)} onChange={() => toggleSelected(user.id)} /></td><td className="px-3 py-3"><p className="font-medium text-fg">{user.full_name || "Unnamed"}</p><p className="text-xs text-fg-muted">{user.email}</p></td><td className="px-3 py-3 text-fg-muted">{user.is_admin ? "Platform admin" : user.role === "teacher" ? "Creator" : "Learner"}</td><td className="px-3 py-3 text-fg-muted">{user.last_active_at ? formatDate(user.last_active_at) : "Never"}</td><td className="px-3 py-3"><div className="flex items-center justify-end gap-1"><a className="rounded-md p-2 text-fg-muted hover:bg-surface" href={`mailto:${user.email}`} aria-label={`Email ${user.email}`}><Mail size={16} /></a><button type="button" className="rounded-md px-2 py-1.5 text-xs font-semibold text-fg-muted hover:bg-surface" disabled={busy} onClick={() => void changeAdmin([user], !user.is_admin)}>{user.is_admin ? "Revoke admin" : "Make admin"}</button></div></td></tr>)}{visible.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">{loading ? "Loading accounts…" : "No accounts match this view."}</td></tr>}</tbody></table></div>
+    <p className="text-xs text-fg-faint">Showing up to 100 most recent accounts returned by the server.</p>
+  </div>;
 }
