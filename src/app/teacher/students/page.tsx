@@ -1,742 +1,294 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/edsync/client";
-import type { Profile, Class, Lesson } from "@/types";
-import { generateInitials, formatRelativeTime } from "@/lib/utils";
-import toast from "react-hot-toast";
-import Link from "next/link";
-import { BookOpenCheck, Plus, Trash2, UsersRound } from "lucide-react";
 
-interface Assignment {
-  id: string;
-  lesson_id: string;
-  lesson_title: string;
-  created_at: string;
-  due_date: string | null;
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { ArrowDownUp, BookOpen, ClipboardCopy, Plus, Trash2, UsersRound } from "lucide-react";
+import { Avatar, Badge, Button, EmptyState, Menu, PageHeader, Sheet, Skeleton, useConfirm } from "@/components/ui";
+import { createClient } from "@/lib/edsync/client";
+import type { Class, Lesson, StudentProgress } from "@/types";
+
+type RosterRow = { id: string; full_name: string | null; email: string; grade_level: string | null; class_id: string; class_name: string };
+type Assignment = { id: string; lesson_id: string; created_at: string; due_date: string | null; lessons?: { title?: string | null } | null };
+type Grade = { id: string; student_id: string; title: string; percent: number | null; status: string; updated_at: string };
+type SortKey = "name" | "class" | "grade";
+
+function message(cause: unknown) {
+  return cause instanceof Error ? cause.message : "Something went wrong.";
 }
 
-type EnrollmentRow = { student_id: string; class_id?: string };
-type AssignmentRow = {
-  id: string;
-  lesson_id: string;
-  created_at: string;
-  due_date: string | null;
-  lessons?: { title?: string | null } | null;
-};
-
-const CLASS_CARD_COLORS = [
-  "from-blue-500 to-cyan-500",
-  "from-purple-500 to-pink-500",
-  "from-amber-500 to-orange-500",
-  "from-emerald-500 to-teal-500",
-];
+function localNow() {
+  const date = new Date();
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 
 export default function TeacherStudents() {
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>("all");
-  const [students, setStudents] = useState<Profile[]>([]);
-  const [allStudents, setAllStudents] = useState<Profile[]>([]);
-  const [myLessons, setMyLessons] = useState<Lesson[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Create space modal
-  const [showAddClass, setShowAddClass] = useState(false);
-  const [newClassName, setNewClassName] = useState("");
-  const [newSubject, setNewSubject] = useState("");
-  const [creating, setCreating] = useState(false);
-
-  // Assign course modal
-  const [showAssign, setShowAssign] = useState(false);
-  const [assignLessonId, setAssignLessonId] = useState("");
-  const [assignDueDate, setAssignDueDate] = useState("");
-  const [assigning, setAssigning] = useState(false);
-
+  const router = useRouter();
+  const confirm = useConfirm();
   const edsync = useMemo(() => createClient(), []);
-  const assignedLessonIds = useMemo(
-    () => new Set(assignments.map((assignment) => assignment.lesson_id)),
-    [assignments],
-  );
-  const activeClass = useMemo(
-    () => classes.find((classItem) => classItem.id === selectedClass),
-    [classes, selectedClass],
-  );
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [roster, setRoster] = useState<RosterRow[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [reverse, setReverse] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [classOpen, setClassOpen] = useState(false);
+  const [className, setClassName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [lessonId, setLessonId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [student, setStudent] = useState<RosterRow | null>(null);
+  const [studentGrades, setStudentGrades] = useState<Grade[]>([]);
+  const [studentProgress, setStudentProgress] = useState<StudentProgress[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const {
-        data: { user },
-      } = await edsync.auth.getUser();
-      if (!user) return;
-
-      const [classRes, lessonsRes] = await Promise.all([
-        edsync
-          .from("classes")
-          .select("*")
-          .eq("teacher_id", user.id)
-          .eq("is_active", true)
-          .order("name"),
-        edsync
-          .from("lessons")
-          .select("id, title, status")
-          .eq("teacher_id", user.id)
-          .order("title"),
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to see classes.");
+      const [classResult, lessonResult, rosterResponse] = await Promise.all([
+        edsync.from("classes").select("*").eq("teacher_id", user.id).eq("is_active", true).order("name"),
+        edsync.from("lessons").select("id, title, status, class_id").eq("teacher_id", user.id).order("title"),
+        fetch("/api/teacher/roster", { cache: "no-store" }),
       ]);
-
-      if (classRes.error) {
-        toast.error("Could not load classes: " + classRes.error.message);
-        return;
+      const payload = await rosterResponse.json();
+      if (classResult.error || lessonResult.error || !rosterResponse.ok || payload.error) {
+        throw classResult.error || lessonResult.error || new Error(payload.error || "Could not load roster.");
       }
-
-      const myClasses: Class[] = classRes.data || [];
-      setClasses(myClasses);
-      setMyLessons((lessonsRes.data || []) as Lesson[]);
-
-      if (myClasses.length === 0) {
-        setAllStudents([]);
-        setStudents([]);
-        return;
-      }
-      const classIds = myClasses.map((classItem) => classItem.id);
-
-      const { data: enrollments } = await edsync
-        .from("class_enrollments")
-        .select("student_id, class_id")
-        .in("class_id", classIds)
-        .eq("is_active", true);
-
-      const studentIds = Array.from(
-        new Set(((enrollments || []) as EnrollmentRow[]).map((enrollment) => enrollment.student_id)),
-      );
-      if (studentIds.length === 0) {
-        setAllStudents([]);
-        setStudents([]);
-        return;
-      }
-
-      const { data: profileData } = await edsync
-        .from("profiles")
-        .select("*")
-        .in("id", studentIds);
-      setAllStudents(profileData || []);
-      setStudents(profileData || []);
+      const ownClasses = (classResult.data || []) as Class[];
+      setClasses(ownClasses);
+      setLessons((lessonResult.data || []) as Lesson[]);
+      setRoster((payload.data?.students || []) as RosterRow[]);
+      const requested = new URLSearchParams(window.location.search).get("classId");
+      if (requested && ownClasses.some((item) => item.id === requested)) setSelectedClassId(requested);
+    } catch (cause) {
+      setError(message(cause));
     } finally {
       setLoading(false);
     }
   }, [edsync]);
 
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadData();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [loadData]);
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
-  const loadAssignments = useCallback(async (classId: string) => {
-    const { data } = await edsync
-      .from("lesson_assignments")
-      .select("id, lesson_id, created_at, due_date, lessons(title)")
-      .eq("class_id", classId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
-    setAssignments(
-      ((data || []) as AssignmentRow[]).map((assignment) => ({
-        id: assignment.id,
-        lesson_id: assignment.lesson_id,
-        lesson_title: assignment.lessons?.title || "Unknown lesson",
-        created_at: assignment.created_at,
-        due_date: assignment.due_date,
-      })),
-    );
-  }, [edsync]);
-
-  const selectClass = async (classId: string) => {
-    setSelectedClass(classId);
-    if (classId === "all") {
-      setStudents(allStudents);
-      setAssignments([]);
-      return;
+  useEffect(() => {
+    if (selectedClassId === "all") {
+      const timer = window.setTimeout(() => setAssignments([]), 0);
+      return () => window.clearTimeout(timer);
     }
-    const { data } = await edsync
-      .from("class_enrollments")
-      .select("student_id")
-      .eq("class_id", classId)
-      .eq("is_active", true);
-    const ids = new Set(((data || []) as EnrollmentRow[]).map((enrollment) => enrollment.student_id));
-    setStudents(allStudents.filter((student) => ids.has(student.id)));
-    await loadAssignments(classId);
-  };
+    let active = true;
+    edsync.from("lesson_assignments").select("id, lesson_id, created_at, due_date, lessons(title)")
+      .eq("class_id", selectedClassId).eq("is_active", true).order("created_at", { ascending: false })
+      .then(({ data, error: assignmentError }) => {
+        if (!active) return;
+        if (assignmentError) {
+          toast.error(assignmentError.message);
+          setAssignments([]);
+        } else {
+          setAssignments((data || []) as Assignment[]);
+        }
+      });
+    return () => { active = false; };
+  }, [edsync, selectedClassId]);
 
-  const createClass = async () => {
-    if (!newClassName.trim()) {
-      toast.error("Space name is required");
-      return;
-    }
-    setCreating(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) {
-      setCreating(false);
-      return;
-    }
-
-    const { data, error } = await edsync
-      .from("classes")
-      .insert({
-        teacher_id: user.id,
-        name: newClassName.trim(),
-        subject: newSubject.trim() || null,
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      toast.error("Failed: " + error.message);
-      setCreating(false);
-      return;
-    }
-    setClasses((prev) =>
-      [...prev, data].sort((a, b) => a.name.localeCompare(b.name)),
-    );
-    setNewClassName("");
-    setNewSubject("");
-    setShowAddClass(false);
-    setCreating(false);
-    toast.success(`Space "${data.name}" created. Access code: ${data.join_code}`);
-  };
-
-  const assignLesson = async () => {
-    if (!assignLessonId) {
-      toast.error("Pick a course first");
-      return;
-    }
-    if (selectedClass === "all") {
-      toast.error("Select a specific space first");
-      return;
-    }
-    setAssigning(true);
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) {
-      setAssigning(false);
-      return;
-    }
-
-    if (assignedLessonIds.has(assignLessonId)) {
-      toast.error("Already shared");
-      setAssigning(false);
-      return;
-    }
-
-    const { error } = await edsync.from("lesson_assignments").insert({
-      lesson_id: assignLessonId,
-      class_id: selectedClass,
-      assigned_by: user.id,
-      due_date: assignDueDate || null,
-      is_active: true,
+  const chosenClass = classes.find((item) => item.id === selectedClassId) || null;
+  const visibleRoster = roster.filter((row) => selectedClassId === "all" || row.class_id === selectedClassId)
+    .sort((left, right) => {
+      const a = sortKey === "name" ? left.full_name || left.email : sortKey === "class" ? left.class_name : left.grade_level || "";
+      const b = sortKey === "name" ? right.full_name || right.email : sortKey === "class" ? right.class_name : right.grade_level || "";
+      return a.localeCompare(b) * (reverse ? -1 : 1);
     });
+  const uniqueStudents = new Set(roster.map((row) => row.id)).size;
 
-    if (error) {
-      toast.error("Failed: " + error.message);
-    } else {
-      await fetch("/api/notifications/lesson-assigned", {
+  const chooseClass = (id: string) => {
+    setSelectedClassId(id);
+    router.replace(id === "all" ? "/teacher/students" : "/teacher/students?classId=" + encodeURIComponent(id), { scroll: false });
+  };
+
+  const sort = (key: SortKey) => {
+    setReverse(sortKey === key ? !reverse : false);
+    setSortKey(key);
+  };
+
+  const createClass = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!className.trim() || busy) return;
+    setBusy(true);
+    try {
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to create a class.");
+      const { data, error: insertError } = await edsync.from("classes").insert({
+        teacher_id: user.id,
+        name: className.trim(),
+        subject: subject.trim() || null,
+        is_active: true,
+      }).select().single();
+      if (insertError || !data) throw insertError || new Error("Class was not created.");
+      setClassOpen(false);
+      setClassName("");
+      setSubject("");
+      toast.success("Class created");
+      await load();
+      chooseClass(data.id);
+    } catch (cause) {
+      toast.error(message(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteClass = async (item: Class) => {
+    if (!await confirm({ title: "Archive " + item.name + "?", body: "Students will lose access to this class and its shared courses.", confirmLabel: "Archive class", danger: true })) return;
+    const { error: updateError } = await edsync.from("classes").update({ is_active: false }).eq("id", item.id);
+    if (updateError) return toast.error(updateError.message);
+    if (selectedClassId === item.id) chooseClass("all");
+    toast.success("Class archived");
+    await load();
+  };
+
+  const copyCode = async (item: Class) => {
+    try {
+      await navigator.clipboard.writeText(item.join_code);
+      toast.success("Join code copied");
+    } catch {
+      toast.error("Could not copy join code.");
+    }
+  };
+
+  const assign = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!chosenClass || !lessonId || busy) return;
+    if (assignments.some((item) => item.lesson_id === lessonId)) return toast.error("This course is already shared.");
+    setBusy(true);
+    try {
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to share a course.");
+      const { error: insertError } = await edsync.from("lesson_assignments").insert({
+        lesson_id: lessonId,
+        class_id: chosenClass.id,
+        assigned_by: user.id,
+        due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        is_active: true,
+      });
+      if (insertError) throw insertError;
+      const notification = await fetch("/api/notifications/lesson-assigned", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          lessonId: assignLessonId,
-          classId: selectedClass,
-          dueDate: assignDueDate || null,
-        }),
+        body: JSON.stringify({ lessonId, classId: chosenClass.id, dueDate: dueDate ? new Date(dueDate).toISOString() : null }),
       });
-      toast.success("Course shared");
-      await loadAssignments(selectedClass);
-      setAssignLessonId("");
-      setAssignDueDate("");
-      setShowAssign(false);
+      if (!notification.ok) toast.error("Course shared, but notifications could not be sent.");
+      else toast.success("Course shared");
+      setAssignOpen(false);
+      setLessonId("");
+      setDueDate("");
+      const { data } = await edsync.from("lesson_assignments").select("id, lesson_id, created_at, due_date, lessons(title)")
+        .eq("class_id", chosenClass.id).eq("is_active", true).order("created_at", { ascending: false });
+      setAssignments((data || []) as Assignment[]);
+    } catch (cause) {
+      toast.error(message(cause));
+    } finally {
+      setBusy(false);
     }
-    setAssigning(false);
   };
 
-  const removeAssignment = async (id: string) => {
-    if (!confirm("Remove this course from the space?")) return;
-    await edsync
-      .from("lesson_assignments")
-      .update({ is_active: false })
-      .eq("id", id);
-    setAssignments((a) => a.filter((x) => x.id !== id));
+  const removeAssignment = async (item: Assignment) => {
+    if (!await confirm({ title: "Remove shared course?", body: "Students in this class will lose access to it.", confirmLabel: "Remove", danger: true })) return;
+    const { error: updateError } = await edsync.from("lesson_assignments").update({ is_active: false }).eq("id", item.id);
+    if (updateError) return toast.error(updateError.message);
+    setAssignments((current) => current.filter((assignment) => assignment.id !== item.id));
     toast.success("Course removed");
   };
 
-  const deleteClass = async (classId: string) => {
-    if (
-      !confirm("Delete this space? Learners will lose access to its courses.")
-    )
-      return;
-    await edsync
-      .from("classes")
-      .update({ is_active: false })
-      .eq("id", classId);
-    setClasses((c) => c.filter((cls) => cls.id !== classId));
-    if (selectedClass === classId) {
-      setSelectedClass("all");
-      setStudents(allStudents);
+  const openStudent = async (row: RosterRow) => {
+    setStudent(row);
+    setDetailLoading(true);
+    setStudentGrades([]);
+    setStudentProgress([]);
+    try {
+      const [gradeResponse, progressResult, assignmentResult] = await Promise.all([
+        fetch("/api/grades?classId=" + encodeURIComponent(row.class_id), { cache: "no-store" }),
+        edsync.from("student_progress").select("*").eq("student_id", row.id),
+        edsync.from("lesson_assignments").select("lesson_id").eq("class_id", row.class_id).eq("is_active", true),
+      ]);
+      const payload = await gradeResponse.json();
+      if (!gradeResponse.ok || payload.error || progressResult.error || assignmentResult.error) throw progressResult.error || assignmentResult.error || new Error(payload.error || "Could not load student details.");
+      setStudentGrades(((payload.data?.scores || []) as Grade[]).filter((grade) => grade.student_id === row.id));
+      const assignedIds = new Set(((assignmentResult.data || []) as Array<{ lesson_id: string }>).map((item) => item.lesson_id));
+      const ownLessonIds = new Set(lessons.filter((lesson) => lesson.class_id === row.class_id || assignedIds.has(lesson.id)).map((lesson) => lesson.id));
+      setStudentProgress(((progressResult.data || []) as StudentProgress[]).filter((progress) => ownLessonIds.has(progress.lesson_id)));
+    } catch (cause) {
+      toast.error(message(cause));
+    } finally {
+      setDetailLoading(false);
     }
-    toast.success("Space deleted");
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-      {/* Header */}
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-edsync-amber">
-            Course access
-          </p>
-          <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
-            Learners
-          </h1>
-          <p className="mt-1 text-sm text-edsync-subtle">
-            {allStudents.length} enrolled / {classes.length} space
-            {classes.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <button onClick={() => setShowAddClass(true)} className="btn-primary justify-center">
-          <Plus className="h-4 w-4" />
-          New space
-        </button>
+    <main className="page">
+      <PageHeader title="Classes" icon={UsersRound} count={classes.length} actions={<Button variant="primary" size="sm" icon={Plus} onClick={() => setClassOpen(true)}>New class</Button>} />
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        <button type="button" aria-pressed={selectedClassId === "all"} onClick={() => chooseClass("all")} className={"shrink-0 rounded-full border px-3 py-1.5 text-sm " + (selectedClassId === "all" ? "border-accent bg-accent-soft text-accent" : "border-line text-fg-muted hover:text-fg")}>All classes <span className="tabular-nums">{uniqueStudents}</span></button>
+        {classes.map((item) => <button key={item.id} type="button" aria-pressed={selectedClassId === item.id} onClick={() => chooseClass(item.id)} className={"shrink-0 rounded-full border px-3 py-1.5 text-sm " + (selectedClassId === item.id ? "border-accent bg-accent-soft text-accent" : "border-line text-fg-muted hover:text-fg")}>{item.name}</button>)}
       </div>
-      </section>
-
-      {/* Create space modal */}
-      {showAddClass && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="edsync-card w-full max-w-md animate-slide-up p-8">
-            <h2 className="font-display font-bold text-xl text-edsync-text mb-6">
-              Create space
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-edsync-subtle mb-2">
-                  Space name *
-                </label>
-                <input
-                  value={newClassName}
-                  onChange={(e) => setNewClassName(e.target.value)}
-                  placeholder="e.g. Biology cohort"
-                  className="edsync-input"
-                  onKeyDown={(e) => e.key === "Enter" && createClass()}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-edsync-subtle mb-2">
-                  Subject (optional)
-                </label>
-                <input
-                  value={newSubject}
-                  onChange={(e) => setNewSubject(e.target.value)}
-                  placeholder="e.g. Biology"
-                  className="edsync-input"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowAddClass(false);
-                  setNewClassName("");
-                  setNewSubject("");
-                }}
-                className="btn-secondary flex-1 justify-center"
-                disabled={creating}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createClass}
-                disabled={creating || !newClassName.trim()}
-                className="btn-primary flex-1 justify-center"
-              >
-                {creating ? "Creating..." : "Create space"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Share course modal */}
-      {showAssign && selectedClass !== "all" && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="edsync-card w-full max-w-md animate-slide-up p-8">
-            <h2 className="font-display font-bold text-xl text-edsync-text mb-1">
-              Share course
-            </h2>
-            <p className="text-edsync-subtle text-sm mb-6">
-              To:{" "}
-              <span className="text-edsync-text font-medium">
-                {activeClass?.name}
-              </span>
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-edsync-subtle mb-2">
-                  Course *
-                </label>
-                <select
-                  value={assignLessonId}
-                  onChange={(e) => setAssignLessonId(e.target.value)}
-                  className="edsync-input"
-                >
-                  <option value="">— Choose a course —</option>
-                  {myLessons
-                    .filter(
-                      (lesson) => !assignedLessonIds.has(lesson.id),
-                    )
-                    .map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.title}
-                        {l.status !== "published" ? " (draft)" : ""}
-                      </option>
-                    ))}
-                </select>
-                {myLessons.filter(
-                  (lesson) => !assignedLessonIds.has(lesson.id),
-                ).length === 0 && (
-                  <p className="text-xs text-edsync-subtle mt-1">
-                    All your courses are already shared with this space.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-edsync-subtle mb-2">
-                  Due Date (optional)
-                </label>
-                <input
-                  type="date"
-                  value={assignDueDate}
-                  onChange={(e) => setAssignDueDate(e.target.value)}
-                  className="edsync-input"
-                  min={new Date().toISOString().split("T")[0]}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowAssign(false);
-                  setAssignLessonId("");
-                  setAssignDueDate("");
-                }}
-                className="btn-secondary flex-1 justify-center"
-                disabled={assigning}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={assignLesson}
-                disabled={assigning || !assignLessonId}
-                className="btn-primary flex-1 justify-center"
-              >
-                {assigning ? "Sharing..." : "Share course"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Classes grid */}
-      {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-36 bg-edsync-card rounded-2xl shimmer" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          {/* All classes card */}
-          <div
-            onClick={() => selectClass("all")}
-            className={`edsync-card cursor-pointer transition-all border-dashed ${selectedClass === "all" ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
-          >
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-              <UsersRound className="h-5 w-5" />
-            </div>
-            <h3 className="font-display font-bold text-edsync-text">
-              All classes
-            </h3>
-            <p className="text-xs text-edsync-subtle">
-              {allStudents.length} learners total
-            </p>
-          </div>
-
-          {classes.map((cls, i) => (
-            <div
-              key={cls.id}
-              onClick={() => selectClass(cls.id)}
-              className={`edsync-card cursor-pointer transition-all relative group ${selectedClass === cls.id ? "border-edsync-blue shadow-glow-blue" : "hover:border-edsync-muted"}`}
-            >
-              <div
-                className={`mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br ${CLASS_CARD_COLORS[i % CLASS_CARD_COLORS.length]}`}
-              >
-                <span className="text-white text-sm font-semibold">
-                  {cls.name
-                    .split(" ")
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((word) => word[0])
-                    .join("")
-                    .toUpperCase() || "CL"}
-                </span>
-              </div>
-              <h3 className="font-display font-bold text-edsync-text truncate">
-                {cls.name}
-              </h3>
-              <p className="text-xs text-edsync-subtle">
-                {cls.subject || "No subject"}
-              </p>
-              <div className="mt-3 flex items-center justify-between border-t border-edsync-border pt-3">
-                <span className="text-xs text-edsync-subtle">Access code</span>
-                <span className="font-mono text-edsync-amber font-bold text-sm">
-                  {cls.join_code}
-                </span>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteClass(cls.id);
-                }}
-                className="absolute right-3 top-3 rounded-lg p-1.5 text-[0] text-edsync-subtle opacity-0 transition-opacity hover:bg-edsync-red/10 hover:text-edsync-red group-hover:opacity-100"
-                title="Delete class"
-                aria-label={`Delete ${cls.name}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Learners table */}
-        <div className="lg:col-span-2 edsync-card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-semibold text-lg text-edsync-text">
-              {selectedClass === "all"
-                ? "All Learners"
-                : activeClass?.name || "Class"}
-            </h2>
-            <span className="badge bg-edsync-blue/10 text-edsync-blue border-edsync-blue/20">
-              {students.length} learners
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-16 bg-edsync-surface rounded-xl shimmer"
-                />
-              ))}
-            </div>
-          ) : students.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="font-semibold text-edsync-text mb-1">
-                No learners
-              </p>
-              <p className="text-edsync-subtle text-sm">
-                {selectedClass === "all"
-                  ? "Share an access code to enroll learners."
-                  : `Share code ${activeClass ? `"${activeClass.join_code}"` : ""} to enroll learners.`}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-edsync-border">
-                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                      Learner
-                    </th>
-                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                      Progress
-                    </th>
-                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3 pr-4">
-                      Interests
-                    </th>
-                    <th className="text-left text-xs text-edsync-subtle font-medium pb-3">
-                      Joined
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student) => (
-                    <tr
-                      key={student.id}
-                      className="border-b border-edsync-border/50 hover:bg-edsync-surface/50 transition-colors"
-                    >
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-edsync-blue to-edsync-purple flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {generateInitials(
-                              student.full_name || student.email,
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-edsync-text text-sm">
-                              {student.full_name || "—"}
-                            </p>
-                            <p className="text-xs text-edsync-subtle">
-                              {student.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-edsync-subtle">
-                        {student.grade_level || "—"}
-                      </td>
-                      <td className="py-3 pr-4">
-                        <div className="flex gap-1 flex-wrap">
-                          {(student.interests || [])
-                            .slice(0, 2)
-                            .map((int, ii) => (
-                              <span
-                                key={ii}
-                                className="badge bg-edsync-muted/30 text-edsync-subtle text-xs"
-                              >
-                                {int}
-                              </span>
-                            ))}
-                          {!student.interests?.length && (
-                            <span className="text-xs text-edsync-subtle/50">
-                              Not set
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 text-xs text-edsync-subtle">
-                        {formatRelativeTime(student.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Course panel for selected space */}
-        <div className="space-y-4">
-          {selectedClass !== "all" ? (
-            <>
-              {/* Class info */}
-              {activeClass && (
-                <div className="edsync-card">
-                  <h3 className="font-semibold text-edsync-text mb-3">
-                    Class info
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-edsync-subtle">Access code</span>
-                      <span className="font-mono font-bold text-edsync-amber">
-                        {activeClass.join_code}
-                      </span>
-                    </div>
-                    {activeClass.subject && (
-                      <div className="flex justify-between">
-                        <span className="text-edsync-subtle">Subject</span>
-                        <span className="text-edsync-text">
-                          {activeClass.subject}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-edsync-subtle">Learners</span>
-                      <span className="text-edsync-text">{students.length}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Lesson assignments */}
-              <div className="edsync-card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-edsync-text">
-                    Shared courses
-                  </h3>
-                  <button
-                    onClick={() => setShowAssign(true)}
-                    className="btn-primary text-xs py-1.5 px-3"
-                  >
-                    <BookOpenCheck className="h-3.5 w-3.5" />
-                    Share
-                  </button>
-                </div>
-                {assignments.length === 0 ? (
-                  <div className="text-center py-6">
-                    <p className="text-edsync-subtle text-sm mb-3">
-                      No shared courses.
-                    </p>
-                    <button
-                      onClick={() => setShowAssign(true)}
-                      className="btn-secondary text-sm py-2"
-                    >
-                      Share course
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {assignments.map((a) => (
-                      <div
-                        key={a.id}
-                        className="flex items-start justify-between gap-2 p-3 bg-edsync-surface rounded-xl border border-edsync-border"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <Link
-                            href={`/teacher/lessons/${a.lesson_id}`}
-                            className="text-sm font-medium text-edsync-text hover:text-edsync-blue truncate block"
-                          >
-                            {a.lesson_title}
-                          </Link>
-                          {a.due_date && (
-                            <p className="text-xs text-edsync-amber mt-0.5">
-                              Due {new Date(a.due_date).toLocaleDateString()}
-                            </p>
-                          )}
-                          <p className="text-xs text-edsync-subtle">
-                            Shared {formatRelativeTime(a.created_at)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeAssignment(a.id)}
-                          className="text-edsync-subtle hover:text-edsync-red text-sm flex-shrink-0"
-                          title="Remove"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="edsync-card text-center py-8">
-              <p className="font-medium text-edsync-text mb-1">Select a class</p>
-              <p className="text-edsync-subtle text-sm">
-                Select a class to manage learners and courses.
-              </p>
-            </div>
-          )}
-        </div>
+      {error ? <div role="alert" className="mb-4 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger">{error} <Button size="sm" onClick={() => void load()}>Retry</Button></div> : null}
+      {chosenClass ? <section className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface p-3">
+        <div className="min-w-0 flex-1"><h2 className="truncate text-sm font-semibold text-fg">{chosenClass.name}</h2><p className="text-xs text-fg-muted">{chosenClass.subject || "Class"} · Join code <strong className="tracking-wider text-fg">{chosenClass.join_code}</strong></p></div>
+        <Button size="sm" icon={ClipboardCopy} onClick={() => void copyCode(chosenClass)}>Copy code</Button>
+        <Menu label={"Class actions for " + chosenClass.name} items={[{ label: "Archive class", icon: Trash2, danger: true, onSelect: () => void deleteClass(chosenClass) }]} />
+      </section> : null}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">Roster</h2><Badge>{visibleRoster.length}</Badge></div>
+          {loading ? <div className="space-y-2 p-3">{[0, 1, 2].map((index) => <Skeleton key={index} className="h-12" />)}</div> : visibleRoster.length === 0 ? <EmptyState icon={UsersRound} title="No learners yet" hint={chosenClass ? "Share the join code to invite learners." : "Create a class and invite learners."} compact /> :
+          <div className="overflow-x-auto"><table className="w-full text-left text-sm">
+            <thead className="bg-surface-2 text-xs text-fg-muted"><tr>
+              <th className="px-4 py-2"><button type="button" onClick={() => sort("name")} className="inline-flex items-center gap-1">Learner <ArrowDownUp size={12} /></button></th>
+              <th className="hidden px-4 py-2 sm:table-cell"><button type="button" onClick={() => sort("class")} className="inline-flex items-center gap-1">Class <ArrowDownUp size={12} /></button></th>
+              <th className="hidden px-4 py-2 sm:table-cell"><button type="button" onClick={() => sort("grade")} className="inline-flex items-center gap-1">Level <ArrowDownUp size={12} /></button></th>
+            </tr></thead>
+            <tbody>{visibleRoster.map((row) => <tr key={row.class_id + row.id} className="border-t border-line hover:bg-surface-2">
+              <td className="px-4 py-2"><button type="button" onClick={() => void openStudent(row)} className="flex min-w-0 items-center gap-2 text-left"><Avatar name={row.full_name || row.email} size={28} decorative /><span className="min-w-0"><span className="block truncate font-medium text-fg">{row.full_name || row.email}</span><span className="block truncate text-xs text-fg-muted">{row.email}</span></span></button></td>
+              <td className="hidden px-4 py-2 text-fg-muted sm:table-cell">{row.class_name}</td>
+              <td className="hidden px-4 py-2 text-fg-muted sm:table-cell">{row.grade_level || "—"}</td>
+            </tr>)}</tbody>
+          </table></div>}
+        </section>
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">Shared courses</h2>{chosenClass ? <Button size="sm" icon={Plus} onClick={() => setAssignOpen(true)}>Share</Button> : null}</div>
+          {!chosenClass ? <p className="p-4 text-sm text-fg-muted">Choose a class to manage its courses.</p> :
+            assignments.length === 0 ? <EmptyState icon={BookOpen} title="Nothing shared" hint="Share a course with this class." compact /> :
+            <div>{assignments.map((item) => <div key={item.id} className="flex items-center gap-2 border-b border-line px-4 py-3 last:border-b-0"><Link href={"/teacher/lessons/" + item.lesson_id} className="min-w-0 flex-1 truncate text-sm font-medium text-fg hover:text-accent">{item.lessons?.title || "Course"}</Link><Menu label="Shared course actions" items={[{ label: "Remove from class", icon: Trash2, danger: true, onSelect: () => void removeAssignment(item) }]} /></div>)}</div>}
+        </section>
       </div>
-    </div>
+      <Sheet open={classOpen} onClose={() => setClassOpen(false)} title="New class" footer={<Button form="new-class-form" type="submit" variant="primary" loading={busy}>Create class</Button>}>
+        <form id="new-class-form" onSubmit={createClass} className="space-y-4">
+          <label className="block text-sm font-medium text-fg">Class name<input className="input mt-1 w-full" required maxLength={120} value={className} onChange={(event) => setClassName(event.target.value)} placeholder="Biology, Period 2" /></label>
+          <label className="block text-sm font-medium text-fg">Subject<input className="input mt-1 w-full" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Optional" /></label>
+        </form>
+      </Sheet>
+      <Sheet open={assignOpen && !!chosenClass} onClose={() => setAssignOpen(false)} title="Share course" footer={<Button form="share-course-form" type="submit" variant="primary" loading={busy}>Share</Button>}>
+        <form id="share-course-form" onSubmit={assign} className="space-y-4">
+          <label className="block text-sm font-medium text-fg">Course<select className="input mt-1 w-full" required value={lessonId} onChange={(event) => setLessonId(event.target.value)}><option value="">Select a course</option>{lessons.filter((item) => item.status === "published" && !assignments.some((assignment) => assignment.lesson_id === item.id)).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+          <label className="block text-sm font-medium text-fg">Due date<input className="input mt-1 w-full" type="datetime-local" min={localNow()} value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
+        </form>
+      </Sheet>
+      <Sheet open={student !== null} onClose={() => setStudent(null)} title={student?.full_name || student?.email || "Learner"} description={student?.class_name}>
+        {detailLoading ? <div className="space-y-2">{[0, 1, 2].map((index) => <Skeleton key={index} className="h-12" />)}</div> :
+          <div className="space-y-6">
+            <section><h3 className="mb-2 text-sm font-semibold text-fg">Grades</h3>{studentGrades.length ? studentGrades.map((grade) => <div key={grade.id} className="flex items-center justify-between border-b border-line py-2 text-sm"><span className="truncate text-fg">{grade.title}</span><span className="tabular-nums text-fg-muted">{grade.percent === null ? "—" : Math.round(grade.percent) + "%"}</span></div>) : <p className="text-sm text-fg-muted">No grades yet.</p>}</section>
+            <section><h3 className="mb-2 text-sm font-semibold text-fg">Course progress</h3>{studentProgress.length ? studentProgress.map((progress) => <div key={progress.id} className="flex items-center justify-between border-b border-line py-2 text-sm"><span className="truncate text-fg">{lessons.find((item) => item.id === progress.lesson_id)?.title || "Course"}</span><Badge tone={progress.status === "completed" ? "success" : "neutral"}>{progress.status.replaceAll("_", " ")}</Badge></div>) : <p className="text-sm text-fg-muted">No course activity yet.</p>}</section>
+          </div>}
+      </Sheet>
+    </main>
   );
 }
