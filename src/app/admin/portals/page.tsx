@@ -47,7 +47,7 @@ type PortalsPayload = {
 };
 
 type MemberRecord = { id: string; user_id: string; full_name: string | null; email: string; role: string; role_label: string | null; status: string };
-type MembersPayload = { members: MemberRecord[]; inviteCode: string; invitesEnabled: boolean };
+type MembersPayload = { members: MemberRecord[]; inviteCode: string | null; invitesEnabled: boolean };
 
 type PortalDraft = {
   name: string;
@@ -256,13 +256,13 @@ export default function AdminPortalsPage() {
   };
 
   const changeInvites = async (action: "rotate" | "enable" | "disable") => {
-    if (action === "rotate" && !await confirm({ title: "Rotate invite code?", body: "Previously shared join codes will stop working.", confirmLabel: "Rotate code", danger: true })) return;
+    if (action === "rotate" && members?.inviteCode && !await confirm({ title: "Rotate invite code?", body: "Previously shared join codes will stop working.", confirmLabel: "Rotate code", danger: true })) return;
     setBusy(true);
     try {
       const response = await fetch("/api/portals/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || "Invite setting could not be saved.");
-      setMessage(action === "rotate" ? "Invite code rotated." : action === "enable" ? "Invites enabled." : "Invites paused.");
+      setMessage(action === "rotate" ? members?.inviteCode ? "Invite code rotated." : "Invite code created." : action === "enable" ? "Invites enabled." : "Invites paused.");
       await loadMembers();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Invite setting could not be saved.");
@@ -304,11 +304,11 @@ export default function AdminPortalsPage() {
       )}
       <section className="premium-surface rounded-xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="font-semibold">Organization access</h2><p className="text-xs text-edsync-subtle">{members?.members.length ?? 0} members · {members?.invitesEnabled === false ? "Invites paused" : "Invites open"}</p></div>
+          <div><h2 className="font-semibold">Organization access</h2><p className="text-xs text-edsync-subtle">{members?.members.length ?? 0} members · {!members ? "Loading access" : !members.inviteCode ? "Invite code needed" : members.invitesEnabled ? "Invites open" : "Invites paused"}</p></div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void copyTenantCode()} disabled={!members?.inviteCode || !members.invitesEnabled}><Copy size={14} /> Copy invite code</button>
             <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void copyInviteLink()} disabled={!members?.inviteCode || !members.invitesEnabled}>Copy invite link</button>
-            <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void changeInvites("rotate")} disabled={!members || busy}>Rotate</button>
+            <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void changeInvites("rotate")} disabled={!members || busy}>{members?.inviteCode ? "Rotate" : "Generate code"}</button>
             <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void changeInvites(members?.invitesEnabled ? "disable" : "enable")} disabled={!members || busy}>{members?.invitesEnabled ? "Pause invites" : "Enable invites"}</button>
           </div>
         </div>
