@@ -5,6 +5,7 @@ import { deserializeRow } from "@/lib/db/schema";
 import { normalizeRoleProfileInput, validateRoleProfileId } from "@/lib/validation/permission-profile";
 import { getPermissionSet, PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -20,7 +21,7 @@ export async function GET() {
   const catalog = catalogRows.map((row) => deserializeRow("permission_catalog", row));
   const roleProfiles = roleRows.map((row) => deserializeRow("role_profiles", row));
   return NextResponse.json({
-    data: { catalog, roleProfiles, granted: Array.from(granted), context },
+    data: { catalog, roleProfiles, granted: Array.from(granted), context: toClientTenantContext(context) },
     error: null,
   });
 }
