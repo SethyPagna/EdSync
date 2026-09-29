@@ -2,547 +2,287 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import {
-  BookOpenCheck,
-  Clock3,
-  Copy,
-  FileText,
-  Plus,
-  Presentation,
-  Search,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
-import { ActionMenu } from "@/components/WorkspacePrimitives";
+import { BookOpen, Copy, ExternalLink, Plus, Search, Sparkles, Trash2, UploadCloud } from "lucide-react";
+import OutlineComposer from "@/components/compose/OutlineComposer";
+import { createCourseFromOutline } from "@/components/compose/api";
+import { Badge, Button, EmptyState, Menu, PageHeader, Segmented, Sheet, Skeleton, useConfirm } from "@/components/ui";
 import { createClient } from "@/lib/edsync/client";
+import { outlineFromText, type LessonOutline } from "@/lib/compose";
 import { listStudioItems, type StudioServerItem } from "@/lib/studio/api";
-import type { Lesson } from "@/types";
-import {
-  formatRelativeTime,
-  getDifficultyColor,
-  getStatusBadge,
-} from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils";
+import type { Class, GlossaryTerm, Lesson, LessonSection, QuizQuestion } from "@/types";
 
-type LessonStatusFilter = "all" | "draft" | "published" | "archived";
-type DurationFilter = "all" | "short" | "medium" | "long";
-type SemesterFilter = "all" | "spring" | "summer" | "fall";
-
-const STATUS_FILTERS: LessonStatusFilter[] = [
-  "all",
-  "published",
-  "draft",
-  "archived",
+type Status = "all" | "published" | "draft" | "archived";
+const statusOptions: Array<{ value: Status; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "published", label: "Live" },
+  { value: "draft", label: "Drafts" },
+  { value: "archived", label: "Archived" },
 ];
-const SEMESTER_FILTERS: Array<{ value: SemesterFilter; label: string }> = [
-  { value: "all", label: "Any term" },
-  { value: "spring", label: "Spring" },
-  { value: "summer", label: "Summer" },
-  { value: "fall", label: "Fall" },
-];
-const STUDIO_LESSON_KINDS = new Set(["doc", "slide", "design", "lesson"]);
 
-function matchesDuration(lesson: Lesson, durationFilter: DurationFilter) {
-  if (durationFilter === "short") return lesson.estimated_duration <= 20;
-  if (durationFilter === "medium")
-    return lesson.estimated_duration >= 21 && lesson.estimated_duration <= 60;
-  if (durationFilter === "long") return lesson.estimated_duration >= 61;
-  return true;
-}
-
-function courseYear(value: string) {
-  const year = new Date(value).getFullYear();
-  return Number.isNaN(year) ? null : String(year);
-}
-
-function courseSemester(value: string): Exclude<SemesterFilter, "all"> | null {
-  const month = new Date(value).getMonth();
-  if (Number.isNaN(month)) return null;
-  if (month <= 4) return "spring";
-  if (month <= 7) return "summer";
-  return "fall";
-}
-
-function matchesYear(createdAt: string, yearFilter: string) {
-  return yearFilter === "all" || courseYear(createdAt) === yearFilter;
-}
-
-function matchesSemester(createdAt: string, semesterFilter: SemesterFilter) {
-  return (
-    semesterFilter === "all" || courseSemester(createdAt) === semesterFilter
-  );
-}
-
-function studioOriginalKind(item: StudioServerItem) {
-  const originalKind = item.metadata?.originalKind;
-  const kind = typeof originalKind === "string" ? originalKind : item.kind;
-  return STUDIO_LESSON_KINDS.has(kind) ? kind : "design";
-}
-
-function studioClassName(item: StudioServerItem) {
-  return typeof item.metadata?.className === "string"
-    ? item.metadata.className
-    : "";
-}
-
-function studioOrderIndex(item: StudioServerItem) {
-  return typeof item.metadata?.orderIndex === "number"
-    ? item.metadata.orderIndex
-    : null;
-}
-
-function studioPageCount(item: StudioServerItem) {
-  return typeof item.metadata?.pageCount === "number"
-    ? item.metadata.pageCount
-    : null;
+function asError(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong.";
 }
 
 export default function TeacherLessons() {
+  const router = useRouter();
+  const confirm = useConfirm();
+  const edsync = useMemo(() => createClient(), []);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [studioItems, setStudioItems] = useState<StudioServerItem[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [filter, setFilter] = useState<LessonStatusFilter>("all");
-  const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
-  const [semesterFilter, setSemesterFilter] = useState<SemesterFilter>("all");
-  const [yearFilter, setYearFilter] = useState("all");
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const edsync = useMemo(() => createClient(), []);
+  const [status, setStatus] = useState<Status>("all");
+  const [newOpen, setNewOpen] = useState(false);
+  const [newClassId, setNewClassId] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const loadLessons = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    setLoadError("");
+    setError("");
     try {
-      const {
-        data: { user },
-      } = await edsync.auth.getUser();
-      if (!user) {
-        setLessons([]);
-        setStudioItems([]);
-        setLoading(false);
-        return;
-      }
-      const [lessonResult, studioResult] = await Promise.all([
-        edsync
-          .from("lessons")
-          .select("*")
-          .eq("teacher_id", user.id)
-          .order("updated_at", { ascending: false }),
-        listStudioItems(undefined, false),
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to see your courses.");
+      const [lessonResult, classResult, studioResult] = await Promise.all([
+        edsync.from("lessons").select("*").eq("teacher_id", user.id).order("updated_at", { ascending: false }),
+        edsync.from("classes").select("*").eq("teacher_id", user.id).eq("is_active", true).order("name"),
+        listStudioItems(undefined, false).catch(() => []),
       ]);
-      const { data } = lessonResult;
-      if (lessonResult.error) throw new Error(lessonResult.error.message);
-      setLessons(data || []);
-      setStudioItems(
-        studioResult.filter((item) =>
-          STUDIO_LESSON_KINDS.has(studioOriginalKind(item)),
-        ),
-      );
-    } catch (error) {
-      setLoadError(
-        error instanceof Error ? error.message : "Could not load courses.",
-      );
+      if (lessonResult.error) throw lessonResult.error;
+      if (classResult.error) throw classResult.error;
+      setLessons((lessonResult.data || []) as Lesson[]);
+      setClasses((classResult.data || []) as Class[]);
+      setStudioItems(studioResult.filter((item) => {
+        const originalKind = item.metadata?.originalKind;
+        const kind = typeof originalKind === "string" ? originalKind : item.kind;
+        return ["doc", "slide", "design", "lesson"].includes(kind);
+      }));
+    } catch (cause) {
+      setError(asError(cause));
     } finally {
       setLoading(false);
     }
   }, [edsync]);
 
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadLessons();
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [loadLessons]);
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
-  const deleteLesson = async (id: string) => {
-    if (!confirm("Delete this course? This cannot be undone.")) return;
-    const { error } = await edsync.from("lessons").delete().eq("id", id);
-    if (error) {
-      toast.error(`Could not delete course: ${error.message}`);
-      return;
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") {
+      const timer = window.setTimeout(() => setNewOpen(true), 0);
+      return () => window.clearTimeout(timer);
     }
-    setLessons((current) => current.filter((lesson) => lesson.id !== id));
+  }, []);
+
+  const closeNew = () => {
+    setNewOpen(false);
+    if (new URLSearchParams(window.location.search).has("new")) router.replace("/teacher/lessons", { scroll: false });
+  };
+
+  const createFromOutline = async (outline: LessonOutline) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await createCourseFromOutline({ outline, classId: newClassId || undefined });
+      toast.success("Course created");
+      closeNew();
+      router.push("/teacher/lessons/" + result.lessonId);
+    } catch (cause) {
+      toast.error(asError(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createBlank = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to create a course.");
+      const { data, error: insertError } = await edsync.from("lessons").insert({
+        teacher_id: user.id,
+        class_id: newClassId || null,
+        title: "Untitled course",
+        status: "draft",
+      }).select("id").single();
+      if (insertError || !data) throw insertError || new Error("Course was not created.");
+      closeNew();
+      router.push("/teacher/lessons/" + data.id);
+    } catch (cause) {
+      toast.error(asError(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeStatus = async (lesson: Lesson, next: Lesson["status"]) => {
+    const { error: updateError } = await edsync.from("lessons").update({ status: next }).eq("id", lesson.id);
+    if (updateError) return toast.error(updateError.message);
+    setLessons((current) => current.map((item) => item.id === lesson.id ? { ...item, status: next } : item));
+    toast.success(next === "published" ? "Course published" : "Course moved to drafts");
+  };
+
+  const deleteLesson = async (lesson: Lesson) => {
+    if (!await confirm({ title: "Delete " + lesson.title + "?", body: "This also removes its lessons and questions.", confirmLabel: "Delete course", danger: true })) return;
+    const { error: deleteError } = await edsync.from("lessons").delete().eq("id", lesson.id);
+    if (deleteError) return toast.error(deleteError.message);
+    setLessons((current) => current.filter((item) => item.id !== lesson.id));
     toast.success("Course deleted");
   };
 
   const duplicateLesson = async (lesson: Lesson) => {
-    const {
-      data: { user },
-    } = await edsync.auth.getUser();
-    if (!user) return;
-    const { data, error } = await edsync
-      .from("lessons")
-      .insert({
-        ...lesson,
-        id: undefined,
-        title: `${lesson.title} (Copy)`,
+    if (busy) return;
+    setBusy(true);
+    let copyId: string | null = null;
+    try {
+      const [sectionResult, questionResult, glossaryResult] = await Promise.all([
+        edsync.from("lesson_sections").select("*").eq("lesson_id", lesson.id).order("order_index"),
+        edsync.from("quiz_questions").select("*").eq("lesson_id", lesson.id).order("order_index"),
+        edsync.from("glossary_terms").select("*").eq("lesson_id", lesson.id),
+      ]);
+      if (sectionResult.error || questionResult.error || glossaryResult.error) {
+        throw sectionResult.error || questionResult.error || glossaryResult.error;
+      }
+      const { id, created_at, updated_at, sections: embeddedSections, progress, ...rest } = lesson;
+      void id; void created_at; void updated_at; void embeddedSections; void progress;
+      const { data: copy, error: copyError } = await edsync.from("lessons").insert({
+        ...rest,
+        title: lesson.title + " (copy)",
         status: "draft",
-        teacher_id: user.id,
-        created_at: undefined,
-        updated_at: undefined,
-      })
-      .select()
-      .single();
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    if (data) {
-      setLessons((current) => [data, ...current]);
+      }).select("id").single();
+      if (copyError || !copy) throw copyError || new Error("Could not duplicate course.");
+      copyId = copy.id;
+      const sectionIds = new Map<string, string>();
+      const sections = ((sectionResult.data || []) as LessonSection[]).map((section) => {
+        const newId = crypto.randomUUID();
+        sectionIds.set(section.id, newId);
+        const { created_at: oldCreated, ...fields } = section;
+        void oldCreated;
+        return { ...fields, id: newId, lesson_id: copy.id };
+      });
+      if (sections.length) {
+        const { error: sectionError } = await edsync.from("lesson_sections").insert(sections);
+        if (sectionError) throw sectionError;
+      }
+      const questions = ((questionResult.data || []) as QuizQuestion[]).map((question) => {
+        const { created_at: oldCreated, ...fields } = question;
+        void oldCreated;
+        return { ...fields, id: crypto.randomUUID(), lesson_id: copy.id, section_id: question.section_id ? sectionIds.get(question.section_id) || null : null };
+      });
+      if (questions.length) {
+        const { error: questionError } = await edsync.from("quiz_questions").insert(questions);
+        if (questionError) throw questionError;
+      }
+      const terms = ((glossaryResult.data || []) as GlossaryTerm[]).map((term) => {
+        const { created_at: oldCreated, ...fields } = term;
+        void oldCreated;
+        return { ...fields, id: crypto.randomUUID(), lesson_id: copy.id };
+      });
+      if (terms.length) {
+        const { error: termError } = await edsync.from("glossary_terms").insert(terms);
+        if (termError) throw termError;
+      }
       toast.success("Course duplicated");
+      await load();
+    } catch (cause) {
+      if (copyId) await edsync.from("lessons").delete().eq("id", copyId);
+      toast.error(asError(cause));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const filtered = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+  const openInStudio = async (lesson: Lesson) => {
+    try {
+      const { data, error: sectionError } = await edsync.from("lesson_sections")
+        .select("title, content").eq("lesson_id", lesson.id).order("order_index");
+      if (sectionError) throw sectionError;
+      const text = "# " + lesson.title + "\n\n" +
+        ((data || []) as Array<{ title: string; content: string | null }>)
+          .map((section) => "## " + section.title + "\n" + (section.content || "")).join("\n\n");
+      const outline = outlineFromText(text, { title: lesson.title });
+      outline.objectives = Array.isArray(lesson.objectives) ? lesson.objectives : [];
+      sessionStorage.setItem("edsync-studio-import", JSON.stringify({ outline, title: lesson.title, lessonId: lesson.id }));
+      router.push("/studio?import=1");
+    } catch (cause) {
+      toast.error(asError(cause));
+    }
+  };
 
-    return lessons.filter((lesson) => {
-      if (filter !== "all" && lesson.status !== filter) return false;
-      if (!matchesDuration(lesson, durationFilter)) return false;
-      if (!matchesSemester(lesson.created_at, semesterFilter)) return false;
-      if (!matchesYear(lesson.created_at, yearFilter)) return false;
-      if (
-        normalizedSearch &&
-        !lesson.title.toLowerCase().includes(normalizedSearch)
-      )
-        return false;
-      return true;
-    });
-  }, [durationFilter, filter, lessons, search, semesterFilter, yearFilter]);
-
-  const filteredStudioItems = useMemo(() => {
-    if (durationFilter !== "all") return [];
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return studioItems.filter((item) => {
-      if (filter !== "all" && item.status !== filter) return false;
-      if (!matchesSemester(item.createdAt, semesterFilter)) return false;
-      if (!matchesYear(item.createdAt, yearFilter)) return false;
-      const searchableText =
-        `${item.title} ${studioClassName(item)} ${studioOriginalKind(item)}`.toLowerCase();
-      if (normalizedSearch && !searchableText.includes(normalizedSearch))
-        return false;
-      return true;
-    });
-  }, [durationFilter, filter, search, semesterFilter, studioItems, yearFilter]);
-
-  const totalItems = lessons.length + studioItems.length;
-  const hasResults = filtered.length > 0 || filteredStudioItems.length > 0;
-  const yearOptions = useMemo(() => {
-    const years = new Set<string>();
-    lessons.forEach((lesson) => {
-      const year = courseYear(lesson.created_at);
-      if (year) years.add(year);
-    });
-    studioItems.forEach((item) => {
-      const year = courseYear(item.createdAt);
-      if (year) years.add(year);
-    });
-    return [
-      "all",
-      ...Array.from(years).sort((left, right) => Number(right) - Number(left)),
-    ];
-  }, [lessons, studioItems]);
+  const filtered = lessons.filter((lesson) =>
+    (status === "all" || lesson.status === status) &&
+    (lesson.title + " " + (classes.find((item) => item.id === lesson.class_id)?.name || ""))
+      .toLowerCase().includes(search.trim().toLowerCase()));
+  const filteredStudio = studioItems.filter((item) =>
+    (status === "all" || item.status === status) &&
+    item.title.toLowerCase().includes(search.trim().toLowerCase()));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-      <section className="rounded-xl border border-edsync-border bg-edsync-card p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="mt-1 font-display text-3xl font-bold text-edsync-text">
-              Courses
-            </h1>
-            <p className="mt-1 text-sm text-edsync-subtle">
-              {totalItems} lesson{totalItems !== 1 ? "s" : ""} total
-            </p>
-          </div>
-          <Link href="/studio" className="btn-primary justify-center">
-            <Plus className="h-4 w-4" />
-            New course
-          </Link>
-        </div>
-
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-          <label className="relative min-w-0">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-edsync-subtle" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search courses..."
-              aria-label="Search courses"
-              className="edsync-input py-2 pl-10"
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-2 sm:flex">
-            {STATUS_FILTERS.map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => setFilter(status)}
-                aria-pressed={filter === status}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold capitalize transition ${
-                  filter === status
-                    ? "bg-edsync-blue text-white"
-                    : "border border-edsync-border bg-edsync-card text-edsync-subtle hover:text-edsync-text"
-                }`}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
-        </div>
-        <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-edsync-subtle">
-            More filters
-            {durationFilter !== "all" ||
-            semesterFilter !== "all" ||
-            yearFilter !== "all"
-              ? " · Active"
-              : ""}
-          </summary>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <select
-              value={durationFilter}
-              onChange={(event) =>
-                setDurationFilter(event.target.value as DurationFilter)
-              }
-              className="edsync-input w-full py-2 text-sm sm:w-48"
-              aria-label="Filter by expected duration"
-            >
-              <option value="all">Any duration</option>
-              <option value="short">Short, 1-20 min</option>
-              <option value="medium">Medium, 21-60 min</option>
-              <option value="long">Long, 61+ min</option>
-            </select>
-            <select
-              value={semesterFilter}
-              onChange={(event) =>
-                setSemesterFilter(event.target.value as SemesterFilter)
-              }
-              className="edsync-input w-full py-2 text-sm sm:w-40"
-              aria-label="Filter by creation season"
-            >
-              {SEMESTER_FILTERS.map((semester) => (
-                <option key={semester.value} value={semester.value}>
-                  {semester.value === "all"
-                    ? "Any creation season"
-                    : "Created in " + semester.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={yearFilter}
-              onChange={(event) => setYearFilter(event.target.value)}
-              className="edsync-input w-full py-2 text-sm sm:w-32"
-              aria-label="Filter by creation year"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year === "all" ? "Any creation year" : year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </details>
-      </section>
-
-      {loadError && (
-        <div
-          role="alert"
-          className="flex items-center justify-between gap-3 rounded-xl border border-edsync-border p-4 text-sm"
-        >
-          <span>{loadError}</span>
-          <button
-            className="text-edsync-blue underline"
-            onClick={() => void loadLessons()}
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="grid gap-3">
-          {[...Array(6)].map((_, index) => (
-            <div
-              key={index}
-              className="h-24 rounded-xl bg-edsync-card shimmer"
-            />
-          ))}
-        </div>
-      ) : loadError && !totalItems ? null : !hasResults ? (
-        <div className="rounded-xl border border-dashed border-edsync-border bg-edsync-card py-16 text-center">
-          <BookOpenCheck className="mx-auto mb-4 h-10 w-10 text-edsync-subtle" />
-          <h3 className="mb-2 font-display text-xl font-bold text-edsync-text">
-            {search ? "No lessons match your search" : "No lessons yet"}
-          </h3>
-          <p className="mb-6 text-sm text-edsync-subtle">
-            {search ? "Try another search." : "Create your first lesson."}
-          </p>
-          {!search && (
-            <Link href="/studio" className="btn-primary inline-flex">
-              Create first lesson
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {filteredStudioItems.map((item) => (
-            <StudioLessonRow key={item.id} item={item} />
-          ))}
+    <main className="page">
+      <PageHeader title="Courses" icon={BookOpen} count={lessons.length + studioItems.length} actions={
+        <Button variant="primary" size="sm" icon={Plus} onClick={() => setNewOpen(true)}>New course</Button>
+      } />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label className="relative min-w-[12rem] flex-1">
+          <Search aria-hidden size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
+          <input className="input w-full pl-9" aria-label="Search courses" placeholder="Search courses" value={search} onChange={(event) => setSearch(event.target.value)} />
+        </label>
+        <Segmented ariaLabel="Course status" value={status} onChange={setStatus} options={statusOptions} />
+      </div>
+      {error ? <div role="alert" className="mb-4 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger">{error} <Button size="sm" onClick={() => void load()}>Retry</Button></div> : null}
+      {loading ? <div className="space-y-2">{[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-16" />)}</div> :
+        filtered.length + filteredStudio.length === 0 ? <EmptyState icon={BookOpen} title={search ? "No matching courses" : "No courses yet"} hint={search ? "Try a different search." : "Create a course from a topic, notes, or a blank page."} /> :
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
           {filtered.map((lesson) => (
-            <LessonRow
-              key={lesson.id}
-              lesson={lesson}
-              onDelete={() => deleteLesson(lesson.id)}
-              onDuplicate={() => duplicateLesson(lesson)}
-            />
+            <div key={lesson.id} className="flex min-w-0 items-center gap-3 border-b border-line px-3 py-3 last:border-b-0 sm:px-4">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><BookOpen size={18} /></span>
+              <Link href={"/teacher/lessons/" + lesson.id} className="min-w-0 flex-1 hover:text-accent">
+                <span className="block truncate text-sm font-semibold text-fg">{lesson.title}</span>
+                <span className="block truncate text-xs text-fg-muted">{classes.find((item) => item.id === lesson.class_id)?.name || "No class"} · Updated {formatRelativeTime(lesson.updated_at)}</span>
+              </Link>
+              <Badge tone={lesson.status === "published" ? "success" : "neutral"} className="hidden capitalize sm:inline-flex">{lesson.status}</Badge>
+              <Menu label={"Actions for " + lesson.title} items={[
+                { label: "Open course", icon: ExternalLink, href: "/teacher/lessons/" + lesson.id },
+                { label: "Open in Studio", icon: Sparkles, onSelect: () => void openInStudio(lesson) },
+                { label: "Duplicate", icon: Copy, onSelect: () => void duplicateLesson(lesson), disabled: busy },
+                { label: lesson.status === "published" ? "Move to drafts" : "Publish", icon: UploadCloud, onSelect: () => void changeStatus(lesson, lesson.status === "published" ? "draft" : "published") },
+                { separator: true },
+                { label: "Delete", icon: Trash2, danger: true, onSelect: () => void deleteLesson(lesson) },
+              ]} />
+            </div>
+          ))}
+          {filteredStudio.map((item) => (
+            <div key={item.id} className="flex min-w-0 items-center gap-3 border-b border-line px-3 py-3 last:border-b-0 sm:px-4">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info"><Sparkles size={18} /></span>
+              <Link href={"/studio?doc=" + encodeURIComponent(item.id)} className="min-w-0 flex-1 hover:text-accent">
+                <span className="block truncate text-sm font-semibold text-fg">{item.title}</span>
+                <span className="block truncate text-xs text-fg-muted">Studio · Updated {formatRelativeTime(item.updatedAt)}</span>
+              </Link>
+              <Badge className="hidden sm:inline-flex">Studio</Badge>
+              <Menu label={"Actions for " + item.title} items={[{ label: "Open in Studio", icon: ExternalLink, href: "/studio?doc=" + encodeURIComponent(item.id) }]} />
+            </div>
           ))}
         </div>
-      )}
-    </div>
-  );
-}
-
-function StudioLessonRow({ item }: { item: StudioServerItem }) {
-  const badge = getStatusBadge(item.status);
-  const kind = studioOriginalKind(item);
-  const Icon =
-    kind === "slide" ? Presentation : kind === "doc" ? FileText : Sparkles;
-  const className = studioClassName(item);
-  const orderIndex = studioOrderIndex(item);
-  const pageCount = studioPageCount(item);
-
-  return (
-    <article className="rounded-xl border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40 hover:shadow-card-hover">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div className="flex min-w-0 gap-3">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`badge ${badge.className}`}>{badge.label}</span>
-              <span className="badge border border-edsync-blue/20 bg-edsync-blue/10 text-edsync-blue">
-                Studio
-              </span>
-            </div>
-            <h3 className="mt-2 truncate font-display text-lg font-bold text-edsync-text">
-              {item.title}
-            </h3>
-            <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
-              Editable lesson canvas for course materials, documents, and
-              presentations.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
-              {className && (
-                <span className="badge bg-edsync-muted/30">{className}</span>
-              )}
-              <span className="capitalize">
-                {kind === "slide" ? "PPT" : kind}
-              </span>
-              {pageCount && (
-                <span>
-                  {pageCount} page{pageCount !== 1 ? "s" : ""}
-                </span>
-              )}
-              {orderIndex && <span>Order {orderIndex}</span>}
-              <span>Updated {formatRelativeTime(item.updatedAt)}</span>
-            </div>
-          </div>
+      }
+      <Sheet open={newOpen} onClose={closeNew} title="Create course" description="Start with an outline or open a blank editor." size="lg">
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-fg">Class
+            <select className="input mt-1 w-full" value={newClassId} onChange={(event) => setNewClassId(event.target.value)}>
+              <option value="">No class yet</option>
+              {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <OutlineComposer useLabel="Create course" onUse={createFromOutline} busy={busy} compact />
+          <div className="border-t border-line pt-4"><Button onClick={() => void createBlank()} disabled={busy}>Start blank</Button></div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/studio?item=${encodeURIComponent(item.id)}`}
-            className="btn-primary min-w-0 flex-1 justify-center py-2 text-sm"
-          >
-            Edit in Studio
-          </Link>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function LessonRow({
-  lesson,
-  onDelete,
-  onDuplicate,
-}: {
-  lesson: Lesson;
-  onDelete: () => void;
-  onDuplicate: () => void;
-}) {
-  const badge = getStatusBadge(lesson.status);
-
-  return (
-    <article className="rounded-xl border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40 hover:shadow-card-hover">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div className="flex min-w-0 gap-3">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-            <BookOpenCheck className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`badge ${badge.className}`}>{badge.label}</span>
-              {lesson.ai_generated && (
-                <span className="badge border border-edsync-purple/20 bg-edsync-purple/10 text-edsync-purple">
-                  AI
-                </span>
-              )}
-            </div>
-            <h3 className="mt-2 truncate font-display text-lg font-bold text-edsync-text">
-              {lesson.title}
-            </h3>
-            <p className="mt-1 line-clamp-1 text-sm text-edsync-subtle">
-              {lesson.description || "No description."}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-edsync-subtle">
-              {lesson.subject && (
-                <span className="badge bg-edsync-muted/30">
-                  {lesson.subject}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1">
-                <Clock3 className="h-3.5 w-3.5" />
-                {lesson.estimated_duration} min
-              </span>
-              <span className={getDifficultyColor(lesson.difficulty)}>
-                {lesson.difficulty}
-              </span>
-              <span>Updated {formatRelativeTime(lesson.updated_at)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/teacher/lessons/${lesson.id}`}
-            className="btn-primary min-w-0 flex-1 justify-center py-2 text-sm"
-          >
-            Edit
-          </Link>
-          <ActionMenu label={`Actions for ${lesson.title}`}>
-            <button
-              type="button"
-              onClick={onDuplicate}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-edsync-text hover:bg-edsync-card"
-            >
-              <Copy className="h-4 w-4" />
-              Duplicate
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-edsync-red hover:bg-edsync-red/10"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </button>
-          </ActionMenu>
-        </div>
-      </div>
-    </article>
+      </Sheet>
+    </main>
   );
 }
