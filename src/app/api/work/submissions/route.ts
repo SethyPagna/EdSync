@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, type SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { errorMessage, jsonError, optionalId, readJsonObject } from "@/lib/grades/http";
 import { GRADE_FEEDBACK_MAX_LENGTH, isGradeSourceType, validateGradeText } from "@/lib/grades/validation";
 import { appendLearningEvent, recordGradeEvent } from "@/lib/learning-events";
@@ -60,6 +61,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const workItemId = params.get("workItemId");
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
 
   if (user.user_metadata.role === "student") {
     const rows = await d1Query(
@@ -125,6 +127,7 @@ export async function POST(request: Request) {
   const responseJson = JSON.stringify(response);
 
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const [work] = await d1Query<SubmissionTarget>(
     `SELECT wi.id, wi.class_id, wi.status, wi.allow_late, wi.due_at, wi.settings,
             ls.id AS submission_id,
@@ -242,6 +245,7 @@ export async function PATCH(request: Request) {
   if (!submissionId) return jsonError("Submission id is required.", 400);
 
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const [submission] = await d1Query<{
     id: string;
     work_item_id: string;
