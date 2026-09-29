@@ -33,11 +33,12 @@ describe("portal members and invites", () => {
   });
 
   it("scopes member and invite reads to the active tenant", async () => {
-    mocks.query.mockResolvedValueOnce([{ id: "member-1", email: "member@example.com" }]).mockResolvedValueOnce([{ invite_code: "join-abc", invites_enabled: 1 }]);
+    mocks.query.mockResolvedValueOnce([{ id: "member-1", email: "member@example.com" }]).mockResolvedValueOnce([{ invite_code: "join-abc", teacher_invite_code: "teach-def", invites_enabled: 1 }]);
     const response = await GET();
     expect(response.status).toBe(200);
     const data = (await response.json()).data;
     expect(data.inviteCode).toBe("join-abc");
+    expect(data.teacherInviteCode).toBe("teach-def");
     expect(data.members).toHaveLength(1);
     expect(mocks.query.mock.calls).toHaveLength(2);
     expect(mocks.query.mock.calls.every(([, params]) => params[0] === "tenant-one")).toBe(true);
@@ -55,6 +56,19 @@ describe("portal members and invites", () => {
     const code = (await response.json()).data.inviteCode as string;
     expect(code).toMatch(/^join-[0-9a-f]{20}$/);
     expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining("json_set"), [code, "tenant-one"]);
+    expect(String(mocks.query.mock.calls[0][0])).not.toContain("'$.invites_enabled'");
+  });
+
+  it("rotates teacher invitations without changing learner invitations", async () => {
+    const response = await POST(request("rotate_teacher"));
+    expect(response.status).toBe(200);
+    const code = (await response.json()).data.teacherInviteCode as string;
+    expect(code).toMatch(/^teach-[0-9a-f]{20}$/);
+    const [sql, params] = mocks.query.mock.calls[0];
+    expect(sql).toContain("'$.teacher_invite_code'");
+    expect(sql).not.toContain("'$.invite_code'");
+    expect(sql).not.toContain("'$.invites_enabled'");
+    expect(params).toEqual([code, "tenant-one"]);
   });
 
   it("can pause joins and rejects unknown actions", async () => {
