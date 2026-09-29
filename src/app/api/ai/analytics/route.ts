@@ -1,195 +1,90 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateAIChat } from "@/lib/ai/chat";
-import { getAuthenticatedUser } from "@/lib/auth";
-import { loadAiUserContext } from "@/lib/ai/personalization";
+import { NextResponse } from "next/server";
+import { generateAIChat, parseJsonResponse } from "@/lib/ai/chat";
+import { getSessionUser } from "@/lib/auth/session";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const preferredRegion = ["hkg1", "sin1"];
 
-type AnalyticsStudentStat = {
-  name: string;
-  avgScore: number | null;
-  reflectionCount: number;
-  lowConfidenceReflections: number;
+type Aggregate = {
+  learners: number;
+  scored: number;
+  atRisk: number;
+  advanced: number;
+  averageScore: number | null;
+  reflections: number;
+  lowConfidence: number;
+  pendingReviews: number;
+  repeatedReviews: number;
+  lessonsWithGaps: number;
 };
 
-type AnalyticsLessonStat = {
-  knowledgeGaps: string[];
-};
-
-type AnalyticsReviewSignal = {
-  pendingCount: number;
-  againCount: number;
-  almostCount: number;
-  topModeLabel: string;
-  copy: string;
-};
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-function normalizeStudentStat(value: unknown): AnalyticsStudentStat {
-  const row = asRecord(value);
-  const score = row.avgScore;
+function count(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(10000, Math.round(value))) : 0;
+}
+
+function aggregateAnalytics(payload: unknown): Aggregate {
+  const input = record(payload);
+  const students = Array.isArray(input.studentStats) ? input.studentStats.slice(0, 10000).map(record) : [];
+  const lessons = Array.isArray(input.lessonStats) ? input.lessonStats.slice(0, 10000).map(record) : [];
+  const scores = students.map((student) => student.avgScore).filter((score): score is number => typeof score === "number" && Number.isFinite(score)).map((score) => Math.max(0, Math.min(100, score)));
+  const review = record(input.reviewSignal);
   return {
-    name: typeof row.name === "string" && row.name.trim() ? row.name.trim() : "Unknown",
-    avgScore: typeof score === "number" && Number.isFinite(score) ? score : null,
-    reflectionCount:
-      typeof row.reflectionCount === "number" && Number.isFinite(row.reflectionCount)
-        ? Math.max(0, row.reflectionCount)
-        : 0,
-    lowConfidenceReflections:
-      typeof row.lowConfidenceReflections === "number" &&
-      Number.isFinite(row.lowConfidenceReflections)
-        ? Math.max(0, row.lowConfidenceReflections)
-        : 0,
+    learners: students.length,
+    scored: scores.length,
+    atRisk: scores.filter((score) => score < 60).length,
+    advanced: scores.filter((score) => score >= 80).length,
+    averageScore: scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null,
+    reflections: students.reduce((sum, student) => sum + count(student.reflectionCount), 0),
+    lowConfidence: students.reduce((sum, student) => sum + count(student.lowConfidenceReflections), 0),
+    pendingReviews: count(review.pendingCount),
+    repeatedReviews: count(review.againCount),
+    lessonsWithGaps: lessons.filter((lesson) => Array.isArray(lesson.knowledgeGaps) && lesson.knowledgeGaps.length > 0).length,
   };
 }
 
-function normalizeLessonStat(value: unknown): AnalyticsLessonStat {
-  const row = asRecord(value);
-  return {
-    knowledgeGaps: Array.isArray(row.knowledgeGaps)
-      ? row.knowledgeGaps.filter(
-          (gap): gap is string => typeof gap === "string" && gap.trim().length > 0,
-        )
-      : [],
-  };
+function ruleBasedSuggestions(data: Aggregate): string[] {
+  const suggestions: string[] = [];
+  if (data.atRisk) suggestions.push(`Plan a short check-in for the ${data.atRisk} learners below 60% and assign one targeted retry.`);
+  if (data.lowConfidence) suggestions.push(`Review the ${data.lowConfidence} low-confidence reflections and clarify the most confusing concept.`);
+  if (data.pendingReviews) suggestions.push(`Schedule a review block for ${data.pendingReviews} pending practice cards; start with repeated misses.`);
+  if (data.lessonsWithGaps) suggestions.push(`Add a worked example to ${data.lessonsWithGaps} lessons with reported knowledge gaps.`);
+  if (data.advanced) suggestions.push(`Offer an extension task for the ${data.advanced} learners scoring at least 80%.`);
+  if (!suggestions.length) suggestions.push("Collect a quick diagnostic and one confidence reflection before changing the lesson plan.");
+  return suggestions;
 }
 
-function normalizeReviewSignal(value: unknown): AnalyticsReviewSignal {
-  const row = asRecord(value);
-  return {
-    pendingCount: boundedCount(row.pendingCount),
-    againCount: boundedCount(row.againCount),
-    almostCount: boundedCount(row.almostCount),
-    topModeLabel: safeShortText(row.topModeLabel, "Review"),
-    copy: safeShortText(row.copy, "No pending practice reviews"),
-  };
-}
-
-function boundedCount(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value)
-    ? Math.min(1000, Math.max(0, Math.round(value)))
-    : 0;
-}
-
-function safeShortText(value: unknown, fallback: string) {
-  if (typeof value !== "string") return fallback;
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, 180) : fallback;
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ suggestions: ["Unauthorized"] }, { status: 401 });
-    }
-
-    const rate = await enforceRateLimit({
-      request,
-      scope: "ai_analytics",
-      limit: 30,
-      windowSeconds: 900,
-      userId: user.id,
-    });
-    if (!rate.allowed) {
-      return NextResponse.json(
-        { suggestions: ["Too many analytics requests. Try again shortly."] },
-        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } },
-      );
-    }
-
-    const payload = asRecord(await request.json());
-    const studentStats = Array.isArray(payload.studentStats)
-      ? payload.studentStats.map(normalizeStudentStat)
-      : [];
-    const lessonStats = Array.isArray(payload.lessonStats)
-      ? payload.lessonStats.map(normalizeLessonStat)
-      : [];
-    const reviewSignal = normalizeReviewSignal(payload.reviewSignal);
-    const aiContext = await loadAiUserContext(user.id);
-
-    const atRisk = studentStats.filter((student) => (student.avgScore ?? 0) < 60);
-    const advanced = studentStats.filter((student) => (student.avgScore ?? 0) >= 80);
-    const reflectionsLogged = studentStats.reduce(
-      (sum, student) => sum + student.reflectionCount,
-      0,
-    );
-    const lowConfidenceReflections = studentStats.reduce(
-      (sum, student) => sum + student.lowConfidenceReflections,
-      0,
-    );
-    const uniqueGaps = Array.from(
-      new Set(lessonStats.flatMap((lesson) => lesson.knowledgeGaps)),
-    );
-    const scoredStudents = studentStats.filter((student) => student.avgScore !== null);
-    const classAverage =
-      scoredStudents.length > 0
-        ? Math.round(
-            scoredStudents.reduce((sum, student) => sum + (student.avgScore || 0), 0) /
-              scoredStudents.length,
-          )
-        : "N/A";
-
-    const context = `
-Space data:
-- Creator profile:
-${aiContext.prompt}
-
-- Total learners: ${studentStats.length}
-- At risk (below 60%): ${atRisk.length} - names: ${atRisk.map((student) => student.name).join(", ") || "none"}
-- Advanced (80%+): ${advanced.length}
-- Reflection entries logged: ${reflectionsLogged}
-- Low-confidence reflections (1-2/5): ${lowConfidenceReflections}
-- Pending practice reviews: ${reviewSignal.pendingCount}
-- Practice review mode needing attention: ${reviewSignal.topModeLabel}
-- Practice review status: ${reviewSignal.copy}
-- Common knowledge gaps: ${uniqueGaps.slice(0, 6).join(", ") || "none identified yet"}
-- Avg space result: ${classAverage}%
-`;
-
-    const raw = await generateAIChat({
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert EdSync learning coach. Give specific, actionable intervention suggestions for a creator. Personalize recommendations to the creator profile, audience level, subjects, and space evidence. Reply ONLY with a JSON array of 5 suggestion strings. No markdown, no preamble.",
-        },
-        {
-          role: "user",
-          content: `Based on this space data, provide 5 specific intervention suggestions:\n${context}\nReply ONLY with: ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4", "suggestion 5"]`,
-        },
-      ],
-      maxTokens: 500,
-      temperature: 0.6,
-    });
-
-    let suggestions: string[];
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const rate = await enforceRateLimit({ request, scope: "ai_analytics", limit: 30, windowSeconds: 900, userId: user.id });
+    if (!rate.allowed) return NextResponse.json({ error: "Too many analytics requests. Try again shortly." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
+    const aggregate = aggregateAnalytics(await request.json());
+    const rules = ruleBasedSuggestions(aggregate);
     try {
-      const clean = raw
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```\s*$/i, "");
-      const start = clean.indexOf("[");
-      const end = clean.lastIndexOf("]");
-      suggestions =
-        start !== -1 && end !== -1
-          ? JSON.parse(clean.slice(start, end + 1))
-          : [clean];
+      const raw = await generateAIChat({
+        feature: "analytics",
+        userId: user.id,
+        jsonMode: true,
+        maxTokens: 500,
+        temperature: 0.35,
+        messages: [
+          { role: "system", content: "You are a learning coach. Use only the anonymous aggregate counts. Return a JSON object with a suggestions array of up to three concise actions. Do not invent student details." },
+          { role: "user", content: JSON.stringify({ aggregate, existingRules: rules }) },
+        ],
+      });
+      const response = parseJsonResponse<{ suggestions?: unknown }>(raw);
+      const ai = Array.isArray(response.suggestions) ? response.suggestions.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3) : [];
+      return NextResponse.json({ suggestions: [...rules, ...ai].slice(0, 5), source: "ai" });
     } catch {
-      suggestions = [raw.trim()];
+      return NextResponse.json({ suggestions: rules, source: "local" });
     }
-
-    return NextResponse.json({ suggestions });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({
-      suggestions: [`Could not generate suggestions: ${msg}`],
-    });
+  } catch (error) {
+    console.error("[analytics]", error);
+    return NextResponse.json({ error: "Analytics suggestions could not be prepared." }, { status: 500 });
   }
 }
