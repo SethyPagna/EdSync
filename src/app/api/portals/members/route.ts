@@ -54,7 +54,7 @@ export async function GET() {
   return NextResponse.json({
     data: {
       members,
-      inviteCode: tenant[0]?.invite_code || access.tenantSlug,
+      inviteCode: tenant[0]?.invite_code ?? null,
       invitesEnabled: tenant[0]?.invites_enabled !== 0,
     },
     error: null,
@@ -79,11 +79,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { inviteCode: code, invitesEnabled: true }, error: null });
   }
   const enabled = body.action === "enable";
+  if (enabled) {
+    const code = `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+    await d1Query(
+      `UPDATE tenants
+          SET settings = json_set(COALESCE(settings, '{}'), '$.invites_enabled', 1,
+              '$.invite_code', COALESCE(json_extract(settings, '$.invite_code'), ?)),
+              updated_at = datetime('now')
+        WHERE id = ?`,
+      [code, access.tenantId],
+    );
+    return NextResponse.json({ data: { invitesEnabled: true }, error: null });
+  }
   await d1Query(
     `UPDATE tenants
         SET settings = json_set(COALESCE(settings, '{}'), '$.invites_enabled', ?), updated_at = datetime('now')
       WHERE id = ?`,
-    [enabled ? 1 : 0, access.tenantId],
+    [0, access.tenantId],
   );
   return NextResponse.json({ data: { invitesEnabled: enabled }, error: null });
 }
