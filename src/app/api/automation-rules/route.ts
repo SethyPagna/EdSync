@@ -99,6 +99,24 @@ export const POST = withRoute(async (request) => {
       () => ({ id: validateAutomationRuleId(body.id), enabled: normalizeAutomationEnabled(body.enabled) }),
       "Rule is required.",
     );
+    if (enabled) {
+      const [current] = await d1Query<{ title: string; trigger_key: string; conditions: string; actions: string }>(
+        `SELECT title, trigger_key, conditions, actions FROM automation_rules WHERE tenant_id = ? AND id = ?${owner.sql} LIMIT 1`,
+        [context.tenant.id, id, ...owner.params],
+      );
+      if (!current) throw new NotFoundError("Rule not found.");
+      try {
+        normalizeAutomationRulePayload({
+          title: current.title,
+          triggerKey: current.trigger_key,
+          conditions: JSON.parse(current.conditions),
+          actions: JSON.parse(current.actions),
+          enabled,
+        });
+      } catch (error) {
+        throw new BadRequestError(`Update this rule before enabling it: ${error instanceof Error ? error.message : "Unsupported configuration."}`);
+      }
+    }
     const [updated] = await d1Query<{ id: string }>(
       `UPDATE automation_rules SET enabled = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id = ?${owner.sql} RETURNING id`,
       [enabled ? 1 : 0, context.tenant.id, id, ...owner.params],
