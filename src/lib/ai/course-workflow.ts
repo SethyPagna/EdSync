@@ -1,4 +1,13 @@
-import { generateAIChat, parseJsonResponse } from "@/lib/ai/chat";
+import { generateAIJson } from "@/lib/ai/chat";
+import {
+  OUTLINE_SYSTEM_PROMPT,
+  buildOutlineUserPrompt,
+  deriveLessonDraft,
+  derivePracticeItems,
+  outlineMaxTokens,
+  parseOutline,
+  type LessonOutline,
+} from "@/lib/compose";
 import { buildLessonDesignPromptContext } from "@/lib/learning/design-system";
 
 export type CourseWorkflowInput = {
@@ -10,16 +19,17 @@ export type CourseWorkflowInput = {
   designTemplateId?: string;
   practiceMode?: string;
   outputLength?: string;
+  userId?: string;
 };
 
 export type CourseWorkflowDraft = {
-  outline: unknown;
-  modules: unknown;
-  quiz: unknown;
-  rubric: unknown;
+  outline: LessonOutline;
+  modules: ReturnType<typeof deriveLessonDraft>["sections"];
+  quiz: ReturnType<typeof deriveLessonDraft>["quizQuestions"];
+  rubric: { criterion: string; points: number }[];
   tags: string[];
-  design: unknown;
-  practicePlan: unknown;
+  design: ReturnType<typeof buildLessonDesignPromptContext>;
+  practicePlan: { mode: string; targetSeconds: number; retryMissed: true; items: ReturnType<typeof derivePracticeItems> };
   review: {
     readability: string;
     accessibility: string;
@@ -28,68 +38,55 @@ export type CourseWorkflowDraft = {
   };
 };
 
-async function jsonStep<T>(feature: string, system: string, user: string) {
-  const raw = await generateAIChat({
-    feature,
-    temperature: 0.2,
-    maxTokens: 1800,
-    messages: [
-      { role: "system", content: `${system}\nReturn only valid compact JSON.` },
-      { role: "user", content: user },
-    ],
-  });
-  return parseJsonResponse<T>(raw);
+function isOutlineShape(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>).title === "string" &&
+    Array.isArray((value as Record<string, unknown>).sections);
 }
 
 export async function generateCourseWorkflow(input: CourseWorkflowInput): Promise<CourseWorkflowDraft> {
-  const topic = input.topic.trim();
-  const audience = input.audience?.trim() || "mixed learners";
-  const duration = Math.max(5, Number(input.durationMinutes || 45));
-  const tone = input.tone?.trim() || "clear, professional, encouraging";
-  const source = input.sourceText ? `\nSource context:\n${input.sourceText.slice(0, 6000)}` : "";
-  const designContext = buildLessonDesignPromptContext(input.designTemplateId, input.outputLength);
-  const practiceMode = input.practiceMode?.trim() || "mixed quiz, flashcards, retry missed, and sprint";
-
-  const outline = await jsonStep(
-    "course_workflow.outline",
-    "You are a master instructional designer using ADDIE and Bloom's Taxonomy.",
-    `Design a ${duration}-minute course on "${topic}" for ${audience}. Follow this output length plan: ${JSON.stringify(designContext.outputLength)}. Include modules, learning objectives, estimated time, prerequisite assumptions, and where practice should happen.${source}`,
-  );
-  const design = await jsonStep(
-    "course_workflow.design",
-    "You are an LMS-native lesson designer. Create accessible editable slide and section design specs, not static images.",
-    `Use this EdSync design system context to plan lesson templates, colors, layout, transitions, animations, and reduced-motion behavior:\n${JSON.stringify(designContext)}\n\nCourse outline:\n${JSON.stringify(outline)}`,
-  );
-  const modules = await jsonStep(
-    "course_workflow.modules",
-    "You write polished LMS lesson content that is concise, accurate, accessible, editable, and compatible with EdSync learning blocks.",
-    `Create course scripts, slide-ready sections, media notes, creator review flags, and activity blocks for this outline, using a ${tone} tone. Respect the output length plan, tool groups, reusable blocks, and design spec:\n${JSON.stringify({ outputLength: designContext.outputLength, toolGroups: designContext.toolGroups, reusableBlocks: designContext.reusableBlocks, outline, design })}`,
-  );
-  const practicePlan = await jsonStep(
-    "course_workflow.practice_plan",
-    "You design learning practice loops with target time, points, explanations, retry missed, and review-card output.",
-    `Create a ${practiceMode} practice plan from these modules. Use this expected practice length: ${designContext.outputLength.practiceCount}. Include mode, targetSeconds, points, explanations, retryMissed, reviewCards, and dashboardRecommendation:\n${JSON.stringify(modules)}`,
-  );
-  const quiz = await jsonStep(
-    "course_workflow.quiz",
-    "You create assessment questions with plausible distractors and point values.",
-    `Create Bloom-balanced quiz and practice questions from these modules and practice plan. Include points, correct answers, explanations, difficulty, and which practice mode should use each item:\n${JSON.stringify({ modules, practicePlan })}`,
-  );
-  const rubric = await jsonStep(
-    "course_workflow.rubric",
-    "You create teacher-controlled rubrics and feedback criteria.",
-    `Create a concise rubric for the course and grading guidance for tasks or discussions:\n${JSON.stringify({ outline, quiz })}`,
-  );
-  const review = await jsonStep<CourseWorkflowDraft["review"]>(
-    "course_workflow.review",
-    "You are a learning quality reviewer. Check readability, accessibility, fairness, and hallucination risk.",
-    `Review this generated course package and return readability, accessibility, fairness, and publishRecommendation. Check visual contrast, reduced-motion fallback, media/link safety notes, quiz clarity, and teacher control. Always choose review_required unless all issues are minor:\n${JSON.stringify({ outline, design, modules, practicePlan, quiz, rubric })}`,
-  );
-  const tags = await jsonStep<string[]>(
-    "course_workflow.tags",
-    "You generate searchable LMS taxonomy tags.",
-    `Return 5-10 concise tags for this course:\n${JSON.stringify({ topic, outline })}`,
-  );
-
-  return { outline, modules, quiz, rubric, tags, design, practicePlan, review };
+  const promptInput = {
+    topic: input.topic.trim(),
+    sourceText: input.sourceText,
+    audience: input.audience,
+    style: input.tone,
+    sectionCount: input.outputLength === "short" ? 3 : input.outputLength === "long" ? 9 : 5,
+    questionCount: input.outputLength === "short" ? 3 : input.outputLength === "long" ? 9 : 5,
+  };
+  const raw = await generateAIJson({
+    feature: "course-workflow-outline",
+    userId: input.userId,
+    maxTokens: outlineMaxTokens(promptInput),
+    temperature: 0.25,
+    messages: [
+      { role: "system", content: OUTLINE_SYSTEM_PROMPT },
+      { role: "user", content: buildOutlineUserPrompt(promptInput) },
+    ],
+  }, isOutlineShape);
+  const { outline, issues } = parseOutline(raw);
+  const draft = deriveLessonDraft(outline);
+  const practiceItems = derivePracticeItems(outline);
+  const reviewRequired = issues.length > 0 || !draft.sections.length || draft.quizQuestions.length < 2 ||
+    outline.questions.some((question) => question.placeholder);
+  const criterionPoints = Math.floor(100 / Math.max(1, outline.objectives.length));
+  return {
+    outline,
+    modules: draft.sections,
+    quiz: draft.quizQuestions,
+    rubric: outline.objectives.map((criterion, index) => ({ criterion, points: index === outline.objectives.length - 1 ? 100 - criterionPoints * index : criterionPoints })),
+    tags: draft.lesson.tags,
+    design: buildLessonDesignPromptContext(input.designTemplateId, input.outputLength),
+    practicePlan: {
+      mode: input.practiceMode?.trim() || "quiz",
+      targetSeconds: Math.max(300, Math.min(7200, Math.round(Number(input.durationMinutes) || 45) * 60)),
+      retryMissed: true,
+      items: practiceItems,
+    },
+    review: {
+      readability: "Review age level and clarity before publishing.",
+      accessibility: "Check media descriptions and keyboard access in the final layout.",
+      fairness: "Check examples and answer choices for bias.",
+      publishRecommendation: reviewRequired ? "review_required" : "ready",
+    },
+  };
 }
