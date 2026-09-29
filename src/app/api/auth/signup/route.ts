@@ -159,10 +159,14 @@ export async function POST(request: Request) {
         `SELECT id, slug, name FROM tenants
           WHERE status = 'active'
             AND COALESCE(json_extract(settings, '$.invites_enabled'), 1) = 1
-            AND json_extract(settings, '$.invite_code') IS NOT NULL
-            AND lower(json_extract(settings, '$.invite_code')) = lower(?)
+            AND ((? = 'student'
+                  AND json_extract(settings, '$.invite_code') IS NOT NULL
+                  AND lower(json_extract(settings, '$.invite_code')) = lower(?))
+              OR (? = 'teacher'
+                  AND json_extract(settings, '$.teacher_invite_code') IS NOT NULL
+                  AND lower(json_extract(settings, '$.teacher_invite_code')) = lower(?)))
           LIMIT 1`,
-        [organizationCode],
+        [role, organizationCode, role, organizationCode],
       )
     : [];
 
@@ -224,7 +228,13 @@ export async function POST(request: Request) {
           tenantSlug,
           organizationName,
           id,
-          JSON.stringify({ signup_source: "auth_signup", owner_role: role, invite_code: `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`, invites_enabled: true }),
+          JSON.stringify({
+            signup_source: "auth_signup",
+            owner_role: role,
+            invite_code: `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`,
+            teacher_invite_code: `teach-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`,
+            invites_enabled: true,
+          }),
         ],
       },
       {
