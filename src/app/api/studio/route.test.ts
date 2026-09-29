@@ -1,17 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), user: vi.fn() }));
+const mocks = vi.hoisted(() => ({ query: vi.fn(), user: vi.fn(), context: vi.fn() }));
 
 vi.mock("@/lib/db/d1", () => ({ d1Query: mocks.query }));
 vi.mock("@/lib/auth/session", () => ({ getSessionUser: mocks.user }));
 vi.mock("@/lib/tenancy", () => ({
-  resolveTenantContext: async () => ({ tenant: { id: "tenant-a" }, portal: null }),
+  DEFAULT_TENANT_ID: "tenant_edsync_default",
+  resolveTenantContext: mocks.context,
   linkTenantObject: vi.fn(),
 }));
 vi.mock("@/lib/learning-events", () => ({ appendLearningEvent: vi.fn() }));
 vi.mock("@/lib/permissions", () => ({ PERMISSIONS: { coursesPublish: "courses.publish" }, getPermissionSet: vi.fn() }));
 
-import { DELETE, GET, PATCH } from "./route";
+import { DELETE, GET, PATCH, POST } from "./route";
 
 const stored = {
   id: "design-1",
@@ -31,6 +32,7 @@ const stored = {
 
 beforeEach(() => {
   mocks.user.mockReset().mockResolvedValue({ id: "owner", user_metadata: { role: "teacher" } });
+  mocks.context.mockReset().mockResolvedValue({ tenant: { id: "tenant-a" }, portal: null, membership: { status: "active" } });
   mocks.query.mockReset().mockResolvedValue([]);
 });
 
@@ -60,5 +62,17 @@ describe("Studio document access", () => {
     const deletion = await DELETE(new Request("http://localhost/api/studio?id=design-1", { method: "DELETE" }));
     expect(deletion.status).toBe(404);
     expect(mocks.query.mock.calls.every(([sql]) => String(sql).startsWith("SELECT"))).toBe(true);
+  });
+
+  it("blocks a signed-in organization outsider before creating a workspace item", async () => {
+    mocks.context.mockResolvedValue({ tenant: { id: "tenant-a" }, portal: null, membership: null });
+
+    const response = await POST(new Request("https://school--main.example.test/api/studio", {
+      method: "POST",
+      body: JSON.stringify({ kind: "slide", title: "Injected item", content: {} }),
+    }));
+
+    expect(response.status).toBe(403);
+    expect(mocks.query).not.toHaveBeenCalled();
   });
 });
