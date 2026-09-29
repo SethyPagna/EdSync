@@ -1,21 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { CalendarClock, Link2, Megaphone, Plus, Send, TimerReset, Trash2 } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Megaphone, Plus, Trash2 } from "lucide-react";
+import { Badge, Button, EmptyState, IconButton, Menu, PageHeader, Segmented, Sheet, Skeleton, useConfirm } from "@/components/ui";
 import { createClient } from "@/lib/edsync/client";
-import { ALL_CLASSES_SCOPE, classScopeFromSearchParams, hasClassScope, scopedClassHref } from "@/lib/classes/class-scope";
 import type { Announcement, Class, ScheduleEvent } from "@/types";
 
 type PlannerData = {
   announcements: (Announcement & { class_name?: string | null })[];
   events: (ScheduleEvent & { class_name?: string | null; lesson_title?: string | null })[];
 };
-type PlannerView = "day" | "week" | "month" | "all";
-
-type PlannerForm = {
-  mode: "announcement" | "deadline" | "event";
+type Mode = "event" | "deadline" | "announcement";
+type View = "week" | "agenda";
+type Draft = {
+  mode: Mode;
   classId: string;
   title: string;
   body: string;
@@ -25,586 +25,212 @@ type PlannerForm = {
   location: string;
   priority: "low" | "normal" | "high";
 };
+const views: Array<{ value: View; label: string }> = [{ value: "week", label: "Week" }, { value: "agenda", label: "Agenda" }];
+const modes: Array<{ value: Mode; label: string }> = [{ value: "event", label: "Event" }, { value: "deadline", label: "Deadline" }, { value: "announcement", label: "Update" }];
 
-const emptyForm: PlannerForm = {
-  mode: "announcement",
-  classId: "",
-  title: "",
-  body: "",
-  startsAt: "",
-  endsAt: "",
-  dueAt: "",
-  location: "",
-  priority: "normal",
-};
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-const plannerViews: Array<{ key: PlannerView; label: string }> = [
-  { key: "day", label: "Day" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "all", label: "All" },
-];
-
-function formatWhen(event: ScheduleEvent) {
-  const value = event.due_at || event.starts_at || event.created_at;
-  if (!value) return "No time set";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function blankDraft(classId = ""): Draft {
+  return { mode: "event", classId, title: "", body: "", startsAt: "", endsAt: "", dueAt: "", location: "", priority: "normal" };
 }
 
-function eventTime(event: ScheduleEvent) {
+function errorText(value: unknown, fallback = "Planner request failed.") {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "message" in value && typeof value.message === "string") return value.message;
+  return fallback;
+}
+
+async function readData(response: Response) {
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.error || !payload) throw new Error(errorText(payload?.error));
+  return payload.data;
+}
+
+function eventDate(event: ScheduleEvent) {
   const value = event.due_at || event.starts_at || event.created_at;
-  const timestamp = value ? new Date(value).getTime() : Number.NaN;
-  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+  return new Date(value);
+}
+
+function startOfWeek(date: Date, offset: number) {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  result.setDate(result.getDate() - (result.getDay() + 6) % 7 + offset * 7);
+  return result;
 }
 
 function sameDay(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function isInPlannerView(event: ScheduleEvent, view: PlannerView, now = new Date()) {
-  if (view === "all") return true;
-  const timestamp = eventTime(event);
-  if (timestamp === Number.MAX_SAFE_INTEGER) return false;
-  const eventDate = new Date(timestamp);
-  if (view === "day") return sameDay(eventDate, now);
-  if (view === "week") return timestamp >= now.getTime() - MILLISECONDS_PER_DAY && timestamp <= now.getTime() + 7 * MILLISECONDS_PER_DAY;
-  return eventDate.getFullYear() === now.getFullYear() && eventDate.getMonth() === now.getMonth();
-}
-
-function eventWorkType(event: ScheduleEvent) {
-  const workType = event.metadata?.workType;
-  return typeof workType === "string" ? workType : null;
-}
-
-function classScopeFromLocation() {
-  if (typeof window === "undefined") return ALL_CLASSES_SCOPE;
-  return classScopeFromSearchParams(new URLSearchParams(window.location.search));
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
 }
 
 export default function TeacherPlannerPage() {
   const router = useRouter();
-  const [requestedClassId, setRequestedClassId] = useState(classScopeFromLocation);
+  const confirm = useConfirm();
   const edsync = useMemo(() => createClient(), []);
   const [classes, setClasses] = useState<Class[]>([]);
   const [planner, setPlanner] = useState<PlannerData>({ announcements: [], events: [] });
-  const [form, setForm] = useState<PlannerForm>(emptyForm);
-  const [selectedClassId, setSelectedClassId] = useState("all");
-  const [plannerView, setPlannerView] = useState<PlannerView>("week");
-  const [loading, setLoading] = useState(true);
+  const [classId, setClassId] = useState("all");
+  const [view, setView] = useState<View>("week");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [openEventId, setOpenEventId] = useState<string | null>(null);
+  const [today, setToday] = useState<Date | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<Draft>(blankDraft);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-  const loadPlanner = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
-      const {
-        data: { user },
-      } = await edsync.auth.getUser();
-      if (!user) return;
-
-      const [classRes, plannerRes] = await Promise.all([
-        edsync
-          .from("classes")
-          .select("*")
-          .eq("teacher_id", user.id)
-          .eq("is_active", true)
-          .order("created_at", { ascending: false }),
-        fetch("/api/planner", { credentials: "include", cache: "no-store" }).then((res) =>
-          res.json(),
-        ),
+      const { data: { user } } = await edsync.auth.getUser();
+      if (!user) throw new Error("Sign in to see your planner.");
+      const [classResult, plan] = await Promise.all([
+        edsync.from("classes").select("*").eq("teacher_id", user.id).eq("is_active", true).order("name"),
+        fetch("/api/planner", { cache: "no-store" }).then(readData),
       ]);
-
-      const classRows = classRes.data || [];
-      setClasses(classRows);
-      setForm((current) => ({
-        ...current,
-        classId: current.classId || classRows[0]?.id || "",
-      }));
-      setPlanner(plannerRes.data || { announcements: [], events: [] });
-    } catch {
-      toast.error("Could not load planner.");
+      if (classResult.error) throw classResult.error;
+      const ownClasses = (classResult.data || []) as Class[];
+      setClasses(ownClasses);
+      setPlanner((plan || { announcements: [], events: [] }) as PlannerData);
+      setForm((current) => ({ ...current, classId: current.classId || ownClasses[0]?.id || "" }));
+      const requested = new URLSearchParams(window.location.search).get("classId");
+      if (requested && ownClasses.some((item) => item.id === requested)) setClassId(requested);
+    } catch (cause) {
+      setLoadError(errorText(cause, "Could not load planner."));
     } finally {
       setLoading(false);
     }
   }, [edsync]);
 
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      void loadPlanner();
+    const timer = window.setTimeout(() => {
+      setToday(new Date());
+      void load();
     }, 0);
-    return () => window.clearTimeout(loadTimer);
-  }, [loadPlanner]);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
-  useEffect(() => {
-    if (!hasClassScope(classes, requestedClassId)) return;
-    const scopeTimer = window.setTimeout(() => {
-      setSelectedClassId(requestedClassId);
-      if (requestedClassId !== ALL_CLASSES_SCOPE) {
-        setForm((current) => ({ ...current, classId: current.classId || requestedClassId }));
-      }
-    }, 0);
-    return () => window.clearTimeout(scopeTimer);
-  }, [classes, requestedClassId]);
-
-  const chooseClassScope = (classId: string) => {
-    setRequestedClassId(classId);
-    setSelectedClassId(classId);
-    if (classId !== ALL_CLASSES_SCOPE) {
-      setForm((current) => ({ ...current, classId }));
-    }
-    router.replace(scopedClassHref("/teacher/planner", classId), { scroll: false });
+  const chooseClass = (next: string) => {
+    setClassId(next);
+    if (next !== "all") setForm((current) => ({ ...current, classId: next }));
+    router.replace(next === "all" ? "/teacher/planner" : "/teacher/planner?classId=" + encodeURIComponent(next), { scroll: false });
   };
 
-  const selectedClass = useMemo(
-    () => classes.find((classRow) => classRow.id === selectedClassId) ?? null,
-    [classes, selectedClassId],
-  );
-  const classScopedEvents = useMemo(() => {
-    if (!selectedClass) return planner.events;
-    return planner.events.filter((event) => event.class_name === selectedClass.name);
-  }, [planner.events, selectedClass]);
-  const visibleEvents = useMemo(
-    () =>
-      classScopedEvents
-        .filter((event) => isInPlannerView(event, plannerView))
-        .sort((left, right) => eventTime(left) - eventTime(right)),
-    [classScopedEvents, plannerView],
-  );
-  const visibleAnnouncements = useMemo(() => {
-    if (!selectedClass) return planner.announcements;
-    return planner.announcements.filter((announcement) => announcement.class_name === selectedClass.name);
-  }, [planner.announcements, selectedClass]);
-  const scheduleStats = useMemo(
-    () => ({
-      day: classScopedEvents.filter((event) => isInPlannerView(event, "day")).length,
-      week: classScopedEvents.filter((event) => isInPlannerView(event, "week")).length,
-      month: classScopedEvents.filter((event) => isInPlannerView(event, "month")).length,
-    }),
-    [classScopedEvents],
-  );
+  const scopedEvents = planner.events.filter((event) => classId === "all" || event.class_id === classId)
+    .sort((left, right) => eventDate(left).getTime() - eventDate(right).getTime());
+  const scopedAnnouncements = planner.announcements.filter((item) => classId === "all" || item.class_id === classId);
+  const weekStart = today ? startOfWeek(today, weekOffset) : null;
+  const weekDays = weekStart ? Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + index);
+    return date;
+  }) : [];
+  const visibleEvents = view === "week" && weekStart
+    ? scopedEvents.filter((event) => {
+        const date = eventDate(event);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        return date >= weekStart && date < weekEnd;
+      })
+    : scopedEvents;
 
-  const submitPlannerItem = async () => {
-    if (!form.classId) {
-      toast.error("Choose a class or course first.");
-      return;
-    }
-    if (!form.title.trim()) {
-      toast.error("Add a clear title.");
-      return;
-    }
-    if (form.mode === "announcement" && !form.body.trim()) {
-      toast.error("Add a notification message.");
-      return;
-    }
-    if (form.mode === "deadline" && !form.dueAt) {
-      toast.error("Choose a due date and time.");
-      return;
-    }
+  const openNew = (mode: Mode = "event") => {
+    setForm(blankDraft(classId === "all" ? classes[0]?.id || "" : classId));
+    setForm((current) => ({ ...current, mode }));
+    setFormOpen(true);
+  };
 
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving) return;
+    if (!form.classId) return toast.error("Choose a class.");
+    if (!form.title.trim()) return toast.error("Add a title.");
+    if (form.mode === "announcement" && !form.body.trim()) return toast.error("Add a message.");
+    if (form.mode === "deadline" && !form.dueAt) return toast.error("Choose a due date.");
+    if (form.mode === "event" && !form.startsAt) return toast.error("Choose a start time.");
     setSaving(true);
     try {
-      const response = await fetch("/api/planner", {
+      const data = await fetch("/api/planner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           kind: form.mode === "announcement" ? "announcement" : "event",
           classId: form.classId,
-          title: form.title,
+          title: form.title.trim(),
           body: form.body,
           description: form.body,
           priority: form.priority,
-          eventType:
-            form.mode === "deadline"
-              ? "deadline"
-              : form.mode === "event"
-                ? "class"
-                : "announcement",
-          startsAt: form.startsAt || null,
-          endsAt: form.mode === "announcement" ? null : form.endsAt || null,
-          dueAt: form.mode === "deadline" ? form.dueAt : null,
+          eventType: form.mode === "deadline" ? "deadline" : form.mode === "event" ? "class" : "announcement",
+          startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+          endsAt: form.mode === "event" && form.endsAt ? new Date(form.endsAt).toISOString() : null,
+          dueAt: form.mode === "deadline" ? new Date(form.dueAt).toISOString() : null,
           location: form.location || null,
         }),
-      });
-      const payload = await response.json();
-
-      if (!response.ok) {
-        toast.error(payload.error?.message || "Could not save planner item.");
-        return;
-      }
-
-      toast.success(
-        form.mode === "announcement"
-          ? `Notification sent to ${payload.data?.notified ?? 0} students.`
-          : "Schedule updated.",
-      );
-      setForm((current) => ({ ...emptyForm, classId: current.classId }));
-      await loadPlanner();
+      }).then(readData);
+      toast.success(form.mode === "announcement" ? "Sent to " + Number(data?.notified || 0) + " learners" : "Schedule updated");
+      setFormOpen(false);
+      await load();
+    } catch (cause) {
+      toast.error(errorText(cause));
     } finally {
       setSaving(false);
     }
   };
 
-  const deletePlannerItem = async (type: "announcement" | "event", id: string, title: string) => {
-    const confirmed = window.confirm(`Delete "${title}"? Learners will no longer see this ${type}.`);
-    if (!confirmed) return;
-    const response = await fetch(`/api/planner?type=${type}&id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || payload?.error) {
-      toast.error(payload?.error?.message || payload?.error || "Planner item was not deleted.");
-      return;
+  const remove = async (kind: "event" | "announcement", id: string, title: string) => {
+    if (!await confirm({ title: "Delete " + title + "?", body: "Learners will no longer see this item.", confirmLabel: "Delete", danger: true })) return;
+    try {
+      await fetch("/api/planner?type=" + kind + "&id=" + encodeURIComponent(id), { method: "DELETE" }).then(readData);
+      toast.success("Planner item deleted");
+      await load();
+    } catch (cause) {
+      toast.error(errorText(cause));
     }
-    toast.success(type === "announcement" ? "Notification deleted." : "Schedule item deleted.");
-    await loadPlanner();
   };
 
   return (
-    <div className="page-shell space-y-6">
-      <header className="group flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-edsync-blue">Course planner</p>
-          <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text">
-            Schedule, deadlines, and updates
-          </h1>
-          <p className="edsync-hover-detail max-w-2xl">
-            Filter by class, view the day/week/month schedule, and keep assessment deadlines linked to real class work.
-          </p>
-        </div>
-      </header>
-
-      <section className="group rounded-xl border border-edsync-border bg-edsync-card p-3">
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => chooseClassScope(ALL_CLASSES_SCOPE)}
-            className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-              selectedClassId === "all"
-                ? "border-edsync-blue bg-edsync-blue text-white"
-                : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
-            }`}
-          >
-            All classes
-          </button>
-          {classes.map((classRow) => (
-            <button
-              key={classRow.id}
-              type="button"
-              onClick={() => chooseClassScope(classRow.id)}
-              className={`whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                selectedClassId === classRow.id
-                  ? "border-edsync-blue bg-edsync-blue text-white"
-                  : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
-              }`}
-            >
-              {classRow.name}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {[
-          { label: "Today", value: scheduleStats.day },
-          { label: "This week", value: scheduleStats.week },
-          { label: "This month", value: scheduleStats.month },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-edsync-border bg-edsync-card p-4">
-            <p className="text-2xl font-bold text-edsync-text">{stat.value}</p>
-            <p className="mt-1 text-sm font-semibold text-edsync-subtle">{stat.label}</p>
-          </div>
-        ))}
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-        <section className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-          <div className="mb-4 grid grid-cols-3 gap-2">
-            {[
-              { mode: "announcement" as const, label: "Notify", icon: Megaphone },
-              { mode: "deadline" as const, label: "Due date", icon: TimerReset },
-              { mode: "event" as const, label: "Event", icon: CalendarClock },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.mode}
-                  type="button"
-                  onClick={() => setForm((current) => ({ ...current, mode: item.mode }))}
-                  className={`rounded-lg border px-3 py-3 text-sm font-semibold transition ${
-                    form.mode === item.mode
-                      ? "border-edsync-blue bg-edsync-blue/10 text-edsync-blue"
-                      : "border-edsync-border bg-edsync-surface text-edsync-text hover:border-edsync-blue/50"
-                  }`}
-                >
-                  <Icon className="mx-auto mb-1 h-4 w-4" />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Class or course</span>
-              <select
-                value={form.classId}
-                onChange={(event) => setForm((current) => ({ ...current, classId: event.target.value }))}
-                className="edsync-input"
-              >
-                {classes.length === 0 ? (
-                  <option value="">No active classes</option>
-                ) : (
-                  classes.map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Title</span>
-              <input
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                className="edsync-input"
-                placeholder={
-                  form.mode === "deadline"
-                    ? "Lab report due"
-                    : form.mode === "event"
-                      ? "Review session"
-                      : "Tomorrow's reading"
-                }
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-edsync-subtle">
-                {form.mode === "announcement" ? "Message" : "Details"}
-              </span>
-              <textarea
-                value={form.body}
-                onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
-                className="edsync-textarea min-h-28"
-                placeholder="Write it in clear learner-friendly language."
-              />
-            </label>
-
-            {form.mode === "announcement" ? (
-              <div className="grid gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Priority</span>
-                  <select
-                    value={form.priority}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        priority: event.target.value as PlannerForm["priority"],
-                      }))
-                    }
-                    className="edsync-input"
-                  >
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                    <option value="low">Low</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1 flex items-center gap-1 text-xs font-semibold text-edsync-subtle">
-                    <Link2 className="h-3.5 w-3.5" />
-                    Attachment or link
-                  </span>
-                  <input
-                    value={form.location}
-                    onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
-                    className="edsync-input"
-                    placeholder="https://..., shared file, image, or resource link"
-                  />
-                </label>
+    <main className="page">
+      <PageHeader title="Planner" icon={CalendarDays} actions={<Button variant="primary" size="sm" icon={Plus} onClick={() => openNew()}>Add item</Button>} />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Segmented ariaLabel="Planner view" value={view} onChange={setView} options={views} />
+        <select className="input ml-auto min-w-36" aria-label="Filter by class" value={classId} onChange={(event) => chooseClass(event.target.value)}><option value="all">All classes</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+      </div>
+      {loadError ? <div role="alert" className="mb-4 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger">{loadError} <Button size="sm" onClick={() => void load()}>Retry</Button></div> : null}
+      {view === "week" && weekStart ? <div className="mb-4 overflow-hidden rounded-2xl border border-line bg-surface">
+        <div className="flex items-center justify-between border-b border-line px-3 py-2"><IconButton icon={ChevronLeft} label="Previous week" onClick={() => setWeekOffset((value) => value - 1)} /><span className="text-sm font-semibold text-fg">{weekStart.toLocaleDateString([], { month: "long", day: "numeric" })} – {weekDays[6].toLocaleDateString([], { month: "short", day: "numeric" })}</span><IconButton icon={ChevronRight} label="Next week" onClick={() => setWeekOffset((value) => value + 1)} /></div>
+        <div className="grid grid-cols-7 divide-x divide-line">{weekDays.map((day) => <div key={day.toISOString()} className={"min-w-0 px-1 py-2 text-center " + (today && sameDay(day, today) ? "bg-accent-soft" : "")}><p className="text-[10px] text-fg-muted">{day.toLocaleDateString([], { weekday: "short" })}</p><p className="text-sm font-semibold text-fg">{day.getDate()}</p><span className="mt-1 inline-block min-w-5 rounded-full bg-surface-2 px-1 text-[10px] text-fg-muted">{scopedEvents.filter((event) => sameDay(eventDate(event), day)).length}</span></div>)}</div>
+      </div> : null}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">{view === "week" ? "This week" : "Agenda"}</h2><Badge>{visibleEvents.length}</Badge></div>
+          {loading ? <div className="space-y-2 p-3">{[0, 1, 2].map((index) => <Skeleton key={index} className="h-14" />)}</div> :
+            visibleEvents.length === 0 ? <EmptyState icon={CalendarDays} title="Nothing scheduled" hint="Add an event or deadline for your class." compact /> :
+            visibleEvents.map((event) => <div key={event.id} className="border-b border-line last:border-b-0">
+              <div className="flex min-w-0 items-center gap-3 px-4 py-3">
+                <span className="flex min-w-12 flex-col text-center text-xs text-fg-muted"><strong className="text-base text-fg">{eventDate(event).toLocaleDateString([], { day: "numeric" })}</strong>{eventDate(event).toLocaleDateString([], { month: "short" })}</span>
+                <button type="button" aria-expanded={openEventId === event.id} onClick={() => setOpenEventId((current) => current === event.id ? null : event.id)} className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-semibold text-fg">{event.title}</span><span className="block truncate text-xs text-fg-muted">{event.class_name || "Class"} · {eventDate(event).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}{event.lesson_title ? " · " + event.lesson_title : ""}</span></button>
+                <Badge className="hidden capitalize sm:inline-flex">{event.event_type.replaceAll("_", " ")}</Badge>
+                <Menu label={"Actions for " + event.title} items={[{ label: "Delete", icon: Trash2, danger: true, onSelect: () => void remove("event", event.id, event.title) }]} />
               </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {form.mode === "deadline" ? (
-                  <label className="block sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Due</span>
-                    <input
-                      type="datetime-local"
-                      value={form.dueAt}
-                      onChange={(event) => setForm((current) => ({ ...current, dueAt: event.target.value }))}
-                      className="edsync-input"
-                    />
-                  </label>
-                ) : (
-                  <>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Starts</span>
-                      <input
-                        type="datetime-local"
-                        value={form.startsAt}
-                        onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))}
-                        className="edsync-input"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Ends</span>
-                      <input
-                        type="datetime-local"
-                        value={form.endsAt}
-                        onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
-                        className="edsync-input"
-                      />
-                    </label>
-                  </>
-                )}
-                <label className="block sm:col-span-2">
-                  <span className="mb-1 block text-xs font-semibold text-edsync-subtle">Location, meeting, or link</span>
-                  <input
-                    value={form.location}
-                    onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
-                    className="edsync-input"
-                    placeholder="Room 204, Zoom, library, or blank"
-                  />
-                </label>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={submitPlannerItem}
-              disabled={saving}
-              className="btn-primary w-full justify-center"
-            >
-              {form.mode === "announcement" ? <Send className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {saving ? "Saving..." : form.mode === "announcement" ? "Send announcement" : "Add to schedule"}
-            </button>
-          </div>
+              {openEventId === event.id ? <div className="space-y-1 border-t border-line bg-surface-2 px-4 py-3 text-sm text-fg-muted">{event.description ? <p className="whitespace-pre-wrap">{event.description}</p> : null}{event.location ? <p>Location: {event.location}</p> : null}{event.ends_at ? <p>Ends {new Date(event.ends_at).toLocaleString()}</p> : null}{typeof event.metadata?.workType === "string" ? <Badge>{event.metadata.workType}</Badge> : null}</div> : null}
+            </div>)}
         </section>
-
-        <section className="space-y-5">
-          <div className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="font-display text-xl font-bold text-edsync-text">Upcoming schedule</h2>
-              <div className="flex flex-wrap gap-2">
-                {plannerViews.map((view) => (
-                  <button
-                    key={view.key}
-                    type="button"
-                    onClick={() => setPlannerView(view.key)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
-                      plannerView === view.key
-                        ? "border-edsync-blue bg-edsync-blue text-white"
-                        : "border-edsync-border bg-edsync-surface text-edsync-subtle hover:border-edsync-blue/50"
-                    }`}
-                  >
-                    {view.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3">
-              {loading ? (
-                [...Array(4)].map((_, index) => (
-                  <div key={index} className="h-20 animate-pulse rounded-lg bg-edsync-surface" />
-                ))
-              ) : visibleEvents.length === 0 ? (
-                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No schedule items yet.
-                </p>
-              ) : (
-                visibleEvents.slice(0, 8).map((event) => (
-                  <div
-                    key={event.id}
-                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-edsync-text">{event.title}</p>
-                        <p className="mt-1 text-xs text-edsync-subtle">
-                          {event.class_name || "Personal"} - {formatWhen(event)}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <span className="badge bg-edsync-blue/10 text-edsync-blue">
-                          {event.event_type.replace("_", " ")}
-                        </span>
-                        {eventWorkType(event) && (
-                          <span className="badge bg-edsync-emerald/10 text-edsync-emerald">
-                            {eventWorkType(event)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {event.description && (
-                      <p className="mt-3 text-sm leading-6 text-edsync-subtle">{event.description}</p>
-                    )}
-                    <div className="mt-3 flex justify-end">
-                      <button
-                        type="button"
-                        className="btn-secondary px-3 py-2 text-xs text-edsync-red"
-                        onClick={() => deletePlannerItem("event", event.id, event.title)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-edsync-border bg-edsync-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-xl font-bold text-edsync-text">Recent notifications</h2>
-              <Megaphone className="h-5 w-5 text-edsync-amber" />
-            </div>
-            <div className="space-y-3">
-              {visibleAnnouncements.length === 0 ? (
-                <p className="rounded-lg border border-edsync-border bg-edsync-surface p-4 text-sm text-edsync-subtle">
-                  No notifications yet.
-                </p>
-              ) : (
-                visibleAnnouncements.slice(0, 6).map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border border-edsync-border bg-edsync-surface p-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-semibold text-edsync-text">{item.title}</p>
-                      <span className="text-xs text-edsync-subtle">
-                        {item.class_name || "Class"}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-edsync-subtle">{item.body}</p>
-                    <div className="mt-3 flex justify-end">
-                      <button
-                        type="button"
-                        className="btn-secondary px-3 py-2 text-xs text-edsync-red"
-                        onClick={() => deletePlannerItem("announcement", item.id, item.title)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">Class updates</h2><Button size="sm" icon={Plus} onClick={() => openNew("announcement")}>Send</Button></div>
+          {scopedAnnouncements.length === 0 ? <EmptyState icon={Megaphone} title="No updates" hint="Send a short message to a class." compact /> :
+            scopedAnnouncements.map((item) => <div key={item.id} className="border-b border-line px-4 py-3 last:border-b-0"><div className="flex items-start gap-2"><details className="min-w-0 flex-1"><summary className="cursor-pointer truncate text-sm font-semibold text-fg">{item.title}</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-fg-muted">{item.body}</p><p className="mt-1 text-[11px] text-fg-faint">{item.class_name || "Class"}</p></details><Menu label={"Actions for " + item.title} items={[{ label: "Delete", icon: Trash2, danger: true, onSelect: () => void remove("announcement", item.id, item.title) }]} /></div></div>)}
         </section>
       </div>
-    </div>
+      <Sheet open={formOpen} onClose={() => setFormOpen(false)} title="Add to planner" footer={<Button variant="primary" type="submit" form="planner-form" loading={saving}>{form.mode === "announcement" ? "Send update" : "Save item"}</Button>}>
+        <form id="planner-form" onSubmit={save} className="space-y-4">
+          <Segmented ariaLabel="Planner item type" value={form.mode} onChange={(mode) => setForm((current) => ({ ...current, mode }))} options={modes} fullWidth />
+          <label className="block text-sm font-medium text-fg">Class<select className="input mt-1 w-full" value={form.classId} required onChange={(event) => setForm((current) => ({ ...current, classId: event.target.value }))}><option value="">Choose class</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label className="block text-sm font-medium text-fg">Title<input className="input mt-1 w-full" required maxLength={160} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></label>
+          <label className="block text-sm font-medium text-fg">{form.mode === "announcement" ? "Message" : "Details"}<textarea className="input mt-1 min-h-24 w-full" required={form.mode === "announcement"} value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} /></label>
+          {form.mode === "event" ? <div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-fg">Starts<input className="input mt-1 w-full" type="datetime-local" required value={form.startsAt} onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))} /></label><label className="block text-sm font-medium text-fg">Ends<input className="input mt-1 w-full" type="datetime-local" value={form.endsAt} onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))} /></label></div> : null}
+          {form.mode === "deadline" ? <label className="block text-sm font-medium text-fg">Due<input className="input mt-1 w-full" type="datetime-local" required value={form.dueAt} onChange={(event) => setForm((current) => ({ ...current, dueAt: event.target.value }))} /></label> : null}
+          {form.mode === "announcement" ? <label className="block text-sm font-medium text-fg">Priority<select className="input mt-1 w-full" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as Draft["priority"] }))}><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></label> : null}
+          <label className="block text-sm font-medium text-fg">{form.mode === "announcement" ? "Attachment link" : "Location or link"}<input className="input mt-1 w-full" value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} placeholder="Optional" /></label>
+        </form>
+      </Sheet>
+    </main>
   );
 }
