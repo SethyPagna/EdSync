@@ -178,7 +178,7 @@ function extractOpenAiText(payload: unknown) {
 function chatModel(provider: RuntimeProvider, requested?: string) {
   const model = requested || provider.default_model || PROVIDER_META[provider.provider as AIProviderKey]?.defaultModel;
   if (provider.provider === "groq" && (model === "groq/compound" || model === "groq/compound-mini" || model === "qwen/qwen3.6-27b")) {
-    return "qwen/qwen3.8-27b";
+    return "openai/gpt-oss-120b";
   }
   return model;
 }
