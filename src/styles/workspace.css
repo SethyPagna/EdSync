@@ -600,7 +600,7 @@
     padding: 8px;
   }
 
-  .catalog-filter label {
+  .catalog-filter > label {
     display: flex;
     min-width: 160px;
     flex: 1;
@@ -609,7 +609,7 @@
     padding: 0 10px;
   }
 
-  .catalog-filter input:not([type="checkbox"]) {
+  .catalog-filter input:not([type="checkbox"]):not([type="radio"]) {
     width: 100%;
     min-width: 0;
     background: transparent;
@@ -724,13 +724,18 @@
       padding: 24px 16px;
     }
 
-    .catalog-filter label {
+    .catalog-filter > label {
       min-height: 32px;
       flex-basis: 100%;
     }
 
+    .catalog-filter fieldset {
+      width: 100%;
+      justify-content: space-between;
+    }
+
     .catalog-filter select {
-      min-width: 0;
+      min-width: 140px;
       flex: 1;
     }
   }
