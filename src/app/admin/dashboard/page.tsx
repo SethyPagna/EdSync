@@ -2,228 +2,52 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Activity,
-  ArrowRight,
-  Bot,
-  BookOpenCheck,
-  Building2,
-  Mail,
-  ShieldCheck,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
-import { InfoPopover, MetricTile } from "@/components/WorkspacePrimitives";
+import { Activity, ArrowUpRight, BookOpenCheck, Building2, Mail, ShieldCheck, UsersRound } from "lucide-react";
+import { PageHeader, StatTile } from "@/components/ui";
 
-type Summary = {
-  cards: Record<string, number>;
-  recentAudit: Array<{ id: string; action: string; entity_type: string; created_at: string }>;
-};
+type Summary = { cards: Record<string, number>; recentAudit: Array<{ id: string; action: string; entity_type: string; created_at: string }> };
 
-const platformMetrics = [
-  ["users", "Users", UsersRound, "text-edsync-blue", ""],
-  ["classes", "Spaces", BookOpenCheck, "text-edsync-emerald", ""],
-  ["workItems", "Tasks", Activity, "text-edsync-amber", ""],
-  ["submissions", "Evidence", Activity, "text-edsync-cyan", ""],
-] as const;
-
-const systemMetrics = [
-  ["providers", "AI providers", Bot, "text-edsync-purple", ""],
-  ["emails", "Email events", Mail, "text-edsync-blue", ""],
-  ["securityEvents", "Security events", ShieldCheck, "text-edsync-red", ""],
-] as const;
-
-const priorityActions = [
-  {
-    title: "Review AI provider health",
-    detail: "Test providers.",
-    href: "/admin/ai",
-  },
-  {
-    title: "Tune platform permissions",
-    detail: "Review roles.",
-    href: "/admin/permissions",
-  },
-  {
-    title: "Open governance hub",
-    detail: "Open hub.",
-    href: "/admin/governance",
-  },
-];
-
-const ownerViewActions = [
-  {
-    title: "Individual account",
-    detail: "Solo creator and learner path.",
-    href: "/admin/view/individual",
-    icon: UserRound,
-  },
-  {
-    title: "Organizations",
-    detail: "Portals and tenant setup.",
-    href: "/admin/view/organization",
-    icon: Building2,
-  },
-  {
-    title: "Organization teacher",
-    detail: "Creator workspace inside an organization.",
-    href: "/admin/view/teacher",
-    icon: UsersRound,
-  },
-  {
-    title: "Organization student",
-    detail: "Learner workspace inside an organization.",
-    href: "/admin/view/student",
-    icon: BookOpenCheck,
-  },
+const destinations = [
+  { href: "/admin/users", label: "People", detail: "Accounts and access", icon: UsersRound },
+  { href: "/admin/permissions", label: "Permissions", detail: "Tenant role profiles", icon: ShieldCheck },
+  { href: "/admin/governance", label: "Governance", detail: "Rules and standards", icon: BookOpenCheck },
+  { href: "/admin/view/organization", label: "Organizations", detail: "Portals and tenants", icon: Building2 },
 ];
 
 export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
+  const [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/admin/summary", { cache: "no-store", signal: controller.signal })
-      .then(async (response) => { if (!response.ok) throw new Error("Summary unavailable"); return response.json(); })
-      .then((payload) => {
-        if (!payload.data || payload.error) throw new Error("Summary unavailable");
-        setSummary(payload.data);
-        setError(null);
-      })
-      .catch((reason) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setError("Could not load platform summary.");
-      });
+      .then(async (response) => { const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Could not load summary."); return payload.data as Summary; })
+      .then(setSummary)
+      .catch((reason) => { if (reason?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "Could not load summary."); });
     return () => controller.abort();
   }, []);
 
-  return (
-    <div className="space-y-6 p-5 lg:p-8">
-      <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
-        <section className="premium-panel rounded-2xl p-5 sm:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Your platform at a glance</p>
-              <h1 className="mt-2 font-display text-3xl font-bold text-edsync-text sm:text-4xl">
-                Overview
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <InfoPopover label="Owner console help">
-                Global owner controls stay separate from tenant-scoped organization manager controls.
-              </InfoPopover>
-              <Link href="/admin/governance" className="btn-primary w-fit justify-center px-4 py-2">
-                Governance
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-          {error && (
-            <div className="mt-4 rounded-2xl border border-edsync-red/25 bg-edsync-red/10 px-4 py-3 text-sm font-semibold text-edsync-red">
-              {error}
-            </div>
-          )}
-        </section>
-      </header>
-
-      <section className="grid grid-cols-4 gap-2 sm:gap-3">
-        {platformMetrics.map(([key, label, Icon, tone, detail]) => (
-          <MetricTile
-            key={key}
-            label={label}
-            value={summary?.cards?.[key] ?? "—"}
-            icon={Icon}
-            tone={tone}
-            detail={detail}
-            compact
-          />
-        ))}
+  return <div className="page-shell space-y-5">
+    <PageHeader title="Platform overview" icon={Activity} />
+    {error && <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
+    <section aria-label="Platform totals" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <StatTile label="People" value={summary?.cards.users ?? "—"} icon={UsersRound} href="/admin/users" />
+      <StatTile label="Spaces" value={summary?.cards.classes ?? "—"} icon={BookOpenCheck} href="/admin/view/organization" />
+      <StatTile label="Work items" value={summary?.cards.workItems ?? "—"} icon={Activity} />
+      <StatTile label="Evidence" value={summary?.cards.submissions ?? "—"} icon={BookOpenCheck} />
+    </section>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_310px]">
+      <section className="card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">Recent admin activity</h2><span className="text-xs text-fg-faint">Latest actions</span></div>
+        <div className="divide-y divide-line">
+          {(summary?.recentAudit ?? []).slice(0, 8).map((item) => <div key={item.id} className="flex items-center gap-3 px-4 py-3 text-sm"><span className="min-w-0 flex-1 truncate font-medium text-fg">{item.action.replaceAll("_", " ")}</span><span className="hidden text-fg-muted sm:inline">{item.entity_type}</span><time className="shrink-0 text-xs text-fg-faint">{new Date(item.created_at).toLocaleDateString()}</time></div>)}
+          {summary && summary.recentAudit.length === 0 && <p className="px-4 py-8 text-center text-sm text-fg-muted">No admin activity yet.</p>}
+          {!summary && !error && <p className="px-4 py-8 text-center text-sm text-fg-muted">Loading activity…</p>}
+        </div>
       </section>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <section className="space-y-4">
-          <section className="edsync-scrollbar-none grid auto-cols-[minmax(11rem,1fr)] grid-flow-col gap-2 overflow-x-auto pb-1 sm:grid-flow-row sm:grid-cols-4 sm:overflow-visible sm:pb-0">
-            {ownerViewActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="premium-card group flex min-w-0 items-center gap-3 rounded-xl p-3 transition hover:-translate-y-0.5"
-                >
-                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-edsync-blue/10 text-edsync-blue">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-edsync-text">{action.title}</span>
-                    <span className="edsync-hover-detail">{action.detail}</span>
-                  </span>
-                </Link>
-              );
-            })}
-          </section>
-
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {systemMetrics.map(([key, label, Icon, tone, detail]) => (
-              <MetricTile
-                key={key}
-                label={label}
-                value={summary?.cards?.[key] ?? 0}
-                icon={Icon}
-                tone={tone}
-                detail={detail}
-                compact
-              />
-            ))}
-          </div>
-
-          <section className="premium-surface overflow-hidden rounded-2xl p-0">
-            <div className="border-b border-edsync-border p-4">
-              <h2 className="font-display text-xl font-bold">Recent activity</h2>
-            </div>
-            <div className="divide-y divide-edsync-border">
-              {!summary &&
-                [...Array(4)].map((_, index) => (
-                  <div key={index} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_160px_190px]">
-                    <span className="h-4 animate-pulse rounded bg-edsync-muted" />
-                    <span className="h-4 animate-pulse rounded bg-edsync-muted" />
-                    <span className="h-4 animate-pulse rounded bg-edsync-muted" />
-                  </div>
-                ))}
-              {(summary?.recentAudit ?? []).map((item) => (
-                <div key={item.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[minmax(0,1fr)_160px_190px] md:items-center">
-                  <span className="font-semibold text-edsync-text">{item.action}</span>
-                  <span className="text-edsync-subtle">{item.entity_type}</span>
-                  <span className="text-edsync-subtle">{new Date(item.created_at).toLocaleString()}</span>
-                </div>
-              ))}
-              {summary && summary.recentAudit.length === 0 && (
-                <p className="p-4 text-sm text-edsync-subtle">No admin actions yet.</p>
-              )}
-            </div>
-          </section>
-        </section>
-
-        <aside className="space-y-3">
-          <h2 className="font-display text-xl font-bold">Manage your platform</h2>
-          {priorityActions.map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="premium-card group block rounded-2xl p-4 transition hover:-translate-y-0.5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-edsync-text">{action.title}</p>
-                  <p className="mt-1 text-sm leading-5 text-edsync-subtle">{action.detail}</p>
-                </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 text-edsync-subtle" />
-              </div>
-            </Link>
-          ))}
-        </aside>
+      <div className="space-y-4">
+        <section className="card p-4"><h2 className="text-sm font-semibold text-fg">System health</h2><div className="mt-3 grid grid-cols-3 gap-2 text-center">{[["Providers", "providers", ShieldCheck], ["Email", "emails", Mail], ["Security", "securityEvents", ShieldCheck]].map(([label, key, Icon]) => { const Symbol = Icon as typeof ShieldCheck; return <div key={key as string} className="rounded-lg bg-surface-2 p-2"><Symbol size={16} className="mx-auto text-fg-muted" /><p className="mt-1 text-lg font-semibold tabular-nums text-fg">{summary?.cards[key as string] ?? "—"}</p><p className="text-[11px] text-fg-muted">{label as string}</p></div>; })}</div></section>
+        <section className="card divide-y divide-line overflow-hidden"><h2 className="px-4 py-3 text-sm font-semibold text-fg">Manage</h2>{destinations.map(({ href, label, detail, icon: Icon }) => <Link key={href} href={href} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><Icon size={17} className="shrink-0 text-fg-muted" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium text-fg">{label}</span><span className="block truncate text-xs text-fg-muted">{detail}</span></span><ArrowUpRight size={15} className="text-fg-faint" /></Link>)}</section>
       </div>
     </div>
-  );
+  </div>;
 }
