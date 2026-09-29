@@ -43,6 +43,12 @@ describe("portal members and invites", () => {
     expect(mocks.query.mock.calls.every(([, params]) => params[0] === "tenant-one")).toBe(true);
   });
 
+  it("does not present a public tenant slug as an invite code", async () => {
+    mocks.query.mockResolvedValueOnce([]).mockResolvedValueOnce([{ invite_code: null, invites_enabled: 1 }]);
+    const response = await GET();
+    expect((await response.json()).data.inviteCode).toBeNull();
+  });
+
   it("rotates an unpredictable code only for the active tenant", async () => {
     const response = await POST(request("rotate"));
     expect(response.status).toBe(200);
@@ -57,5 +63,14 @@ describe("portal members and invites", () => {
     mocks.query.mockClear();
     expect((await POST(request("delete"))).status).toBe(400);
     expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("creates a private code when enabling invitations for a legacy tenant", async () => {
+    const response = await POST(request("enable"));
+    expect(response.status).toBe(200);
+    const [sql, params] = mocks.query.mock.calls[0];
+    expect(sql).toContain("COALESCE(json_extract(settings, '$.invite_code'), ?)");
+    expect(params[0]).toMatch(/^join-[0-9a-f]{20}$/);
+    expect(params[1]).toBe("tenant-one");
   });
 });
