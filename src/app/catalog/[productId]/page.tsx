@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
@@ -59,6 +59,9 @@ export default async function CatalogDetailPage({
   }
   const item = await getPublicCatalogItem(productId);
   if (!item) notFound();
+  const host = (await headers()).get("host")?.trim().toLowerCase().split(":")[0];
+  const isDemoSite = process.env.EDSYNC_DEMO_MODE === "1" &&
+    Boolean(host && host === process.env.EDSYNC_DEMO_HOSTNAME?.trim().toLowerCase());
   const cookieStore = await cookies();
   const publicLanguage = resolvedSearchParams?.language ?? cookieStore.get("edsync-language")?.value;
   const copy = getPublicCopy(publicLanguage);
@@ -169,13 +172,15 @@ export default async function CatalogDetailPage({
           <div className="premium-panel rounded-2xl p-5">
             <p className="font-display text-3xl font-semibold">{displayPrice}</p>
             <div className="mt-4">
-              <CatalogEnrollButton
+              {isDemoSite ? <><Link href="/catalog#demo-roles" className="btn-primary w-full justify-center">
+                Explore sample workspace <ArrowRight className="h-4 w-4" />
+              </Link><p className="mt-3 text-xs text-edsync-subtle">This is sample content. Enrollment and checkout are disabled in the read-only demo.</p></> : <CatalogEnrollButton
                 productId={item.id}
                 isFree={item.price.isFree}
                 available={item.price.isFree || Boolean(item.price.id)}
                 language={publicLanguage}
                 labels={enrollLabels}
-              />
+              />}
             </div>
             <div className="mt-5 flex items-center gap-2 border-t border-edsync-border pt-4 text-sm">
               <Building2 className="h-4 w-4 shrink-0 text-edsync-blue" />
