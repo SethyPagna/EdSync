@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import test from "node:test";
-import { applyPublicBuildVars } from "./cloudflare-build";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve, sep } from "node:path";
+import test, { type TestContext } from "node:test";
+import { applyPublicBuildVars, assertSafeOpenNextBuild, withPrivateEnvFilesHidden } from "./cloudflare-build";
 
 type CloudflareAppConfig = { vars?: Record<string, unknown> };
 
@@ -18,4 +20,71 @@ test("Cloudflare public variables are present at Next build time", () => {
   assert.equal(env.R2_BUCKET, undefined);
   assert.equal(env.APP_ENCRYPTION_KEY, undefined);
   assert.equal(env.SESSION_SECRET, undefined);
+});
+
+function temporaryRoot(t: TestContext) {
+  const root = mkdtempSync(join(tmpdir(), "edsync-cloudflare-build-"));
+  t.after(() => {
+    if (!resolve(root).startsWith(`${resolve(tmpdir())}${sep}`)) throw new Error("Refusing to clean outside the temporary directory.");
+    rmSync(root, { recursive: true, force: true });
+  });
+  return root;
+}
+
+test("private env files are hidden during the build and restored afterward", (t) => {
+  const root = temporaryRoot(t);
+  const source = join(root, ".env.local");
+  const content = "APP_ENCRYPTION_KEY=sample-private-key-value\n";
+  writeFileSync(source, content);
+
+  withPrivateEnvFilesHidden(root, (values) => {
+    assert.equal(existsSync(source), false);
+    assert.equal(existsSync(join(root, ".wrangler", "edsync-open-next-env-hold", ".env.local")), true);
+    assert.equal(values.get("APP_ENCRYPTION_KEY"), "sample-private-key-value");
+  });
+
+  assert.equal(readFileSync(source, "utf8"), content);
+  assert.equal(existsSync(join(root, ".wrangler", "edsync-open-next-env-hold", ".env.local")), false);
+  assert.equal(existsSync(join(root, ".wrangler", "edsync-open-next-env-hold", "build.lock")), false);
+});
+
+test("private env files are restored when the build fails", (t) => {
+  const root = temporaryRoot(t);
+  const source = join(root, ".env.production.local");
+  writeFileSync(source, "SESSION_SECRET=sample-session-secret\n");
+
+  assert.throws(() => withPrivateEnvFilesHidden(root, () => {
+    assert.equal(existsSync(source), false);
+    throw new Error("simulated build failure");
+  }), /simulated build failure/);
+
+  assert.equal(readFileSync(source, "utf8"), "SESSION_SECRET=sample-session-secret\n");
+});
+
+test("rejects secret-bearing or stale OpenNext output without exposing values", (t) => {
+  const root = temporaryRoot(t);
+  const output = join(root, ".open-next");
+  const cloudflare = join(output, "cloudflare");
+  mkdirSync(cloudflare, { recursive: true });
+  const envModule = join(cloudflare, "next-env.mjs");
+  const worker = join(output, "worker.js");
+  const emptyModes = "export const production = {};\nexport const development = {};\nexport const test = {};\n";
+  const secret = "sample-secret-value-123";
+  const values = new Map([["SESSION_SECRET", secret]]);
+  writeFileSync(envModule, emptyModes);
+  writeFileSync(worker, "export default {};");
+  assert.doesNotThrow(() => assertSafeOpenNextBuild(output, values));
+
+  writeFileSync(worker, `export const leaked = ${JSON.stringify(secret)};`);
+  assert.throws(() => assertSafeOpenNextBuild(output, values), (error: unknown) => {
+    assert.equal(String(error).includes(secret), false);
+    return /private value from SESSION_SECRET/.test(String(error));
+  });
+
+  writeFileSync(worker, "export default {};");
+  writeFileSync(envModule, `${emptyModes}export const production = {};\n`);
+  assert.throws(() => assertSafeOpenNextBuild(output, values), /stale or malformed/);
+
+  writeFileSync(envModule, "export const production = {\"SESSION_SECRET\":\"hidden\"};\nexport const development = {};\nexport const test = {};\n");
+  assert.throws(() => assertSafeOpenNextBuild(output, values), /embedded an environment file/);
 });
