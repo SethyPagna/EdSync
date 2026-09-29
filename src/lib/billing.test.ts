@@ -7,12 +7,13 @@ vi.mock("@/lib/db/d1", () => ({ d1Query: mocks.query }));
 import { completeTransaction, createCheckout, grantEntitlement } from "@/lib/billing";
 import { HttpError } from "@/lib/security/http-errors";
 
-type Transaction = { id: string; product_id: string | null; status: string; metadata: string | null };
+type Transaction = { id: string; product_id: string | null; provider: "manual" | "stripe"; status: string; metadata: string | null };
 
 function transaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
     id: "txn-1",
     product_id: "product-1",
+    provider: "manual",
     status: "pending",
     metadata: JSON.stringify({ userId: "buyer-1" }),
     ...overrides,
@@ -63,6 +64,61 @@ describe("grantEntitlement", () => {
       { source_type: "stripe_checkout", source_id: "txn-2" },
     ]);
     db.close();
+  });
+});
+
+describe("createCheckout with manual payments", () => {
+  const env = { provider: process.env.PAYMENT_PROVIDER, key: process.env.STRIPE_SECRET_KEY };
+  const request = { tenantId: "tenant-1", userId: "buyer-1", priceId: "price-1", successUrl: "https://edsync.test/ok", cancelUrl: "https://edsync.test/no" };
+  let db: DatabaseSync;
+
+  beforeEach(() => {
+    db = new DatabaseSync(":memory:");
+    db.exec(`CREATE TABLE billing_prices (
+      id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, active INTEGER,
+      amount_cents INTEGER, currency TEXT, billing_interval TEXT
+    );
+    CREATE TABLE billing_transactions (
+      id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, price_id TEXT,
+      provider TEXT, amount_cents INTEGER, currency TEXT, status TEXT,
+      metadata TEXT, created_at TEXT, updated_at TEXT
+    );
+    INSERT INTO billing_prices VALUES ('price-1', 'tenant-1', 'product-1', 1, 4900, 'usd', 'one_time');`);
+    mocks.query.mockReset().mockImplementation(async (sql: string, params: SQLInputValue[] = []) => db.prepare(sql).all(...params));
+    process.env.PAYMENT_PROVIDER = "manual";
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
+  afterEach(() => {
+    db.close();
+    if (env.provider === undefined) delete process.env.PAYMENT_PROVIDER;
+    else process.env.PAYMENT_PROVIDER = env.provider;
+    if (env.key === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = env.key;
+  });
+
+  it("reuses a buyer's pending order when checkout is retried", async () => {
+    const first = await createCheckout(request);
+    const second = await createCheckout(request);
+    expect(second).toEqual(first);
+    expect(db.prepare("SELECT COUNT(*) AS count FROM billing_transactions").get()).toEqual({ count: 1 });
+  });
+
+  it("keeps orders separate by buyer and creates a new one after a price change", async () => {
+    const first = await createCheckout(request);
+    const otherBuyer = await createCheckout({ ...request, userId: "buyer-2" });
+    expect(otherBuyer.transactionId).not.toBe(first.transactionId);
+    db.exec("UPDATE billing_prices SET amount_cents = 5900 WHERE id = 'price-1'");
+    const updatedPrice = await createCheckout(request);
+    expect(updatedPrice.transactionId).not.toBe(first.transactionId);
+    expect(db.prepare("SELECT COUNT(*) AS count FROM billing_transactions").get()).toEqual({ count: 3 });
+  });
+
+  it("records a manual order when Stripe is selected without a secret key", async () => {
+    process.env.PAYMENT_PROVIDER = "stripe";
+    const result = await createCheckout(request);
+    expect(result).toMatchObject({ provider: "manual", mode: "manual" });
+    expect(db.prepare("SELECT provider FROM billing_transactions WHERE id = ?").get(result.transactionId)).toEqual({ provider: "manual" });
   });
 });
 
@@ -132,7 +188,7 @@ describe("completeTransaction", () => {
   });
 
   it("marks a pending transaction paid and grants the product to its buyer", async () => {
-    routeQueries(transaction());
+    routeQueries(transaction({ provider: "stripe" }));
     const result = await completeTransaction({ tenantId: "tenant-1", transactionId: "txn-1", expectedUserId: "buyer-1", sourceType: "stripe_checkout" });
     expect(result).toEqual({ status: "paid", transactionId: "txn-1", userId: "buyer-1", productId: "product-1", entitlementGranted: true });
     expect(mocks.query.mock.calls[0]?.[1]).toEqual(["txn-1", "tenant-1"]);
@@ -140,7 +196,7 @@ describe("completeTransaction", () => {
   });
 
   it("refuses to grant a transaction to anyone but the buyer who started it", async () => {
-    routeQueries(transaction());
+    routeQueries(transaction({ provider: "stripe" }));
     const result = await completeTransaction({ tenantId: "tenant-1", transactionId: "txn-1", expectedUserId: "attacker", sourceType: "stripe_checkout" });
     expect(result).toEqual({ status: "user_mismatch" });
     expect(sqlCalls().some((sql) => sql.includes("UPDATE") || sql.includes("INSERT"))).toBe(false);
@@ -159,6 +215,22 @@ describe("completeTransaction", () => {
       status: "not_payable",
     });
     expect(sqlCalls().some((sql) => sql.includes("INSERT INTO entitlements"))).toBe(false);
+  });
+
+  it("cannot mark a pending Stripe order paid through the manual-payment action", async () => {
+    routeQueries(transaction({ provider: "stripe" }));
+    await expect(completeTransaction({ tenantId: "tenant-1", transactionId: "txn-1", sourceType: "manual_payment" })).resolves.toEqual({
+      status: "not_payable",
+    });
+    expect(sqlCalls().some((sql) => sql.includes("UPDATE billing_transactions") || sql.includes("INSERT INTO entitlements"))).toBe(false);
+  });
+
+  it("cannot complete a pending manual order through a Stripe webhook", async () => {
+    routeQueries(transaction());
+    await expect(completeTransaction({ tenantId: "tenant-1", transactionId: "txn-1", sourceType: "stripe_checkout" })).resolves.toEqual({
+      status: "not_payable",
+    });
+    expect(sqlCalls().some((sql) => sql.includes("UPDATE billing_transactions") || sql.includes("INSERT INTO entitlements"))).toBe(false);
   });
 
   it("is idempotent for an already paid transaction", async () => {
