@@ -29,7 +29,7 @@ function stringField(payload: Record<string, unknown>, key: string) {
   return typeof payload[key] === "string" ? payload[key] : "";
 }
 
-async function notifyExpiringCertifications(env: Env, tenantId?: string) {
+async function notifyExpiringCertifications(env: Env, tenantId?: string, limit = 40) {
   const rows = await env.EDSYNC_DB.prepare(
     `SELECT lc.id, lc.user_id, cr.title, lc.expires_at
        FROM learner_certifications lc
@@ -40,13 +40,13 @@ async function notifyExpiringCertifications(env: Env, tenantId?: string) {
         AND lc.expires_at IS NOT NULL
         AND lc.expires_at > datetime('now')
         AND lc.expires_at <= datetime('now', '+' || MAX(0, MIN(365, COALESCE(cr.notify_before_days, 30))) || ' days')
-        AND NOT EXISTS (SELECT 1 FROM automation_rules ar WHERE ar.tenant_id = lc.tenant_id AND ar.trigger_key = 'certification.expiring')
+        AND NOT EXISTS (SELECT 1 FROM automation_rules ar WHERE ar.tenant_id = lc.tenant_id AND ar.trigger_key = 'certification.expiring' AND ar.enabled = 1)
         AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.id = 'certification-expiry:' || lc.id || ':' || lc.expires_at)
         AND (? IS NULL OR lc.tenant_id = ?)
       ORDER BY lc.expires_at ASC
-      LIMIT 100`,
+      LIMIT ?`,
   )
-    .bind(tenantId ?? null, tenantId ?? null)
+    .bind(tenantId ?? null, tenantId ?? null, limit)
     .all<ExpiringCertification>();
 
   let created = 0;
@@ -74,7 +74,7 @@ async function runJob(job: StoredJob, env: Env) {
   if (!tenantId) throw new Error("Missing tenant ID");
 
   if (job.job_type === "certification.expiry_check") {
-    return { notificationsCreated: await notifyExpiringCertifications(env, tenantId) };
+    return { notificationsCreated: await notifyExpiringCertifications(env, tenantId, 1) };
   }
 
   if (job.job_type.startsWith("automation_rule.")) {
@@ -126,7 +126,7 @@ async function processJob(env: Env, id: string) {
   }
 }
 
-export default {
+const automationWorker = {
   async fetch(request: Request) {
     if (new URL(request.url).pathname !== "/health") return new Response(null, { status: 404 });
     return Response.json({ ok: true, service: "edsync-automation" });
@@ -150,11 +150,24 @@ export default {
     }
   },
 
-  async scheduled(_event: ScheduledEvent, env: Env) {
+  async scheduled(event: ScheduledEvent, env: Env) {
+    const minute = new Date(event.scheduledTime).getUTCMinutes();
+    if (minute === 0) {
+      const rules = await runEnabledAutomationRules(env);
+      if (rules.capacityReached || rules.rulesSkipped > 0) {
+        console.warn(JSON.stringify({ event: "automation_rule_sweep_incomplete", ...rules }));
+      }
+      return;
+    }
+    if (minute === 20) {
+      await notifyExpiringCertifications(env);
+      return;
+    }
+    if (minute !== 40) return;
     const pending = await env.EDSYNC_DB.prepare(
       `SELECT id FROM automation_jobs
         WHERE status = 'queued' OR (status = 'running' AND updated_at < datetime('now', '-10 minutes'))
-        ORDER BY created_at ASC LIMIT 100`,
+        ORDER BY created_at ASC LIMIT 8`,
     ).all<{ id: string }>();
     for (const job of pending.results ?? []) {
       try {
@@ -163,10 +176,7 @@ export default {
         console.error(JSON.stringify({ event: "automation_recovery_failed", jobId: job.id, error: error instanceof Error ? error.message : "Unknown error" }));
       }
     }
-    await notifyExpiringCertifications(env);
-    const rules = await runEnabledAutomationRules(env);
-    if (rules.capacityReached || rules.rulesSkipped > 0) {
-      console.warn(JSON.stringify({ event: "automation_rule_sweep_incomplete", ...rules }));
-    }
   },
 };
+
+export default automationWorker;
