@@ -85,4 +85,17 @@ describe("automation rules route", () => {
     );
     expect(response.status).toBe(400);
   });
+
+  it("refuses to enable a legacy rule with an action the worker cannot execute", async () => {
+    mocks.query.mockResolvedValueOnce([{
+      title: "Mastery unlock",
+      trigger_key: "score.mastery",
+      conditions: '{"scoreGte":90}',
+      actions: '[{"type":"unlock","target":"optional_work"}]',
+    }]);
+    const response = await post({ action: "toggle", id: "legacy-rule", enabled: true });
+    expect(response.status).toBe(400);
+    expect(mocks.query).toHaveBeenCalledOnce();
+    expect(String(mocks.query.mock.calls[0][0])).toContain("tenant_id = ?");
+  });
 });
