@@ -6,11 +6,15 @@ import { normalizeRoleProfileInput, validateRoleProfileId } from "@/lib/validati
 import { getPermissionSet, PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { resolveTenantContext } from "@/lib/tenancy";
 import { toClientTenantContext } from "@/lib/tenancy/client-context";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) {
+    return NextResponse.json({ data: null, error: "Organization membership required." }, { status: 403 });
+  }
   const [catalogRows, roleRows, granted] = await Promise.all([
     d1Query("SELECT * FROM permission_catalog ORDER BY category, label"),
     d1Query("SELECT * FROM role_profiles WHERE tenant_id = ? OR tenant_id IS NULL OR is_system = 1 ORDER BY is_system DESC, label", [
