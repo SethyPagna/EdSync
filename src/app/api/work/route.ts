@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, type SessionUser } from "@/lib/auth/session";
-import { d1Query } from "@/lib/db/d1";
+import { d1Batch, d1Query } from "@/lib/db/d1";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { notifyAndEmail } from "@/lib/engagement/server";
 import { errorMessage, jsonError, optionalId, readJsonObject } from "@/lib/grades/http";
 import { appendLearningEvent } from "@/lib/learning-events";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 import {
   tenantObjectJoin,
   tenantObjectParams,
@@ -18,7 +19,7 @@ import {
   type WorkItemRecord,
   type WorkSettings,
 } from "@/lib/work/update";
-import { studentWorkQuestion, type StudentWorkQuestion, type WorkQuestionRow } from "@/lib/work/questions";
+import { editableWorkQuestions, studentWorkQuestion, type EditableWorkQuestion, type StudentWorkQuestion, type WorkQuestionRow } from "@/lib/work/questions";
 
 const WORK_ITEM_TABLE = "learning_work_items";
 const THREAD_TABLE = "discussion_threads";
@@ -36,16 +37,32 @@ type ScopedWorkItem = WorkItemRecord & {
   teacher_id: string;
 };
 
-type WorkQuestionInput = {
-  prompt?: unknown;
-  questionType?: unknown;
-  options?: unknown;
-  correctAnswer?: unknown;
-  points?: unknown;
+type StaffWorkQuestionRow = WorkQuestionRow & { correct_answer: string | null };
+type StaffWorkQuestion = {
+  id: string;
+  prompt: string;
+  questionType: string;
+  options: string[];
+  correctAnswer: string;
+  points: number;
 };
+
+function questionInsertStatements(workItemId: string, questions: EditableWorkQuestion[]) {
+  return questions.map((question, index) => ({
+    sql: `INSERT INTO learning_work_questions (
+            id, work_item_id, prompt, question_type, options, correct_answer, points, order_index, metadata, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', datetime('now'))`,
+    params: [crypto.randomUUID(), workItemId, question.prompt, question.questionType,
+      JSON.stringify(question.options), question.correctAnswer, question.points, index],
+  }));
+}
 
 function isStaff(user: SessionUser) {
   return user.user_metadata.role === "teacher" || user.user_metadata.role === "admin";
+}
+
+function publishedQuestionWork(record: WorkItemRecord) {
+  return record.status === "published" && (record.work_type === "quiz" || record.work_type === "test");
 }
 
 function workScopeParams(tenantId: string) {
@@ -328,6 +345,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const classId = params.get("classId");
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
 
   if (user.user_metadata.role === "student") {
@@ -387,7 +405,7 @@ export async function GET(request: Request) {
 
   const ownerWhere = user.user_metadata.role === "admin" ? "1=1" : "wi.teacher_id = ?";
   const ownerParams = user.user_metadata.role === "admin" ? [] : [user.id];
-  const work = await d1Query(
+  const work = await d1Query<{ id: string } & Record<string, unknown>>(
     `SELECT wi.*, c.name AS class_name,
             COUNT(ls.id) AS submission_count
        FROM learning_work_items wi
@@ -403,7 +421,30 @@ export async function GET(request: Request) {
       ? [...workScopeParams(context.tenant.id), ...ownerParams, classId]
       : [...workScopeParams(context.tenant.id), ...ownerParams],
   );
-  return NextResponse.json({ data: work, error: null });
+  const byWorkId = new Map<string, StaffWorkQuestion[]>();
+  for (let start = 0; start < work.length; start += 100) {
+    const workIds = work.slice(start, start + 100).map((item) => item.id);
+    const questions = await d1Query<StaffWorkQuestionRow>(
+      `SELECT id, work_item_id, prompt, question_type, options, correct_answer, points, order_index
+         FROM learning_work_questions
+        WHERE work_item_id IN (${workIds.map(() => "?").join(", ")})
+        ORDER BY work_item_id, order_index, id`,
+      workIds,
+    );
+    for (const row of questions) {
+      const existing = byWorkId.get(row.work_item_id) ?? [];
+      existing.push({
+        id: row.id,
+        prompt: row.prompt,
+        questionType: row.question_type,
+        options: studentWorkQuestion(row).options,
+        correctAnswer: row.correct_answer ?? "",
+        points: Number(row.points ?? 1),
+      });
+      byWorkId.set(row.work_item_id, existing);
+    }
+  }
+  return NextResponse.json({ data: work.map((item) => ({ ...item, questions: byWorkId.get(item.id) ?? [] })), error: null });
 }
 
 export async function POST(request: Request) {
@@ -413,20 +454,21 @@ export async function POST(request: Request) {
 
   const body = await readJsonObject(request);
   if (!body) return jsonError("Send a JSON object body.", 400);
-  if (body.questions !== undefined && !Array.isArray(body.questions)) {
-    return jsonError("Questions must be a list.", 400);
-  }
 
   let record: WorkItemRecord;
+  let questions: EditableWorkQuestion[];
   try {
     record = newWorkItemRecord(body);
+    questions = editableWorkQuestions(body.questions);
   } catch (error) {
     return jsonError(errorMessage(error, "Invalid work item."), 400);
   }
+  if (publishedQuestionWork(record) && questions.length === 0) return jsonError("Add at least one question before publishing.", 400);
   const settings = normalizeWorkSettings(record.settings);
   const classId = optionalId(body.classId);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const scopedClass = await getScopedClass({
     classId,
@@ -470,27 +512,7 @@ export async function POST(request: Request) {
   );
   await linkTenantObject({ tenantId: context.tenant.id, portalId: context.portal?.id, table: WORK_ITEM_TABLE, objectId: id });
 
-  const questions = (body.questions ?? []) as WorkQuestionInput[];
-  for (let index = 0; index < questions.length; index += 1) {
-    const question = questions[index];
-    if (typeof question?.prompt !== "string" || !question.prompt.trim()) continue;
-    const points = Number(question.points ?? 1);
-    await d1Query(
-      `INSERT INTO learning_work_questions (
-         id, work_item_id, prompt, question_type, options, correct_answer, points, order_index, metadata, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', datetime('now'))`,
-      [
-        crypto.randomUUID(),
-        id,
-        question.prompt,
-        typeof question.questionType === "string" ? question.questionType : "short_answer",
-        JSON.stringify(Array.isArray(question.options) ? question.options : []),
-        typeof question.correctAnswer === "string" ? question.correctAnswer : null,
-        Number.isFinite(points) ? Math.max(0, points) : 1,
-        index,
-      ],
-    );
-  }
+  if (questions.length > 0) await d1Batch(questionInsertStatements(id, questions));
 
   await syncDiscussionThread({ workItemId: id, classId, teacherId: user.id, record, context });
   if (classId && record.due_at) {
@@ -558,6 +580,7 @@ export async function PATCH(request: Request) {
   if (!id) return jsonError("Work item id is required.", 400);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const existing = await getScopedWorkItem({
     workItemId: id,
@@ -568,18 +591,35 @@ export async function PATCH(request: Request) {
   if (!existing) return jsonError("Work item not found.", 404);
 
   let record: WorkItemRecord;
+  let questions: EditableWorkQuestion[] | null = null;
   try {
     record = mergeWorkItemPatch(existing, body);
+    if (body.questions !== undefined) questions = editableWorkQuestions(body.questions);
   } catch (error) {
     return jsonError(errorMessage(error, "Invalid work item."), 400);
   }
 
-  if (record.work_type !== existing.work_type) {
+  if (record.work_type !== existing.work_type || questions !== null) {
     const [submission] = await d1Query<{ id: string }>(
       "SELECT id FROM learning_submissions WHERE work_item_id = ? LIMIT 1",
       [id],
     );
-    if (submission) return jsonError("The work type can't change after students have submitted.", 409);
+    if (submission) return jsonError(
+      record.work_type !== existing.work_type
+        ? "The work type can't change after students have submitted."
+        : "Questions can't change after students have submitted.",
+      409,
+    );
+  }
+  if (publishedQuestionWork(record)) {
+    if (questions?.length === 0) return jsonError("Add at least one question before publishing.", 400);
+    if (questions === null && (record.status !== existing.status || record.work_type !== existing.work_type)) {
+      const [question] = await d1Query<{ id: string }>(
+        "SELECT id FROM learning_work_questions WHERE work_item_id = ? LIMIT 1",
+        [id],
+      );
+      if (!question) return jsonError("Add at least one question before publishing.", 400);
+    }
   }
   if (record.lesson_id !== existing.lesson_id || record.category_id !== existing.category_id) {
     const linkError = await findWorkLinkError({
@@ -593,13 +633,12 @@ export async function PATCH(request: Request) {
   }
   const settings = normalizeWorkSettings(record.settings);
 
-  await d1Query(
-    `UPDATE learning_work_items
+  const updateSql = `UPDATE learning_work_items
         SET title = ?, description = ?, work_type = ?, instructions = ?, points_possible = ?,
             due_at = ?, status = ?, allow_late = ?, lesson_id = ?, category_id = ?, rubric = ?,
             settings = ?, updated_at = datetime('now')
-      WHERE id = ?`,
-    [
+      WHERE id = ?`;
+  const updateParams = [
       record.title,
       record.description,
       record.work_type,
@@ -613,8 +652,13 @@ export async function PATCH(request: Request) {
       record.rubric,
       record.settings,
       id,
-    ],
-  );
+    ];
+  if (questions === null) await d1Query(updateSql, updateParams);
+  else await d1Batch([
+    { sql: updateSql, params: updateParams },
+    { sql: "DELETE FROM learning_work_questions WHERE work_item_id = ?", params: [id] },
+    ...questionInsertStatements(id, questions),
+  ]);
 
   const [klass] = existing.class_id
     ? await d1Query<{ name: string }>("SELECT name FROM classes WHERE id = ? LIMIT 1", [existing.class_id])
@@ -664,6 +708,7 @@ export async function DELETE(request: Request) {
   if (!id) return jsonError("Work item id is required.", 400);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const workItem = await getScopedWorkItem({
     workItemId: id,
