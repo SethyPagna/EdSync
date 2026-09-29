@@ -26,7 +26,11 @@ export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
-  await requirePermission(user, context, PERMISSIONS.portalsManage);
+  try {
+    await requirePermission(user, context, PERMISSIONS.portalsManage);
+  } catch {
+    return NextResponse.json({ data: null, error: "Missing portal management permission." }, { status: 403 });
+  }
 
   const body = (await request.json()) as { name?: string; slug?: string; planTier?: string; isolationMode?: string };
   let tenantInput;
@@ -40,10 +44,11 @@ export async function POST(request: Request) {
   }
 
   const id = crypto.randomUUID();
+  const inviteCode = `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
   await ensureDefaultTenant(user.id);
   await d1Query(
     `INSERT INTO tenants (id, slug, name, owner_id, plan_tier, isolation_mode, settings, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, '{}', datetime('now'), datetime('now'))`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
     [
       id,
       tenantInput.slug,
@@ -51,6 +56,7 @@ export async function POST(request: Request) {
       user.id,
       tenantInput.planTier,
       tenantInput.isolationMode,
+      JSON.stringify({ invite_code: inviteCode, invites_enabled: true }),
     ],
   );
   await d1Query(
@@ -63,5 +69,5 @@ export async function POST(request: Request) {
      VALUES (?, ?, ?, 'role_master_admin', 'active', '[]', datetime('now'), datetime('now'))`,
     [crypto.randomUUID(), id, user.id],
   );
-  return NextResponse.json({ data: { id }, error: null });
+  return NextResponse.json({ data: { id, inviteCode }, error: null });
 }
