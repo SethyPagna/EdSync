@@ -1,12 +1,14 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { loadAccessibleLesson } from "@/lib/lessons/access";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), batch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ query: vi.fn(), batch: vi.fn(), user: { id: "student-1", email: "student@example.com", user_metadata: { role: "student" } } }));
 
 vi.mock("@/lib/auth/session", () => ({
-  getSessionUser: vi.fn(async () => ({ id: "student-1", email: "student@example.com", user_metadata: { role: "student" } })),
+  getSessionUser: vi.fn(async () => mocks.user),
 }));
 vi.mock("@/lib/db/d1", () => ({ d1Query: mocks.query, d1Batch: mocks.batch }));
+vi.mock("@/lib/lessons/access", () => ({ loadAccessibleLesson: vi.fn() }));
 vi.mock("@/lib/tenancy", () => ({
   DEFAULT_TENANT_ID: "tenant_edsync_default",
   linkTenantObject: vi.fn(async () => undefined),
@@ -35,6 +37,9 @@ describe("practice attempts route", () => {
     mocks.query.mockResolvedValue([]);
     mocks.batch.mockReset();
     mocks.batch.mockResolvedValue(undefined);
+    mocks.user = { id: "student-1", email: "student@example.com", user_metadata: { role: "student" } };
+    vi.mocked(loadAccessibleLesson).mockReset();
+    vi.mocked(loadAccessibleLesson).mockResolvedValue(null);
   });
 
   it("stores a valid local practice attempt with its items in one batch", async () => {
@@ -59,6 +64,29 @@ describe("practice attempts route", () => {
     ]);
   });
 
+  it("grades accepted spelling variants on the server", async () => {
+    const { status, payload } = await post({ mode: "quiz", items: [{ ...item, answer: "São Paulo", accept: ["Sao Paulo"], response: " SAO   PAULO " }] });
+    expect(status).toBe(200);
+    expect((payload.data as { summary: { correctItems: number } }).summary.correctItems).toBe(1);
+    const statements = mocks.batch.mock.calls[0]?.[0] as Array<{ sql: string; params: unknown[] }>;
+    expect(statements.filter((statement) => statement.sql.includes("practice_review_cards"))).toHaveLength(0);
+  });
+
+  it.each(["teacher", "admin"])("saves practice for a lesson accessible to its %s", async (role) => {
+    mocks.user = { id: `${role}-1`, email: `${role}@example.com`, user_metadata: { role } };
+    vi.mocked(loadAccessibleLesson).mockResolvedValue({ id: "lesson-1", title: "Fractions", teacher_id: "teacher-1", class_id: "class-1", status: "published" });
+    const { status } = await post({ mode: "quiz", sourceType: "lesson", sourceId: "lesson-1", items: [item] });
+    expect(status).toBe(200);
+    expect(loadAccessibleLesson).toHaveBeenCalledWith(expect.objectContaining({ lessonId: "lesson-1", user: expect.objectContaining({ id: `${role}-1` }) }));
+  });
+
+  it("rejects an inaccessible lesson source for a student", async () => {
+    const { status } = await post({ mode: "quiz", sourceType: "lesson", sourceId: "other-lesson", items: [item] });
+    expect(status).toBe(404);
+    expect(loadAccessibleLesson).toHaveBeenCalledWith(expect.objectContaining({ user: expect.objectContaining({ id: "student-1" }) }));
+    expect(mocks.batch).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["malformed JSON", "{oops", "Invalid JSON body."],
     ["unknown modes", { mode: "timed", items: [item] }, "Choose a supported practice mode."],
@@ -69,6 +97,7 @@ describe("practice attempts route", () => {
       "up to 200 items",
     ],
     ["object answers", { mode: "quiz", items: [{ ...item, answer: { $gt: "" } }] }, "Practice answers"],
+    ["invalid variants", { mode: "quiz", items: [{ ...item, accept: [42] }] }, "Accepted answers"],
     ["missing prompts", { mode: "quiz", items: [{ ...item, prompt: "" }] }, "needs an id and a prompt"],
     [
       "non-finite points",
