@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import CatalogPage from "./catalog/page";
 import { getSessionUser } from "@/lib/auth/session";
 import type { CatalogSearchParams } from "@/lib/catalog/filters";
@@ -21,6 +22,13 @@ export default async function RootPage({
         ? "/teacher/dashboard"
         : "/student/dashboard",
     );
+  }
+
+  const host = (await headers()).get("host")?.trim().toLowerCase().split(":")[0];
+  const isDemoSite = process.env.EDSYNC_DEMO_MODE === "1" &&
+    Boolean(host && host === process.env.EDSYNC_DEMO_HOSTNAME?.trim().toLowerCase());
+  if (isDemoSite) {
+    return <CatalogPage searchParams={Promise.resolve(resolvedSearchParams ?? {})} />;
   }
 
   const context = await resolveTenantContext(null).catch(() => null);
