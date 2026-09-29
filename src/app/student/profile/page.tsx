@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Bell, BookOpen, CircleAlert, Flame, LockKeyhole, Palette, UserRound } from "lucide-react";
+import { Award, Bell, BookOpen, CircleAlert, Flame, LockKeyhole, Palette, UserRound } from "lucide-react";
 import { createClient } from "@/lib/edsync/client";
 import { validateDisplayName } from "@/lib/auth/display-name";
 import { GRADE_LEVELS } from "@/lib/grades";
@@ -13,11 +13,18 @@ import { Button, PageHeader, Skeleton } from "@/components/ui";
 import { AppearancePicker } from "@/components/ui/AppearancePicker";
 
 type ProgressRow = { status: string; score: number | null; final_quiz_score: number | null };
+type Credential = { id: string; rule_id: string; status: "active" | "expired" | "revoked"; issued_at: string; expires_at: string | null };
+type CredentialRule = { id: string; title: string };
+type CredentialPayload = { data?: { certifications?: Credential[]; rules?: CredentialRule[]; nextCursor?: string | null }; error?: string };
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: "system", text_size: "medium", email_notifications: true,
   assignment_notifications: true, weekly_digest: true,
 };
 function percentage(value: number) { return Math.max(0, Math.min(100, Math.round(value))); }
+function credentialDate(value: string) {
+  const date = new Date(value.includes("T") ? value : `${value.replace(" ", "T")}Z`);
+  return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : value.slice(0, 10);
+}
 function learningStats(rows: ProgressRow[]) {
   const started = rows.filter((row) => row.status !== "not_started");
   const completed = started.filter((row) => row.status === "completed");
@@ -40,6 +47,29 @@ export default function StudentProfile() {
   const [saveMessage, setSaveMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [credentialRules, setCredentialRules] = useState<CredentialRule[]>([]);
+  const [credentialError, setCredentialError] = useState("");
+  const [credentialsLoading, setCredentialsLoading] = useState(true);
+
+  const loadCredentials = useCallback(async () => {
+    setCredentialsLoading(true); setCredentialError("");
+    try {
+      let cursor: string | null = null;
+      do {
+        const url = cursor ? `/api/certifications?cursor=${encodeURIComponent(cursor)}` : "/api/certifications";
+        const response = await fetch(url, { cache: "no-store" });
+        const payload: CredentialPayload = await response.json();
+        if (!response.ok || payload.error) throw new Error(payload.error || "Could not load certifications.");
+        setCredentials(payload.data?.certifications ?? []);
+        setCredentialRules(payload.data?.rules ?? []);
+        const nextCursor = payload.data?.nextCursor ?? null;
+        if (nextCursor && nextCursor === cursor) throw new Error("Certification pages did not advance. Try refreshing.");
+        cursor = nextCursor;
+      } while (cursor);
+    } catch (error) { setCredentialError(error instanceof Error ? error.message : "Could not load certifications."); }
+    finally { setCredentialsLoading(false); }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError("");
@@ -61,6 +91,7 @@ export default function StudentProfile() {
   }, [edsync]);
 
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => { void loadCredentials(); }, 0); return () => window.clearTimeout(timer); }, [loadCredentials]);
 
   const save = async () => {
     let name: string | null;
@@ -132,6 +163,14 @@ export default function StudentProfile() {
           <label className="block text-sm font-medium text-fg">Level<select className="select mt-1 w-full" value={gradeLevel} onChange={(event) => { setGradeLevel(event.target.value); setSaveMessage(""); }}><option value="">Select a level</option>{GRADE_LEVELS.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select></label>
           <fieldset className="mt-4"><legend className="text-sm font-medium text-fg">Interests</legend><div className="mt-2 flex flex-wrap gap-2">{INTEREST_AREAS.map((interest) => <button type="button" aria-pressed={interests.includes(interest)} key={interest} onClick={() => toggleInterest(interest)} className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${interests.includes(interest) ? "border-accent bg-accent-soft text-accent" : "border-line text-fg-muted hover:text-fg"}`}>{interest}</button>)}</div></fieldset>
           <div className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4 text-center"><div><p className="text-lg font-semibold text-fg">{stats.completed}</p><p className="text-xs text-fg-muted">Completed</p></div><div><p className="text-lg font-semibold text-fg">{stats.mastery === null ? "—" : `${stats.mastery}%`}</p><p className="text-xs text-fg-muted">Quiz average</p></div><div><p className="flex items-center justify-center gap-1 text-lg font-semibold text-fg"><Flame size={16} className="text-warning" />{profile?.streak_days ?? 0}</p><p className="text-xs text-fg-muted">Day streak</p></div></div>
+        </section>
+
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <div className="mb-3 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-semibold text-fg"><Award size={17} className="text-accent" />Certifications</h2><button type="button" className="text-xs font-medium text-accent hover:underline" onClick={() => void loadCredentials()} disabled={credentialsLoading}>Refresh</button></div>
+          {credentialError && <p role="alert" className="text-sm text-danger">{credentialError}</p>}
+          {credentialsLoading && <p className="text-sm text-fg-muted">Checking your learning records…</p>}
+          {!credentialsLoading && !credentialError && credentials.length === 0 && <p className="text-sm text-fg-muted">No certifications earned yet. Complete an eligible course to see one here.</p>}
+          {!credentialsLoading && credentials.length > 0 && <div className="divide-y divide-line">{credentials.map((credential) => <div key={credential.id} className="flex flex-wrap items-center gap-2 py-2.5"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">{credentialRules.find((rule) => rule.id === credential.rule_id)?.title ?? "Certification"}</p><p className="text-xs text-fg-muted">Issued {credentialDate(credential.issued_at)}{credential.expires_at ? ` · Expires ${credentialDate(credential.expires_at)}` : ""}</p></div><span className={`rounded-full px-2 py-1 text-[11px] font-semibold capitalize ${credential.status === "active" ? "bg-success-soft text-success" : "bg-surface-2 text-fg-muted"}`}>{credential.status}</span></div>)}</div>}
         </section>
 
         <div className="space-y-4">
