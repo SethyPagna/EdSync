@@ -13,17 +13,28 @@ describe("organization invite lookup", () => {
     const [sql, params] = query.mock.calls[0];
     expect(sql).toContain("invites_enabled");
     expect(sql).toContain("invite_code') IS NOT NULL");
+    expect(sql).toContain("teacher_invite_code') IS NOT NULL");
     expect(sql).not.toContain("lower(t.slug)");
-    expect(params).toEqual(["join-a1b2"]);
+    expect(params).toEqual(["join-a1b2", "join-a1b2", "join-a1b2"]);
   });
 
   it("returns the real slug for a valid invite code", async () => {
-    query.mockResolvedValueOnce([{ tenant_id: "tenant-1", tenant_slug: "school", tenant_name: "School", tenant_settings: '{"invite_code":"join-secret"}', portal_slug: "main", portal_name: "School Portal", portal_audience: "internal" }]);
+    query.mockResolvedValueOnce([{ tenant_id: "tenant-1", tenant_slug: "school", tenant_name: "School", tenant_settings: '{"invite_code":"join-secret"}', invite_role: "student", portal_slug: "main", portal_name: "School Portal", portal_audience: "internal" }]);
     const response = await GET(new Request("https://edsync.test/api/auth/organizations?code=join-secret"));
     expect(response.status).toBe(200);
     const data = (await response.json()).data;
     expect(data.slug).toBe("school");
+    expect(data.inviteRole).toBe("student");
     expect(data).not.toHaveProperty("inviteCode");
+  });
+
+  it("identifies a teacher invitation without returning its code", async () => {
+    query.mockResolvedValueOnce([{ tenant_id: "tenant-1", tenant_slug: "school", tenant_name: "School", tenant_settings: '{}', invite_role: "teacher", portal_slug: "main", portal_name: "School Portal", portal_audience: "internal" }]);
+    const response = await GET(new Request("https://edsync.test/api/auth/organizations?code=teach-staff"));
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.inviteRole).toBe("teacher");
+    expect(JSON.stringify(data)).not.toContain("teach-staff");
   });
 
   it("does not reveal a disabled or unknown organization", async () => {
