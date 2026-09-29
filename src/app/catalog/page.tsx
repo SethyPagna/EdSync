@@ -41,6 +41,7 @@ export default async function CatalogPage({
   ]);
   const unavailable = catalogResult.status === "rejected";
   const items = catalogResult.status === "fulfilled" ? catalogResult.value : [];
+  const showFilters = unavailable || hasFilters || items.length > 0;
   const portals =
     portalsResult.status === "fulfilled" ? portalsResult.value : [];
   const labels = {
@@ -90,7 +91,7 @@ export default async function CatalogPage({
             {unavailable ? "" : `${items.length} ${copy.courses.toLowerCase()}`}
           </span>
         </div>
-        <form action="/catalog" className="catalog-filter">
+        {showFilters && <form action="/catalog" className="catalog-filter">
           {language && <input type="hidden" name="language" value={language} />}
           {filters.tenantSlug && (
             <input type="hidden" name="tenant" value={filters.tenantSlug} />
@@ -173,7 +174,7 @@ export default async function CatalogPage({
               </label>
             </div>
           </details>
-        </form>
+        </form>}
         {hasFilters && (
           <Link
             href={publicLanguageHref("/catalog", filters.language)}
@@ -203,14 +204,14 @@ export default async function CatalogPage({
                 ? "Courses are temporarily unavailable"
                 : copy.emptyTitle}
             </h3>
-            <p className="mt-2 text-sm text-edsync-subtle">
+            {(unavailable || hasFilters) && <p className="mt-2 text-sm text-edsync-subtle">
               {unavailable ? "Please try again in a moment." : copy.emptyCopy}
-            </p>
+            </p>}
             <Link
-              href={publicLanguageHref("/catalog", filters.language)}
+              href={publicLanguageHref(unavailable || hasFilters ? "/catalog" : "/auth/signup", filters.language)}
               className="btn-secondary mt-5"
             >
-              {unavailable ? "Try again" : copy.clearFilters}
+              {unavailable ? "Try again" : hasFilters ? copy.clearFilters : copy.createWorkspace}
             </Link>
           </div>
         )}
