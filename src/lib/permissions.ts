@@ -35,12 +35,6 @@ export async function getPermissionSet(user: SessionUser, context: TenantContext
     for (const permission of (Array.isArray(parsed?.permissions) ? parsed.permissions : []) as string[]) direct.add(permission);
   }
 
-  if (user.user_metadata.role === "teacher") {
-    direct.add(PERMISSIONS.coursesAuthor);
-    direct.add(PERMISSIONS.coursesPublish);
-    direct.add(PERMISSIONS.gradesManage);
-    direct.add(PERMISSIONS.reportsView);
-  }
   if (user.user_metadata.role === "student") direct.add(PERMISSIONS.learn);
   return direct;
 }
