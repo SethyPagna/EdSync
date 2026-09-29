@@ -16,6 +16,14 @@ export type StudentWorkQuestion = {
   points: number;
 };
 
+export type EditableWorkQuestion = {
+  prompt: string;
+  questionType: "multiple_choice" | "short_answer" | "long_answer" | "true_false";
+  options: string[];
+  correctAnswer: string | null;
+  points: number;
+};
+
 function questionOptions(value: unknown): string[] {
   let parsed = value;
   if (typeof value === "string") {
@@ -36,6 +44,37 @@ export function studentWorkQuestion(row: WorkQuestionRow): StudentWorkQuestion {
     options: kind === "choice" ? options : [],
     points: Number.isFinite(Number(row.points)) ? Math.max(0, Number(row.points)) : 0,
   };
+}
+
+export function editableWorkQuestions(value: unknown): EditableWorkQuestion[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 50) throw new Error("Send at most 50 questions.");
+  return value.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error("Each question must be an object.");
+    }
+    const input = entry as Record<string, unknown>;
+    const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
+    if (!prompt || prompt.length > 1000) throw new Error("Each question needs a prompt of at most 1000 characters.");
+    const questionType = input.questionType ?? "short_answer";
+    if (questionType !== "multiple_choice" && questionType !== "short_answer" && questionType !== "long_answer" && questionType !== "true_false") {
+      throw new Error("Choose a supported question type.");
+    }
+    const points = Number(input.points ?? 1);
+    if (!Number.isFinite(points) || points < 0 || points > 10000) throw new Error("Question points must be between 0 and 10000.");
+    const correctAnswer = typeof input.correctAnswer === "string" ? input.correctAnswer.trim() : null;
+    if (correctAnswer && correctAnswer.length > 4000) throw new Error("Answer keys must be at most 4000 characters.");
+    let options: string[] = [];
+    if (questionType === "multiple_choice" || questionType === "true_false") {
+      if (!Array.isArray(input.options)) throw new Error("Choice questions need options.");
+      options = input.options.map((option) => typeof option === "string" ? option.trim() : "");
+      if (options.length < 2 || options.length > 8 || options.some((option) => !option || option.length > 200) || new Set(options).size !== options.length) {
+        throw new Error("Choice questions need 2 to 8 distinct options of at most 200 characters.");
+      }
+      if (!correctAnswer || !options.includes(correctAnswer)) throw new Error("Choose an answer key from the options.");
+    }
+    return { prompt, questionType, options, correctAnswer, points };
+  });
 }
 
 export function validatedQuestionResponse(response: Record<string, unknown>, questions: StudentWorkQuestion[]) {
