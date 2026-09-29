@@ -16,12 +16,14 @@ import {
 import { isPracticeMode, normalizePracticeMode } from "@/lib/practice/modes";
 import {
   BadRequestError,
+  ForbiddenError,
   NotFoundError,
   UnauthorizedError,
   readJson,
   withRoute,
 } from "@/lib/security/http-errors";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 import { loadAccessibleLesson } from "@/lib/lessons/access";
 import type { PracticeMode } from "@/types";
 
@@ -169,6 +171,7 @@ export const POST = withRoute(async (request) => {
   const targetSeconds = seconds(body.targetSeconds, "Target time");
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) throw new ForbiddenError("Organization membership required.");
   const mode: PracticeMode = normalizePracticeMode(body.mode);
   const attemptId = crypto.randomUUID();
   const sourceType = optionalText(body.sourceType, "Practice source type", MAX_ID_LENGTH) ?? "studio";
