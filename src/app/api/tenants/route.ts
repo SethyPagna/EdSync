@@ -3,23 +3,28 @@ import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
 import { PERMISSIONS, requirePermission } from "@/lib/permissions";
 import { ensureDefaultTenant, resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext, toClientTenantSummary, type ClientTenantSummary } from "@/lib/tenancy/client-context";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 import { normalizeTenantInput } from "@/lib/validation/tenant";
 
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) {
+    return NextResponse.json({ data: null, error: "Organization membership required." }, { status: 403 });
+  }
   const tenants = user.user_metadata.role === "admin"
-    ? await d1Query("SELECT * FROM tenants ORDER BY updated_at DESC")
-    : await d1Query(
-        `SELECT t.*
+    ? await d1Query<ClientTenantSummary>("SELECT id, slug, name, plan_tier FROM tenants ORDER BY updated_at DESC")
+    : await d1Query<ClientTenantSummary>(
+        `SELECT t.id, t.slug, t.name, t.plan_tier
            FROM tenants t
            JOIN tenant_memberships tm ON tm.tenant_id = t.id
           WHERE tm.user_id = ? AND tm.status = 'active'
           ORDER BY t.updated_at DESC`,
         [user.id],
       );
-  return NextResponse.json({ data: { current: context, tenants }, error: null });
+  return NextResponse.json({ data: { current: toClientTenantContext(context), tenants: tenants.map(toClientTenantSummary) }, error: null });
 }
 
 export async function POST(request: Request) {
