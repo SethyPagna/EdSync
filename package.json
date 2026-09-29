@@ -97,13 +97,13 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260925.2",
+    "@cloudflare/workers-types": "^5.20260926.1",
     "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.3",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
