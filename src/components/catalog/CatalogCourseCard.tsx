@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, Building2, Clock3 } from "lucide-react";
+import { ArrowRight, Atom, BookOpenCheck, Building2, Clock3, PenLine, Sigma } from "lucide-react";
 import type { PublicCatalogItem } from "@/lib/catalog";
 import { publicLanguageQuerySuffix } from "@/lib/public/languages";
 
@@ -18,6 +18,20 @@ type CatalogCourseCardProps = {
   };
 };
 
+function courseVisual(item: PublicCatalogItem) {
+  const subject = `${item.metadata.category} ${item.lesson.subject ?? ""}`.toLowerCase();
+  if (/science|biology|chemistry|physics/.test(subject)) {
+    return { Icon: Atom, background: "from-emerald-100 via-teal-50 to-cyan-100 dark:from-emerald-950 dark:via-teal-950 dark:to-cyan-950", foreground: "text-emerald-800 dark:text-emerald-200" };
+  }
+  if (/math|algebra|geometry/.test(subject)) {
+    return { Icon: Sigma, background: "from-indigo-100 via-blue-50 to-sky-100 dark:from-indigo-950 dark:via-blue-950 dark:to-sky-950", foreground: "text-indigo-800 dark:text-indigo-200" };
+  }
+  if (/english|writing|literature/.test(subject)) {
+    return { Icon: PenLine, background: "from-amber-100 via-orange-50 to-rose-100 dark:from-amber-950 dark:via-orange-950 dark:to-rose-950", foreground: "text-amber-900 dark:text-amber-200" };
+  }
+  return { Icon: BookOpenCheck, background: "from-edsync-blue/20 via-edsync-surface to-edsync-emerald/20", foreground: "text-edsync-blue" };
+}
+
 export default function CatalogCourseCard({
   item,
   featured = false,
@@ -33,6 +47,8 @@ export default function CatalogCourseCard({
   },
 }: CatalogCourseCardProps) {
   const detailUrl = `${item.detailUrl}${publicLanguageQuerySuffix(language)}`;
+  const visual = courseVisual(item);
+  const VisualIcon = visual.Icon;
 
   return (
     <Link
@@ -45,13 +61,21 @@ export default function CatalogCourseCard({
       <div className="relative aspect-[16/10] overflow-hidden bg-edsync-surface">
         {item.metadata.thumbnailUrl ? (
           <div
+            role="img"
             className="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
             style={{ backgroundImage: `url(${item.metadata.thumbnailUrl})` }}
             aria-label={`${item.title} thumbnail`}
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-edsync-blue/20 via-edsync-surface to-edsync-emerald/20">
-            <BookOpenCheck className="h-12 w-12 text-edsync-blue" />
+          <div
+            role="img"
+            aria-label={`${item.metadata.category || item.lesson.subject || "Course"} illustration for ${item.title}`}
+            className={`relative flex h-full items-center justify-center overflow-hidden bg-gradient-to-br ${visual.background}`}
+          >
+            <span aria-hidden="true" className="absolute -left-10 -top-14 size-44 rounded-full border-[24px] border-white/30 dark:border-white/5" />
+            <span className={`relative flex size-20 items-center justify-center rounded-[1.5rem] border border-white/60 bg-white/40 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-black/10 ${visual.foreground}`}>
+              <VisualIcon className="size-10" strokeWidth={1.7} aria-hidden="true" />
+            </span>
           </div>
         )}
         <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
