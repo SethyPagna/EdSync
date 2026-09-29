@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   loadLesson: vi.fn(),
   user: { id: "teacher-a", user_metadata: { role: "teacher" } },
   tenantId: "tenant_edsync_default",
+  membershipStatus: "active" as "active" | "suspended" | null,
 }));
 
 vi.mock("@/lib/auth/session", () => ({ getSessionUser: vi.fn(async () => mocks.user) }));
@@ -14,7 +15,7 @@ vi.mock("@/lib/db/d1", () => ({ d1Query: mocks.query }));
 vi.mock("@/lib/certifications/issuance", () => ({ issueEligibleCertifications: mocks.issue }));
 vi.mock("@/lib/lessons/access", () => ({ loadAccessibleLesson: mocks.loadLesson }));
 vi.mock("@/lib/permissions", () => ({ PERMISSIONS: { coursesPublish: "courses.publish" }, requirePermission: vi.fn(async () => undefined) }));
-vi.mock("@/lib/tenancy", () => ({ DEFAULT_TENANT_ID: "tenant_edsync_default", resolveTenantContext: vi.fn(async () => ({ tenant: { id: mocks.tenantId }, portal: null, membership: { status: "active" } })) }));
+vi.mock("@/lib/tenancy", () => ({ DEFAULT_TENANT_ID: "tenant_edsync_default", resolveTenantContext: vi.fn(async () => ({ tenant: { id: mocks.tenantId }, portal: null, membership: mocks.membershipStatus ? { status: mocks.membershipStatus } : null })) }));
 
 import { GET, POST } from "./route";
 
@@ -29,6 +30,7 @@ describe("certification issuance route", () => {
     mocks.loadLesson.mockReset().mockResolvedValue({ id: "lesson-a", status: "published" });
     mocks.user.user_metadata.role = "teacher";
     mocks.tenantId = "tenant_edsync_default";
+    mocks.membershipStatus = "active";
   });
 
   it("reconciles only the requesting learner before listing credentials", async () => {
@@ -50,6 +52,20 @@ describe("certification issuance route", () => {
     const response = await GET(new Request(`https://edsync.test/api/certifications?cursor=${"x".repeat(501)}`), undefined);
     expect(response.status).toBe(400);
     expect(mocks.issue).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { role: "teacher", membershipStatus: null },
+    { role: "student", membershipStatus: "suspended" },
+  ] as const)("denies a $role without active organization membership before issuing or reading credentials", async ({ role, membershipStatus }) => {
+    mocks.user.user_metadata.role = role;
+    mocks.tenantId = "tenant-school";
+    mocks.membershipStatus = membershipStatus;
+
+    const response = await GET(new Request("https://school.example.test/api/certifications"), undefined);
+    expect(response.status).toBe(403);
+    expect(mocks.issue).not.toHaveBeenCalled();
+    expect(mocks.query).not.toHaveBeenCalled();
   });
 
   it("owner-scopes a manual issue request and returns its continuation cursor", async () => {
