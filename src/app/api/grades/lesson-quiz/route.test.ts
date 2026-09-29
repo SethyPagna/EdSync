@@ -17,7 +17,7 @@ import {
   sqliteAdapter,
 } from "@/lib/grades/test-support";
 import { GET as getGrades, POST as postManualGrade } from "../route";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const state = vi.hoisted(() => ({
   adapter: null as unknown,
@@ -48,6 +48,10 @@ beforeEach(() => {
 
 function submit(body: unknown) {
   return POST(jsonRequest("/api/grades/lesson-quiz", "POST", body));
+}
+
+function recorded(lessonId = "lesson-1") {
+  return GET(new Request(`http://localhost/api/grades/lesson-quiz?lessonId=${encodeURIComponent(lessonId)}`));
 }
 
 function scoreRow(lessonId = "lesson-1", studentId = STUDENT.id) {
@@ -353,5 +357,77 @@ describe("POST /api/grades/lesson-quiz", () => {
     state.user = null;
     expect((await submit({ lessonId: "lesson-1", answers: ALL_CORRECT })).status).toBe(401);
     expect(scoreRow()).toBeUndefined();
+  });
+});
+
+describe("GET /api/grades/lesson-quiz", () => {
+  it("releases no answer feedback before a recorded final attempt, including after a legacy score claim", async () => {
+    const empty = await recorded();
+    expect(empty.status).toBe(200);
+    expect((await readJson(empty)).data).toEqual({ grade: null, answers: {} });
+
+    await submit({ lessonId: "lesson-1", score: 90 });
+    expect((await readJson(await recorded())).data).toEqual({ grade: null, answers: {} });
+  });
+
+  it("restores the latest zero-score attempt, submitted answers, and server-released feedback without writing", async () => {
+    db.prepare("UPDATE quiz_questions SET explanation = 'Mitochondria release energy.' WHERE id = 'q-mcq'").run();
+    await submit({ lessonId: "lesson-1", answers: ALL_CORRECT });
+    await submit({ lessonId: "lesson-1", answers: { "q-mcq": "b", "q-tf": false, "q-short": "" } });
+    db.prepare("UPDATE quiz_questions SET correct_answer = 'b', options = ? WHERE id = 'q-mcq'").run(JSON.stringify([
+      { id: "a", text: "A", is_correct: false },
+      { id: "b", text: "B", is_correct: true },
+    ]));
+    const before = {
+      attempts: countRows("SELECT COUNT(*) AS n FROM quiz_attempts"),
+      events: countRows("SELECT COUNT(*) AS n FROM learning_events"),
+    };
+
+    const response = await recorded();
+    expect(response.status).toBe(200);
+    const { data } = await readJson(response);
+    expect(data).toMatchObject({
+      grade: { score: 0, maxScore: 4, percent: 0, status: "graded", attemptNumber: 2, recorded: true, locked: false },
+      answers: { "q-mcq": "b", "q-tf": false },
+    });
+    expect((data?.grade as { results: unknown[] }).results).toEqual([
+      { questionId: "q-mcq", correct: false, pointsEarned: 0, pointsPossible: 2, correctOptionIds: ["a"], explanation: "Mitochondria release energy." },
+      { questionId: "q-tf", correct: false, pointsEarned: 0, pointsPossible: 1, correctOptionIds: ["true"] },
+      { questionId: "q-short", correct: false, pointsEarned: 0, pointsPossible: 1, correctOptionIds: [] },
+    ]);
+    expect(countRows("SELECT COUNT(*) AS n FROM quiz_attempts")).toBe(before.attempts);
+    expect(countRows("SELECT COUNT(*) AS n FROM learning_events")).toBe(before.events);
+  });
+
+  it("shows a teacher's reviewed grade while keeping the learner's original per-question review", async () => {
+    await submit({ lessonId: "lesson-1", answers: { "q-mcq": "a", "q-tf": true, "q-short": "Plants use sunlight" } });
+    state.user = TEACHER;
+    await postManualGrade(jsonRequest("/api/grades", "POST", {
+      studentId: STUDENT.id,
+      classId: "class-1",
+      sourceType: "lesson_quiz",
+      sourceId: "lesson-1",
+      title: "Cells final quiz",
+      pointsEarned: 4,
+      pointsPossible: 4,
+    }));
+    state.user = STUDENT;
+    const { data } = await readJson(await recorded());
+    expect(data?.grade).toMatchObject({ score: 4, maxScore: 4, percent: 100, status: "graded", locked: true });
+    const results = (data?.grade as { results: Array<{ questionId: string; correct: boolean | null }> }).results;
+    expect(results.find((result) => result.questionId === "q-short")?.correct).toBeNull();
+  });
+
+  it("keeps final results scoped to the signed-in learner and published lesson", async () => {
+    await submit({ lessonId: "lesson-1", answers: ALL_CORRECT });
+    state.user = OTHER_STUDENT;
+    expect((await recorded()).status).toBe(404);
+    state.user = TEACHER;
+    expect((await recorded()).status).toBe(403);
+    state.user = null;
+    expect((await recorded()).status).toBe(401);
+    state.user = STUDENT;
+    expect((await recorded("missing-lesson")).status).toBe(404);
+    expect((await GET(new Request("http://localhost/api/grades/lesson-quiz"))).status).toBe(400);
   });
 });
