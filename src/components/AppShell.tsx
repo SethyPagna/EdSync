@@ -100,6 +100,8 @@ const OWNER_VIEWS: { mode: AdminViewMode; label: string; href: string }[] = [
   { mode: "organization-student", label: "Org learner", href: "/student/dashboard?adminView=organization-student" },
 ];
 
+const isDemoSite = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
 function ShellContent({ role, children, navItems }: AppShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -204,7 +206,7 @@ function ShellContent({ role, children, navItems }: AppShellProps) {
       window.localStorage.removeItem("edsync-auth-workspace");
       document.cookie = "edsync-admin-view-mode=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "edsync_role=; path=/; max-age=0; SameSite=Lax";
-      router.replace("/auth/login");
+      router.replace(isDemoSite ? "/catalog" : "/auth/login");
       router.refresh();
     }
   };
@@ -219,7 +221,7 @@ function ShellContent({ role, children, navItems }: AppShellProps) {
     router.push(href);
   };
 
-  const createActions = role === "student" ? [] : CREATE_ACTIONS;
+  const createActions = isDemoSite || role === "student" ? [] : CREATE_ACTIONS;
   const commands: ShellCommand[] = [
     ...items.map((item) => ({ id: `nav:${item.href}`, label: item.label, icon: item.icon, group: "Pages", href: appendAdminViewMode(item.href, adminViewMode), keywords: [item.id ?? ""] })),
     ...tabs.filter((tab) => tab.href !== activeItem?.href).map((tab) => ({ id: `tab:${tab.href}`, label: tab.label, icon: activeItem?.icon ?? Compass, group: activeItem?.label ?? "Pages", href: appendAdminViewMode(tab.href, adminViewMode) })),
@@ -287,6 +289,10 @@ function ShellContent({ role, children, navItems }: AppShellProps) {
             <div className="workspace-topbar-leading"><Link href={`/${role}/dashboard`} className="workspace-mobile-brand" aria-label="EdSync home"><span className="workspace-mark">E<span>.</span></span></Link><div className="workspace-topbar-title"><span>{activeItem?.label ?? "Workspace"}</span>{tabs.length > 0 && <nav className="workspace-group-tabs" aria-label={`${activeItem?.label ?? "Workspace"} sections`}>{tabs.map((tab) => { const active = tab.href === activeTab?.href; return <Link key={tab.href} href={appendAdminViewMode(tab.href, adminViewMode)} aria-current={active ? "page" : undefined} data-active={active}>{tab.label}</Link>; })}</nav>}</div></div>
             <div className="workspace-topbar-actions">{(previewing || workspaceContext?.type === "organization" || requestedAdminView === "organization") && <span className="workspace-context-chip" title={requestedAdminView === "organization" && role === "admin" ? adminViewModeLabel("organization") : workspaceLabel}>{requestedAdminView === "organization" && role === "admin" ? adminViewModeLabel("organization") : workspaceLabel}</span>}<CommandMenu items={commands} /><div className="workspace-topbar-bell"><NotificationMenu role={role} /></div><div className="workspace-mobile-avatar">{avatar(true)}</div></div>
           </header>}
+          {isDemoSite && <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-edsync-blue/20 bg-edsync-blue/5 px-4 py-2 text-xs text-edsync-text sm:px-6">
+            <span><strong className="font-semibold">Sample workspace</strong> · Explore the example data. Changes are disabled in this public demo.</span>
+            <Link href="/catalog" className="font-semibold text-edsync-blue hover:underline">Switch learner / teacher view</Link>
+          </div>}
           <main id="workspace-content" tabIndex={-1} className="workspace-content">{children}</main>
         </div>
         {!immersive && <><nav className="workspace-mobile-tabs" aria-label="Mobile navigation">{items.slice(0, 4).map((item) => navLink(item, true))}<button type="button" className="workspace-tab" data-active={items.slice(4).some((item) => item.href === activeItem?.href)} aria-label="More navigation" onClick={() => setMoreOpen(true)}><Menu size={19} /><span>More</span></button></nav><Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More" side="bottom"><div className="workspace-more-list">{items.slice(4).map((item) => navLink(item))}<Link href="/catalog" onClick={() => setMoreOpen(false)} className="workspace-menu-link"><Compass size={18} /> Explore courses</Link>{createActions.map((action) => <Link key={action.id} href={appendAdminViewMode(action.href, adminViewMode)} onClick={() => setMoreOpen(false)} className="workspace-menu-link"><action.icon size={18} /> {action.label}</Link>)}<Link href={role === "admin" ? "/admin/settings" : `/${role}/profile`} onClick={() => setMoreOpen(false)} className="workspace-menu-link"><UserRound size={18} /> Profile</Link></div></Sheet></>}
