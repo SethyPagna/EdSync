@@ -18,7 +18,7 @@ export type CheckoutResult = {
 };
 
 function provider(): PaymentProvider {
-  return process.env.PAYMENT_PROVIDER === "stripe" ? "stripe" : "manual";
+  return process.env.PAYMENT_PROVIDER === "stripe" && process.env.STRIPE_SECRET_KEY ? "stripe" : "manual";
 }
 
 export async function createCheckout(input: CheckoutRequest): Promise<CheckoutResult> {
@@ -31,8 +31,21 @@ export async function createCheckout(input: CheckoutRequest): Promise<CheckoutRe
   }>("SELECT * FROM billing_prices WHERE id = ? AND tenant_id = ? AND active = 1 LIMIT 1", [input.priceId, input.tenantId]);
   if (!price) throw new NotFoundError("Price not found.");
 
-  const transactionId = crypto.randomUUID();
   const selectedProvider = provider();
+  if (selectedProvider === "manual") {
+    const [pending] = await d1Query<{ id: string }>(
+      `SELECT id FROM billing_transactions
+        WHERE tenant_id = ? AND product_id = ? AND price_id = ?
+          AND provider = 'manual' AND status = 'pending'
+          AND amount_cents = ? AND currency = ?
+          AND json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END, '$.userId') = ?
+        ORDER BY created_at DESC LIMIT 1`,
+      [input.tenantId, price.product_id, price.id, price.amount_cents, price.currency, input.userId],
+    );
+    if (pending) return { provider: "manual", mode: "manual", url: null, transactionId: pending.id };
+  }
+
+  const transactionId = crypto.randomUUID();
   await d1Query(
     `INSERT INTO billing_transactions (
        id, tenant_id, product_id, price_id, provider, amount_cents, currency, status, metadata, created_at, updated_at
@@ -49,7 +62,7 @@ export async function createCheckout(input: CheckoutRequest): Promise<CheckoutRe
     ],
   );
 
-  if (selectedProvider !== "stripe" || !process.env.STRIPE_SECRET_KEY) {
+  if (selectedProvider !== "stripe") {
     return { provider: "manual", mode: "manual", url: null, transactionId };
   }
 
@@ -133,6 +146,7 @@ export async function grantEntitlement(input: {
 type TransactionRow = {
   id: string;
   product_id: string | null;
+  provider: PaymentProvider;
   status: "pending" | "paid" | "failed" | "refunded" | "void";
   metadata: string | null;
 };
@@ -161,10 +175,12 @@ export async function completeTransaction(input: {
   sourceType: string;
 }): Promise<CompleteTransactionResult> {
   const [transaction] = await d1Query<TransactionRow>(
-    "SELECT id, product_id, status, metadata FROM billing_transactions WHERE id = ? AND tenant_id = ? LIMIT 1",
+    "SELECT id, product_id, provider, status, metadata FROM billing_transactions WHERE id = ? AND tenant_id = ? LIMIT 1",
     [input.transactionId, input.tenantId],
   );
   if (!transaction) return { status: "not_found" };
+  const expectedProvider = input.sourceType === "manual_payment" ? "manual" : input.sourceType === "stripe_checkout" ? "stripe" : null;
+  if (!expectedProvider || transaction.provider !== expectedProvider) return { status: "not_payable" };
   const owner = transactionOwner(transaction.metadata);
   if (!owner || (input.expectedUserId && input.expectedUserId !== owner)) return { status: "user_mismatch" };
   if (transaction.status !== "pending" && transaction.status !== "paid") return { status: "not_payable" };
