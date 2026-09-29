@@ -23,7 +23,7 @@ export default defineConfig({
         },
       },
       {
-        // Components, routes, middleware, browser-facing lib code (src/lib/ui) and any .tsx test.
+        // Components, routes, proxy, browser-facing lib code (src/lib/ui) and any .tsx test.
         extends: true,
         test: {
           name: "dom",
