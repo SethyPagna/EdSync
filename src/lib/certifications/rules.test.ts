@@ -37,6 +37,11 @@ describe("certification rule validation", () => {
     expect(normalizeCertificationSettings({ audit: "standard" })).toEqual({ audit: "standard" });
     expect(normalizeCertificationSettings(null)).toEqual({});
     expect(() => normalizeCertificationSettings([])).toThrow("JSON object");
+    expect(normalizeCertificationSettings({ evidence: ["completion", "completion", "score"], scoreGte: 90 })).toEqual({ evidence: ["completion", "score"], scoreGte: 90 });
+    expect(() => normalizeCertificationSettings({ evidence: [] })).toThrow("evidence");
+    expect(() => normalizeCertificationSettings({ evidence: ["completion"], scoreGte: 90 })).toThrow("Score evidence");
+    expect(() => normalizeCertificationSettings({ scoreGte: 101 })).toThrow("between 0 and 100");
+    expect(() => normalizeCertificationSettings({ renewal: "weekly" })).toThrow("renewal");
   });
 
   it("validates rule and course identifiers", () => {
