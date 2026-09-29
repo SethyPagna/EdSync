@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Archive, ClipboardCheck, ClipboardList, Edit3, MessageSquare, Plus } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ClipboardCheck, ClipboardList, Edit3, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, EmptyState, Menu, PageHeader, Segmented, Sheet, Skeleton, useConfirm } from "@/components/ui";
 import { createClient } from "@/lib/edsync/client";
 import { normalizeWorkGradingSettings, workGradingLabel, type WorkGradingMode } from "@/lib/work/grading";
@@ -13,6 +13,8 @@ import type { Lesson } from "@/types";
 
 type ClassRow = { id: string; name: string };
 type CategoryRow = { id: string; class_id: string; name: string };
+type SavedWorkQuestion = { id: string; prompt: string; questionType: string; options: string[]; correctAnswer: string; points: number };
+type WorkQuestionForm = { prompt: string; questionType: "multiple_choice" | "true_false" | "short_answer" | "long_answer"; optionsText: string; correctAnswer: string; points: string };
 type WorkItem = {
   id: string;
   class_id: string | null;
@@ -29,6 +31,7 @@ type WorkItem = {
   settings: unknown;
   class_name: string | null;
   submission_count: number;
+  questions: SavedWorkQuestion[];
 };
 type Submission = {
   id: string;
@@ -86,6 +89,7 @@ type WorkForm = {
   lessonId: string;
   categoryId: string;
   rubricText: string;
+  questions: WorkQuestionForm[];
 };
 
 const workTypes = ["task", "quiz", "test", "discussion", "activity"];
@@ -111,8 +115,12 @@ function blankForm(classId = ""): WorkForm {
     title: "", classId, workType: "task", status: "published", instructions: "",
     pointsPossible: "100", dueAt: "", gradingMode: "points", gradeWeightPercent: "",
     countsTowardGrade: true, participationCriteria: "", allowLate: true,
-    allowResubmission: false, maxAttempts: "", lessonId: "", categoryId: "", rubricText: "",
+    allowResubmission: false, maxAttempts: "", lessonId: "", categoryId: "", rubricText: "", questions: [],
   };
+}
+
+function blankQuestion(): WorkQuestionForm {
+  return { prompt: "", questionType: "short_answer", optionsText: "", correctAnswer: "", points: "1" };
 }
 
 function rubricText(value: string | null) {
@@ -142,6 +150,22 @@ function errorText(cause: unknown) {
   return cause instanceof Error ? cause.message : "Something went wrong.";
 }
 
+function reviewResponse(value: unknown) {
+  let parsed = value;
+  if (typeof value === "string") {
+    try { parsed = JSON.parse(value); } catch { return { text: value, answers: [] }; }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { text: "", answers: [] };
+  const record = parsed as Record<string, unknown>;
+  const answers = Array.isArray(record.answers) ? record.answers.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const answer = entry as Record<string, unknown>;
+    return typeof answer.prompt === "string" && typeof answer.answer === "string"
+      ? [{ prompt: answer.prompt, answer: answer.answer }] : [];
+  }) : [];
+  return { text: typeof record.text === "string" ? record.text : "", answers };
+}
+
 async function jsonData(response: Response) {
   const payload = await response.json().catch(() => null);
   if (!response.ok || payload?.error) throw new Error(payload?.error || "Request failed.");
@@ -169,10 +193,24 @@ function itemForm(item: WorkItem): WorkForm {
     lessonId: item.lesson_id || "",
     categoryId: item.category_id || "",
     rubricText: rubricText(item.rubric),
+    questions: (item.questions ?? []).map((question) => ({
+      prompt: question.prompt,
+      questionType: question.questionType === "multiple_choice" || question.questionType === "true_false" || question.questionType === "long_answer" ? question.questionType : "short_answer",
+      optionsText: (question.options ?? []).join("\n"),
+      correctAnswer: question.correctAnswer || "",
+      points: String(question.points),
+    })),
   };
 }
 
 function toRequestField(key: keyof WorkForm, value: WorkForm[keyof WorkForm]): [string, unknown] {
+  if (key === "questions") return ["questions", (value as WorkQuestionForm[]).map((question) => ({
+    prompt: question.prompt,
+    questionType: question.questionType,
+    options: question.questionType === "multiple_choice" || question.questionType === "true_false" ? question.optionsText.split(/\r?\n/).map((option) => option.trim()).filter(Boolean) : [],
+    correctAnswer: question.correctAnswer,
+    points: Number(question.points),
+  }))];
   if (key === "rubricText") return ["rubric", rubricItems(String(value))];
   if (key === "pointsPossible" || key === "gradeWeightPercent") return [key, value === "" ? null : Number(value)];
   if (key === "maxAttempts") return [key, value === "" ? null : Number(value)];
@@ -273,6 +311,7 @@ export default function TeacherWorkPage() {
   const visibleQueue = queue.filter((row) => reviewFilter === "all" || (reviewFilter === "graded" ? row.data.status === "graded" : row.data.status === "submitted"));
   const linkedLessons = lessons.filter((item) => !form.classId || item.class_id === form.classId || item.class_id === null);
   const linkedCategories = categories.filter((item) => item.class_id === form.classId);
+  const questionsLocked = !!editing && Number(editing.submission_count) > 0;
 
   const openNew = () => {
     const next = blankForm(classId === "all" ? classes[0]?.id || "" : classId);
@@ -297,6 +336,8 @@ export default function TeacherWorkPage() {
     if (!form.title.trim()) return toast.error("Add a title.");
     const points = Number(form.pointsPossible);
     if (form.pointsPossible.trim() === "" || !Number.isFinite(points) || points < 0) return toast.error("Enter valid possible points.");
+    if (form.status === "published" && (form.workType === "quiz" || form.workType === "test") && form.questions.length === 0 &&
+      (!editing || initial.status !== "published" || initial.workType !== form.workType)) return toast.error("Add at least one question before publishing.");
     if (form.maxAttempts && (!Number.isInteger(Number(form.maxAttempts)) || Number(form.maxAttempts) < 1 || Number(form.maxAttempts) > 100)) return toast.error("Attempts must be between 1 and 100.");
     if (form.dueAt && Number.isNaN(new Date(form.dueAt).getTime())) return toast.error("Choose a valid due date.");
     setBusy(true);
@@ -387,7 +428,19 @@ export default function TeacherWorkPage() {
   };
 
   const update = <K extends keyof WorkForm>(key: K, value: WorkForm[K]) => setForm((current) => ({ ...current, [key]: value }));
+  const updateQuestion = (index: number, patch: Partial<WorkQuestionForm>) => setForm((current) => ({
+    ...current,
+    questions: current.questions.map((question, position) => position === index ? { ...question, ...patch } : question),
+  }));
+  const moveQuestion = (index: number, direction: -1 | 1) => setForm((current) => {
+    const next = [...current.questions];
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return current;
+    [next[index], next[target]] = [next[target], next[index]];
+    return { ...current, questions: next };
+  });
   const reviewedItem = selectedReview?.kind === "work" ? items.find((item) => item.id === selectedReview.data.work_item_id) : null;
+  const reviewedResponse = selectedReview?.kind === "work" ? reviewResponse(selectedReview.data.response) : null;
 
   return (
     <main className="page">
@@ -416,7 +469,7 @@ export default function TeacherWorkPage() {
         <section className="overflow-hidden rounded-2xl border border-line bg-surface">
           {visibleItems.map((item) => <div key={item.id} className="flex min-w-0 items-center gap-3 border-b border-line px-3 py-3 last:border-b-0 sm:px-4">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">{item.work_type === "discussion" ? <MessageSquare size={17} /> : <ClipboardList size={17} />}</span>
-            <button type="button" onClick={() => openEdit(item)} className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-semibold text-fg">{item.title}</span><span className="block truncate text-xs text-fg-muted">{item.class_name || "No class"} · {item.due_at ? "Due " + new Date(item.due_at).toLocaleDateString() : "No due date"} · {item.submission_count || 0} submissions</span></button>
+            <button type="button" onClick={() => openEdit(item)} className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-semibold text-fg">{item.title}</span><span className="block truncate text-xs text-fg-muted">{item.class_name || "No class"} · {item.due_at ? "Due " + new Date(item.due_at).toLocaleDateString() : "No due date"} · {item.submission_count || 0} {Number(item.submission_count) === 1 ? "submission" : "submissions"}</span></button>
             <Badge tone={item.status === "published" ? "success" : "neutral"} className="hidden capitalize sm:inline-flex">{item.status}</Badge>
             <Menu label={"Actions for " + item.title} items={[{ label: "Edit", icon: Edit3, onSelect: () => openEdit(item) }, { label: "Archive", icon: Archive, danger: true, onSelect: () => void archive(item) }]} />
           </div>)}
@@ -426,13 +479,44 @@ export default function TeacherWorkPage() {
           <label className="block text-sm font-medium text-fg">Title<input className="input mt-1 w-full" required maxLength={160} value={form.title} onChange={(event) => update("title", event.target.value)} /></label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium text-fg">Class<select className="input mt-1 w-full" required disabled={!!editing} value={form.classId} onChange={(event) => { update("classId", event.target.value); update("lessonId", ""); update("categoryId", ""); }}><option value="">Choose class</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-            <label className="block text-sm font-medium text-fg">Type<select className="input mt-1 w-full" disabled={!!editing && Number(editing.submission_count) > 0} value={form.workType} onChange={(event) => update("workType", event.target.value)}>{workTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+            <label className="block text-sm font-medium text-fg">Type<select className="input mt-1 w-full" disabled={!!editing && Number(editing.submission_count) > 0} value={form.workType} onChange={(event) => {
+              const workType = event.target.value;
+              setForm((current) => ({ ...current, workType, questions: workType === "quiz" || workType === "test" ? current.questions : [] }));
+            }}>{workTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
             <label className="block text-sm font-medium text-fg">Points possible<input className="input mt-1 w-full" type="number" min="0" max="10000" step="0.01" required value={form.pointsPossible} onChange={(event) => update("pointsPossible", event.target.value)} /></label>
             <label className="block text-sm font-medium text-fg">Due date<input className="input mt-1 w-full" type="datetime-local" value={form.dueAt} onChange={(event) => update("dueAt", event.target.value)} /></label>
             <label className="block text-sm font-medium text-fg">Status<select className="input mt-1 w-full" value={form.status} onChange={(event) => update("status", event.target.value)}><option value="published">Published</option><option value="draft">Draft</option></select></label>
             <label className="block text-sm font-medium text-fg">Scoring<select className="input mt-1 w-full" value={form.gradingMode} onChange={(event) => update("gradingMode", event.target.value as WorkGradingMode)}>{modes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select></label>
           </div>
           <label className="block text-sm font-medium text-fg">Instructions<textarea className="input mt-1 min-h-20 w-full" value={form.instructions} onChange={(event) => update("instructions", event.target.value)} /></label>
+          {(form.workType === "quiz" || form.workType === "test") && <section className="space-y-3 rounded-xl border border-line p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div><h3 className="text-sm font-semibold text-fg">Questions</h3><p className="text-xs text-fg-muted">{form.questions.length} added</p></div>
+              <Button type="button" size="sm" icon={Plus} disabled={questionsLocked || form.questions.length >= 50} onClick={() => update("questions", [...form.questions, blankQuestion()])}>Add question</Button>
+            </div>
+            {questionsLocked && <p className="rounded-lg bg-surface-2 p-3 text-xs text-fg-muted">Questions are locked after a learner submits.</p>}
+            {form.questions.map((question, index) => {
+              const choices = question.optionsText.split(/\r?\n/).map((option) => option.trim()).filter(Boolean);
+              const isChoice = question.questionType === "multiple_choice" || question.questionType === "true_false";
+              return <div key={index} className="space-y-3 rounded-xl border border-line bg-surface-2 p-3">
+                <div className="flex items-center gap-1"><span className="mr-auto text-xs font-semibold text-fg-muted">Question {index + 1}</span>
+                  <button type="button" aria-label={`Move question ${index + 1} up`} disabled={questionsLocked || index === 0} onClick={() => moveQuestion(index, -1)} className="rounded-lg p-1.5 text-fg-muted hover:bg-surface disabled:opacity-40"><ArrowUp size={15} /></button>
+                  <button type="button" aria-label={`Move question ${index + 1} down`} disabled={questionsLocked || index === form.questions.length - 1} onClick={() => moveQuestion(index, 1)} className="rounded-lg p-1.5 text-fg-muted hover:bg-surface disabled:opacity-40"><ArrowDown size={15} /></button>
+                  <button type="button" aria-label={`Remove question ${index + 1}`} disabled={questionsLocked} onClick={() => update("questions", form.questions.filter((_, position) => position !== index))} className="rounded-lg p-1.5 text-danger hover:bg-danger-soft disabled:opacity-40"><Trash2 size={15} /></button>
+                </div>
+                <label className="block text-sm font-medium text-fg">Prompt<input className="input mt-1 w-full" required maxLength={1000} disabled={questionsLocked} value={question.prompt} onChange={(event) => updateQuestion(index, { prompt: event.target.value })} placeholder="Ask a clear question" /></label>
+                <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
+                  <label className="block text-sm font-medium text-fg">Answer type<select className="input mt-1 w-full" disabled={questionsLocked} value={question.questionType} onChange={(event) => {
+                    const questionType = event.target.value as WorkQuestionForm["questionType"];
+                    updateQuestion(index, { questionType, optionsText: questionType === "true_false" ? "True\nFalse" : question.optionsText, correctAnswer: "" });
+                  }}><option value="short_answer">Short answer</option><option value="long_answer">Long answer</option><option value="multiple_choice">Multiple choice</option><option value="true_false">True / false</option></select></label>
+                  <label className="block text-sm font-medium text-fg">Points<input className="input mt-1 w-full" type="number" min="0" max="10000" step="0.01" required disabled={questionsLocked} value={question.points} onChange={(event) => updateQuestion(index, { points: event.target.value })} /></label>
+                </div>
+                {question.questionType === "multiple_choice" && <label className="block text-sm font-medium text-fg">Options <span className="font-normal text-fg-muted">One per line</span><textarea className="input mt-1 min-h-24 w-full" disabled={questionsLocked} value={question.optionsText} onChange={(event) => updateQuestion(index, { optionsText: event.target.value })} placeholder={"First option\nSecond option"} /></label>}
+                {isChoice ? <label className="block text-sm font-medium text-fg">Answer key<select className="input mt-1 w-full" required disabled={questionsLocked} value={question.correctAnswer} onChange={(event) => updateQuestion(index, { correctAnswer: event.target.value })}><option value="">Choose the correct option</option>{choices.map((choice, choiceIndex) => <option key={`${choice}-${choiceIndex}`} value={choice}>{choice}</option>)}</select></label> : <label className="block text-sm font-medium text-fg">Reference answer <span className="font-normal text-fg-muted">Optional</span><input className="input mt-1 w-full" disabled={questionsLocked} maxLength={4000} value={question.correctAnswer} onChange={(event) => updateQuestion(index, { correctAnswer: event.target.value })} /></label>}
+              </div>;
+            })}
+          </section>}
           <details className="rounded-xl border border-line bg-surface-2 p-3"><summary className="cursor-pointer text-sm font-medium text-fg">Scoring and submission options</summary>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {form.gradingMode === "weighted" ? <label className="block text-sm font-medium text-fg">Course weight %<input className="input mt-1 w-full" type="number" min="0" max="100" step="0.1" value={form.gradeWeightPercent} onChange={(event) => update("gradeWeightPercent", event.target.value)} /></label> : null}
@@ -454,7 +538,10 @@ export default function TeacherWorkPage() {
         {selectedReview ? <form id="review-form" onSubmit={grade} className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted"><Badge tone={selectedReview.data.status === "graded" ? "success" : "warning"}>{selectedReview.data.status}</Badge>{selectedReview.kind === "work" ? <span>{selectedReview.data.attempt_count || 1} attempt(s)</span> : <span>Course quiz</span>}</div>
           {reviewedItem ? <p className="text-sm text-fg-muted">{workGradingLabel(normalizeWorkGradingSettings(reviewedItem.settings), reviewedItem.points_possible)}</p> : null}
-          {selectedReview.kind === "work" ? <section className="rounded-xl border border-line bg-surface-2 p-3"><h3 className="mb-2 text-sm font-semibold text-fg">Submission</h3><pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-fg-muted">{typeof selectedReview.data.response === "string" ? selectedReview.data.response : JSON.stringify(selectedReview.data.response, null, 2)}</pre></section> : null}
+          {selectedReview.kind === "work" ? <section className="rounded-xl border border-line bg-surface-2 p-3"><h3 className="mb-2 text-sm font-semibold text-fg">Submission</h3>
+            {reviewedResponse?.answers.length ? <div className="max-h-64 space-y-3 overflow-auto">{reviewedResponse.answers.map((entry, index) => <div key={index} className="rounded-lg bg-surface p-3"><p className="text-xs font-semibold text-fg-muted">{index + 1}. {entry.prompt}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm text-fg">{entry.answer}</p></div>)}</div> :
+              <p className="whitespace-pre-wrap break-words text-sm text-fg">{reviewedResponse?.text || "No written response."}</p>}
+          </section> : null}
           {reviewedItem?.rubric && rubricText(reviewedItem.rubric) ? <section className="rounded-xl border border-line p-3"><h3 className="text-sm font-semibold text-fg">Rubric</h3><p className="mt-1 whitespace-pre-wrap text-sm text-fg-muted">{rubricText(reviewedItem.rubric)}</p></section> : null}
           <div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-fg">Earned points<input className="input mt-1 w-full" type="number" min="0" step="0.01" required value={earned} onChange={(event) => setEarned(event.target.value)} /></label><label className="block text-sm font-medium text-fg">Possible points<input className="input mt-1 w-full" type="number" min="0" step="0.01" required value={possible} onChange={(event) => setPossible(event.target.value)} /></label></div>
           <label className="block text-sm font-medium text-fg">Feedback<textarea className="input mt-1 min-h-24 w-full" value={feedback} onChange={(event) => setFeedback(event.target.value)} /></label>
