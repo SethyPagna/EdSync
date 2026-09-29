@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { ActionMenu } from "@/components/WorkspacePrimitives";
+import { Sheet, useConfirm } from "@/components/ui";
 import type { Tenant, TenantPortal } from "@/types";
 
 type PortalCatalogSettings = {
@@ -44,6 +45,9 @@ type PortalsPayload = {
   domains: DomainRecord[];
   context: { tenant: Tenant; portal: TenantPortal | null };
 };
+
+type MemberRecord = { id: string; user_id: string; full_name: string | null; email: string; role: string; role_label: string | null; status: string };
+type MembersPayload = { members: MemberRecord[]; inviteCode: string; invitesEnabled: boolean };
 
 type PortalDraft = {
   name: string;
@@ -97,6 +101,22 @@ export default function AdminPortalsPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [members, setMembers] = useState<MembersPayload | null>(null);
+  const [membersError, setMembersError] = useState("");
+  const confirm = useConfirm();
+
+  const loadMembers = async () => {
+    try {
+      const response = await fetch("/api/portals/members", { cache: "no-store" });
+      const json = await response.json();
+      if (!response.ok || !json.data) throw new Error(json.error || "Could not load members.");
+      setMembers(json.data);
+      setMembersError("");
+    } catch (error) {
+      setMembersError(error instanceof Error ? error.message : "Could not load members.");
+    }
+  };
 
   const load = async () => {
     try {
@@ -115,7 +135,8 @@ export default function AdminPortalsPage() {
   };
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    const membersTimer = window.setTimeout(() => void loadMembers(), 0);
+    return () => { window.clearTimeout(timer); window.clearTimeout(membersTimer); };
   }, []);
 
   const domainsByPortal = useMemo(() => {
@@ -162,7 +183,7 @@ export default function AdminPortalsPage() {
       },
       "Portal created.",
     );
-    if (ok) setForm(emptyPortal);
+    if (ok) { setForm(emptyPortal); setFormOpen(false); }
   };
 
   const startEdit = (portal: PortalRecord) => {
@@ -207,17 +228,12 @@ export default function AdminPortalsPage() {
       );
       return;
     }
-    if (
-      !window.confirm(
-        `Delete "${portal.name}"? Catalog links will be detached from this portal.`,
-      )
-    )
-      return;
+    if (!await confirm({ title: `Delete ${portal.name}?`, body: "Catalog links will be detached from this portal.", confirmLabel: "Delete portal", danger: true })) return;
     await run({ action: "delete", id: portal.id }, "Portal deleted.");
   };
 
   const copyTenantCode = async () => {
-    const code = payload?.context.tenant.slug;
+    const code = members?.inviteCode;
     if (!code) return;
     try {
       await navigator.clipboard.writeText(code);
@@ -227,11 +243,40 @@ export default function AdminPortalsPage() {
     }
   };
 
+  const copyInviteLink = async () => {
+    const code = members?.inviteCode;
+    if (!code) return;
+    const link = `${window.location.origin}/auth/signup?mode=organization&org=${encodeURIComponent(code)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setMessage("Invite link copied.");
+    } catch {
+      setMessage("Copy this invite link: " + link);
+    }
+  };
+
+  const changeInvites = async (action: "rotate" | "enable" | "disable") => {
+    if (action === "rotate" && !await confirm({ title: "Rotate invite code?", body: "Previously shared join codes will stop working.", confirmLabel: "Rotate code", danger: true })) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/portals/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || "Invite setting could not be saved.");
+      setMessage(action === "rotate" ? "Invite code rotated." : action === "enable" ? "Invites enabled." : "Invites paused.");
+      await loadMembers();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Invite setting could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const visiblePortals = (payload?.portals ?? []).filter((portal) =>
     (portal.name + " " + portal.slug)
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
+  const selectedPortal = payload?.portals.find((portal) => portal.id === editingId);
   return (
     <div className="page-shell space-y-5">
       <header className="premium-panel flex flex-wrap items-center justify-between gap-4">
@@ -239,16 +284,9 @@ export default function AdminPortalsPage() {
           <p className="mb-2 text-xs text-edsync-subtle">
             {payload?.context.tenant.name || "Your organization"}
           </p>
-          <h1 className="font-display font-bold">Portals & domains</h1>
+          <h1 className="font-display text-2xl font-bold">Portals</h1>
         </div>
-        <button
-          className="btn-secondary"
-          onClick={() => void copyTenantCode()}
-          disabled={!payload}
-        >
-          <Copy size={15} />
-          Invite code
-        </button>
+        <button type="button" className="btn-primary" onClick={() => { setEditingId(null); setForm(emptyPortal); setFormOpen(true); }}><Plus size={16} /> New portal</button>
       </header>
       {message && (
         <div
@@ -264,35 +302,28 @@ export default function AdminPortalsPage() {
           </button>
         </div>
       )}
-      <div className="focus-banner">
-        <div>
-          <span className="text-xs uppercase tracking-widest text-emerald-200">
-            Your academy, your identity
-          </span>
-          <h2 className="font-display">Start now. Connect a domain later.</h2>
-          <p>
-            Each portal has a shareable address. Your courses and access
-            settings stay together.
-          </p>
+      <section className="premium-surface rounded-xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-semibold">Organization access</h2><p className="text-xs text-edsync-subtle">{members?.members.length ?? 0} members · {members?.invitesEnabled === false ? "Invites paused" : "Invites open"}</p></div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void copyTenantCode()} disabled={!members?.inviteCode || !members.invitesEnabled}><Copy size={14} /> Copy invite code</button>
+            <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void copyInviteLink()} disabled={!members?.inviteCode || !members.invitesEnabled}>Copy invite link</button>
+            <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void changeInvites("rotate")} disabled={!members || busy}>Rotate</button>
+            <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => void changeInvites(members?.invitesEnabled ? "disable" : "enable")} disabled={!members || busy}>{members?.invitesEnabled ? "Pause invites" : "Enable invites"}</button>
+          </div>
         </div>
-        <Globe2
-          size={48}
-          strokeWidth={1}
-          className="shrink-0 text-emerald-200"
-        />
-      </div>
-      <details className="compact-guide" id="create-portal">
-        <summary>
-          <Plus size={18} />
-          Create a portal
-        </summary>
-        <form onSubmit={createPortal} className="mt-4 space-y-4">
-          <PortalFields value={form} onChange={setForm} />
-          <button className="btn-primary" disabled={busy}>
-            {busy ? "Creating…" : "Create portal"}
-          </button>
-        </form>
-      </details>
+        {membersError && <p role="alert" className="mt-2 text-xs text-edsync-red">{membersError} <button type="button" className="underline" onClick={() => void loadMembers()}>Retry</button></p>}
+        <details className="mt-3 border-t border-edsync-border pt-3">
+          <summary className="cursor-pointer text-sm font-semibold text-edsync-blue">Members</summary>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-left text-sm">
+              <thead className="text-xs text-edsync-subtle"><tr><th scope="col" className="py-2 font-medium">Member</th><th scope="col" className="py-2 font-medium">Role</th><th scope="col" className="py-2 font-medium">Status</th></tr></thead>
+              <tbody className="divide-y divide-edsync-border">{(members?.members ?? []).map((member) => <tr key={member.id}><td className="py-2"><span className="block font-medium">{member.full_name || member.email}</span><span className="text-xs text-edsync-subtle">{member.email}</span></td><td className="py-2"><span className="badge bg-edsync-blue/10 text-edsync-blue">{member.role_label || member.role}</span></td><td className="py-2 text-xs capitalize text-edsync-subtle">{member.status}</td></tr>)}</tbody>
+            </table>
+            {members?.members.length === 0 && <p className="py-3 text-sm text-edsync-subtle">No members yet.</p>}
+          </div>
+        </details>
+      </section>
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display font-bold">
           Your portals{" "}
@@ -334,30 +365,7 @@ export default function AdminPortalsPage() {
           const domains = domainsByPortal.get(portal.id) ?? [];
           return (
             <article key={portal.id} className="premium-surface p-5">
-              {editingId === portal.id ? (
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void savePortal(portal);
-                  }}
-                >
-                  <PortalFields value={draft} onChange={setDraft} />
-                  <div className="flex gap-2">
-                    <button className="btn-primary" disabled={busy}>
-                      {busy ? "Saving…" : "Save changes"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => setEditingId(null)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
+              <>
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="rounded-xl bg-edsync-blue/10 p-3 text-edsync-blue">
                       <Building2 size={20} />
@@ -493,12 +501,17 @@ export default function AdminPortalsPage() {
                       </div>
                     </div>
                   </details>
-                </>
-              )}
+              </>
             </article>
           );
         })}
       </div>
+      <Sheet open={formOpen || Boolean(editingId)} onClose={() => { setFormOpen(false); setEditingId(null); }} title={editingId ? "Edit portal" : "Create portal"} description="Share a portal link now; connect a domain later." size="lg">
+        <form className="space-y-4" onSubmit={(event) => { if (selectedPortal) { event.preventDefault(); void savePortal(selectedPortal); } else { void createPortal(event); } }}>
+          <PortalFields value={selectedPortal ? draft : form} onChange={selectedPortal ? setDraft : setForm} />
+          <button className="btn-primary" disabled={busy}>{busy ? "Saving…" : selectedPortal ? "Save changes" : "Create portal"}</button>
+        </form>
+      </Sheet>
     </div>
   );
 }
