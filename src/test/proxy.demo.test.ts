@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { proxy } from "./proxy";
+import { proxy } from "../proxy";
 
 function request(hostname: string, path: string, method: string) {
   return new NextRequest(`https://${hostname}${path}`, { method });
