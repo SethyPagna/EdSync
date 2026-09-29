@@ -2,8 +2,8 @@
 
 EdSync is a role-based learning workspace for teachers and students. It uses
 Next.js, Cloudflare D1 for relational data, Cloudflare R2 for object storage,
-Cloudflare AI Gateway for AI provider routing, and one Cloudflare Worker with
-EdSync-owned data bindings.
+Cloudflare AI Gateway for AI provider routing, an app Worker, and a separate
+automation Worker with EdSync-owned data bindings.
 
 ## Platform
 
@@ -11,7 +11,7 @@ EdSync-owned data bindings.
 - Next.js 16 App Router, React 19, TypeScript 6, and Tailwind CSS 4
 - Custom D1-backed authentication and role-aware routing
 - Cloudflare D1, R2, AI Gateway, Queues, Workers, Vectorize, Turnstile
-- Cloudflare Worker deployment for the hosted Next.js runtime
+- Cloudflare Workers for the hosted Next.js runtime and background automation
 - Docker/local profile for self-deployment behind Cloudflare
 
 ## Local Setup
@@ -79,10 +79,15 @@ announcements, notes, notifications, catalog products, and Studio designs.
 
 - Cloudflare app Worker link: `https://edsync.learn-app.workers.dev`
 - Cloudflare app Worker name: `edsync`
+- Cloudflare automation Worker name: `edsync-automation`
 - Cloudflare D1 database: `edsync-prod-d1`
 - Cloudflare R2 bucket: `edsync-assets-prod`
 - Cloudflare Queue: `edsync-automation-prod`
 - Cloudflare Vectorize index: `edsync-learning-prod`
+- `npm.cmd run deploy:cloudflare` builds the app, deploys the automation queue
+  consumer and hourly recovery sweep, deploys the app Worker, then syncs
+  configured Worker secrets. Set `CLOUDFLARE_ACCOUNT_ID` for the EdSync account
+  and sign Wrangler into that account before running it.
 - Real secrets belong in `.env.local`, Vercel environment variables, Cloudflare
   secrets, or CI secrets. They must not be committed.
 - `npm.cmd run db:local` starts the production-mode Docker self-hosting profile
@@ -198,7 +203,7 @@ security audit, which always checks current advisories.
 - `config/` contains tool configuration that can be addressed by explicit
   paths, including ESLint, Tailwind, Vitest, and environment examples.
 - `infra/` contains local, Cloudflare, and D1 database infrastructure files.
-- `infra/cloudflare/` owns the single Worker, Wrangler, and OpenNext
+- `infra/cloudflare/` owns the app and automation Workers, Wrangler, and OpenNext
   configuration for EdSync-specific Cloudflare resources.
 - Framework-required root entry points remain at the root so Next.js, npm,
   Vercel, TypeScript, and Codex can discover them without custom bootstrapping.
