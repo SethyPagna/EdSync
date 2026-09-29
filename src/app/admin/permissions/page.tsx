@@ -1,276 +1,44 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Edit3, Save, ShieldCheck, Trash2, X } from "lucide-react";
-import { InfoPopover } from "@/components/WorkspacePrimitives";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import type { Permission, RoleProfile } from "@/types";
+import { Button, PageHeader, Sheet, useConfirm } from "@/components/ui";
 
-type PermissionsPayload = {
-  catalog: Permission[];
-  roleProfiles: RoleProfile[];
-  granted: string[];
-};
-
-type ProfileDraft = {
-  label: string;
-  description: string;
-  permissions: string[];
-};
-
-const emptyDraft: ProfileDraft = {
-  label: "",
-  description: "",
-  permissions: [],
-};
-
-function draftFrom(profile: RoleProfile): ProfileDraft {
-  return {
-    label: profile.label,
-    description: profile.description ?? "",
-    permissions: profile.permissions ?? [],
-  };
-}
-
-function PermissionPicker({
-  grouped,
-  selected,
-  onToggle,
-}: {
-  grouped: Record<string, Permission[]>;
-  selected: string[];
-  onToggle: (permission: string) => void;
-}) {
-  return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {Object.entries(grouped).map(([category, permissions]) => (
-        <section key={category} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="font-semibold text-edsync-text">{category}</p>
-            <span className="text-xs font-semibold text-edsync-subtle">
-              {permissions.filter((permission) => selected.includes(permission.permission_key)).length}/
-              {permissions.length}
-            </span>
-          </div>
-          <div className="grid gap-1.5">
-            {permissions.map((permission) => (
-              <label
-                key={permission.id}
-                className="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-2 text-sm transition hover:bg-edsync-card"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(permission.permission_key)}
-                  onChange={() => onToggle(permission.permission_key)}
-                  className="mt-1"
-                />
-                <span className="min-w-0">
-                  <span className="block font-semibold text-edsync-text">{permission.label}</span>
-                  <span className="block truncate text-xs text-edsync-subtle">{permission.permission_key}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
+type Payload = { catalog: Permission[]; roleProfiles: RoleProfile[]; granted: string[] };
+type Draft = { label: string; description: string; permissions: string[] };
+const emptyDraft: Draft = { label: "", description: "", permissions: [] };
 
 export default function AdminPermissionsPage() {
-  const [payload, setPayload] = useState<PermissionsPayload>({ catalog: [], roleProfiles: [], granted: [] });
-  const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
+  const [payload, setPayload] = useState<Payload>({ catalog: [], roleProfiles: [], granted: [] });
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<ProfileDraft>(emptyDraft);
-  const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const confirm = useConfirm();
 
-  const load = () => {
-    fetch("/api/permissions", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((json: { data?: PermissionsPayload }) => setPayload(json.data ?? { catalog: [], roleProfiles: [], granted: [] }));
-  };
+  const load = useCallback(async () => { try { const response = await fetch("/api/permissions", { cache: "no-store" }); const result = await response.json(); if (!response.ok || result.error) throw new Error(result.error || "Could not load permissions."); setPayload(result.data ?? { catalog: [], roleProfiles: [], granted: [] }); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load permissions."); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+  const grouped = useMemo(() => Object.entries(payload.catalog.reduce<Record<string, Permission[]>>((groups, permission) => { const key = permission.category || "General"; (groups[key] ??= []).push(permission); return groups; }, {})), [payload.catalog]);
+  const editable = payload.roleProfiles.filter((profile) => !profile.is_system);
 
-  useEffect(() => {
-    load();
-  }, []);
+  const run = async (body: Record<string, unknown>, success: string) => { setBusy(true); setError(""); try { const response = await fetch("/api/permissions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const result = await response.json(); if (!response.ok || result.error) throw new Error(result.error || "Could not save profile."); setNotice(success); await load(); return true; } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save profile."); return false; } finally { setBusy(false); } };
+  const create = () => { setEditingId(null); setDraft(emptyDraft); setOpen(true); };
+  const edit = (profile: RoleProfile) => { setEditingId(profile.id); setDraft({ label: profile.label, description: profile.description ?? "", permissions: [...(profile.permissions ?? [])] }); setOpen(true); };
+  const save = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const ok = await run({ action: editingId ? "update_profile" : "create_profile", ...(editingId ? { id: editingId } : {}), ...draft }, editingId ? "Profile saved." : "Profile created."); if (ok) setOpen(false); };
+  const remove = async (profile: RoleProfile) => { if (!await confirm({ title: `Delete ${profile.label}?`, body: "Members assigned to this profile will lose that assignment.", confirmLabel: "Delete profile", danger: true })) return; await run({ action: "delete_profile", id: profile.id }, "Profile deleted."); };
+  const toggle = (key: string) => setDraft((current) => ({ ...current, permissions: current.permissions.includes(key) ? current.permissions.filter((item) => item !== key) : [...current.permissions, key] }));
 
-  const catalogByCategory = useMemo(() => {
-    return payload.catalog.reduce<Record<string, Permission[]>>((collection, item) => {
-      const key = item.category || "General";
-      collection[key] = collection[key] || [];
-      collection[key].push(item);
-      return collection;
-    }, {});
-  }, [payload.catalog]);
+  return <div className="page-shell space-y-4"><PageHeader title="Permissions" icon={ShieldCheck} actions={<Button variant="primary" onClick={create}><Plus size={16} /> New role</Button>} />
+    {error && <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm text-fg-muted">{notice}</p>}
+    <section className="card overflow-hidden"><div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">Organization roles</h2><span className="text-xs text-fg-faint">System roles are read only</span></div><div className="divide-y divide-line">{editable.map((profile) => <div key={profile.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap"><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-fg">{profile.label}</p><p className="truncate text-xs text-fg-muted">{profile.description || "Organization role"}</p></div><span className="shrink-0 text-xs tabular-nums text-fg-muted">{profile.permissions?.length ?? 0} permissions</span><button type="button" className="rounded-md px-2 py-1.5 text-sm text-fg-muted hover:bg-surface-2" onClick={() => edit(profile)}>Edit</button><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-soft hover:text-danger" onClick={() => void remove(profile)} aria-label={`Delete ${profile.label}`}><Trash2 size={16} /></button></div>)}{editable.length === 0 && <p className="px-4 py-6 text-center text-sm text-fg-muted">No organization roles yet.</p>}</div></section>
+    <section className="card overflow-hidden"><div className="border-b border-line px-4 py-3"><h2 className="text-sm font-semibold text-fg">Permission matrix</h2><p className="text-xs text-fg-muted">Compare permissions across system and organization roles.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[540px] text-left text-xs"><thead className="sticky top-0 bg-surface-2"><tr><th className="min-w-[210px] px-3 py-2 font-semibold text-fg-muted">Permission</th>{payload.roleProfiles.map((profile) => <th key={profile.id} className="min-w-[90px] px-2 py-2 text-center font-semibold text-fg-muted">{profile.label}</th>)}</tr></thead><tbody>{grouped.map(([category, permissions]) => <FragmentRows key={category} category={category} permissions={permissions} profiles={payload.roleProfiles} />)}</tbody></table>{payload.catalog.length === 0 && <p className="px-4 py-6 text-center text-sm text-fg-muted">No permission catalog loaded.</p>}</div></section>
+    <Sheet open={open} onClose={() => setOpen(false)} title={editingId ? "Edit role profile" : "New role profile"} description="Permissions apply only within this organization." size="lg" onSubmit={save} footer={<><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" variant="primary" disabled={busy}>{busy ? "Saving…" : "Save role"}</Button></>}><div className="space-y-4">{error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}<label className="block space-y-1 text-sm font-medium text-fg">Role name<input className="edsync-input w-full" value={draft.label} onChange={(event) => setDraft({ ...draft, label: event.target.value })} maxLength={120} required /></label><label className="block space-y-1 text-sm font-medium text-fg">Description<textarea className="edsync-input min-h-20 w-full" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} maxLength={600} /></label><div className="space-y-3">{grouped.map(([category, permissions]) => <fieldset key={category} className="rounded-lg border border-line p-3"><legend className="px-1 text-sm font-semibold text-fg">{category}</legend><div className="grid gap-2 sm:grid-cols-2">{permissions.map((permission) => <label key={permission.id} className="flex items-start gap-2 text-sm text-fg-muted"><input type="checkbox" className="mt-1" checked={draft.permissions.includes(permission.permission_key)} onChange={() => toggle(permission.permission_key)} /><span><span className="block font-medium text-fg">{permission.label}</span><span className="block text-xs text-fg-faint">{permission.permission_key}</span></span></label>)}</div></fieldset>)}</div></div></Sheet>
+  </div>;
+}
 
-  const systemProfiles = payload.roleProfiles.filter((role) => role.is_system);
-  const tenantProfiles = payload.roleProfiles.filter((role) => !role.is_system);
-
-  const togglePermission = (permission: string, target: ProfileDraft, update: (next: ProfileDraft) => void) => {
-    const exists = target.permissions.includes(permission);
-    update({
-      ...target,
-      permissions: exists ? target.permissions.filter((item) => item !== permission) : [...target.permissions, permission],
-    });
-  };
-
-  const run = async (body: Record<string, unknown>, success: string) => {
-    setMessage("");
-    const response = await fetch("/api/permissions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const json = await response.json();
-    if (!response.ok || json.error) {
-      setMessage(json.error || "Request failed.");
-      return false;
-    }
-    setMessage(success);
-    load();
-    return true;
-  };
-
-  const createProfile = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const ok = await run({ action: "create_profile", ...draft }, "Role profile created.");
-    if (ok) setDraft(emptyDraft);
-  };
-
-  const startEdit = (profile: RoleProfile) => {
-    setEditingId(profile.id);
-    setEditDraft(draftFrom(profile));
-  };
-
-  const saveProfile = async (profile: RoleProfile) => {
-    const ok = await run({ action: "update_profile", id: profile.id, ...editDraft }, "Role profile saved.");
-    if (ok) setEditingId(null);
-  };
-
-  const deleteProfile = async (profile: RoleProfile) => {
-    if (!window.confirm(`Delete "${profile.label}"? Members using it will keep their account but lose this profile assignment.`)) return;
-    await run({ action: "delete_profile", id: profile.id }, "Role profile deleted.");
-  };
-
-  return (
-    <div className="space-y-5 p-5 lg:p-8">
-      <header className="premium-panel rounded-2xl p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Access model</p>
-          <h1 className="font-display text-3xl font-bold text-edsync-text">Permissions</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Create tenant-scoped role profiles for organization owners, managers, auditors, billing admins, instructors, and learners.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <InfoPopover label="Permission scope help">
-            Platform owner access stays global. Profiles created here only apply inside the selected tenant, which keeps organization managers from changing application-wide settings.
-          </InfoPopover>
-          <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 text-sm font-semibold text-edsync-subtle">
-            Tenant-scoped roles
-          </div>
-        </div>
-        </div>
-      </header>
-
-      {message && <div className="rounded-2xl border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
-
-      <form onSubmit={createProfile} className="premium-surface grid gap-4 rounded-2xl p-4 xl:grid-cols-[320px_minmax(0,1fr)_auto]">
-        <div className="grid gap-3">
-          <input className="edsync-input" value={draft.label} onChange={(event) => setDraft({ ...draft, label: event.target.value })} placeholder="Role profile name" required />
-          <textarea className="edsync-input min-h-24" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="What this role can manage" />
-        </div>
-        <PermissionPicker
-          grouped={catalogByCategory}
-          selected={draft.permissions}
-          onToggle={(permission) => togglePermission(permission, draft, setDraft)}
-        />
-        <button className="btn-primary h-fit justify-center" type="submit">Add profile</button>
-      </form>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="premium-surface overflow-hidden rounded-2xl p-0">
-          <div className="border-b border-edsync-border px-4 py-3">
-            <h2 className="font-display text-xl font-bold">Tenant role profiles</h2>
-            <p className="text-sm text-edsync-subtle">Edit, delete, or adjust permissions without changing platform-owner access.</p>
-          </div>
-          <div className="divide-y divide-edsync-border">
-            {tenantProfiles.map((profile) => {
-              const editing = editingId === profile.id;
-              return (
-                <div key={profile.id} className="grid gap-3 px-4 py-4 text-sm">
-                  {editing ? (
-                    <div className="grid gap-3">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <input className="edsync-input" value={editDraft.label} onChange={(event) => setEditDraft({ ...editDraft, label: event.target.value })} />
-                        <input className="edsync-input" value={editDraft.description} onChange={(event) => setEditDraft({ ...editDraft, description: event.target.value })} />
-                      </div>
-                      <PermissionPicker
-                        grouped={catalogByCategory}
-                        selected={editDraft.permissions}
-                        onToggle={(permission) => togglePermission(permission, editDraft, setEditDraft)}
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="font-semibold text-edsync-text">{profile.label}</p>
-                      <p className="mt-1 text-edsync-subtle">{profile.description || "Tenant role profile"}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {(profile.permissions ?? []).map((permission) => (
-                          <span key={permission} className="badge bg-edsync-blue/10 text-edsync-blue">{permission}</span>
-                        ))}
-                        {(profile.permissions ?? []).length === 0 && <span className="text-sm text-edsync-subtle">No permissions selected.</span>}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {editing ? (
-                      <>
-                        <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => saveProfile(profile)}><Save className="h-4 w-4" /> Save</button>
-                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startEdit(profile)}><Edit3 className="h-4 w-4" /> Edit</button>
-                        <button type="button" className="btn-ghost px-3 py-2 text-sm text-rose-600" onClick={() => deleteProfile(profile)}><Trash2 className="h-4 w-4" /> Delete</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {tenantProfiles.length === 0 && <p className="px-4 py-5 text-sm text-edsync-subtle">No tenant profiles yet.</p>}
-          </div>
-        </div>
-
-        <aside className="grid gap-4">
-          <div className="premium-surface rounded-2xl p-4">
-            <h2 className="font-display text-xl font-bold">System profiles</h2>
-            <div className="mt-3 grid gap-2">
-              {systemProfiles.map((role) => (
-                <div key={role.id} className="rounded-2xl border border-edsync-border bg-edsync-surface p-3 text-sm">
-                  <p className="font-semibold">{role.label}</p>
-                  <p className="text-edsync-subtle">{role.description || "System role profile"}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="premium-surface rounded-2xl p-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-edsync-blue" />
-              <h2 className="font-display text-xl font-bold">Permission catalog</h2>
-            </div>
-            <div className="mt-3 grid gap-3">
-              {Object.entries(catalogByCategory).map(([category, items]) => (
-                <div key={category}>
-                  <p className="text-sm font-semibold text-edsync-text">{category}</p>
-                  <p className="text-sm text-edsync-subtle">{items.length} permissions</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-      </section>
-    </div>
-  );
+function FragmentRows({ category, permissions, profiles }: { category: string; permissions: Permission[]; profiles: RoleProfile[] }) {
+  return <><tr className="border-t border-line bg-surface-2"><th colSpan={profiles.length + 1} className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-faint">{category}</th></tr>{permissions.map((permission) => <tr key={permission.id} className="border-t border-line"><th className="px-3 py-2 font-medium text-fg">{permission.label}</th>{profiles.map((profile) => <td key={profile.id} className="px-2 py-2 text-center">{profile.permissions?.includes(permission.permission_key) && <Check aria-label="Granted" size={15} className="mx-auto text-success" />}</td>)}</tr>)}</>;
 }
