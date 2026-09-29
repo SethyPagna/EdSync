@@ -112,6 +112,11 @@ export default function StudentWorkPage() {
     existing: item.submission_status ? { status: item.submission_status, attempts: Number(submissions[item.id]?.attempt_count ?? 0) } : null,
   });
   const openComposer = (item: WorkItem) => { setActive(item); setResponseText(""); setQuestionAnswers({}); setSubmitError(""); };
+  const openDiscussion = (item: WorkItem) => {
+    const params = new URLSearchParams({ workItemId: item.id });
+    if (requestedClassId !== ALL_CLASSES_SCOPE) params.set("classId", requestedClassId);
+    router.push(`/student/discussions?${params.toString()}`);
+  };
   const submit = async () => {
     if (!active) return;
     const questions = active.questions ?? [];
@@ -177,7 +182,8 @@ export default function StudentWorkPage() {
                 {submitted(item) ? <CheckCircle2 size={13} /> : <Clock3 size={13} />}
                 {item.submission_status === "graded" ? (item.submission_percent === null ? "Graded" : `${item.submission_percent}%`) : submitted(item) ? "Submitted" : "To do"}
               </span>
-              {decision.ok && <Button size="sm" onClick={() => openComposer(item)}>{submitted(item) ? "Resubmit" : "Open"}</Button>}
+              {item.work_type === "discussion" ? <Button size="sm" onClick={() => openDiscussion(item)}>Open thread</Button> :
+                decision.ok && <Button size="sm" onClick={() => openComposer(item)}>{submitted(item) ? "Resubmit" : "Open"}</Button>}
             </div>
           </div>
         </article>;
