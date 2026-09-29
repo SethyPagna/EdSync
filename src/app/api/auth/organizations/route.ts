@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     tenant_slug: string;
     tenant_name: string;
     tenant_settings: string | null;
+    invite_role: "student" | "teacher";
     portal_slug: string | null;
     portal_name: string | null;
     portal_audience: string | null;
@@ -41,17 +42,21 @@ export async function GET(request: Request) {
             t.slug AS tenant_slug,
             t.name AS tenant_name,
             t.settings AS tenant_settings,
+            CASE WHEN lower(json_extract(t.settings, '$.teacher_invite_code')) = lower(?)
+                 THEN 'teacher' ELSE 'student' END AS invite_role,
             tp.slug AS portal_slug,
             tp.name AS portal_name,
             tp.audience AS portal_audience
        FROM tenants t
        LEFT JOIN tenant_portals tp ON tp.tenant_id = t.id AND tp.is_default = 1
       WHERE COALESCE(json_extract(t.settings, '$.invites_enabled'), 1) = 1
-        AND json_extract(t.settings, '$.invite_code') IS NOT NULL
-        AND lower(json_extract(t.settings, '$.invite_code')) = lower(?)
+        AND ((json_extract(t.settings, '$.invite_code') IS NOT NULL
+              AND lower(json_extract(t.settings, '$.invite_code')) = lower(?))
+          OR (json_extract(t.settings, '$.teacher_invite_code') IS NOT NULL
+              AND lower(json_extract(t.settings, '$.teacher_invite_code')) = lower(?)))
         AND t.status = 'active'
       LIMIT 1`,
-    [code],
+    [code, code, code],
   );
 
   if (!row) {
@@ -69,6 +74,7 @@ export async function GET(request: Request) {
       portalName: row.portal_name,
       portalAudience: row.portal_audience,
       ssoEnabled,
+      inviteRole: row.invite_role,
     },
     error: null,
   });
