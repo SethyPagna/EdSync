@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, type SessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { notifyAndEmail } from "@/lib/engagement/server";
 import { errorMessage, jsonError, optionalId, readJsonObject } from "@/lib/grades/http";
 import { appendLearningEvent } from "@/lib/learning-events";
@@ -326,6 +327,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const classId = params.get("classId");
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
 
   if (user.user_metadata.role === "student") {
     const work = await d1Query(
@@ -408,6 +410,7 @@ export async function POST(request: Request) {
   const classId = optionalId(body.classId);
 
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const scopedClass = await getScopedClass({
     classId,
     tenantId: context.tenant.id,
@@ -538,6 +541,7 @@ export async function PATCH(request: Request) {
   if (!id) return jsonError("Work item id is required.", 400);
 
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const existing = await getScopedWorkItem({
     workItemId: id,
     tenantId: context.tenant.id,
@@ -643,6 +647,7 @@ export async function DELETE(request: Request) {
   if (!id) return jsonError("Work item id is required.", 400);
 
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const workItem = await getScopedWorkItem({
     workItemId: id,
     tenantId: context.tenant.id,
