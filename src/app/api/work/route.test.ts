@@ -151,6 +151,42 @@ describe("POST /api/work", () => {
   });
 });
 
+describe("GET /api/work for students", () => {
+  it("shows published question prompts and choices without answer keys", async () => {
+    const { body } = await create({
+      title: "Cell quiz",
+      workType: "quiz",
+      status: "published",
+      questions: [
+        { prompt: "Which organelle?", questionType: "multiple_choice", options: ["Nucleus", "Ribosome"], correctAnswer: "Nucleus", points: 2 },
+        { prompt: "Explain why.", questionType: "short_answer", correctAnswer: "It stores DNA.", points: 3 },
+      ],
+    });
+    const id = String(body.data?.id);
+    state.user = STUDENT;
+    const response = await GET(new Request("http://localhost/api/work"));
+    expect(response.status).toBe(200);
+    const payload = await readJson(response);
+    const item = (payload.data as unknown as Array<{ id: string; questions: unknown[] }>).find((row) => row.id === id);
+    expect(item?.questions).toEqual([
+      expect.objectContaining({ prompt: "Which organelle?", kind: "choice", options: ["Nucleus", "Ribosome"], points: 2 }),
+      expect.objectContaining({ prompt: "Explain why.", kind: "short", options: [], points: 3 }),
+    ]);
+    expect(JSON.stringify(payload)).not.toContain("correct_answer");
+    expect(JSON.stringify(payload)).not.toContain("It stores DNA.");
+  });
+
+  it("hides questions when class enrollment is inactive", async () => {
+    const { body } = await create({ title: "Private quiz", workType: "quiz", status: "published", questions: [{ prompt: "Hidden prompt" }] });
+    const id = String(body.data?.id);
+    db.prepare("UPDATE class_enrollments SET is_active = 0 WHERE class_id = 'class-1' AND student_id = ?").run(STUDENT.id);
+    state.user = STUDENT;
+    const payload = await readJson(await GET(new Request("http://localhost/api/work")));
+    expect((payload.data as unknown as Array<{ id: string }>).some((item) => item.id === id)).toBe(false);
+    expect(JSON.stringify(payload)).not.toContain("Hidden prompt");
+  });
+});
+
 describe("PATCH /api/work", () => {
   async function seedWork() {
     const { body } = await create({
