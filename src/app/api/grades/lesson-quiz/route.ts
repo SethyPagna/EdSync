@@ -44,6 +44,21 @@ type RecordedQuizEvent = {
   claimedScore: number | null;
 };
 
+type StoredAttempt = {
+  question_id: string;
+  answer: string | null;
+  question_type: string | null;
+  attempt_number: number;
+};
+
+type StoredGrade = {
+  points_earned: number;
+  points_possible: number;
+  percent: number | null;
+  status: string;
+  metadata: string | null;
+};
+
 const ENROLLED_CLASS_IDS = `SELECT ec.class_id
                               FROM class_enrollments ec
                              WHERE ec.student_id = ?
@@ -60,6 +75,15 @@ const ENTITLED_LESSON_IDS = `SELECT ep.course_id FROM entitlements ee
 
 function numberOrNull(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function jsonObjectOrEmpty(value: string | null | undefined): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(value || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
 }
 
 function predicateParams(objectTable: string, tenantId: string) {
@@ -155,6 +179,138 @@ async function loadRecordedQuizEvent(input: {
     pendingReview: numberOrNull(payload.pendingReview),
     claimedScore: numberOrNull(payload.claimedScore),
   };
+}
+
+function submittedAnswer(row: StoredAttempt): string | string[] | boolean | null {
+  if (row.answer === null) return null;
+  if (row.question_type === "true_false" && (row.answer === "true" || row.answer === "false")) {
+    return row.answer === "true";
+  }
+  if (row.question_type === "multiple_choice" && row.answer.startsWith("[")) {
+    try {
+      const value: unknown = JSON.parse(row.answer);
+      if (Array.isArray(value) && value.every((item): item is string => typeof item === "string")) return value;
+    } catch {
+      return row.answer;
+    }
+  }
+  return row.answer;
+}
+
+function recordedResults(value: unknown, questionIds: Set<string>) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const result = item as Record<string, unknown>;
+    if (typeof result.questionId !== "string" || !questionIds.has(result.questionId)) return [];
+    if (result.correct !== null && typeof result.correct !== "boolean") return [];
+    const pointsEarned = numberOrNull(result.pointsEarned);
+    const pointsPossible = numberOrNull(result.pointsPossible);
+    if (pointsEarned === null || pointsPossible === null) return [];
+    return [{
+      questionId: result.questionId,
+      correct: result.correct,
+      pointsEarned,
+      pointsPossible,
+      correctOptionIds: Array.isArray(result.correctOptionIds)
+        ? result.correctOptionIds.filter((id): id is string => typeof id === "string")
+        : [],
+      ...(typeof result.answerText === "string" ? { answerText: result.answerText } : {}),
+      ...(typeof result.explanation === "string" ? { explanation: result.explanation } : {}),
+    }];
+  });
+}
+
+export async function GET(request: Request) {
+  const user = await getSessionUser();
+  if (!user) return jsonError("Unauthorized", 401);
+  if (user.user_metadata.role !== "student") return jsonError("Student access required.", 403);
+
+  const lessonId = optionalId(new URL(request.url).searchParams.get("lessonId"));
+  if (!lessonId) return jsonError("Lesson is required.", 400);
+
+  const context = await resolveTenantContext(user);
+  const accessible = await loadAccessibleLesson({
+    lessonId,
+    tenantId: context.tenant.id,
+    tenantMember: Boolean(context.membership),
+    user,
+  });
+  if (!accessible) return jsonError("Lesson not found.", 404);
+  const lesson = await loadStudentLesson(lessonId, context.tenant.id, user.id);
+  if (!lesson) return jsonError("Lesson not found.", 404);
+
+  const attempts = await d1Query<StoredAttempt>(
+    `SELECT qa.question_id, qa.answer, qq.question_type, qa.attempt_number
+       FROM quiz_attempts qa
+       JOIN quiz_questions qq ON qq.id = qa.question_id AND qq.lesson_id = qa.lesson_id AND qq.is_final_quiz = 1
+      WHERE qa.student_id = ? AND qa.lesson_id = ?
+        AND qa.attempt_number = (
+          SELECT MAX(latest.attempt_number)
+            FROM quiz_attempts latest
+            JOIN quiz_questions final_question
+              ON final_question.id = latest.question_id
+             AND final_question.lesson_id = latest.lesson_id
+             AND final_question.is_final_quiz = 1
+           WHERE latest.student_id = ? AND latest.lesson_id = ?
+        )
+      ORDER BY qq.order_index, qq.created_at`,
+    [user.id, lessonId, user.id, lessonId],
+  );
+  if (!attempts.length) return NextResponse.json({ data: { grade: null, answers: {} }, error: null });
+
+  const attemptNumber = attempts[0].attempt_number;
+  const [event] = await d1Query<{ payload: string | null }>(
+    `SELECT le.payload
+       FROM learning_events le
+      WHERE le.tenant_id = ? AND le.student_id = ?
+        AND le.source_type = 'lesson_quiz' AND le.source_id = ?
+        AND le.event_type = ?
+        AND json_valid(le.payload)
+        AND json_extract(le.payload, '$.writer') = 'system'
+        AND json_extract(le.payload, '$.attemptNumber') = ?
+      ORDER BY le.rowid DESC
+      LIMIT 1`,
+    [context.tenant.id, user.id, lessonId, GRADED_EVENT, attemptNumber],
+  );
+  const [gradebook] = await d1Query<StoredGrade>(
+    `SELECT points_earned, points_possible, percent, status, metadata
+       FROM gradebook_scores
+      WHERE student_id = ? AND source_type = 'lesson_quiz' AND source_id = ?
+      LIMIT 1`,
+    [user.id, lessonId],
+  );
+  const snapshot = jsonObjectOrEmpty(event?.payload);
+  const questionIds = new Set(attempts.map((row) => row.question_id));
+  const results = recordedResults(snapshot.results, questionIds);
+  const answers = Object.fromEntries(attempts.flatMap((row) => {
+    const answer = submittedAnswer(row);
+    return answer === null ? [] : [[row.question_id, answer]];
+  }));
+  const score = numberOrNull(gradebook?.points_earned) ?? numberOrNull(snapshot.score);
+  const maxScore = numberOrNull(gradebook?.points_possible) ?? numberOrNull(snapshot.maxScore);
+  if (score === null || maxScore === null) {
+    return NextResponse.json({ data: { grade: null, answers }, error: null });
+  }
+  const metadata = jsonObjectOrEmpty(gradebook?.metadata);
+  return NextResponse.json({
+    data: {
+      grade: {
+        score,
+        maxScore,
+        percent: gradebook ? numberOrNull(gradebook.percent) : numberOrNull(snapshot.percent),
+        status: gradebook?.status === "graded" || gradebook?.status === "submitted"
+          ? gradebook.status
+          : snapshot.status === "graded" || snapshot.status === "submitted" ? snapshot.status : "ungraded",
+        results,
+        attemptNumber,
+        recorded: true,
+        locked: metadata.gradedByRole === "teacher",
+      },
+      answers,
+    },
+    error: null,
+  });
 }
 
 async function nextAttemptNumber(studentId: string, lessonId: string) {
@@ -305,6 +461,7 @@ async function gradeAttempt(input: {
       score: grade.score,
       maxScore: grade.maxScore,
       pendingReview: grade.pendingReview,
+      results: reviewedResults,
     },
     metadata: { attemptNumber, pendingReview: grade.pendingReview },
   });
