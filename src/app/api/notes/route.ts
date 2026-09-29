@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { d1Query } from "@/lib/db/d1";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { createNotification } from "@/lib/engagement/server";
 import { normalizeStudentNoteInput } from "@/lib/notes/validation";
 import type { SessionUser } from "@/lib/auth/session";
@@ -129,6 +130,7 @@ export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("student_notes"))) return NextResponse.json({ data: null, error: "Learner notes are unavailable." }, { status: 403 });
 
   const params = new URL(request.url).searchParams;
   const studentId = params.get("studentId");
@@ -202,6 +204,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
   }
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("student_notes"))) return NextResponse.json({ data: null, error: "Learner notes are unavailable." }, { status: 403 });
 
   const body = (await request.json()) as {
     studentId?: string;
@@ -280,6 +283,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
   }
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("student_notes"))) return NextResponse.json({ data: null, error: "Learner notes are unavailable." }, { status: 403 });
   const body = (await request.json()) as {
     id?: string;
     title?: string;
@@ -339,6 +343,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ data: null, error: "Teacher access required." }, { status: 403 });
   }
   const context = await resolveTenantContext(user);
+  if (!(await isFeatureEnabled("student_notes"))) return NextResponse.json({ data: null, error: "Learner notes are unavailable." }, { status: 403 });
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return NextResponse.json({ data: null, error: "Note id is required." }, { status: 400 });
   const canManage = await canManageStudentNote({ user, context, noteId: id });
