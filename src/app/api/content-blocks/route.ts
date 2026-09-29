@@ -12,6 +12,7 @@ import {
 } from "@/lib/studio/content-block-validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 import { toClientTenantContext } from "@/lib/tenancy/client-context";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 
 const CONTENT_BLOCK_TABLE = "content_blocks";
 
@@ -101,6 +102,9 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) {
+    return NextResponse.json({ data: null, error: "Organization membership required." }, { status: 403 });
+  }
   const isAdmin = user.user_metadata.role === "admin";
   const blocks = await d1Query<ContentBlockRow>(
     `SELECT *
