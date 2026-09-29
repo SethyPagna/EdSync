@@ -18,7 +18,7 @@ export default defineConfig({
         test: {
           name: "lib",
           environment: "node",
-          include: ["src/lib/**/*.{test,spec}.ts"],
+          include: ["src/lib/**/*.{test,spec}.ts", "infra/cloudflare/workers/**/*.{test,spec}.ts"],
           exclude: ["src/lib/ui/**"],
         },
       },
