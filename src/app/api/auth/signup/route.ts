@@ -81,6 +81,12 @@ export async function POST(request: Request) {
       error: { message: "Choose whether to join or create an organization.", status: 400 },
     }, { status: 400 });
   }
+  if (accountType === "organization" && organizationMode === "create" && role !== "teacher") {
+    return NextResponse.json({
+      data: { user: null, session: null },
+      error: { message: "Create an organization with a teacher account.", status: 400 },
+    }, { status: 400 });
+  }
 
   let fullName: string | null;
   try {
