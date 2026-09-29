@@ -20,6 +20,7 @@ import {
   validateStandardsTitle,
 } from "@/lib/validation/standards";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 import { ownerScope } from "@/lib/tenancy/ownership";
 
 const STANDARDS_PACKAGE_TABLE = "standards_packages";
@@ -56,7 +57,7 @@ export const GET = withRoute(async () => {
     [context.tenant.id, ...owner.params],
   );
   const packages = rows.map((row) => deserializeRow("standards_packages", row));
-  return NextResponse.json({ data: { packages, context }, error: null });
+  return NextResponse.json({ data: { packages, context: toClientTenantContext(context) }, error: null });
 });
 
 export const POST = withRoute(async (request) => {
