@@ -1,4 +1,5 @@
 import type { MessageBatch, ScheduledEvent } from "@cloudflare/workers-types";
+import { runEnabledAutomationRules } from "./rule-engine";
 
 type Env = AutomationEnv;
 
@@ -33,10 +34,14 @@ async function notifyExpiringCertifications(env: Env, tenantId?: string) {
     `SELECT lc.id, lc.user_id, cr.title, lc.expires_at
        FROM learner_certifications lc
        JOIN certification_rules cr ON cr.id = lc.rule_id AND cr.tenant_id = lc.tenant_id
+       JOIN tenants t ON t.id = lc.tenant_id AND t.status = 'active'
+       JOIN tenant_memberships tm ON tm.tenant_id = lc.tenant_id AND tm.user_id = lc.user_id AND tm.status = 'active'
       WHERE lc.status = 'active'
         AND lc.expires_at IS NOT NULL
         AND lc.expires_at > datetime('now')
         AND lc.expires_at <= datetime('now', '+' || MAX(0, MIN(365, COALESCE(cr.notify_before_days, 30))) || ' days')
+        AND NOT EXISTS (SELECT 1 FROM automation_rules ar WHERE ar.tenant_id = lc.tenant_id AND ar.trigger_key = 'certification.expiring')
+        AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.id = 'certification-expiry:' || lc.id || ':' || lc.expires_at)
         AND (? IS NULL OR lc.tenant_id = ?)
       ORDER BY lc.expires_at ASC
       LIMIT 100`,
@@ -159,5 +164,9 @@ export default {
       }
     }
     await notifyExpiringCertifications(env);
+    const rules = await runEnabledAutomationRules(env);
+    if (rules.capacityReached || rules.rulesSkipped > 0) {
+      console.warn(JSON.stringify({ event: "automation_rule_sweep_incomplete", ...rules }));
+    }
   },
 };
