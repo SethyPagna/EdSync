@@ -11,6 +11,7 @@ import {
   validateContentBlockTitle,
 } from "@/lib/studio/content-block-validation";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 
 const CONTENT_BLOCK_TABLE = "content_blocks";
 
@@ -110,7 +111,7 @@ export async function GET() {
       LIMIT 100`,
     [context.tenant.id, isAdmin ? 1 : 0, user.id],
   );
-  return NextResponse.json({ data: { blocks: blocks.map(serializeBlock), context }, error: null });
+  return NextResponse.json({ data: { blocks: blocks.map(serializeBlock), context: toClientTenantContext(context) }, error: null });
 }
 
 export async function POST(request: Request) {
