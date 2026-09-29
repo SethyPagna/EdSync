@@ -14,6 +14,7 @@ import {
 import { normalizeWorkGradingSettings, workGradeContribution } from "@/lib/work/grading";
 import { evaluateWorkSubmission, normalizeWorkSubmissionPolicy } from "@/lib/work/policy";
 import { validateEarnedWorkPoints, validateWorkPoints, validateWorkResponse } from "@/lib/work/validation";
+import { studentWorkQuestion, validatedQuestionResponse, type WorkQuestionRow } from "@/lib/work/questions";
 
 const WORK_ITEM_TABLE = "learning_work_items";
 const ALREADY_GRADED = "This work is already graded.";
@@ -124,8 +125,6 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(errorMessage(error, "Invalid submission response."), 400);
   }
-  const responseJson = JSON.stringify(response);
-
   const context = await resolveTenantContext(user);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const [work] = await d1Query<SubmissionTarget>(
@@ -163,6 +162,22 @@ export async function POST(request: Request) {
       : null,
   });
   if (!decision.ok) return jsonError(decision.error, decision.status);
+
+  const questionRows = await d1Query<WorkQuestionRow>(
+    `SELECT id, work_item_id, prompt, question_type, options, points, order_index
+       FROM learning_work_questions
+      WHERE work_item_id = ?
+      ORDER BY order_index, id`,
+    [workItemId],
+  );
+  if (questionRows.length > 0) {
+    try {
+      response = validatedQuestionResponse(response, questionRows.map(studentWorkQuestion));
+    } catch (error) {
+      return jsonError(errorMessage(error, "Invalid question answers."), 400);
+    }
+  }
+  const responseJson = JSON.stringify(response);
 
   const allowResubmission = policy.allowResubmission ? 1 : 0;
   const created = await d1Query<{ id: string }>(
