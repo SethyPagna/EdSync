@@ -43,6 +43,11 @@ async function deliver(env: Parameters<typeof worker.queue>[1], item: ReturnType
   await worker.queue({ messages: [item] } as unknown as Parameters<typeof worker.queue>[0], env);
 }
 
+async function sweep(env: Parameters<typeof worker.scheduled>[1], minute = 20) {
+  const scheduledTime = Date.parse(`2026-09-29T00:${String(minute).padStart(2, "0")}:00Z`);
+  await worker.scheduled({ scheduledTime } as Parameters<typeof worker.scheduled>[0], env);
+}
+
 describe("EdSync automation consumer", () => {
   it("claims a persisted job once and acknowledges a duplicate delivery", async () => {
     const { db, env } = fixture();
@@ -79,6 +84,20 @@ describe("EdSync automation consumer", () => {
     }
   });
 
+  it("recovers queued jobs in the scheduled recovery pass", async () => {
+    const { db, env } = fixture();
+    try {
+      db.prepare("INSERT INTO automation_rules (id, tenant_id, enabled, trigger_key) VALUES ('rule-1', 'tenant-a', 1, 'deadline.upcoming')").run();
+      db.prepare("INSERT INTO automation_jobs (id, job_type, status, payload) VALUES (?, ?, 'queued', ?)").run("job-3", "automation_rule.updated", JSON.stringify({ tenantId: "tenant-a", ruleId: "rule-1" }));
+
+      await sweep(env, 40);
+
+      expect(db.prepare("SELECT status, attempts FROM automation_jobs WHERE id = 'job-3'").get()).toMatchObject({ status: "completed", attempts: 1 });
+    } finally {
+      db.close();
+    }
+  });
+
   it("sends one in-app expiry notice per certification across repeated sweeps", async () => {
     const { db, env } = fixture();
     try {
@@ -86,8 +105,8 @@ describe("EdSync automation consumer", () => {
       db.prepare("INSERT INTO tenant_memberships (tenant_id, user_id, status) VALUES ('tenant-a', 'learner-1', 'active')").run();
       db.prepare("INSERT INTO certification_rules (id, tenant_id, title, notify_before_days) VALUES ('rule-1', 'tenant-a', 'Safety training', 30)").run();
       db.prepare("INSERT INTO learner_certifications (id, tenant_id, rule_id, user_id, status, expires_at) VALUES ('cert-1', 'tenant-a', 'rule-1', 'learner-1', 'active', datetime('now', '+2 days'))").run();
-      await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
-      await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
+      await sweep(env);
+      await sweep(env);
 
       expect(db.prepare("SELECT COUNT(*) AS count FROM notifications").get()).toMatchObject({ count: 1 });
       expect(db.prepare("SELECT user_id, type FROM notifications").get()).toMatchObject({ user_id: "learner-1", type: "certification.expiring" });
@@ -105,8 +124,9 @@ describe("EdSync automation consumer", () => {
       const insert = db.prepare("INSERT INTO learner_certifications (id, tenant_id, rule_id, user_id, status, expires_at) VALUES (?, 'tenant-a', 'rule-1', 'learner-1', 'active', datetime('now', '+2 days'))");
       for (let index = 0; index < 105; index += 1) insert.run(`cert-${index}`);
 
-      await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
-      await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
+      await sweep(env);
+      await sweep(env);
+      await sweep(env);
 
       expect(db.prepare("SELECT COUNT(*) AS count FROM notifications").get()).toMatchObject({ count: 105 });
     } finally {
@@ -114,7 +134,7 @@ describe("EdSync automation consumer", () => {
     }
   });
 
-  it("respects a tenant's configured certification automation", async () => {
+  it("keeps default expiry notices when a custom rule is paused", async () => {
     const { db, env } = fixture();
     try {
       db.prepare("INSERT INTO tenants (id, status) VALUES ('tenant-a', 'active')").run();
@@ -123,9 +143,9 @@ describe("EdSync automation consumer", () => {
       db.prepare("INSERT INTO learner_certifications (id, tenant_id, rule_id, user_id, status, expires_at) VALUES ('cert-1', 'tenant-a', 'rule-1', 'learner-1', 'active', datetime('now', '+2 days'))").run();
       db.prepare("INSERT INTO automation_rules (id, tenant_id, enabled, trigger_key) VALUES ('custom-cert', 'tenant-a', 0, 'certification.expiring')").run();
 
-      await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
+      await sweep(env);
 
-      expect(db.prepare("SELECT COUNT(*) AS count FROM notifications").get()).toMatchObject({ count: 0 });
+      expect(db.prepare("SELECT COUNT(*) AS count FROM notifications").get()).toMatchObject({ count: 1 });
     } finally {
       db.close();
     }
