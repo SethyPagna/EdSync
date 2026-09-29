@@ -4,6 +4,7 @@ export type PracticeItem = {
   id: string;
   prompt: string;
   answer: string | boolean | string[];
+  accept?: string[];
   response?: string | boolean | string[];
   explanation?: string;
   points?: number;
@@ -17,13 +18,15 @@ export type PracticeAttemptInput = {
 };
 
 function normalizeAnswer(value: PracticeItem["answer"]) {
-  if (Array.isArray(value)) return value.map((item) => item.trim().toLowerCase()).sort().join("|");
-  return String(value).trim().toLowerCase();
+  const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  if (Array.isArray(value)) return value.map(fold).sort().join("|");
+  return fold(String(value));
 }
 
 export function isPracticeItemCorrect(item: PracticeItem) {
   if (item.response === undefined || item.response === null) return false;
-  return normalizeAnswer(item.answer) === normalizeAnswer(item.response);
+  const response = normalizeAnswer(item.response);
+  return response === normalizeAnswer(item.answer) || (item.accept ?? []).some((answer) => response === normalizeAnswer(answer));
 }
 
 export function summarizePracticeAttempt(input: PracticeAttemptInput): PracticeAttemptSummary {
