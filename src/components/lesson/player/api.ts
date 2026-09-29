@@ -24,7 +24,10 @@ export type FinalGrade = {
   results: FinalResult[];
   recorded: boolean;
   locked?: boolean;
+  attemptNumber?: number;
 };
+
+export type RecordedFinal = { grade: FinalGrade | null; answers: Answers };
 
 export type ProgressSnapshot = {
   status: "not_started" | "in_progress" | "completed";
@@ -70,6 +73,10 @@ export function checkAnswer(lessonId: string, questionId: string, answer: Answer
 
 export function submitFinal(lessonId: string, answers: Answers) {
   return post<FinalGrade>("/api/grades/lesson-quiz", { lessonId, answers });
+}
+
+export function loadRecordedFinal(lessonId: string) {
+  return request<RecordedFinal>(`/api/grades/lesson-quiz?lessonId=${encodeURIComponent(lessonId)}`);
 }
 
 export function saveProgress(
