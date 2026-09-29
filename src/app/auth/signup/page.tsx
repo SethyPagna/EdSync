@@ -103,6 +103,7 @@ function SignupForm() {
   const changeAccountType = (nextAccountType: AccountType) => {
     setAccountType(nextAccountType);
     if (nextAccountType === "organization") {
+      if (organizationMode === "create") setRole("teacher");
       prepareOrganizationLookup(organizationCode, organizationMode, nextAccountType);
       return;
     }
@@ -111,6 +112,7 @@ function SignupForm() {
 
   const changeOrganizationMode = (mode: OrganizationMode) => {
     setOrganizationMode(mode);
+    if (mode === "create") setRole("teacher");
     prepareOrganizationLookup(organizationCode, mode);
   };
 
@@ -439,9 +441,9 @@ function SignupForm() {
                 : `${authCopy.joiningOrganization}: ${organizationLabel}`}
             </div>
           )}
-          <div className={`grid gap-2 ${organizationMode === "join" && accountType === "organization" ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"}`}>
+          <div className={`grid gap-2 ${accountType === "organization" ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"}`}>
             {(["teacher", "student"] as const).filter((item) =>
-              accountType !== "organization" || organizationMode !== "join" || item === organizationLookup?.inviteRole,
+              accountType !== "organization" || (organizationMode === "create" ? item === "teacher" : item === organizationLookup?.inviteRole),
             ).map((item) => {
               const Icon = roleIcons[item];
               const selected = role === item;
@@ -468,6 +470,9 @@ function SignupForm() {
           </div>
           {accountType === "organization" && organizationMode === "join" && (
             <p className="text-xs text-edsync-subtle">Your invite code determines this role. Ask your organization for a different code if needed.</p>
+          )}
+          {accountType === "organization" && organizationMode === "create" && (
+            <p className="text-xs text-edsync-subtle">Organization owners create with a teacher account.</p>
           )}
           <div className="grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={() => setStep("space")} className="btn-secondary justify-center py-3">
