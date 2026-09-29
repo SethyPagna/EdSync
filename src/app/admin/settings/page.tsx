@@ -1,220 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import toast from "react-hot-toast";
-import { Brain, CreditCard, Edit3, LockKeyhole, Save, ShieldCheck, SlidersHorizontal, Trash2, UsersRound, X } from "lucide-react";
-import SectionOrderSettings from "@/components/SectionOrderSettings";
-import { InfoPopover } from "@/components/WorkspacePrimitives";
+import { ArrowRight, Plus, Settings2, Trash2 } from "lucide-react";
+import { Button, PageHeader, Sheet, useConfirm } from "@/components/ui";
 
-type Flag = {
-  id: string;
-  flag_key: string;
-  label: string;
-  description: string | null;
-  enabled: number | boolean;
-  audience?: "all" | "admin" | "teacher" | "student";
-};
-
-type FlagDraft = {
-  flagKey: string;
-  label: string;
-  description: string;
-  enabled: boolean;
-  audience: "all" | "admin" | "teacher" | "student";
-};
-
-const emptyFlag: FlagDraft = {
-  flagKey: "",
-  label: "",
-  description: "",
-  enabled: true,
-  audience: "all",
-};
-
-const operationLinks = [
-  { href: "/admin/ai", label: "AI providers", detail: "Keys, health, fallback.", icon: Brain },
-  { href: "/admin/governance", label: "Governance", detail: "Rules and audits.", icon: ShieldCheck },
-  { href: "/admin/permissions", label: "Permissions", detail: "Role profiles.", icon: UsersRound },
-  { href: "/admin/security", label: "Security", detail: "Events and logs.", icon: LockKeyhole },
-  { href: "/admin/billing", label: "Catalog", detail: "Products and prices.", icon: CreditCard },
-  { href: "/admin/portals", label: "Organizations", detail: "Portals and domains.", icon: SlidersHorizontal },
-];
+type Flag = { id: string; flag_key: string; label: string; description: string | null; enabled: number | boolean; audience?: "all" | "admin" | "teacher" | "student" };
+type FlagDraft = { flagKey: string; label: string; description: string; enabled: boolean; audience: "all" | "admin" | "teacher" | "student" };
+const emptyFlag: FlagDraft = { flagKey: "", label: "", description: "", enabled: true, audience: "all" };
+const links = [{ href: "/admin/ai", label: "AI providers" }, { href: "/admin/security", label: "Security" }, { href: "/admin/permissions", label: "Permissions" }, { href: "/admin/governance", label: "Governance" }, { href: "/admin/billing", label: "Catalog" }, { href: "/admin/portals", label: "Organizations" }];
 
 export default function AdminSettingsPage() {
   const [flags, setFlags] = useState<Flag[]>([]);
   const [emailMode, setEmailMode] = useState("outbox");
-  const [flagDraft, setFlagDraft] = useState<FlagDraft>(emptyFlag);
+  const [draft, setDraft] = useState<FlagDraft>(emptyFlag);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<FlagDraft>(emptyFlag);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const confirm = useConfirm();
 
-  const load = () => {
-    fetch("/api/admin/settings", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => {
-        setFlags(payload.data?.flags ?? []);
-        setEmailMode(payload.data?.emailMode ?? "outbox");
-      });
+  const load = useCallback(async () => { try { const response = await fetch("/api/admin/settings", { cache: "no-store" }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Could not load settings."); setFlags(payload.data?.flags ?? []); setEmailMode(payload.data?.emailMode ?? "outbox"); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load settings."); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+
+  const run = async (method: "POST" | "PATCH", body: Record<string, unknown>, success: string) => {
+    setBusy(true); setError("");
+    try { const response = await fetch("/api/admin/settings", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Setting could not be saved."); setNotice(success); await load(); return true; }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Setting could not be saved."); return false; }
+    finally { setBusy(false); }
   };
+  const edit = (flag: Flag) => { setDraft({ flagKey: flag.flag_key, label: flag.label, description: flag.description ?? "", enabled: Boolean(flag.enabled), audience: flag.audience ?? "all" }); setEditingId(flag.id); setOpen(true); };
+  const create = () => { setDraft(emptyFlag); setEditingId(null); setOpen(true); };
+  const save = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const ok = await run("POST", { action: editingId ? "update_flag" : "create_flag", ...(editingId ? { id: editingId } : {}), ...draft }, editingId ? "Flag saved." : "Flag created."); if (ok) setOpen(false); };
+  const remove = async (flag: Flag) => { if (!await confirm({ title: `Delete ${flag.label}?`, body: "This flag will be removed from the platform.", confirmLabel: "Delete flag", danger: true })) return; await run("POST", { action: "delete_flag", id: flag.id }, "Flag deleted."); };
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  const toggle = async (flagKey: string, enabled: boolean) => {
-    await fetch("/api/admin/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ flagKey, enabled }),
-    });
-    toast.success("Setting updated.");
-    load();
-  };
-
-  const saveFlag = async (body: Record<string, unknown>, success: string) => {
-    const response = await fetch("/api/admin/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const payload = await response.json();
-    if (!response.ok || payload.error) {
-      toast.error(payload.error || "Setting could not be saved.");
-      return false;
-    }
-    toast.success(success);
-    load();
-    return true;
-  };
-
-  const createFlag = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const ok = await saveFlag({ action: "create_flag", ...flagDraft }, "Feature flag created.");
-    if (ok) setFlagDraft(emptyFlag);
-  };
-
-  const startEdit = (flag: Flag) => {
-    setEditingId(flag.id);
-    setEditDraft({
-      flagKey: flag.flag_key,
-      label: flag.label,
-      description: flag.description ?? "",
-      enabled: Boolean(flag.enabled),
-      audience: flag.audience ?? "all",
-    });
-  };
-
-  const updateFlag = async (flag: Flag) => {
-    const ok = await saveFlag({ action: "update_flag", id: flag.id, ...editDraft }, "Feature flag saved.");
-    if (ok) setEditingId(null);
-  };
-
-  const deleteFlag = async (flag: Flag) => {
-    if (!window.confirm(`Delete "${flag.label}"?`)) return;
-    await saveFlag({ action: "delete_flag", id: flag.id }, "Feature flag deleted.");
-  };
-
-  return (
-    <div className="space-y-5 p-5 lg:p-8">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">System</p>
-          <h1 className="font-display text-3xl font-bold">Settings</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-lg border border-edsync-border bg-edsync-surface px-3 py-2 text-sm font-semibold capitalize text-edsync-text">
-            Email: {emailMode}
-          </span>
-          <InfoPopover label="Settings help">
-            Feature flags, AI providers, security, governance, catalog, and organization controls live here.
-          </InfoPopover>
-        </div>
-      </header>
-
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {operationLinks.map(({ href, label, detail, icon: Icon }) => (
-          <Link key={href} href={href} className="rounded-lg border border-edsync-border bg-edsync-card p-4 transition hover:border-edsync-blue/40 hover:shadow-card-hover">
-            <Icon className="mb-3 h-6 w-6 text-edsync-blue" />
-            <p className="font-semibold text-edsync-text">{label}</p>
-            <p className="mt-1 text-sm leading-5 text-edsync-subtle">{detail}</p>
-          </Link>
-        ))}
-      </section>
-
-      <SectionOrderSettings
-        storageKey="edsync-admin-settings-section-order"
-        sections={[
-          "Dashboard",
-          "Users",
-          "Organizations",
-          "Permissions",
-          "Governance",
-          "AI providers",
-          "Catalog",
-          "Security",
-          "Settings",
-        ]}
-      />
-
-      <section className="edsync-card overflow-hidden p-0">
-        <div className="border-b border-edsync-border px-4 py-3">
-          <h2 className="font-display text-xl font-bold">Feature flags</h2>
-        </div>
-        <form onSubmit={createFlag} className="grid gap-3 border-b border-edsync-border p-4 lg:grid-cols-[180px_220px_minmax(0,1fr)_140px_120px]">
-          <input className="edsync-input" value={flagDraft.flagKey} onChange={(event) => setFlagDraft({ ...flagDraft, flagKey: event.target.value })} placeholder="flag_key" required />
-          <input className="edsync-input" value={flagDraft.label} onChange={(event) => setFlagDraft({ ...flagDraft, label: event.target.value })} placeholder="Label" required />
-          <input className="edsync-input" value={flagDraft.description} onChange={(event) => setFlagDraft({ ...flagDraft, description: event.target.value })} placeholder="Description" />
-          <select className="edsync-input" value={flagDraft.audience} onChange={(event) => setFlagDraft({ ...flagDraft, audience: event.target.value as FlagDraft["audience"] })}>
-            <option value="all">All</option>
-            <option value="admin">Admin</option>
-            <option value="teacher">Org creator</option>
-            <option value="student">Org learner</option>
-          </select>
-          <button className="btn-primary justify-center" type="submit">Add flag</button>
-        </form>
-        <div className="divide-y divide-edsync-border">
-          {flags.map((flag) => (
-            <div key={flag.id} className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1fr)_120px] md:items-center">
-              {editingId === flag.id ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <input className="edsync-input" value={editDraft.flagKey} onChange={(event) => setEditDraft({ ...editDraft, flagKey: event.target.value })} />
-                  <input className="edsync-input" value={editDraft.label} onChange={(event) => setEditDraft({ ...editDraft, label: event.target.value })} />
-                  <input className="edsync-input" value={editDraft.description} onChange={(event) => setEditDraft({ ...editDraft, description: event.target.value })} />
-                  <select className="edsync-input" value={editDraft.audience} onChange={(event) => setEditDraft({ ...editDraft, audience: event.target.value as FlagDraft["audience"] })}>
-                    <option value="all">All</option>
-                    <option value="admin">Admin</option>
-                    <option value="teacher">Org creator</option>
-                    <option value="student">Org learner</option>
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <p className="font-semibold">{flag.label}</p>
-                  <p className="text-sm text-edsync-subtle">{flag.description}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wide text-edsync-subtle">{flag.flag_key} / {flag.audience ?? "all"}</p>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2 md:justify-end">
-                {editingId === flag.id ? (
-                  <>
-                    <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => updateFlag(flag)}><Save className="h-4 w-4" /> Save</button>
-                    <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={() => toggle(flag.flag_key, !flag.enabled)} className={flag.enabled ? "btn-primary px-3 py-2 text-sm" : "btn-secondary px-3 py-2 text-sm"}>
-                      {flag.enabled ? "On" : "Off"}
-                    </button>
-                    <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => startEdit(flag)}><Edit3 className="h-4 w-4" /> Edit</button>
-                    <button type="button" className="btn-ghost px-3 py-2 text-sm text-rose-600" onClick={() => deleteFlag(flag)}><Trash2 className="h-4 w-4" /> Delete</button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-          {flags.length === 0 && <p className="px-4 py-5 text-sm text-edsync-subtle">No feature flags loaded yet.</p>}
-        </div>
-      </section>
-    </div>
-  );
+  return <div className="page-shell space-y-4"><PageHeader title="Settings" icon={Settings2} actions={<Button variant="primary" onClick={create}><Plus size={16} /> New flag</Button>} />
+    <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-muted">Email mode: {emailMode}</span>{links.map((item) => <Link key={item.href} href={item.href} className="inline-flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs font-medium text-fg-muted hover:text-fg">{item.label}<ArrowRight size={12} /></Link>)}</div>
+    {error && <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm text-fg-muted">{notice}</p>}
+    <section className="card divide-y divide-line overflow-hidden"><div className="flex items-center justify-between px-4 py-3"><h2 className="text-sm font-semibold text-fg">Feature flags</h2><span className="text-xs text-fg-faint">{flags.length} flags</span></div>{flags.map((flag) => <div key={flag.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap"><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-fg">{flag.label}</p><p className="truncate text-xs text-fg-muted">{flag.flag_key} · {flag.audience ?? "all"}{flag.description ? ` · ${flag.description}` : ""}</p></div><button type="button" role="switch" aria-checked={Boolean(flag.enabled)} aria-label={`${flag.label} enabled`} disabled={busy} className={`rounded-full px-3 py-1 text-xs font-semibold ${flag.enabled ? "bg-success-soft text-success" : "bg-surface-2 text-fg-muted"}`} onClick={() => void run("PATCH", { flagKey: flag.flag_key, enabled: !flag.enabled }, "Flag updated.")}>{flag.enabled ? "On" : "Off"}</button><button type="button" className="rounded-md px-2 py-1.5 text-sm text-fg-muted hover:bg-surface-2" onClick={() => edit(flag)}>Edit</button><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-soft hover:text-danger" onClick={() => void remove(flag)} aria-label={`Delete ${flag.label}`}><Trash2 size={16} /></button></div>)}{flags.length === 0 && <p className="px-4 py-8 text-center text-sm text-fg-muted">No feature flags yet.</p>}</section>
+    <Sheet open={open} onClose={() => setOpen(false)} title={editingId ? "Edit feature flag" : "New feature flag"} onSubmit={save} footer={<><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" variant="primary" disabled={busy}>{busy ? "Saving…" : "Save flag"}</Button></>}><div className="space-y-4">{error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}<label className="block space-y-1 text-sm font-medium text-fg">Key<input className="edsync-input w-full" value={draft.flagKey} onChange={(event) => setDraft({ ...draft, flagKey: event.target.value })} placeholder="feature_name" required /></label><label className="block space-y-1 text-sm font-medium text-fg">Label<input className="edsync-input w-full" value={draft.label} onChange={(event) => setDraft({ ...draft, label: event.target.value })} required /></label><label className="block space-y-1 text-sm font-medium text-fg">Description<textarea className="edsync-input min-h-20 w-full" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="block space-y-1 text-sm font-medium text-fg">Audience<select className="edsync-input w-full" value={draft.audience} onChange={(event) => setDraft({ ...draft, audience: event.target.value as FlagDraft["audience"] })}><option value="all">Everyone</option><option value="admin">Admins</option><option value="teacher">Creators</option><option value="student">Learners</option></select></label><label className="flex items-center gap-2 text-sm text-fg"><input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft({ ...draft, enabled: event.target.checked })} />Enabled</label></div></Sheet>
+  </div>;
 }
