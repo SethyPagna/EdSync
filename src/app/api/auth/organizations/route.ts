@@ -47,13 +47,11 @@ export async function GET(request: Request) {
        FROM tenants t
        LEFT JOIN tenant_portals tp ON tp.tenant_id = t.id AND tp.is_default = 1
       WHERE COALESCE(json_extract(t.settings, '$.invites_enabled'), 1) = 1
-        AND (
-          (json_extract(t.settings, '$.invite_code') IS NOT NULL AND lower(json_extract(t.settings, '$.invite_code')) = lower(?))
-          OR (json_extract(t.settings, '$.invite_code') IS NULL AND lower(t.slug) = lower(?))
-        )
+        AND json_extract(t.settings, '$.invite_code') IS NOT NULL
+        AND lower(json_extract(t.settings, '$.invite_code')) = lower(?)
         AND t.status = 'active'
       LIMIT 1`,
-    [code, code],
+    [code],
   );
 
   if (!row) {
