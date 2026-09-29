@@ -15,9 +15,9 @@ import {
   ShieldCheck,
   TestTube2,
   Trash2,
-  X,
 } from "lucide-react";
 import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
+import { Sheet, useConfirm } from "@/components/ui";
 
 type ProviderMetaEntry = {
   label: string;
@@ -108,7 +108,7 @@ const FALLBACK_META: Record<string, ProviderMetaEntry> = {
     label: "Groq",
     providerType: "chat",
     defaultEndpoint: "https://api.groq.com/openai/v1/chat/completions",
-    defaultModel: "groq/compound",
+    defaultModel: "openai/gpt-oss-120b",
     defaultPriority: 10,
     safeRequestsPerMinute: 18,
     safeMaxInputChars: 3000,
@@ -329,10 +329,13 @@ export default function AdminAIPage() {
   const [form, setForm] = useState<ProviderForm>(() => blankForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; message: string } | null>(null);
+  const confirm = useConfirm();
 
   const providerOptions = useMemo(() => Object.keys(providerMeta), [providerMeta]);
   const setupIssues = useMemo(
@@ -350,8 +353,11 @@ export default function AdminAIPage() {
       setProviderMeta(payload.data?.providerMeta ?? FALLBACK_META);
       setSummary(payload.data?.summary ?? EMPTY_SUMMARY);
       setRecentRuns(payload.data?.recentRuns ?? []);
+      setLoadError("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Provider settings could not be loaded.");
+      const message = error instanceof Error ? error.message : "Provider settings could not be loaded.";
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -445,7 +451,7 @@ export default function AdminAIPage() {
   };
 
   const deleteProvider = async (provider: Provider) => {
-    if (!window.confirm(`Delete ${provider.name}? The encrypted key will be removed from EdSync.`)) return;
+    if (!await confirm({ title: `Delete ${provider.name}?`, body: "The encrypted key will be removed from EdSync.", confirmLabel: "Delete provider", danger: true })) return;
     setBusyId(provider.id);
     try {
       const response = await fetch(`/api/ai/providers?id=${encodeURIComponent(provider.id)}`, { method: "DELETE" });
@@ -470,14 +476,19 @@ export default function AdminAIPage() {
     }
 
     setTestingId(provider.id);
+    setTestResult(null);
     try {
-      const response = await fetch(`/api/ai/providers/${provider.id}/test`, { method: "POST" });
+      const response = await fetch(`/api/ai/providers/${encodeURIComponent(provider.id)}/test`, { method: "POST" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Provider test failed.");
-      toast.success(payload.data?.message || "Provider responded.");
+      const message = payload.data?.message || "Provider responded.";
+      setTestResult({ id: provider.id, ok: true, message });
+      toast.success(message);
       await loadProviders();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Provider test failed.");
+      const message = error instanceof Error ? error.message : "Provider test failed.";
+      setTestResult({ id: provider.id, ok: false, message });
+      toast.error(message);
       await loadProviders();
     } finally {
       setTestingId(null);
@@ -489,13 +500,13 @@ export default function AdminAIPage() {
       <div className="premium-panel rounded-2xl p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">AI command center</p>
-          <h1 className="font-display text-3xl font-bold text-edsync-text">AI Providers</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-edsync-subtle">
-            Configure encrypted provider keys, routing priority, health checks, cooldowns, and automatic fallback from one place.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-edsync-blue">AI routing</p>
+          <h1 className="font-display text-2xl font-bold text-edsync-text">Providers</h1>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={() => { setEditingId(null); setForm(blankForm(providerOptions[0] ?? "groq", providerMeta)); setFormOpen(true); }} className="btn-primary px-3 py-2">
+            <Plus className="h-4 w-4" /> Add provider
+          </button>
           <InfoPopover label="AI routing help">
             Keys are encrypted. Lower priority numbers run first. Failed providers cool down and fallback automatically.
           </InfoPopover>
@@ -511,6 +522,9 @@ export default function AdminAIPage() {
           </div>
         )}
       </div>
+
+      {loadError && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-edsync-red/30 bg-edsync-red/10 px-3 py-2 text-sm text-edsync-red"><span>{loadError}</span><button type="button" className="underline" onClick={() => void loadProviders()}>Retry</button></div>}
+      {loading && <div className="h-28 animate-pulse rounded-xl bg-edsync-muted" aria-label="Loading providers" />}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className="premium-card rounded-2xl p-4">
@@ -549,7 +563,7 @@ export default function AdminAIPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="space-y-4">
         <section className="space-y-4">
           <div className="premium-surface overflow-visible rounded-2xl p-0">
             <div className="border-b border-edsync-border px-4 py-3">
@@ -581,7 +595,9 @@ export default function AdminAIPage() {
                   </div>
                   {keyStateAction(provider) && <p className="mt-2 text-xs text-edsync-amber">{keyStateAction(provider)}</p>}
                   {provider.last_error && <p className="mt-2 text-xs text-edsync-red">{provider.last_error}</p>}
+                  {testResult?.id === provider.id && <p role="status" className={`mt-2 text-xs ${testResult.ok ? "text-edsync-emerald" : "text-edsync-red"}`}>{testResult.message}</p>}
                   <div className="mt-3 flex justify-end">
+                    <button type="button" className="btn-ghost px-3 py-2 text-xs" disabled={testingId === provider.id || Boolean(keyStateAction(provider))} onClick={() => void testProvider(provider)}><TestTube2 className="h-4 w-4" /> {testingId === provider.id ? "Testing" : "Test"}</button>
                     <ProviderActionMenu
                       provider={provider}
                       testing={testingId === provider.id}
@@ -638,6 +654,7 @@ export default function AdminAIPage() {
                         <span className={`badge ${statusClasses(provider.last_status)}`}>{provider.last_status}</span>
                         {provider.last_checked_at && <p className="mt-1 text-xs text-edsync-subtle">{new Date(provider.last_checked_at).toLocaleString()}</p>}
                         {provider.last_error && <p className="mt-1 max-w-[220px] text-xs text-edsync-red">{provider.last_error}</p>}
+                        {testResult?.id === provider.id && <p role="status" className={`mt-1 max-w-[220px] text-xs ${testResult.ok ? "text-edsync-emerald" : "text-edsync-red"}`}>{testResult.message}</p>}
                       </td>
                       <td className="px-4 py-3 text-xs text-edsync-subtle">
                         <div className={`inline-flex items-center gap-2 rounded-full px-2 py-1 font-bold ${keyStateClasses(provider)}`}>
@@ -647,6 +664,7 @@ export default function AdminAIPage() {
                         {keyStateAction(provider) && <p className="mt-2 max-w-[220px] text-xs text-edsync-amber">{keyStateAction(provider)}</p>}
                       </td>
                       <td className="px-4 py-3">
+                        <button type="button" className="btn-ghost px-2 py-1 text-xs" disabled={testingId === provider.id || Boolean(keyStateAction(provider))} onClick={() => void testProvider(provider)}><TestTube2 className="h-4 w-4" /> {testingId === provider.id ? "Testing" : "Test"}</button>
                         <ProviderActionMenu
                           provider={provider}
                           testing={testingId === provider.id}
@@ -668,10 +686,10 @@ export default function AdminAIPage() {
             </div>
           </div>
 
-          <div className="premium-surface rounded-2xl p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
+          <details className="premium-surface rounded-2xl p-4">
+            <summary className="mb-3 flex cursor-pointer items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-xl font-bold">Recent AI Runs</h2>
+                <h2 className="font-display text-base font-bold">Recent runs</h2>
               </div>
               {summary.recent_failures > 0 && (
                 <span className="badge bg-edsync-red/10 text-edsync-red">
@@ -679,7 +697,7 @@ export default function AdminAIPage() {
                   {summary.recent_failures} failed
                 </span>
               )}
-            </div>
+            </summary>
             <div className="grid gap-2">
               {recentRuns.slice(0, 8).map((run) => (
                 <div key={run.id} className="grid gap-2 rounded-2xl border border-edsync-border bg-edsync-surface px-3 py-2 text-sm md:grid-cols-[140px_1fr_120px_120px]">
@@ -694,27 +712,11 @@ export default function AdminAIPage() {
               ))}
               {recentRuns.length === 0 && <p className="text-sm text-edsync-subtle">No AI run audit rows yet.</p>}
             </div>
-          </div>
+          </details>
         </section>
-
-        <aside className="premium-surface h-fit rounded-2xl p-4 2xl:sticky 2xl:top-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-xl font-bold">{editingId ? "Edit Provider" : "Add Provider"}</h2>
-            </div>
-            {editingId ? (
-              <button type="button" onClick={resetForm} className="btn-ghost px-2 py-2">
-                <X className="h-4 w-4" />
-              </button>
-            ) : (
-              <button type="button" onClick={() => setFormOpen((value) => !value)} className="btn-secondary px-3 py-2">
-                <Plus className="h-4 w-4" />
-                {formOpen ? "Collapse" : "Open"}
-              </button>
-            )}
-          </div>
-
-          {formOpen && <form onSubmit={saveProvider} className="mt-4 space-y-4">
+      </div>
+      <Sheet open={formOpen} onClose={resetForm} title={editingId ? "Edit provider" : "Add provider"} description="Keys are encrypted before storage." size="lg">
+          <form onSubmit={saveProvider} className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <FieldLabel>Name</FieldLabel>
@@ -760,6 +762,9 @@ export default function AdminAIPage() {
               <input className="edsync-input" value={form.default_model} onChange={(event) => setForm({ ...form, default_model: event.target.value })} required />
             </div>
 
+            <details className="rounded-xl border border-edsync-border p-3">
+              <summary className="cursor-pointer text-sm font-semibold">Advanced routing</summary>
+              <div className="mt-3 space-y-4">
             <div className="space-y-1.5">
               <FieldLabel>Supported models</FieldLabel>
               <textarea
@@ -809,6 +814,8 @@ export default function AdminAIPage() {
                 <input className="edsync-input" type="number" min="5" value={form.cooldown_seconds} onChange={(event) => setForm({ ...form, cooldown_seconds: event.target.value })} />
               </div>
             </div>
+              </div>
+            </details>
 
             <label className="flex items-center justify-between gap-4 rounded-lg border border-edsync-border px-4 py-3">
               <span>
@@ -839,9 +846,8 @@ export default function AdminAIPage() {
                 </button>
               )}
             </div>
-          </form>}
-        </aside>
-      </div>
+          </form>
+      </Sheet>
     </div>
   );
 }
