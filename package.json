@@ -120,6 +120,9 @@
   },
   "overrides": {
     "postcss": "$postcss",
+    "miniflare": {
+      "undici": "^7.29.1"
+    },
     "pptxgenjs": {
       "image-size": "^2.0.4"
     }
