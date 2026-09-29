@@ -93,7 +93,7 @@ function LoginForm() {
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
-      fetch(`/api/auth/organizations?code=${encodeURIComponent(code)}`, {
+      fetch(`/api/auth/organizations?purpose=login&code=${encodeURIComponent(code)}`, {
         cache: "no-store",
         signal: controller.signal,
       })
@@ -294,7 +294,7 @@ function LoginForm() {
               }`}
             >
               {organizationStatus === "found"
-                ? `${authCopy.foundOrganization} ${organizationLookup?.name}${organizationLookup?.portalName ? ` - ${organizationLookup.portalName}` : ""}.`
+                ? "Ready to sign in to your workspace."
                 : organizationStatus === "checking"
                   ? authCopy.checkingOrganization
                   : authCopy.missingOrganization}
