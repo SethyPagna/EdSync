@@ -21,13 +21,15 @@ import { GET, PATCH, POST } from "./route";
 const state = vi.hoisted(() => ({
   adapter: null as unknown,
   user: null as SessionUser | null,
+  tenantId: "tenant_edsync_default" as string,
+  membershipStatus: null as string | null,
 }));
 
 vi.mock("@/lib/db/d1-adapter", () => ({ getD1QueryAdapter: () => state.adapter }));
 vi.mock("@/lib/auth/session", () => ({ getSessionUser: async () => state.user }));
 vi.mock("@/lib/tenancy", () => ({
   DEFAULT_TENANT_ID: "tenant_edsync_default",
-  resolveTenantContext: async () => ({ tenant: { id: "tenant_edsync_default" }, portal: null, membership: null }),
+  resolveTenantContext: async () => ({ tenant: { id: state.tenantId }, portal: null, membership: state.membershipStatus ? { status: state.membershipStatus } : null }),
   linkTenantObject: async (input: { tenantId: string; portalId?: string | null; table: string; objectId: string }) => {
     await (state.adapter as D1QueryAdapter).query(
       `INSERT OR IGNORE INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
@@ -65,6 +67,16 @@ beforeEach(() => {
   db = createGradingDatabase();
   state.adapter = sqliteAdapter(db);
   state.user = STUDENT;
+  state.tenantId = "tenant_edsync_default";
+  state.membershipStatus = null;
+});
+
+it("blocks outsiders from reading, submitting and grading organization work", async () => {
+  state.tenantId = "tenant_school";
+  expect((await GET(new Request("http://localhost/api/work/submissions"))).status).toBe(403);
+  expect((await submit("any-work")).status).toBe(403);
+  state.user = TEACHER;
+  expect((await PATCH(jsonRequest("/api/work/submissions", "PATCH", { submissionId: "any-submission", pointsEarned: 1 }))).status).toBe(403);
 });
 
 it("blocks assignment submissions when the global work flag is disabled", async () => {
