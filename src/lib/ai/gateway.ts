@@ -1,3 +1,5 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { Ai } from "@cloudflare/workers-types";
 import { d1Query } from "@/lib/db/d1";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { decryptSecret, isSecretEncryptionConfigured } from "@/lib/security/secrets";
@@ -45,6 +47,9 @@ type ProviderResult = {
 };
 
 const ONE_MINUTE_MS = 60_000;
+const CLOUDFLARE_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8" as const;
+const CLOUDFLARE_AI_MAX_INPUT_CHARS = 72_000;
+const CLOUDFLARE_AI_MAX_OUTPUT_TOKENS = 4096;
 const PROVIDER_RUNTIME = new Map<string, RuntimeState>();
 
 function trim(value: unknown) {
@@ -247,10 +252,36 @@ async function callProvider(provider: RuntimeProvider, options: AIChatOptions) {
   return callOpenAiCompatible(provider, options);
 }
 
+function cloudflareAiBinding(): Ai | null {
+  try {
+    const binding = (getCloudflareContext().env as CloudflareEnv & { AI?: Ai }).AI;
+    return typeof binding?.run === "function" ? binding : null;
+  } catch {
+    return null;
+  }
+}
+
+async function callCloudflareAi(binding: Ai, options: AIChatOptions): Promise<ProviderResult> {
+  const inputChars = options.messages.reduce((total, message) => total + message.content.length, 0);
+  if (inputChars > CLOUDFLARE_AI_MAX_INPUT_CHARS) {
+    throw new Error("Request is too long for Cloudflare AI fallback.");
+  }
+  const requestedTokens = Number(options.maxTokens);
+  const maxTokens = clamp(Number.isFinite(requestedTokens) && requestedTokens > 0 ? Math.floor(requestedTokens) : 1800, 128, CLOUDFLARE_AI_MAX_OUTPUT_TOKENS);
+  const raw = await binding.run(CLOUDFLARE_AI_MODEL, {
+    messages: options.messages,
+    max_tokens: maxTokens,
+    temperature: typeof options.temperature === "number" ? clamp(options.temperature, 0, 1) : 0.45,
+    stream: false,
+    ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
+  });
+  return { text: typeof raw.response === "string" ? raw.response.trim() : "", raw };
+}
+
 async function auditRun(input: {
   userId?: string | null;
   feature: string;
-  provider: RuntimeProvider;
+  provider: { provider: string; default_model?: string | null };
   model?: string;
   success: boolean;
   latencyMs: number;
@@ -282,7 +313,6 @@ async function auditRun(input: {
 export async function aiGatewayChat(options: AIChatOptions) {
   const started = Date.now();
   const providers = await loadRuntimeProviders();
-  if (providers.length === 0) throw new Error("No AI provider is configured.");
   const allowFallback = await isFeatureEnabled("ai_provider_fallback");
 
   const attempted = new Set<string>();
@@ -339,6 +369,38 @@ export async function aiGatewayChat(options: AIChatOptions) {
     }
   }
 
+  if (allowFallback) {
+    const binding = cloudflareAiBinding();
+    if (binding) {
+      const fallbackProvider = { provider: "cloudflare", default_model: CLOUDFLARE_AI_MODEL };
+      try {
+        const result = await callCloudflareAi(binding, options);
+        if (!result.text) throw new Error("Cloudflare AI returned an empty response.");
+        await auditRun({
+          userId: options.userId,
+          feature: options.feature || "chat",
+          provider: fallbackProvider,
+          success: true,
+          latencyMs: Date.now() - started,
+          metadata: { failovers },
+        });
+        return result.text;
+      } catch (error) {
+        await auditRun({
+          userId: options.userId,
+          feature: options.feature || "chat",
+          provider: fallbackProvider,
+          success: false,
+          latencyMs: Date.now() - started,
+          errorMessage: error instanceof Error ? error.message : "Cloudflare AI failed",
+          metadata: { failovers },
+        });
+        throw error;
+      }
+    }
+  }
+
+  if (providers.length === 0) throw new Error("No AI provider is configured.");
   if (lastError instanceof TruncatedError) throw lastError;
   throw new Error(lastError instanceof Error ? lastError.message : "All AI providers are busy or unavailable.");
 }
