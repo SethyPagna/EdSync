@@ -22,16 +22,10 @@ import {
   withRoute,
 } from "@/lib/security/http-errors";
 import { linkTenantObject, resolveTenantContext, type TenantContext } from "@/lib/tenancy";
-import {
-  tenantObjectJoin,
-  tenantObjectParams,
-  tenantObjectPredicate,
-} from "@/lib/tenancy/object-scope";
+import { loadAccessibleLesson } from "@/lib/lessons/access";
 import type { PracticeMode } from "@/types";
 
 const ATTEMPT_TABLE = "practice_attempts";
-const CLASS_TABLE = "classes";
-const LESSON_TABLE = "lessons";
 const LOCAL_PRACTICE_SOURCE_ID = "local-practice";
 const MAX_PRACTICE_ITEMS = 200;
 const MAX_ANSWER_OPTIONS = 50;
@@ -48,10 +42,6 @@ type PracticeAttemptBody = {
   targetSeconds?: unknown;
   items?: unknown;
 };
-
-function predicateParams(objectTable: string, tenantId: string) {
-  return tenantObjectParams({ objectTable, tenantId }).slice(1);
-}
 
 async function canUseStudioSource(input: {
   user: SessionUser;
@@ -75,36 +65,12 @@ async function canUseLessonSource(input: {
   context: TenantContext;
   sourceId: string;
 }) {
-  const [row] = await d1Query<{ id: string }>(
-    `SELECT l.id
-       FROM lessons l
-       ${tenantObjectJoin({ objectTable: LESSON_TABLE, objectAlias: "l", linkAlias: "lesson_link" })}
-       LEFT JOIN classes c ON c.id = l.class_id
-       ${tenantObjectJoin({ objectTable: CLASS_TABLE, objectAlias: "c", linkAlias: "class_link" })}
-      WHERE l.id = ?
-        AND (${tenantObjectPredicate({ linkAlias: "lesson_link" })}
-          OR (l.class_id IS NOT NULL AND ${tenantObjectPredicate({ linkAlias: "class_link" })}))
-        AND (
-          l.class_id IS NULL
-          OR EXISTS (
-            SELECT 1
-              FROM class_enrollments ce
-             WHERE ce.class_id = l.class_id
-               AND ce.student_id = ?
-               AND ce.is_active = 1
-          )
-        )
-      LIMIT 1`,
-    [
-      LESSON_TABLE,
-      CLASS_TABLE,
-      input.sourceId,
-      ...predicateParams(LESSON_TABLE, input.context.tenant.id),
-      ...predicateParams(CLASS_TABLE, input.context.tenant.id),
-      input.user.id,
-    ],
-  );
-  return Boolean(row);
+  return Boolean(await loadAccessibleLesson({
+    lessonId: input.sourceId,
+    tenantId: input.context.tenant.id,
+    user: input.user,
+    tenantMember: input.context.membership?.status === "active",
+  }));
 }
 
 async function canUsePracticeSource(input: {
@@ -171,6 +137,10 @@ function practiceItems(value: unknown): PracticeItem[] {
     if (!isAnswer(item.answer) || (response !== undefined && !isAnswer(response))) {
       throw new BadRequestError("Practice answers must be text, true/false, or a list of text.");
     }
+    const accept = item.accept;
+    if (accept !== undefined && (!Array.isArray(accept) || accept.length > MAX_ANSWER_OPTIONS || !accept.every((entry) => typeof entry === "string" && entry.length <= MAX_TEXT_LENGTH))) {
+      throw new BadRequestError("Accepted answers must be a list of short text values.");
+    }
     const points = item.points ?? undefined;
     if (points !== undefined && (typeof points !== "number" || !Number.isFinite(points) || points < 0 || points > MAX_POINTS)) {
       throw new BadRequestError(`Practice item points must be between 0 and ${MAX_POINTS}.`);
@@ -180,6 +150,7 @@ function practiceItems(value: unknown): PracticeItem[] {
       prompt,
       answer: item.answer,
       response,
+      accept: accept as string[] | undefined,
       explanation: optionalText(item.explanation, "Practice explanation", MAX_TEXT_LENGTH),
       points,
     };
