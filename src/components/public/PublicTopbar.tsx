@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { ArrowRight, Building2, GraduationCap } from "lucide-react";
 import LanguageMenu from "@/components/LanguageMenu";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -24,6 +24,9 @@ export default async function PublicTopbar({
   language,
 }: PublicTopbarProps) {
   const cookieStore = await cookies();
+  const host = (await headers()).get("host")?.trim().toLowerCase().split(":")[0];
+  const isDemoSite = process.env.EDSYNC_DEMO_MODE === "1" &&
+    Boolean(host && host === process.env.EDSYNC_DEMO_HOSTNAME?.trim().toLowerCase());
   const publicLanguage = normalizePublicLanguage(language ?? cookieStore.get("edsync-language")?.value);
   const copy = getPublicCopy(publicLanguage);
   const resolvedOrganizationCode = organizationCode || organizationSlug || portalSlug;
@@ -38,6 +41,7 @@ export default async function PublicTopbar({
           ? "/student/dashboard"
           : "/auth/login";
   const loginHref = publicLanguageHref("/auth/login", publicLanguage, { org: resolvedOrganizationCode });
+  const actionLabel = signedIn ? copy.start : isDemoSite ? "Explore demo" : copy.signIn;
 
   return (
     <header className="edsync-public-topbar relative z-30">
@@ -62,11 +66,11 @@ export default async function PublicTopbar({
           <ThemeToggle compact />
           <LanguageMenu compact syncCatalogFilter />
           <Link
-            href={signedIn ? workspaceHref : loginHref}
+            href={signedIn ? workspaceHref : isDemoSite ? "/catalog#demo-roles" : loginHref}
             className="btn-primary min-h-10 justify-center px-2.5 py-2 text-sm sm:px-4"
-            aria-label={signedIn ? copy.start : copy.signIn}
+            aria-label={actionLabel}
           >
-            <span className="hidden min-[390px]:inline">{signedIn ? copy.start : copy.signIn}</span>
+            <span className="hidden min-[390px]:inline">{actionLabel}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
