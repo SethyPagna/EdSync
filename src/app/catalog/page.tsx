@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import {
   ArrowRight,
   BookOpenCheck,
   Building2,
+  GraduationCap,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -32,6 +34,9 @@ export default async function CatalogPage({
 }: {
   searchParams?: Promise<CatalogSearchParams>;
 }) {
+  const host = (await headers()).get("host")?.trim().toLowerCase().split(":")[0];
+  const isDemoSite = process.env.EDSYNC_DEMO_MODE === "1" &&
+    Boolean(host && host === process.env.EDSYNC_DEMO_HOSTNAME?.trim().toLowerCase());
   const filters = normalizeCatalogFilters(await searchParams);
   const copy = getPublicCopy(filters.language);
   const hasFilters = hasCatalogFilters(filters);
@@ -56,6 +61,29 @@ export default async function CatalogPage({
   return (
     <main className="catalog-revamp text-edsync-text">
       <PublicTopbar active="catalog" language={filters.language} />
+      {isDemoSite && (
+        <section id="demo-roles" className="mx-auto mt-5 max-w-7xl scroll-mt-20 px-4 sm:px-6">
+          <div className="premium-panel rounded-[1.4rem] border border-edsync-blue/20 bg-edsync-blue/5 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <span className="catalog-eyebrow">Interactive sample</span>
+                <h2 className="mt-1 font-display text-xl font-semibold">See EdSync with real example lessons</h2>
+                <p className="mt-1 text-sm text-edsync-subtle">Choose a view to explore sample classes, courses, and progress. This shared demo is read-only.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <form action="/api/demo/session" method="post">
+                  <input type="hidden" name="role" value="student" />
+                  <button className="btn-primary" type="submit"><BookOpenCheck size={16} /> Explore as learner</button>
+                </form>
+                <form action="/api/demo/session" method="post">
+                  <input type="hidden" name="role" value="teacher" />
+                  <button className="btn-secondary" type="submit"><GraduationCap size={16} /> Explore as teacher</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
       {!hasFilters && (
         <section className="catalog-hero">
           <div className="max-w-2xl">
@@ -69,12 +97,12 @@ export default async function CatalogPage({
                 {copy.catalogLabel}
                 <ArrowRight size={16} />
               </a>
-              <Link
+              {!isDemoSite && <Link
                 href={publicLanguageHref("/auth/signup", filters.language)}
                 className="btn-secondary"
               >
                 {copy.createWorkspace}
-              </Link>
+              </Link>}
             </div>
           </div>
         </section>
@@ -207,11 +235,17 @@ export default async function CatalogPage({
             {(unavailable || hasFilters) && <p className="mt-2 text-sm text-edsync-subtle">
               {unavailable ? "Please try again in a moment." : copy.emptyCopy}
             </p>}
+            {!isDemoSite && !unavailable && !hasFilters && <a
+              href="https://edsync-demo.learn-app.workers.dev"
+              className="btn-primary mt-5"
+            >
+              Explore populated demo <ArrowRight size={16} />
+            </a>}
             <Link
-              href={publicLanguageHref(unavailable || hasFilters ? "/catalog" : "/auth/signup", filters.language)}
+              href={isDemoSite && !unavailable && !hasFilters ? "#demo-roles" : publicLanguageHref(unavailable || hasFilters ? "/catalog" : "/auth/signup", filters.language)}
               className="btn-secondary mt-5"
             >
-              {unavailable ? "Try again" : hasFilters ? copy.clearFilters : copy.createWorkspace}
+              {unavailable ? "Try again" : hasFilters ? copy.clearFilters : isDemoSite ? "Explore sample workspace" : copy.createWorkspace}
             </Link>
           </div>
         )}
@@ -246,8 +280,8 @@ export default async function CatalogPage({
         )}
         <footer className="mt-12 flex justify-between border-t border-edsync-border pt-5 text-xs text-edsync-subtle">
           <span>EdSync · Keep growing.</span>
-          <Link href={publicLanguageHref("/auth/login", filters.language)}>
-            {copy.signIn}
+          <Link href={isDemoSite ? "#demo-roles" : publicLanguageHref("/auth/login", filters.language)}>
+            {isDemoSite ? "Explore demo" : copy.signIn}
             <ArrowRight className="ml-2 inline" size={12} />
           </Link>
         </footer>
