@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   }
 
   const draft = await generateCourseWorkflow({
+    userId: user.id,
     topic: body.topic,
     audience: body.audience,
     durationMinutes: body.durationMinutes,
