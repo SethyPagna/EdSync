@@ -14,7 +14,9 @@ type WorkItem = {
   id: string; title: string; work_type: string; instructions: string | null; due_at: string | null;
   allow_late: number | null; points_possible: number; settings: unknown; class_name: string | null;
   submission_status: string | null; submission_percent: number | null; submission_feedback: string | null;
+  questions: WorkQuestion[];
 };
+type WorkQuestion = { id: string; prompt: string; kind: "choice" | "short" | "long"; options: string[]; points: number };
 type Submission = { work_item_id: string; attempt_count: number | null; is_late: number | null };
 type ApiResponse<T> = { data?: T; error?: string | { message?: string } | null };
 type WorkFilter = "open" | "dueSoon" | "submitted" | "feedback" | "discussions" | "all";
@@ -50,6 +52,7 @@ export default function StudentWorkPage() {
   const [now, setNow] = useState(0);
   const [active, setActive] = useState<WorkItem | null>(null);
   const [responseText, setResponseText] = useState("");
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -108,20 +111,29 @@ export default function StudentWorkPage() {
     policy: normalizeWorkSubmissionPolicy(item.settings),
     existing: item.submission_status ? { status: item.submission_status, attempts: Number(submissions[item.id]?.attempt_count ?? 0) } : null,
   });
-  const openComposer = (item: WorkItem) => { setActive(item); setResponseText(""); setSubmitError(""); };
+  const openComposer = (item: WorkItem) => { setActive(item); setResponseText(""); setQuestionAnswers({}); setSubmitError(""); };
   const submit = async () => {
     if (!active) return;
-    if (!responseText.trim()) { setSubmitError("Write a response first."); return; }
+    const questions = active.questions ?? [];
+    if (questions.length > 0 && questions.some((question) => !questionAnswers[question.id]?.trim())) {
+      setSubmitError("Answer every question before submitting."); return;
+    }
+    if (questions.length === 0 && !responseText.trim()) { setSubmitError("Write a response first."); return; }
     setSaving(true); setSubmitError("");
     try {
       const response = await fetch("/api/work/submissions", {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-        body: JSON.stringify({ workItemId: active.id, response: { text: responseText } }),
+        body: JSON.stringify({
+          workItemId: active.id,
+          response: questions.length > 0
+            ? { answers: questions.map((question) => ({ questionId: question.id, answer: questionAnswers[question.id].trim() })) }
+            : { text: responseText },
+        }),
       });
       const payload = (await response.json()) as ApiResponse<{ attemptNumber: number; late: boolean }>;
       if (!response.ok || payload.error) { setSubmitError(apiError(payload.error, "Submission was not saved.")); return; }
       toast.success(payload.data?.late ? "Submitted late." : "Submitted.");
-      setActive(null); setResponseText(""); await load();
+      setActive(null); setResponseText(""); setQuestionAnswers({}); await load();
     } catch { setSubmitError("Submission was not saved. Try again."); }
     finally { setSaving(false); }
   };
@@ -173,7 +185,15 @@ export default function StudentWorkPage() {
     <Sheet open={active !== null} onClose={() => { if (!saving) setActive(null); }} title={active?.title ?? "Submit work"} description={active ? `${active.class_name || "Independent course"} · ${dueLabel(active.due_at)}` : undefined} footer={<><Button onClick={() => setActive(null)} disabled={saving}>Cancel</Button><Button variant="primary" icon={Send} loading={saving} onClick={() => void submit()} disabled={!activeDecision?.ok}>Submit response</Button></>}>
       {active && <div className="space-y-5">
         {active.instructions && <div className="rounded-lg bg-surface-2 p-4"><p className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">Instructions</p><p className="whitespace-pre-wrap text-sm leading-6 text-fg">{active.instructions}</p></div>}
-        <label className="block text-sm font-semibold text-fg">Your response<textarea autoFocus className="input mt-2 min-h-48 w-full" value={responseText} onChange={(event) => setResponseText(event.target.value)} placeholder="Write your answer or reflection…" /></label>
+        {(active.questions ?? []).length > 0 ? <div className="space-y-5">
+          {(active.questions ?? []).map((question, index) => <fieldset key={question.id} className="rounded-xl border border-line p-4">
+            <legend className="px-1 text-sm font-semibold text-fg">{index + 1}. {question.prompt}</legend>
+            {question.kind === "choice" ? <div className="mt-3 space-y-2">{question.options.map((option, optionIndex) => <label key={`${question.id}-${optionIndex}`} className="flex cursor-pointer items-start gap-3 rounded-lg border border-line px-3 py-2.5 text-sm text-fg hover:bg-surface-2">
+              <input type="radio" name={`work-question-${question.id}`} value={option} checked={questionAnswers[question.id] === option} onChange={() => setQuestionAnswers((current) => ({ ...current, [question.id]: option }))} className="mt-0.5 accent-accent" />
+              <span>{option}</span>
+            </label>)}</div> : question.kind === "long" ? <textarea aria-label={`Answer to question ${index + 1}`} className="input mt-3 min-h-28 w-full" maxLength={4000} value={questionAnswers[question.id] ?? ""} onChange={(event) => setQuestionAnswers((current) => ({ ...current, [question.id]: event.target.value }))} placeholder="Write your answer…" /> : <input aria-label={`Answer to question ${index + 1}`} className="input mt-3 w-full" maxLength={4000} value={questionAnswers[question.id] ?? ""} onChange={(event) => setQuestionAnswers((current) => ({ ...current, [question.id]: event.target.value }))} placeholder="Your answer" />}
+          </fieldset>)}
+        </div> : <label className="block text-sm font-semibold text-fg">Your response<textarea autoFocus className="input mt-2 min-h-48 w-full" value={responseText} onChange={(event) => setResponseText(event.target.value)} placeholder="Write your answer or reflection…" /></label>}
         {activeDecision && !activeDecision.ok && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{activeDecision.error}</p>}
         {submitError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{submitError}</p>}
         {submissions[active.id] && <p className="text-xs text-fg-muted">Attempt {Number(submissions[active.id].attempt_count ?? 0) + 1}{normalizeWorkSubmissionPolicy(active.settings).maxAttempts ? ` of ${normalizeWorkSubmissionPolicy(active.settings).maxAttempts}` : ""}</p>}
