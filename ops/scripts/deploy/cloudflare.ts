@@ -36,7 +36,6 @@ function main() {
     for (const key of [
       "APP_ENCRYPTION_KEY",
       "CLOUDFLARE_ACCOUNT_ID",
-      "CLOUDFLARE_API_TOKEN",
       "CLOUDFLARE_AI_GATEWAY_URL",
       "R2_ACCESS_KEY_ID",
       "R2_SECRET_ACCESS_KEY",
