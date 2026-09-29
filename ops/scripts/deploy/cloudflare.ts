@@ -1,8 +1,7 @@
 import { loadEnvFile, run } from "../shared/ops";
+import { APP_WORKER_CONFIG_PATH, buildCloudflareApp } from "./cloudflare-build";
 
-const APP_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.app.jsonc";
 const AUTOMATION_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.automation.jsonc";
-const OPEN_NEXT_CONFIG_PATH = "infra/cloudflare/open-next.config.ts";
 
 function putWorkerSecret(key: string, config: string) {
   const value = process.env[key];
@@ -12,21 +11,11 @@ function putWorkerSecret(key: string, config: string) {
 }
 
 function main() {
-  loadEnvFile(".env.local");
-  loadEnvFile(".env");
-
   if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
-    throw new Error("CLOUDFLARE_ACCOUNT_ID is required. Wrangler can authenticate through its OAuth login or an API token.");
+    throw new Error("CLOUDFLARE_ACCOUNT_ID is required in the process environment. Wrangler can authenticate through its OAuth login or an API token.");
   }
 
-  run("npx", [
-    "opennextjs-cloudflare",
-    "build",
-    "--config",
-    APP_WORKER_CONFIG_PATH,
-    "--openNextConfigPath",
-    OPEN_NEXT_CONFIG_PATH,
-  ]);
+  buildCloudflareApp();
 
   run("npx", ["wrangler", "deploy", "--config", AUTOMATION_WORKER_CONFIG_PATH]);
 
@@ -42,6 +31,8 @@ function main() {
   if (process.env.CLOUDFLARE_SKIP_SECRET_SYNC === "1") {
     console.log("Skipping Worker secret sync because CLOUDFLARE_SKIP_SECRET_SYNC=1.");
   } else {
+    loadEnvFile(".env.local");
+    loadEnvFile(".env");
     for (const key of [
       "APP_ENCRYPTION_KEY",
       "CLOUDFLARE_ACCOUNT_ID",
