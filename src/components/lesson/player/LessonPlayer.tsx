@@ -9,7 +9,7 @@ import { isEditableTarget } from "@/components/ui/helpers";
 import { createClient } from "@/lib/edsync/client";
 import type { PlayerQuestion } from "@/lib/lessons/quiz";
 import type { GlossaryTerm, Lesson, LessonSection, StudentProgress } from "@/types";
-import { allAnswered, checkAnswer, loadQuestions, questionsForSection, saveProgress, submitFinal, type Answers, type FinalGrade, type ProgressSnapshot, type QuestionFeedback } from "./api";
+import { allAnswered, checkAnswer, loadQuestions, loadRecordedFinal, questionsForSection, saveProgress, submitFinal, type Answers, type FinalGrade, type ProgressSnapshot, type QuestionFeedback } from "./api";
 import QuestionCard from "./QuestionCard";
 import SectionContent from "./SectionContent";
 import LessonSheet, { type LessonTool } from "./LessonSheet";
@@ -81,13 +81,16 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
       const glossary = (glossaryResponse.data ?? []) as GlossaryTerm[];
       const saved = progressResponse.data as StudentProgress | null;
       const snapshot = await recordProgress({});
+      const recordedFinal = questions.some((question) => question.isFinal)
+        ? await loadRecordedFinal(lessonId)
+        : null;
       const index = initialSection(sections, saved);
       setPage({ lesson, sections, questions, glossary });
       setSectionIdx(index);
       setProgress(snapshot);
-      setAnswers({});
+      setAnswers(recordedFinal?.answers ?? {});
       setFeedback({});
-      setFinalGrade(null);
+      setFinalGrade(recordedFinal?.grade ?? null);
       if (saved?.status === "completed" || snapshot.completed) setView("complete");
       else if (!saved && questions.some((question) => question.purpose === "diagnostic" && !question.isFinal)) setView("warmup");
       else if (sections.length > 0 && (saved?.sections_completed?.length ?? 0) < sections.length) setView("section");
@@ -240,10 +243,10 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
 
         {view === "final" && (
           <div className="space-y-5"><div><p className="mb-1 text-xs text-fg-muted">{finalQuestions.length} questions</p><h1 className="text-[22px] font-semibold tracking-tight">Final quiz</h1></div>
-            {finalQuestions.map((question, index) => <QuestionCard key={question.id} question={question} index={index} answer={answers[question.id]} onAnswer={(answer) => setAnswers((current) => ({ ...current, [question.id]: answer }))} feedback={finalGrade?.results.find((result) => result.questionId === question.id)} />)}
+            {finalQuestions.map((question, index) => <QuestionCard key={question.id} question={question} index={index} answer={answers[question.id]} onAnswer={(answer) => setAnswers((current) => ({ ...current, [question.id]: answer }))} feedback={finalGrade?.results.find((result) => result.questionId === question.id)} disabled={Boolean(finalGrade)} />)}
             {finalGrade && <div role="status" className="rounded-xl border border-line bg-surface p-5"><p className="text-sm font-medium text-fg">{finalGrade.status === "submitted" ? "Submitted for review" : "Quiz scored"}</p><p className="mt-1 text-sm text-fg-muted">{finalGrade.percent === null ? `${finalGrade.score} of ${finalGrade.maxScore} points scored so far; your teacher will review the rest.` : `${Math.round(finalGrade.percent)}% · ${finalGrade.score} of ${finalGrade.maxScore} points`}</p>{finalGrade.locked && <p className="mt-1 text-xs text-fg-muted">Your teacher's grade remains on record.</p>}</div>}
             {actionError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{actionError}</p>}
-            <div className="flex justify-end">{finalGrade ? <Button variant="primary" iconRight={ArrowRight} onClick={() => setView("finish")}>Continue</Button> : <Button variant="primary" loading={busy} disabled={!allAnswered(finalQuestions, answers)} onClick={sendFinal}>Submit quiz</Button>}</div>
+            <div className="flex justify-end">{finalGrade ? <Button variant="primary" iconRight={ArrowRight} onClick={() => setView(progress?.completed ? "complete" : "finish")}>Continue</Button> : <Button variant="primary" loading={busy} disabled={!allAnswered(finalQuestions, answers)} onClick={sendFinal}>Submit quiz</Button>}</div>
           </div>
         )}
 
@@ -255,7 +258,7 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
         )}
 
         {view === "complete" && (
-          <div className="space-y-5 rounded-xl border border-line bg-surface p-6 text-center"><div className="mx-auto flex size-12 items-center justify-center rounded-full bg-success-soft text-success"><Check className="size-6" /></div><h1 className="text-[22px] font-semibold tracking-tight">Lesson complete</h1><p className="text-sm text-fg-muted">{progress?.streakDays ? `${progress.streakDays}-day learning streak` : "Your progress is saved."}</p><div className="flex flex-wrap justify-center gap-2"><Button variant="primary" onClick={() => router.push("/student/lessons")}>More courses</Button><Button onClick={() => void goToSection(0)} disabled={!page.sections.length}>Review lesson</Button><Button icon={CircleHelp} onClick={() => setTool("tutor")}>Ask a question</Button></div></div>
+          <div className="space-y-5 rounded-xl border border-line bg-surface p-6 text-center"><div className="mx-auto flex size-12 items-center justify-center rounded-full bg-success-soft text-success"><Check className="size-6" /></div><h1 className="text-[22px] font-semibold tracking-tight">Lesson complete</h1><p className="text-sm text-fg-muted">{progress?.streakDays ? `${progress.streakDays}-day learning streak` : "Your progress is saved."}</p>{finalGrade && <div role="status" className="rounded-lg bg-surface-2 p-3"><p className="text-xs font-medium text-fg-muted">Final quiz</p><p className="mt-1 text-lg font-semibold tabular-nums">{finalGrade.status === "submitted" ? "Pending review" : finalGrade.percent === null ? "Score unavailable" : `${Math.round(finalGrade.percent)}%`}</p>{finalGrade.locked && <p className="mt-1 text-xs text-fg-muted">Your teacher's grade remains on record.</p>}<Button className="mt-2" onClick={() => setView("final")}>Review answers</Button></div>}<div className="flex flex-wrap justify-center gap-2"><Button variant="primary" onClick={() => router.push("/student/lessons")}>More courses</Button><Button onClick={() => void goToSection(0)} disabled={!page.sections.length}>Review lesson</Button><Button icon={CircleHelp} onClick={() => setTool("tutor")}>Ask a question</Button></div></div>
         )}
       </main>
 
