@@ -21,7 +21,7 @@ import {
 } from "@/lib/validation/standards";
 import { linkTenantObject, resolveTenantContext } from "@/lib/tenancy";
 import { toClientTenantContext } from "@/lib/tenancy/client-context";
-import { ownerScope } from "@/lib/tenancy/ownership";
+import { isTenantOutsider, ownerScope } from "@/lib/tenancy/ownership";
 
 const STANDARDS_PACKAGE_TABLE = "standards_packages";
 const STORAGE_OBJECT_TABLE = "storage_objects";
@@ -51,6 +51,7 @@ export const GET = withRoute(async () => {
   const user = await getSessionUser();
   if (!user) throw new UnauthorizedError();
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) throw new ForbiddenError("Organization membership required.");
   const owner = ownerScope(user, context, "owner_id");
   const rows = await d1Query(
     `SELECT * FROM standards_packages WHERE tenant_id = ?${owner.sql} ORDER BY updated_at DESC`,
