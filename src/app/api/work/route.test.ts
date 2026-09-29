@@ -20,6 +20,8 @@ import { DELETE, GET, PATCH, POST } from "./route";
 const state = vi.hoisted(() => ({
   adapter: null as unknown,
   user: null as SessionUser | null,
+  tenantId: "tenant_edsync_default" as string,
+  membershipStatus: null as string | null,
 }));
 
 vi.mock("@/lib/db/d1-adapter", () => ({ getD1QueryAdapter: () => state.adapter }));
@@ -27,7 +29,7 @@ vi.mock("@/lib/auth/session", () => ({ getSessionUser: async () => state.user })
 vi.mock("@/lib/engagement/server", () => ({ notifyAndEmail: vi.fn(async () => undefined) }));
 vi.mock("@/lib/tenancy", () => ({
   DEFAULT_TENANT_ID: "tenant_edsync_default",
-  resolveTenantContext: async () => ({ tenant: { id: "tenant_edsync_default" }, portal: null, membership: null }),
+  resolveTenantContext: async () => ({ tenant: { id: state.tenantId }, portal: null, membership: state.membershipStatus ? { status: state.membershipStatus } : null }),
   linkTenantObject: async (input: { tenantId: string; portalId?: string | null; table: string; objectId: string }) => {
     await (state.adapter as D1QueryAdapter).query(
       `INSERT OR IGNORE INTO tenant_object_links (id, tenant_id, portal_id, object_table, object_id, created_at)
@@ -43,6 +45,21 @@ beforeEach(() => {
   db = createGradingDatabase();
   state.adapter = sqliteAdapter(db);
   state.user = TEACHER;
+  state.tenantId = "tenant_edsync_default";
+  state.membershipStatus = null;
+});
+
+it("blocks an outsider from reading, creating or changing organization work", async () => {
+  state.tenantId = "tenant_school";
+  insertRows(db, "tenants", [{ id: "tenant_school", slug: "school", name: "School" }]);
+  expect((await create({ classId: null, status: "draft" })).response.status).toBe(403);
+  expect(selectOne(db, "SELECT COUNT(*) AS n FROM learning_work_items")?.n).toBe(0);
+  expect((await GET(new Request("http://localhost/api/work"))).status).toBe(403);
+  expect((await patch({ id: "any-work", title: "Changed" })).status).toBe(403);
+  expect((await DELETE(new Request("http://localhost/api/work?id=any-work", { method: "DELETE" }))).status).toBe(403);
+
+  state.membershipStatus = "active";
+  expect((await create({ classId: null, status: "draft" })).response.status).toBe(200);
 });
 
 it("blocks assignment reads and writes when the global work flag is disabled", async () => {
@@ -149,6 +166,27 @@ describe("POST /api/work", () => {
     state.user = null;
     expect((await create({})).response.status).toBe(401);
   });
+
+  it("rejects invalid quiz options before creating any work item", async () => {
+    const result = await create({
+      workType: "quiz",
+      questions: [{ prompt: "Choose one", questionType: "multiple_choice", options: ["A", "A"], correctAnswer: "A" }],
+    });
+    expect(result.response.status).toBe(400);
+    expect(selectOne(db, "SELECT COUNT(*) AS n FROM learning_work_items")?.n).toBe(0);
+  });
+
+  it("keeps an unfinished quiz in draft until questions are authored", async () => {
+    expect((await create({ workType: "quiz", status: "published" })).response.status).toBe(400);
+    const draft = await create({ workType: "quiz", status: "draft" });
+    expect(draft.response.status).toBe(200);
+    const id = String(draft.body.data?.id);
+    expect((await patch({ id, status: "published" })).status).toBe(400);
+    expect((await patch({ id, questions: [{ prompt: "What changed?" }] })).status).toBe(200);
+    expect((await patch({ id, status: "published" })).status).toBe(200);
+    expect((await patch({ id, questions: [] })).status).toBe(400);
+    expect(selectAll(db, "SELECT prompt FROM learning_work_questions WHERE work_item_id = ?", id)).toEqual([{ prompt: "What changed?" }]);
+  });
 });
 
 describe("GET /api/work for students", () => {
@@ -174,6 +212,11 @@ describe("GET /api/work for students", () => {
     ]);
     expect(JSON.stringify(payload)).not.toContain("correct_answer");
     expect(JSON.stringify(payload)).not.toContain("It stores DNA.");
+
+    state.user = TEACHER;
+    const staffPayload = await readJson(await GET(new Request("http://localhost/api/work")));
+    const staffItem = (staffPayload.data as unknown as Array<{ id: string; questions: Array<{ correctAnswer: string }> }>).find((row) => row.id === id);
+    expect(staffItem?.questions.map((question) => question.correctAnswer)).toEqual(["Nucleus", "It stores DNA."]);
   });
 
   it("hides questions when class enrollment is inactive", async () => {
@@ -184,6 +227,31 @@ describe("GET /api/work for students", () => {
     const payload = await readJson(await GET(new Request("http://localhost/api/work")));
     expect((payload.data as unknown as Array<{ id: string }>).some((item) => item.id === id)).toBe(false);
     expect(JSON.stringify(payload)).not.toContain("Hidden prompt");
+  });
+
+  it("keeps question lookups under D1's 100 bound-parameter limit", async () => {
+    const items = Array.from({ length: 101 }, (_, index) => ({
+      id: `many-${index}`, teacher_id: TEACHER.id, class_id: "class-1", title: `Quiz ${index}`,
+      work_type: "quiz", status: "published",
+    }));
+    insertRows(db, "learning_work_items", items);
+    insertRows(db, "tenant_object_links", items.map((item) => ({
+      id: `link-${item.id}`, tenant_id: "tenant_edsync_default", object_table: "learning_work_items", object_id: item.id,
+    })));
+    insertRows(db, "learning_work_questions", [{ id: "many-q", work_item_id: "many-100", prompt: "Last question" }]);
+    const base = sqliteAdapter(db);
+    const questionBatchSizes: number[] = [];
+    state.adapter = {
+      ...base,
+      async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []) {
+        if (sql.includes("FROM learning_work_questions")) questionBatchSizes.push(params.length);
+        return base.query<T>(sql, params);
+      },
+    } satisfies D1QueryAdapter;
+    state.user = STUDENT;
+    const payload = await readJson(await GET(new Request("http://localhost/api/work")));
+    expect(questionBatchSizes).toEqual([100, 1]);
+    expect((payload.data as unknown as Array<{ id: string; questions: unknown[] }>).find((item) => item.id === "many-100")?.questions).toHaveLength(1);
   });
 });
 
@@ -205,6 +273,21 @@ describe("PATCH /api/work", () => {
     });
     return String(body.data?.id);
   }
+
+  it("replaces draft questions but locks questions after the first submission", async () => {
+    const { body } = await create({ status: "published", questions: [{ prompt: "Old question", correctAnswer: "Old answer" }] });
+    const id = String(body.data?.id);
+    const replacement = [{ prompt: "New question", questionType: "short_answer", correctAnswer: "New answer", points: 5 }];
+    expect((await patch({ id, questions: replacement })).status).toBe(200);
+    expect(selectAll(db, "SELECT prompt, correct_answer FROM learning_work_questions WHERE work_item_id = ?", id)).toEqual([
+      { prompt: "New question", correct_answer: "New answer" },
+    ]);
+    insertRows(db, "learning_submissions", [{ id: "sub-locked", work_item_id: id, student_id: STUDENT.id, class_id: "class-1" }]);
+    const locked = await patch({ id, questions: [{ prompt: "Tampered question" }] });
+    expect(locked.status).toBe(409);
+    expect((await readJson(locked)).error).toBe("Questions can't change after students have submitted.");
+    expect(selectAll(db, "SELECT prompt FROM learning_work_questions WHERE work_item_id = ?", id)).toEqual([{ prompt: "New question" }]);
+  });
 
   it("merges only the provided fields", async () => {
     const id = await seedWork();
