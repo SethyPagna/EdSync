@@ -52,7 +52,7 @@ export const PROVIDER_META: Record<
     label: "Groq",
     providerType: "chat",
     defaultEndpoint: "https://api.groq.com/openai/v1/chat/completions",
-    defaultModel: "groq/compound",
+    defaultModel: "qwen/qwen3.8-27b",
     defaultPriority: 10,
     safeRequestsPerMinute: 18,
     safeMaxInputChars: 3000,
