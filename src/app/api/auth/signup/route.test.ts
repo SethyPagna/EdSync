@@ -13,10 +13,10 @@ vi.mock("@/lib/auth/session", () => ({
 
 import { POST } from "./route";
 
-function signup(code: string) {
+function signup(code: string, role: "teacher" | "student" = "student") {
   return POST(new Request("https://edsync.test/api/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ email: "member@example.com", password: "StrongPass123!", options: { data: { full_name: "New Member", role: "student", account_type: "organization", organization_mode: "join", organization_code: code } } }),
+    body: JSON.stringify({ email: "member@example.com", password: "StrongPass123!", options: { data: { full_name: "New Member", role, account_type: "organization", organization_mode: "join", organization_code: code } } }),
   }));
 }
 
@@ -34,16 +34,17 @@ describe("organization invitation signup", () => {
     const [sql, params] = mocks.query.mock.calls[0];
     expect(sql).toContain("invite_code') IS NOT NULL");
     expect(sql).toContain("invites_enabled");
-    expect(params).toEqual(["join-abcdef", "join-abcdef"]);
+    expect(params).toEqual(["join-abcdef"]);
     const payload = await response.json();
     expect(payload.data.user.user_metadata.tenant_slug).toBe("school");
     expect(mocks.batch.mock.calls[0][0].some((statement: { sql: string; params: unknown[] }) => statement.sql.includes("tenant_memberships") && statement.params[1] === "tenant-one")).toBe(true);
   });
 
-  it("retains slug join only for legacy tenants without an invite code", async () => {
-    mocks.query.mockResolvedValueOnce([{ id: "tenant-legacy", slug: "legacy-school", name: "Legacy" }]).mockResolvedValueOnce([]);
-    expect((await signup("legacy-school")).status).toBe(200);
-    expect(String(mocks.query.mock.calls[0][0])).toContain("invite_code') IS NULL AND lower(slug)");
+  it("does not enroll a teacher through a public tenant slug", async () => {
+    const response = await signup("legacy-school", "teacher");
+    expect(response.status).toBe(404);
+    expect(String(mocks.query.mock.calls[0][0])).not.toContain("lower(slug)");
+    expect(mocks.batch).not.toHaveBeenCalled();
   });
 
   it("does not write an account for a disabled or unknown invite", async () => {
