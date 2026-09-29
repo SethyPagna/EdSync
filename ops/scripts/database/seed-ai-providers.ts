@@ -22,10 +22,10 @@ type AuthUserIdRow = {
 };
 
 const PROVIDERS = [
-  { env: "GROQ_RESEARCH_1_KEY", name: "Groq Research 1", provider: "groq", type: "chat", model: "groq/compound", priority: 10, rpm: 18, timeout: 18000, cooldown: 20 },
-  { env: "GROQ_GPT_OSS_2_KEY", name: "Groq GPT OSS 2", provider: "groq", type: "chat", model: "groq/compound", priority: 11, rpm: 18, timeout: 18000, cooldown: 20 },
-  { env: "GROQ_QWEN_3_KEY", name: "Groq Qwen 3", provider: "groq", type: "chat", model: "groq/compound", priority: 12, rpm: 18, timeout: 18000, cooldown: 20 },
-  { env: "GROQ_LLAMA_SCOUT_4_KEY", name: "Groq Llama Scout 4", provider: "groq", type: "chat", model: "groq/compound", priority: 13, rpm: 18, timeout: 18000, cooldown: 20 },
+  { env: "GROQ_RESEARCH_1_KEY", name: "Groq Research 1", provider: "groq", type: "chat", model: "openai/gpt-oss-120b", priority: 10, rpm: 18, timeout: 18000, cooldown: 20 },
+  { env: "GROQ_GPT_OSS_2_KEY", name: "Groq GPT OSS 2", provider: "groq", type: "chat", model: "openai/gpt-oss-120b", priority: 11, rpm: 18, timeout: 18000, cooldown: 20 },
+  { env: "GROQ_QWEN_3_KEY", name: "Groq Qwen 3", provider: "groq", type: "chat", model: "openai/gpt-oss-120b", priority: 12, rpm: 18, timeout: 18000, cooldown: 20 },
+  { env: "GROQ_LLAMA_SCOUT_4_KEY", name: "Groq Llama Scout 4", provider: "groq", type: "chat", model: "openai/gpt-oss-120b", priority: 13, rpm: 18, timeout: 18000, cooldown: 20 },
   { env: "GOOGLE_AI_1_KEY", name: "Google AI 1", provider: "google", type: "chat", model: "gemini-flash-latest", priority: 20, rpm: 14, timeout: 17000, cooldown: 20 },
   { env: "GOOGLE_AI_2_KEY", name: "Google AI 2", provider: "google", type: "chat", model: "gemini-flash-latest", priority: 21, rpm: 14, timeout: 17000, cooldown: 20 },
   { env: "MISTRAL_MAIN_KEY", name: "Mistral Main", provider: "mistral", type: "chat", model: "mistral-small-latest", priority: 30, rpm: 10, timeout: 18000, cooldown: 25 },
