@@ -8,13 +8,13 @@ import { GET } from "./route";
 describe("organization invite lookup", () => {
   beforeEach(() => query.mockReset().mockResolvedValue([]));
 
-  it("only resolves active invitations and blocks slug fallback after rotation", async () => {
+  it("only resolves active private invitations", async () => {
     await GET(new Request("https://edsync.test/api/auth/organizations?code=join-a1b2"));
     const [sql, params] = query.mock.calls[0];
     expect(sql).toContain("invites_enabled");
     expect(sql).toContain("invite_code') IS NOT NULL");
-    expect(sql).toContain("invite_code') IS NULL AND lower(t.slug)");
-    expect(params).toEqual(["join-a1b2", "join-a1b2"]);
+    expect(sql).not.toContain("lower(t.slug)");
+    expect(params).toEqual(["join-a1b2"]);
   });
 
   it("returns the real slug for a valid invite code", async () => {
