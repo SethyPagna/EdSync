@@ -912,7 +912,11 @@ function seedDiscussion(work: WorkSeed) {
     updated_at: sqlAt(-1),
   });
   linkToTenant("discussion_threads", threadId);
-  const posts = [
+  const posts = work.key === "peer-review" ? [
+    ["student", "I revised the storm scene so Mara pauses at the door before stepping into the rain."],
+    [rosterKey("Amara Okafor"), "The soaked letter is a vivid detail. It makes the moment feel real."],
+    ["teacher", "What action could show Mara's fear without naming it?"],
+  ] as const : [
     ["student", "I think the pond would slowly die. Plants and algae would stop making food and oxygen."],
     [rosterKey("Amara Okafor"), "Decomposers could keep going for a while, but they'd run out of material too."],
     ["teacher", "Great start. What happens to the fish first, and why?"],
