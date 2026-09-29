@@ -1,271 +1,118 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Edit3, MoreVertical, Save, Sparkles, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Sparkles, Trash2, Workflow } from "lucide-react";
 import type { AutomationRule } from "@/types";
-import { ActionMenu, InfoPopover } from "@/components/WorkspacePrimitives";
 import { AUTOMATION_RECIPES, AUTOMATION_TRIGGER_LABELS } from "@/lib/automation/rules";
-
-type AutomationPayload = {
-  rules: AutomationRule[];
-};
+import { Button, EmptyState, PageHeader, Sheet } from "@/components/ui";
 
 type RuleDraft = {
   title: string;
   triggerKey: string;
-  conditionsText: string;
-  actionsText: string;
+  conditions: Record<string, unknown>;
+  actions: Array<Record<string, unknown>>;
   enabled: boolean;
 };
 
-const emptyRule: RuleDraft = {
-  title: "",
-  triggerKey: AUTOMATION_RECIPES[0].triggerKey,
-  conditionsText: '{"inactiveDays":5}',
-  actionsText: '[{"type":"notify","channel":"in_app"}]',
-  enabled: true,
-};
+const defaultRecipe = AUTOMATION_RECIPES[0];
 
-const triggerOptions = Object.entries(AUTOMATION_TRIGGER_LABELS);
-
-function draftFrom(rule: AutomationRule): RuleDraft {
-  return {
-    title: rule.title,
-    triggerKey: rule.trigger_key,
-    conditionsText: JSON.stringify(rule.conditions ?? {}, null, 2),
-    actionsText: JSON.stringify(rule.actions ?? [], null, 2),
-    enabled: Boolean(rule.enabled),
-  };
+function fromRecipe(recipe: (typeof AUTOMATION_RECIPES)[number]): RuleDraft {
+  return { title: recipe.title, triggerKey: recipe.triggerKey, conditions: { ...recipe.conditions }, actions: recipe.actions.map((action) => ({ ...action })), enabled: false };
 }
 
-function parseJsonStrict<T>(value: string, label: string): T {
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    throw new Error(`${label} must be valid JSON.`);
+function fromRule(rule: AutomationRule): RuleDraft {
+  return { title: rule.title, triggerKey: rule.trigger_key, conditions: { ...(rule.conditions ?? {}) }, actions: (rule.actions ?? []).map((action) => ({ ...action })), enabled: Boolean(rule.enabled) };
+}
+
+function conditionSummary(trigger: string, conditions: Record<string, unknown>) {
+  if (trigger === "learner.inactive") return `${conditions.inactiveDays ?? 5} inactive days`;
+  if (trigger === "score.mastery") return `Score ≥ ${conditions.scoreGte ?? 90}%`;
+  if (trigger === "deadline.upcoming") return `${conditions.hoursBeforeDue ?? 24} hours before due`;
+  if (trigger === "certification.expiring") return `${conditions.daysBeforeExpiry ?? 30} days before expiry`;
+  if (trigger === "work.submitted") return conditions.needsReview ? "Needs review" : "Any submission";
+  return "Configured";
+}
+
+function ConditionControls({ draft, onChange }: { draft: RuleDraft; onChange: (next: RuleDraft) => void }) {
+  const set = (key: string, value: unknown) => onChange({ ...draft, conditions: { ...draft.conditions, [key]: value } });
+  const number = (key: string, label: string, suffix: string, fallback: number, max: number) => (
+    <label className="block space-y-1 text-sm font-medium text-fg"><span>{label}</span><div className="flex items-center gap-2"><input className="edsync-input w-28" type="number" min="1" max={max} value={Number(draft.conditions[key] ?? fallback)} onChange={(event) => set(key, Number(event.target.value))} required /><span className="text-fg-muted">{suffix}</span></div></label>
+  );
+  if (draft.triggerKey === "learner.inactive") return number("inactiveDays", "No activity for", "days", 5, 365);
+  if (draft.triggerKey === "score.mastery") return <label className="block space-y-1 text-sm font-medium text-fg"><span>Minimum score</span><div className="flex items-center gap-2"><input className="edsync-input w-28" type="number" min="0" max="100" value={Number(draft.conditions.scoreGte ?? 90)} onChange={(event) => set("scoreGte", Number(event.target.value))} required /><span className="text-fg-muted">%</span></div></label>;
+  if (draft.triggerKey === "deadline.upcoming") return number("hoursBeforeDue", "Before deadline", "hours", 24, 168);
+  if (draft.triggerKey === "certification.expiring") return number("daysBeforeExpiry", "Before expiry", "days", 30, 365);
+  if (draft.triggerKey === "work.submitted") {
+    const selected = Array.isArray(draft.conditions.workTypes) ? draft.conditions.workTypes as string[] : [];
+    return <div className="space-y-3"><fieldset className="space-y-2"><legend className="text-sm font-medium text-fg">Work types</legend><div className="flex flex-wrap gap-3">{["task", "discussion", "activity", "quiz", "test"].map((type) => <label key={type} className="flex items-center gap-1.5 text-sm capitalize text-fg-muted"><input type="checkbox" checked={selected.includes(type)} onChange={(event) => set("workTypes", event.target.checked ? [...selected, type] : selected.filter((item) => item !== type))} />{type}</label>)}</div></fieldset><label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={Boolean(draft.conditions.needsReview)} onChange={(event) => set("needsReview", event.target.checked)} />Only submissions needing review</label></div>;
   }
+  return null;
 }
 
-function prettyJson(value: unknown) {
-  return JSON.stringify(value, null, 2);
-}
-
-function compactJson(value: unknown) {
-  return JSON.stringify(value);
+function ActionControls({ draft, onChange }: { draft: RuleDraft; onChange: (next: RuleDraft) => void }) {
+  const update = (index: number, patch: Record<string, unknown>) => onChange({ ...draft, actions: draft.actions.map((action, position) => position === index ? { ...action, ...patch } : action) });
+  return <div className="space-y-2">
+    {draft.actions.map((action, index) => <div key={index} className="rounded-lg border border-line bg-surface-2 p-3">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-fg-faint">{index + 1}</span>
+        <select className="edsync-input min-w-0 flex-1" value={String(action.type)} onChange={(event) => update(index, { type: event.target.value })} aria-label={`Action ${index + 1} type`}>
+          <option value="notify">Send notification</option>
+          {draft.triggerKey === "score.mastery" && <option value="award_badge">Award badge</option>}
+          {!["notify", "award_badge"].includes(String(action.type)) && <option value={String(action.type)}>Unsupported legacy action</option>}
+        </select>
+        <button type="button" onClick={() => onChange({ ...draft, actions: draft.actions.filter((_, position) => position !== index) })} disabled={draft.actions.length === 1} className="rounded-md p-2 text-fg-muted hover:bg-surface disabled:opacity-40" aria-label={`Remove action ${index + 1}`}><Trash2 size={16} /></button>
+      </div>
+      {action.type === "notify" && <label className="mt-2 block text-xs text-fg-muted">Notification template<input className="edsync-input mt-1 w-full" value={String(action.template ?? "")} onChange={(event) => update(index, { template: event.target.value, channel: "in_app" })} placeholder="Template key" /></label>}
+      {action.type === "award_badge" && <label className="mt-2 block text-xs text-fg-muted">Badge key<input className="edsync-input mt-1 w-full" value={String(action.badge ?? "")} onChange={(event) => update(index, { badge: event.target.value })} placeholder="mastery" /></label>}
+    </div>)}
+    <button type="button" className="text-sm font-medium text-accent hover:underline" onClick={() => onChange({ ...draft, actions: [...draft.actions, { type: "notify", channel: "in_app", template: "" }] })}>+ Add notification</button>
+  </div>;
 }
 
 export default function AdminAutomationPage() {
-  const [payload, setPayload] = useState<AutomationPayload>({ rules: [] });
-  const [form, setForm] = useState<RuleDraft>(emptyRule);
+  const [rules, setRules] = useState<AutomationRule[]>([]);
+  const [draft, setDraft] = useState<RuleDraft>(() => fromRecipe(defaultRecipe));
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<RuleDraft>(emptyRule);
-  const [message, setMessage] = useState("");
-  const [showJson, setShowJson] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const load = () =>
-    fetch("/api/automation-rules", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((json: { data?: AutomationPayload }) => setPayload(json.data ?? { rules: [] }));
-
-  useEffect(() => {
-    load();
+  const load = useCallback(async () => {
+    try { const response = await fetch("/api/automation-rules", { cache: "no-store" }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Could not load automation rules."); setRules(payload.data?.rules ?? []); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load automation rules."); }
   }, []);
-
-  const bodyFrom = (source: RuleDraft) => ({
-    title: source.title,
-    triggerKey: source.triggerKey,
-    conditions: parseJsonStrict<Record<string, unknown>>(source.conditionsText, "Conditions"),
-    actions: parseJsonStrict<Array<Record<string, unknown>>>(source.actionsText, "Actions"),
-    enabled: source.enabled,
-  });
-
-  const applyRecipe = (recipe: (typeof AUTOMATION_RECIPES)[number]) => {
-    setForm({
-      title: recipe.title,
-      triggerKey: recipe.triggerKey,
-      conditionsText: prettyJson(recipe.conditions),
-      actionsText: prettyJson(recipe.actions),
-      enabled: false,
-    });
-    setMessage("Recipe loaded as a paused draft.");
-  };
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
   const run = async (body: Record<string, unknown>, success: string) => {
-    setMessage("");
-    const response = await fetch("/api/automation-rules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const json = await response.json();
-    if (!response.ok || json.error) {
-      setMessage(json.error || "Request failed.");
-      return false;
-    }
-    setMessage(success);
-    load();
-    return true;
+    setBusy(true); setError("");
+    try { const response = await fetch("/api/automation-rules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const payload = await response.json(); if (!response.ok || payload.error) throw new Error(payload.error || "Rule could not be saved."); setNotice(success); await load(); return true; }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Rule could not be saved."); return false; }
+    finally { setBusy(false); }
   };
-
-  const create = async (event: React.FormEvent) => {
+  const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    let body;
-    try {
-      body = bodyFrom(form);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Automation rule is invalid.");
-      return;
-    }
-    const ok = await run({ action: "create", ...body }, "Automation rule created.");
-    if (ok) setForm(emptyRule);
+    if (draft.actions.length === 0) { setError("Add at least one action."); return; }
+    if (draft.triggerKey === "work.submitted" && (!Array.isArray(draft.conditions.workTypes) || draft.conditions.workTypes.length === 0)) { setError("Choose at least one work type."); return; }
+    if (draft.actions.some((action) => !["notify", "award_badge"].includes(String(action.type)))) { setError("Replace unsupported legacy actions before saving."); return; }
+    const ok = await run({ action: editingId ? "update" : "create", ...(editingId ? { id: editingId } : {}), ...draft }, editingId ? "Rule saved." : "Rule created.");
+    if (ok) setOpen(false);
   };
-
-  const save = async (rule: AutomationRule) => {
-    let body;
-    try {
-      body = bodyFrom(draft);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Automation rule is invalid.");
-      return;
-    }
-    const ok = await run({ action: "update", id: rule.id, ...body }, "Automation rule saved.");
-    if (ok) setEditingId(null);
+  const changeTrigger = (triggerKey: string) => {
+    const recipe = AUTOMATION_RECIPES.find((item) => item.triggerKey === triggerKey);
+    const actions = triggerKey === "score.mastery" ? draft.actions : draft.actions.filter((action) => action.type !== "award_badge");
+    setDraft({ ...draft, triggerKey, conditions: recipe ? { ...recipe.conditions } : {}, actions: actions.length ? actions : [{ type: "notify", channel: "in_app", template: "" }] });
   };
+  const create = (recipe = defaultRecipe) => { setEditingId(null); setDraft(fromRecipe(recipe)); setError(""); setOpen(true); };
+  const edit = (rule: AutomationRule) => { setEditingId(rule.id); setDraft(fromRule(rule)); setError(""); setOpen(true); };
+  const remove = async (rule: AutomationRule) => { if (!window.confirm(`Delete “${rule.title}”?`)) return; await run({ action: "delete", id: rule.id }, "Rule deleted."); };
 
-  const toggle = async (rule: AutomationRule) => {
-    await run({ action: "toggle", id: rule.id, enabled: !rule.enabled }, rule.enabled ? "Automation paused." : "Automation enabled.");
-  };
-
-  const remove = async (rule: AutomationRule) => {
-    if (!window.confirm(`Delete "${rule.title}"?`)) return;
-    await run({ action: "delete", id: rule.id }, "Automation rule deleted.");
-  };
-
-  return (
-    <div className="page-shell space-y-5">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-edsync-blue">Governance</p>
-          <h1 className="font-display text-3xl font-bold text-edsync-text">Automation Rules</h1>
-        </div>
-        <InfoPopover label="Automation help">
-          Start paused. Test notifications first. Enable unlocks, badges, and reminders after the tenant flow is confirmed.
-        </InfoPopover>
-      </header>
-
-      {message && <div className="rounded-lg border border-edsync-border bg-edsync-surface px-4 py-3 text-sm text-edsync-subtle">{message}</div>}
-
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {AUTOMATION_RECIPES.map((recipe) => (
-          <button
-            key={recipe.id}
-            type="button"
-            onClick={() => applyRecipe(recipe)}
-            className="rounded-lg border border-edsync-border bg-edsync-card p-4 text-left transition hover:border-edsync-blue/50 hover:bg-edsync-surface"
-          >
-            <span className="text-xs font-bold uppercase tracking-wide text-edsync-blue">
-              {AUTOMATION_TRIGGER_LABELS[recipe.triggerKey]}
-            </span>
-            <span className="mt-2 block font-semibold text-edsync-text">{recipe.title}</span>
-          </button>
-        ))}
-      </section>
-
-      <form onSubmit={create} className="edsync-card grid gap-3 p-4 lg:grid-cols-[minmax(220px,1fr)_220px_140px_auto]">
-        <input className="edsync-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Rule title" required />
-        <select className="edsync-input" value={form.triggerKey} onChange={(event) => setForm({ ...form, triggerKey: event.target.value })}>
-          {triggerOptions.map(([triggerKey, label]) => (
-            <option key={triggerKey} value={triggerKey}>{label}</option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm text-edsync-subtle">
-          <input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
-          Enabled
-        </label>
-        <button className="btn-primary justify-center" type="submit">Create rule</button>
-        <div className="lg:col-span-4">
-          <button
-            type="button"
-            className="btn-secondary px-3 py-2 text-sm"
-            onClick={() => setShowJson((value) => !value)}
-          >
-            {showJson ? "Hide JSON" : "Edit conditions"}
-          </button>
-        </div>
-        {showJson && (
-          <>
-            <textarea className="edsync-input min-h-24 lg:col-span-2" value={form.conditionsText} onChange={(event) => setForm({ ...form, conditionsText: event.target.value })} aria-label="Conditions JSON" />
-            <textarea className="edsync-input min-h-24 lg:col-span-2" value={form.actionsText} onChange={(event) => setForm({ ...form, actionsText: event.target.value })} aria-label="Actions JSON" />
-          </>
-        )}
-      </form>
-
-      <div className="edsync-card overflow-hidden p-0">
-        <div className="border-b border-edsync-border px-4 py-3">
-          <h2 className="font-display text-xl font-bold">Rules</h2>
-        </div>
-        <div className="divide-y divide-edsync-border">
-          {payload.rules.map((rule) => {
-            const editing = editingId === rule.id;
-            return (
-              <section key={rule.id} className="grid gap-3 px-4 py-4 text-sm">
-                {editing ? (
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    <input className="edsync-input" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
-                    <input className="edsync-input" value={draft.triggerKey} onChange={(event) => setDraft({ ...draft, triggerKey: event.target.value })} />
-                    <textarea className="edsync-input min-h-24" value={draft.conditionsText} onChange={(event) => setDraft({ ...draft, conditionsText: event.target.value })} />
-                    <textarea className="edsync-input min-h-24" value={draft.actionsText} onChange={(event) => setDraft({ ...draft, actionsText: event.target.value })} />
-                    <label className="flex items-center gap-2 text-sm text-edsync-subtle">
-                      <input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft({ ...draft, enabled: event.target.checked })} />
-                      Enabled
-                    </label>
-                  </div>
-                ) : (
-                  <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_200px_120px] lg:items-center">
-                    <div>
-                      <p className="font-semibold text-edsync-text">{rule.title}</p>
-                      <p className="mt-1 text-xs text-edsync-subtle">{JSON.stringify(rule.conditions)}</p>
-                    </div>
-                    <span className="font-semibold text-xs text-edsync-subtle">{AUTOMATION_TRIGGER_LABELS[rule.trigger_key] ?? rule.trigger_key}</span>
-                    <span className={`badge ${rule.enabled ? "bg-edsync-emerald/10 text-edsync-emerald" : "bg-slate-100 text-slate-500"}`}>
-                      {rule.enabled ? "Enabled" : "Paused"}
-                    </span>
-                  </div>
-                )}
-                <div className="flex flex-wrap justify-end gap-2">
-                  {editing ? (
-                    <>
-                      <button type="button" className="btn-primary px-3 py-2 text-sm" onClick={() => save(rule)}><Save className="h-4 w-4" /> Save</button>
-                      <button type="button" className="btn-secondary px-3 py-2 text-sm" onClick={() => setEditingId(null)}><X className="h-4 w-4" /> Cancel</button>
-                    </>
-                  ) : (
-                    <ActionMenu label={`${rule.title} actions`}>
-                      <button type="button" className="btn-secondary justify-start px-3 py-2 text-sm" onClick={() => { setEditingId(rule.id); setDraft(draftFrom(rule)); }}><Edit3 className="h-4 w-4" /> Edit</button>
-                      <button type="button" className="btn-secondary justify-start px-3 py-2 text-sm" onClick={() => toggle(rule)}>{rule.enabled ? "Pause" : "Enable"}</button>
-                      <button type="button" className="btn-ghost justify-start px-3 py-2 text-sm text-rose-600" onClick={() => remove(rule)}><Trash2 className="h-4 w-4" /> Delete</button>
-                    </ActionMenu>
-                  )}
-                </div>
-                {!editing && (
-                  <details className="rounded-lg border border-edsync-border bg-edsync-surface">
-                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-edsync-subtle">
-                      <MoreVertical className="h-3.5 w-3.5" />
-                      Rule payload
-                    </summary>
-                    <pre className="overflow-auto border-t border-edsync-border p-3 text-xs text-edsync-subtle">{compactJson({ conditions: rule.conditions, actions: rule.actions })}</pre>
-                  </details>
-                )}
-              </section>
-            );
-          })}
-          {payload.rules.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-edsync-subtle">
-              <Sparkles className="mx-auto mb-3 h-8 w-8" />
-              Loading starter automation recipes.
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="page-shell space-y-4">
+    <PageHeader title="Automation" icon={Workflow} count={rules.length} actions={<Button variant="primary" onClick={() => create()}><Plus size={16} /> New rule</Button>} />
+    <div className="rounded-lg border border-amber-300/50 bg-amber-50/70 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Enabled rules run hourly. They can send in-app notifications; mastery rules can also award badges.</div>
+    {error && <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm text-fg-muted">{notice}</p>}
+    <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold uppercase tracking-wide text-fg-faint">Start from a recipe</span>{AUTOMATION_RECIPES.map((recipe) => <button key={recipe.id} type="button" onClick={() => create(recipe)} className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-fg-muted hover:border-accent hover:text-fg">{recipe.title}</button>)}</div>
+    <div className="card divide-y divide-line overflow-hidden">{rules.map((rule) => <div key={rule.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-fg">{rule.title}</p><p className="truncate text-xs text-fg-muted">{AUTOMATION_TRIGGER_LABELS[rule.trigger_key] ?? rule.trigger_key} · {conditionSummary(rule.trigger_key, rule.conditions ?? {})} · {rule.actions.length} action{rule.actions.length === 1 ? "" : "s"}</p></div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${rule.enabled ? "bg-success-soft text-success" : "bg-surface-2 text-fg-muted"}`}>{rule.enabled ? "Enabled" : "Paused"}</span><div className="flex items-center gap-1"><button type="button" className="rounded-md px-2 py-1.5 text-sm text-fg-muted hover:bg-surface-2" onClick={() => edit(rule)}>Edit</button><button type="button" className="rounded-md px-2 py-1.5 text-sm text-fg-muted hover:bg-surface-2" disabled={busy} onClick={() => void run({ action: "toggle", id: rule.id, enabled: !rule.enabled }, rule.enabled ? "Rule paused." : "Rule enabled.")}>{rule.enabled ? "Pause" : "Enable"}</button><button type="button" className="rounded-md p-2 text-fg-muted hover:bg-danger-soft hover:text-danger" disabled={busy} onClick={() => void remove(rule)} aria-label={`Delete ${rule.title}`}><Trash2 size={16} /></button></div></div>)}{rules.length === 0 && <EmptyState icon={Workflow} title="No rules yet" hint="Use a recipe or create a rule to prepare automation." compact />}</div>
+    <Sheet open={open} onClose={() => setOpen(false)} title={editingId ? "Edit automation rule" : "New automation rule"} description="Choose when it applies and what it should do." size="lg" onSubmit={save} footer={<><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" variant="primary" disabled={busy}>{busy ? "Saving…" : "Save rule"}</Button></>}><div className="space-y-5">{error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}<label className="block space-y-1 text-sm font-medium text-fg">Rule name<input className="edsync-input w-full" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} maxLength={140} required /></label><label className="block space-y-1 text-sm font-medium text-fg">When this happens<select className="edsync-input w-full" value={draft.triggerKey} onChange={(event) => changeTrigger(event.target.value)}>{Object.entries(AUTOMATION_TRIGGER_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><section className="space-y-2 border-t border-line pt-4"><h3 className="text-sm font-semibold text-fg">Conditions</h3><ConditionControls draft={draft} onChange={setDraft} /></section><section className="space-y-2 border-t border-line pt-4"><h3 className="text-sm font-semibold text-fg">Actions</h3><ActionControls draft={draft} onChange={setDraft} /></section><label className="flex items-center gap-2 border-t border-line pt-4 text-sm text-fg"><input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft({ ...draft, enabled: event.target.checked })} />Mark as enabled</label></div></Sheet>
+  </div>;
 }
