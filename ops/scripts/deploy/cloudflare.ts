@@ -1,6 +1,7 @@
 import { loadEnvFile, run } from "../shared/ops";
 
 const APP_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.app.jsonc";
+const AUTOMATION_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.automation.jsonc";
 const OPEN_NEXT_CONFIG_PATH = "infra/cloudflare/open-next.config.ts";
 
 function putWorkerSecret(key: string, config: string) {
@@ -26,6 +27,8 @@ function main() {
     "--openNextConfigPath",
     OPEN_NEXT_CONFIG_PATH,
   ]);
+
+  run("npx", ["wrangler", "deploy", "--config", AUTOMATION_WORKER_CONFIG_PATH]);
 
   run("npx", [
     "opennextjs-cloudflare",
