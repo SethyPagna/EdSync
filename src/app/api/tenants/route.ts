@@ -50,6 +50,7 @@ export async function POST(request: Request) {
 
   const id = crypto.randomUUID();
   const inviteCode = `join-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+  const teacherInviteCode = `teach-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
   await ensureDefaultTenant(user.id);
   await d1Query(
     `INSERT INTO tenants (id, slug, name, owner_id, plan_tier, isolation_mode, settings, created_at, updated_at)
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       user.id,
       tenantInput.planTier,
       tenantInput.isolationMode,
-      JSON.stringify({ invite_code: inviteCode, invites_enabled: true }),
+      JSON.stringify({ invite_code: inviteCode, teacher_invite_code: teacherInviteCode, invites_enabled: true }),
     ],
   );
   await d1Query(
@@ -74,5 +75,5 @@ export async function POST(request: Request) {
      VALUES (?, ?, ?, 'role_master_admin', 'active', '[]', datetime('now'), datetime('now'))`,
     [crypto.randomUUID(), id, user.id],
   );
-  return NextResponse.json({ data: { id, inviteCode }, error: null });
+  return NextResponse.json({ data: { id, inviteCode, teacherInviteCode }, error: null });
 }
