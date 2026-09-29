@@ -23,6 +23,7 @@ import {
 } from "@/lib/security/http-errors";
 import { sanitizeCatalogMetadata } from "@/lib/security/media";
 import { DEFAULT_TENANT_ID, resolveTenantContext } from "@/lib/tenancy";
+import { toClientTenantContext } from "@/lib/tenancy/client-context";
 import { isTenantOutsider } from "@/lib/tenancy/ownership";
 
 type BillingAction =
@@ -177,7 +178,7 @@ export const GET = withRoute(async () => {
   const entitlements = entitlementRows.map((row) => deserializeRow("entitlements", row));
   const transactions = transactionRows.map((row) => deserializeRow("billing_transactions", row));
   const portals = portalRows.map((row) => deserializeRow("tenant_portals", row));
-  return NextResponse.json({ data: { products, prices, entitlements, transactions, portals, links, context }, error: null });
+  return NextResponse.json({ data: { products, prices, entitlements, transactions, portals, links, context: toClientTenantContext(context) }, error: null });
 });
 
 export const POST = withRoute(async (request) => {
