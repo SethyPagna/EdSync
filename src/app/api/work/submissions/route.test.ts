@@ -67,6 +67,14 @@ beforeEach(() => {
   state.user = STUDENT;
 });
 
+it("blocks assignment submissions when the global work flag is disabled", async () => {
+  workItem("flagged-work");
+  insertRows(db, "feature_flags", [{ id: "flag-work", flag_key: "work_items", label: "Assignments", enabled: 0 }]);
+  expect((await submit("flagged-work")).status).toBe(403);
+  expect((await GET(new Request("http://localhost/api/work/submissions"))).status).toBe(403);
+  expect(submissionRow("flagged-work")).toBeUndefined();
+});
+
 function submit(workItemId: string, text = "My answer") {
   return POST(jsonRequest("/api/work/submissions", "POST", { workItemId, response: { text } }));
 }
