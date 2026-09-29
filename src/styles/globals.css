@@ -909,6 +909,20 @@
     }
   }
 
+  @media (max-width: 360px) {
+    .edsync-auth-choice {
+      flex-direction: column;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .edsync-auth-choice > span:not(.edsync-auth-choice-tooltip) {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+    }
+  }
+
   .edsync-practice-mode-detail,
   .edsync-hover-detail {
     display: block;
