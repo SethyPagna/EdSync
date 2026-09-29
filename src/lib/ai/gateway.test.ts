@@ -36,6 +36,6 @@ describe("AI gateway", () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: "OK" } }] }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(aiGatewayChat({ messages: [{ role: "user", content: "Hi" }] })).resolves.toBe("OK");
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).model).toBe("qwen/qwen3.8-27b");
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).model).toBe("openai/gpt-oss-120b");
   });
 });
