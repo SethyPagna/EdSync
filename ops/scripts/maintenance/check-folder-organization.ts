@@ -24,7 +24,7 @@ const folderRules: FolderRule[] = [
     root: "ops",
   },
   {
-    allowedChildren: new Set(["_headers", "favicon.svg", "manifest.webmanifest", "showcase"]),
+    allowedChildren: new Set(["_headers", "favicon.svg", "manifest.webmanifest", "showcase", "vendor"]),
     root: "public",
   },
   {
