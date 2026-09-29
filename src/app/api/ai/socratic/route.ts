@@ -42,10 +42,8 @@ export async function POST(request: NextRequest) {
       conversationHistory = [],
     } = await request.json();
 
-    if (!question?.trim()) {
-      return NextResponse.json({
-        hint: "What would you like help thinking through?",
-      });
+    if (typeof question !== "string" || !question.trim()) {
+      return NextResponse.json({ error: "A question is required." }, { status: 400 });
     }
 
     const objectivesList = Array.isArray(lessonObjectives)
@@ -87,7 +85,7 @@ HARD RULES:
         role: (message.role === "assistant" ? "assistant" : "user") as
           | "user"
           | "assistant",
-        content: message.content,
+        content: typeof message.content === "string" ? message.content.slice(0, 1200) : "",
       }));
 
     const hint = await generateAIChat({
@@ -98,14 +96,16 @@ HARD RULES:
       ],
       maxTokens: 250,
       temperature: 0.75,
+      userId: user.id,
+      feature: "socratic",
     });
+
+    if (!hint.trim()) return NextResponse.json({ error: "Socratic help is unavailable right now. Please try again." }, { status: 502 });
 
     return NextResponse.json({ hint });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error("[socratic]", msg);
-    return NextResponse.json({
-      hint: "That's a great question to sit with. What part feels most confusing right now, and what do you already understand about it?",
-    });
+    return NextResponse.json({ error: "Socratic help is unavailable right now. Please try again." }, { status: 502 });
   }
 }
