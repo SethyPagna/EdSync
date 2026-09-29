@@ -1,4 +1,5 @@
 import { d1Query } from "@/lib/db/d1";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { decryptSecret, isSecretEncryptionConfigured } from "@/lib/security/secrets";
 import { listEnabledProviderRows, PROVIDER_META, type AIProviderKey, type AIProviderRow } from "./providers";
 
@@ -282,12 +283,13 @@ export async function aiGatewayChat(options: AIChatOptions) {
   const started = Date.now();
   const providers = await loadRuntimeProviders();
   if (providers.length === 0) throw new Error("No AI provider is configured.");
+  const allowFallback = await isFeatureEnabled("ai_provider_fallback");
 
   const attempted = new Set<string>();
   const failovers: { provider: string; name: string; error: string }[] = [];
   let lastError: unknown = null;
 
-  while (attempted.size < providers.length) {
+  while (attempted.size < (allowFallback ? providers.length : 1)) {
     const provider = pickProvider(providers.filter((item) => !attempted.has(item.id)));
     if (!provider) break;
 
