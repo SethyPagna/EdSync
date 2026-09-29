@@ -6,6 +6,7 @@ import { errorMessage, jsonError, optionalId, readJsonObject } from "@/lib/grade
 import { GRADE_FEEDBACK_MAX_LENGTH, isGradeSourceType, validateGradeText } from "@/lib/grades/validation";
 import { appendLearningEvent, recordGradeEvent } from "@/lib/learning-events";
 import { resolveTenantContext } from "@/lib/tenancy";
+import { isTenantOutsider } from "@/lib/tenancy/ownership";
 import {
   tenantObjectJoin,
   tenantObjectParams,
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const workItemId = params.get("workItemId");
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
 
   if (user.user_metadata.role === "student") {
@@ -126,6 +128,7 @@ export async function POST(request: Request) {
     return jsonError(errorMessage(error, "Invalid submission response."), 400);
   }
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const [work] = await d1Query<SubmissionTarget>(
     `SELECT wi.id, wi.class_id, wi.status, wi.allow_late, wi.due_at, wi.settings,
@@ -260,6 +263,7 @@ export async function PATCH(request: Request) {
   if (!submissionId) return jsonError("Submission id is required.", 400);
 
   const context = await resolveTenantContext(user);
+  if (isTenantOutsider(user, context)) return jsonError("Organization membership required.", 403);
   if (!(await isFeatureEnabled("work_items"))) return jsonError("Assignments are unavailable.", 403);
   const [submission] = await d1Query<{
     id: string;
