@@ -52,6 +52,34 @@ function post(body: string) {
 }
 
 describe("POST /api/data", () => {
+  it("permits demo reads while rejecting every parsed write action", async () => {
+    vi.stubEnv("EDSYNC_DEMO_MODE", "1");
+    try {
+      const ownProfile = await post(JSON.stringify({
+        table: "profiles",
+        action: "select",
+        filters: [{ op: "eq", column: "id", value: STUDENT.id }],
+        maybeSingle: true,
+      }));
+      expect(ownProfile.status).toBe(200);
+      expect(await ownProfile.json()).toMatchObject({ data: { id: STUDENT.id } });
+
+      for (const request of [
+        { table: "profiles", action: "insert", values: { id: "visitor-row", email: "visitor@example.test" } },
+        { table: "profiles", action: "update", values: { full_name: "Changed" }, filters: [{ op: "eq", column: "id", value: STUDENT.id }] },
+        { table: "profiles", action: "delete", filters: [{ op: "eq", column: "id", value: STUDENT.id }] },
+        { table: "profiles", action: "upsert", values: { id: STUDENT.id, full_name: "Changed" } },
+      ]) {
+        const response = await post(JSON.stringify(request));
+        expect(response.status, request.action).toBe(403);
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+      }
+      expect(rowOf(db, "profiles", STUDENT.id)?.full_name).not.toBe("Changed");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("projects quiz questions without keys for learners while teachers retain authoring fields", async () => {
     db.prepare("UPDATE quiz_questions SET correct_answer = ?, explanation = ?, options = ? WHERE id = ?")
       .run("secret-answer-917", "private explanation", JSON.stringify([
