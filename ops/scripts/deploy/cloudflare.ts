@@ -1,8 +1,6 @@
 import { loadEnvFile, run } from "../shared/ops";
 import { APP_WORKER_CONFIG_PATH, buildCloudflareApp } from "./cloudflare-build";
 
-const AUTOMATION_WORKER_CONFIG_PATH = "infra/cloudflare/wrangler.automation.jsonc";
-
 function putWorkerSecret(key: string, config: string) {
   const value = process.env[key];
   if (!value) return;
@@ -16,8 +14,6 @@ function main() {
   }
 
   buildCloudflareApp();
-
-  run("npx", ["wrangler", "deploy", "--config", AUTOMATION_WORKER_CONFIG_PATH]);
 
   run("npx", [
     "opennextjs-cloudflare",
