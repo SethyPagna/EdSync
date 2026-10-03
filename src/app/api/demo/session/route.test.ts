@@ -23,7 +23,7 @@ vi.mock("@/lib/auth/session", () => ({
 
 import { POST } from "./route";
 
-const HOST = "edsync-demo.learn-app.workers.dev";
+const HOST = "edsync-demo.pagna.workers.dev";
 
 function request(role: string, hostname = HOST, origin = `https://${hostname}`) {
   return new NextRequest(`https://${hostname}/api/demo/session`, {
@@ -53,7 +53,7 @@ describe("one-click demo session", () => {
     vi.stubEnv("EDSYNC_DEMO_MODE", undefined);
     expect((await POST(request("student"))).status).toBe(404);
     vi.stubEnv("EDSYNC_DEMO_MODE", "1");
-    expect((await POST(request("student", "edsync.learn-app.workers.dev"))).status).toBe(404);
+    expect((await POST(request("student", "edsync.pagna.workers.dev"))).status).toBe(404);
     expect((await POST(request("student", HOST, "https://attacker.test"))).status).toBe(404);
     expect(mocks.query).not.toHaveBeenCalled();
     expect(mocks.createSession).not.toHaveBeenCalled();
