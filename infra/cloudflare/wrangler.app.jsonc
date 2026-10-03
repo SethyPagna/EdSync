@@ -31,7 +31,7 @@
     "R2_BUCKET": "edsync-assets-prod",
     "R2_PUBLIC_BASE_URL": "https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev",
     "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "https://pub-fd59bf7992c64c6f94c13d2aedc47a83.r2.dev",
-    "NEXT_PUBLIC_APP_URL": "https://edsync.learn-app.workers.dev",
+    "NEXT_PUBLIC_APP_URL": "https://edsync.pagna.workers.dev",
     "CLOUDFLARE_QUEUE_NAME": "edsync-automation-prod",
     "CLOUDFLARE_VECTORIZE_INDEX": "edsync-learning-prod"
   },
