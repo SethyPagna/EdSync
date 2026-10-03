@@ -235,12 +235,6 @@ export default async function CatalogPage({
             {(unavailable || hasFilters) && <p className="mt-2 text-sm text-edsync-subtle">
               {unavailable ? "Please try again in a moment." : copy.emptyCopy}
             </p>}
-            {!isDemoSite && !unavailable && !hasFilters && <a
-              href="https://edsync-demo.pagna.workers.dev"
-              className="btn-primary mt-5"
-            >
-              Explore populated demo <ArrowRight size={16} />
-            </a>}
             <Link
               href={isDemoSite && !unavailable && !hasFilters ? "#demo-roles" : publicLanguageHref(unavailable || hasFilters ? "/catalog" : "/auth/signup", filters.language)}
               className="btn-secondary mt-5"
