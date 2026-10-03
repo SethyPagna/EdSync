@@ -31,7 +31,6 @@
     "clean:local": "tsx ops/scripts/maintenance/clean-local.ts",
     "clean:all": "tsx ops/scripts/maintenance/clean-local.ts --include-node-modules",
     "check:extraction": "tsx ops/scripts/maintenance/check-extraction-bounds.ts",
-    "deploy:vercel": "tsx ops/scripts/deploy/vercel.ts",
     "deploy:cloudflare": "tsx ops/scripts/deploy/cloudflare.ts",
     "build:cloudflare": "tsx ops/scripts/deploy/cloudflare-build.ts",
     "preview:cloudflare": "npm run build:cloudflare && opennextjs-cloudflare preview --config infra/cloudflare/wrangler.app.jsonc",
