@@ -34,6 +34,7 @@ function initialSection(sections: LessonSection[], progress: StudentProgress | n
 }
 
 export default function LessonPlayer({ lessonId }: { lessonId: string }) {
+  const isDemoSite = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const router = useRouter();
   const client = useMemo(() => createClient(), []);
   const [page, setPage] = useState<PageData | null>(null);
@@ -52,12 +53,14 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
   const pendingSeconds = useRef(0);
   const lastInteraction = useRef(0);
   const viewRef = useRef<View>("loading");
+  const demoProgress = useRef<ProgressSnapshot>({ status: "not_started", sectionsCompleted: [], progress: 0, completed: false, streakDays: 0 });
 
   const recordProgress = useCallback((update: Parameters<typeof saveProgress>[1]) => {
+    if (isDemoSite) return Promise.resolve(demoProgress.current);
     const operation = progressQueue.current.catch(() => undefined).then(() => saveProgress(lessonId, update));
     progressQueue.current = operation.then(() => undefined, () => undefined);
     return operation.then((saved) => { setProgress(saved); return saved; });
-  }, [lessonId]);
+  }, [lessonId, isDemoSite]);
 
   const load = useCallback(async () => {
     setView("loading");
@@ -80,6 +83,15 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
       const sections = (sectionsResponse.data ?? []) as LessonSection[];
       const glossary = (glossaryResponse.data ?? []) as GlossaryTerm[];
       const saved = progressResponse.data as StudentProgress | null;
+      if (isDemoSite) {
+        demoProgress.current = {
+          status: saved?.status ?? "not_started",
+          sectionsCompleted: saved?.sections_completed ?? [],
+          progress: sections.length ? (saved?.sections_completed?.length ?? 0) / sections.length : 0,
+          completed: saved?.status === "completed",
+          streakDays: 0,
+        };
+      }
       const snapshot = await recordProgress({});
       const recordedFinal = questions.some((question) => question.isFinal)
         ? await loadRecordedFinal(lessonId)
@@ -99,7 +111,7 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
     } catch (cause) {
       setLoadingError(cause instanceof Error ? cause.message : "Lesson could not load.");
     }
-  }, [client, lessonId, recordProgress]);
+  }, [client, lessonId, recordProgress, isDemoSite]);
 
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
   useEffect(() => { viewRef.current = view; }, [view]);
@@ -142,7 +154,7 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
   const completedIds = progress?.sectionsCompleted ?? [];
   const progressPercent = Math.round((progress?.progress ?? 0) * 100);
   const missedPrompts = finalQuestions.filter((question) => finalGrade?.results.some((result) => result.questionId === question.id && result.correct === false)).map((question) => question.prompt);
-  const tutorPhase: "diagnostic" | "quiz_section" | "final_quiz" | "learning" = view === "warmup" ? "diagnostic" : view === "final" ? "final_quiz" : view === "section" && sectionQuestions.length > 0 && !checked ? "quiz_section" : "learning";
+  const tutorPhase: "diagnostic" | "quiz_section" | "final_quiz" | "learning" = view === "warmup" ? "diagnostic" : view === "final" ? "final_quiz" : view === "section" && sectionQuestions.length > 0 && !checked && !isDemoSite ? "quiz_section" : "learning";
 
   const goToSection = useCallback(async (index: number) => {
     if (!page || index < 0 || index >= page.sections.length) return;
@@ -228,7 +240,7 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
             <div><p className="mb-1 text-xs text-fg-muted">Optional</p><h1 className="text-[22px] font-semibold tracking-tight">Warm-up</h1></div>
             {warmupQuestions.map((question, index) => <QuestionCard key={question.id} question={question} index={index} answer={answers[question.id]} onAnswer={(answer) => setAnswers((current) => ({ ...current, [question.id]: answer }))} feedback={feedback[question.id]} />)}
             {actionError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{actionError}</p>}
-            <div className="flex justify-end gap-2">{!checked && <Button onClick={() => setView(page.sections.length ? "section" : finalQuestions.length ? "final" : "finish")}>Skip</Button>}{checked ? <Button variant="primary" iconRight={ArrowRight} onClick={() => setView(page.sections.length ? "section" : finalQuestions.length ? "final" : "finish")}>Begin lesson</Button> : <Button variant="primary" loading={busy} disabled={!allAnswered(warmupQuestions, answers)} onClick={checkQuestions}>Check answers</Button>}</div>
+            <div className="flex justify-end gap-2">{!checked && <Button onClick={() => setView(page.sections.length ? "section" : finalQuestions.length ? "final" : "finish")}>Skip</Button>}{checked ? <Button variant="primary" iconRight={ArrowRight} onClick={() => setView(page.sections.length ? "section" : finalQuestions.length ? "final" : "finish")}>Begin lesson</Button> : <Button variant="primary" loading={busy} disabled={isDemoSite || !allAnswered(warmupQuestions, answers)} onClick={checkQuestions}>Check answers</Button>}</div>
           </div>
         )}
 
@@ -246,14 +258,14 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
             {finalQuestions.map((question, index) => <QuestionCard key={question.id} question={question} index={index} answer={answers[question.id]} onAnswer={(answer) => setAnswers((current) => ({ ...current, [question.id]: answer }))} feedback={finalGrade?.results.find((result) => result.questionId === question.id)} disabled={Boolean(finalGrade)} />)}
             {finalGrade && <div role="status" className="rounded-xl border border-line bg-surface p-5"><p className="text-sm font-medium text-fg">{finalGrade.status === "submitted" ? "Submitted for review" : "Quiz scored"}</p><p className="mt-1 text-sm text-fg-muted">{finalGrade.percent === null ? `${finalGrade.score} of ${finalGrade.maxScore} points scored so far; your teacher will review the rest.` : `${Math.round(finalGrade.percent)}% · ${finalGrade.score} of ${finalGrade.maxScore} points`}</p>{finalGrade.locked && <p className="mt-1 text-xs text-fg-muted">Your teacher's grade remains on record.</p>}</div>}
             {actionError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{actionError}</p>}
-            <div className="flex justify-end">{finalGrade ? <Button variant="primary" iconRight={ArrowRight} onClick={() => setView(progress?.completed ? "complete" : "finish")}>Continue</Button> : <Button variant="primary" loading={busy} disabled={!allAnswered(finalQuestions, answers)} onClick={sendFinal}>Submit quiz</Button>}</div>
+            <div className="flex justify-end">{finalGrade ? <Button variant="primary" iconRight={ArrowRight} onClick={() => setView(progress?.completed ? "complete" : "finish")}>Continue</Button> : <Button variant="primary" loading={busy} disabled={isDemoSite || !allAnswered(finalQuestions, answers)} onClick={sendFinal}>Submit quiz</Button>}</div>
           </div>
         )}
 
         {view === "finish" && (
-          <div className="space-y-5 rounded-xl border border-line bg-surface p-6"><div className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><Sparkles className="size-5" /></div><h1 className="text-[22px] font-semibold tracking-tight">Ready to finish</h1><p className="text-sm text-fg-muted">Your progress is saved.</p>{finalGrade?.percent !== null && finalGrade && <p className="text-2xl font-semibold tabular-nums text-fg">{Math.round(finalGrade.percent)}%</p>}
+          <div className="space-y-5 rounded-xl border border-line bg-surface p-6"><div className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><Sparkles className="size-5" /></div><h1 className="text-[22px] font-semibold tracking-tight">Ready to finish</h1><p className="text-sm text-fg-muted">{isDemoSite ? "This sample is read-only. Progress and quiz answers are not saved." : "Your progress is saved."}</p>{finalGrade?.percent !== null && finalGrade && <p className="text-2xl font-semibold tabular-nums text-fg">{Math.round(finalGrade.percent)}%</p>}
             {actionError && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{actionError}</p>}
-            <div className="flex flex-wrap gap-2"><Button variant="primary" icon={Check} loading={busy} onClick={finish}>Finish lesson</Button><Button icon={Sparkles} onClick={() => setTool("reflection")}>Reflect</Button><Button onClick={() => setTool("extended")}>Explore more</Button></div>
+            <div className="flex flex-wrap gap-2"><Button variant="primary" icon={Check} loading={busy} disabled={isDemoSite} onClick={finish}>Finish lesson</Button><Button icon={Sparkles} onClick={() => setTool("reflection")}>Reflect</Button><Button onClick={() => setTool("extended")}>Explore more</Button></div>
           </div>
         )}
 
@@ -266,7 +278,7 @@ export default function LessonPlayer({ lessonId }: { lessonId: string }) {
         <footer className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md">
           <div className="mx-auto flex max-w-[720px] items-center justify-between gap-3 px-4 sm:px-6">
             <Button icon={ChevronLeft} disabled={sectionIdx === 0 || busy} onClick={() => void goToSection(sectionIdx - 1)}>Previous</Button>
-            {sectionQuestions.length > 0 && !checked ? <Button variant="primary" iconRight={Check} loading={busy} disabled={!allAnswered(sectionQuestions, answers)} onClick={checkQuestions}>Check answers</Button> : <Button variant="primary" iconRight={ChevronRight} loading={busy} onClick={nextSection}>{sectionIdx === page.sections.length - 1 ? finalQuestions.length ? "Final quiz" : "Continue" : "Next"}</Button>}
+            {sectionQuestions.length > 0 && !checked && !isDemoSite ? <Button variant="primary" iconRight={Check} loading={busy} disabled={!allAnswered(sectionQuestions, answers)} onClick={checkQuestions}>Check answers</Button> : <Button variant="primary" iconRight={ChevronRight} loading={busy} onClick={nextSection}>{sectionIdx === page.sections.length - 1 ? finalQuestions.length ? "Final quiz" : "Continue" : "Next"}</Button>}
           </div>
         </footer>
       )}
