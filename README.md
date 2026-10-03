@@ -77,7 +77,7 @@ announcements, notes, notifications, catalog products, and Studio designs.
 
 ## Deployment
 
-- Cloudflare app Worker link: `https://edsync.learn-app.workers.dev`
+- Cloudflare app Worker link: `https://edsync.pagna.workers.dev`
 - Cloudflare app Worker name: `edsync`
 - Cloudflare automation Worker name: `edsync-automation`
 - Cloudflare D1 database: `edsync-prod-d1`
@@ -284,7 +284,7 @@ No DNS records, domain purchases, or live Cloudflare changes are performed by th
 
 ## Public sample workspace
 
-The [EdSync demo](https://edsync-demo.learn-app.workers.dev) runs as a separate Cloudflare Worker with its own D1 database. Visitors can browse four free sample courses and switch between fictional learner and teacher workspaces without credentials. The shared workspaces are read-only; they illustrate lessons, classes, assessments, progress, and Studio without changing the official EdSync tenant. The empty official catalog links to this populated demo.
+The [EdSync demo](https://edsync-demo.pagna.workers.dev) runs as a separate Cloudflare Worker with its own D1 database. Visitors can browse four free sample courses and switch between fictional learner and teacher workspaces without credentials. The shared workspaces are read-only; they illustrate lessons, classes, assessments, progress, and Studio without changing the official EdSync tenant. The empty official catalog links to this populated demo.
 
 Build and deploy the demo with its own Wrangler config, never the production app or automation deploy command:
 
