@@ -84,6 +84,12 @@ announcements, notes, notifications, catalog products, and Studio designs.
 - Cloudflare R2 bucket: `edsync-assets-prod`
 - Cloudflare Queue: `edsync-automation-prod`
 - Cloudflare Vectorize index: `edsync-learning-prod`
+- EdSync deploys only to the `Apps` account owned by `jamesung.kh@gmail.com`
+  (`d105a82bc26b6913575355352c2d1bb1`). All three Wrangler configs pin that
+  account. Use its isolated OAuth profile via `XDG_CONFIG_HOME`; the laptop's
+  default Wrangler profile belongs to BusinessOS and must not be used here.
+- Vercel Git deployments remain disabled in `vercel.json`; the Vercel deploy
+  command has been removed. Cloudflare is the supported release target.
 - `npm.cmd run deploy:cloudflare` builds the app with the public values in the
   app Wrangler config, deploys the automation queue consumer and its phased
   20-minute sweep, then deploys the app Worker. Set `CLOUDFLARE_ACCOUNT_ID` in
@@ -94,8 +100,8 @@ announcements, notes, notifications, catalog products, and Studio designs.
   provider records. A different key cannot decrypt their stored credentials.
   If that key is unavailable, skip secret sync and use the enabled Cloudflare
   Workers AI fallback until the original key or provider credentials are restored.
-- Real secrets belong in `.env.local`, Vercel environment variables, Cloudflare
-  secrets, or CI secrets. They must not be committed.
+- Real secrets belong in `.env.local`, Cloudflare secrets, or CI secrets.
+  They must not be committed.
 - `npm.cmd run db:local` starts the production-mode Docker self-hosting profile
   (`infra/local/docker-compose.yml`: `next build` + `next start` plus a
   cloudflared tunnel) with the root `.env.local`. It does not use the local D1;
