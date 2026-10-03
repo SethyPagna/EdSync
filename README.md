@@ -79,7 +79,9 @@ announcements, notes, notifications, catalog products, and Studio designs.
 
 - Cloudflare app Worker link: `https://edsync.pagna.workers.dev`
 - Cloudflare app Worker name: `edsync`
-- Cloudflare automation Worker name: `edsync-automation`
+- The former background Worker `edsync-automation` was removed by the owner.
+  Normal app deployments do not recreate it. Queue processing and scheduled
+  background sweeps require a separately enabled consumer.
 - Cloudflare D1 database: `edsync-prod-d1`
 - Cloudflare R2 bucket: `edsync-assets-prod`
 - Cloudflare Queue: `edsync-automation-prod`
@@ -91,8 +93,7 @@ announcements, notes, notifications, catalog products, and Studio designs.
 - Vercel Git deployments remain disabled in `vercel.json`; the Vercel deploy
   command has been removed. Cloudflare is the supported release target.
 - `npm.cmd run deploy:cloudflare` builds the app with the public values in the
-  app Wrangler config, deploys the automation queue consumer and its phased
-  20-minute sweep, then deploys the app Worker. Set `CLOUDFLARE_ACCOUNT_ID` in
+  app Wrangler config, then deploys only the `edsync` app Worker. Set `CLOUDFLARE_ACCOUNT_ID` in
   the process environment and sign Wrangler into the EdSync account first.
   The command syncs local Worker secrets afterward unless
   `CLOUDFLARE_SKIP_SECRET_SYNC=1` is set.
