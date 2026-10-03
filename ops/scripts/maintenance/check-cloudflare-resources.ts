@@ -155,8 +155,8 @@ if (demoVars.R2_BUCKET || demoVars.CLOUDFLARE_QUEUE_NAME || demoVars.CLOUDFLARE_
 if (demoVars.EDSYNC_DEMO_MODE !== "1" || demoVars.NEXT_PUBLIC_DEMO_MODE !== "true") {
   demoIsolationIssues.push("Demo mode flags must be enabled.");
 }
-if (demoVars.EDSYNC_DEMO_HOSTNAME !== "edsync-demo.learn-app.workers.dev" || demoVars.NEXT_PUBLIC_APP_URL !== "https://edsync-demo.learn-app.workers.dev") {
-  demoIsolationIssues.push("Demo host and public URL must point at edsync-demo.learn-app.workers.dev.");
+if (demoVars.EDSYNC_DEMO_HOSTNAME !== "edsync-demo.pagna.workers.dev" || demoVars.NEXT_PUBLIC_APP_URL !== "https://edsync-demo.pagna.workers.dev") {
+  demoIsolationIssues.push("Demo host and public URL must point at edsync-demo.pagna.workers.dev.");
 }
 if (demoConfig.services?.length !== 1 || demoConfig.services[0]?.service !== "edsync-demo") {
   demoIsolationIssues.push("Demo must self-reference only the edsync-demo Worker.");
