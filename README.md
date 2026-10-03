@@ -285,7 +285,10 @@ No DNS records, domain purchases, or live Cloudflare changes are performed by th
 
 ## Public sample workspace
 
-The [EdSync demo](https://edsync-demo.pagna.workers.dev) runs as a separate Cloudflare Worker with its own D1 database. Visitors can browse four free sample courses and switch between fictional learner and teacher workspaces without credentials. The shared workspaces are read-only; they illustrate lessons, classes, assessments, progress, and Studio without changing the official EdSync tenant. The empty official catalog links to this populated demo.
+The official live app is [EdSync](https://edsync.pagna.workers.dev). The former
+separate demo Worker is no longer deployed. The following instructions describe
+the optional isolated sample-workspace infrastructure retained in source; normal
+app deployment does not publish it. Do not recreate removed Workers automatically.
 
 Build and deploy the demo with its own Wrangler config, never the production app or automation deploy command:
 
