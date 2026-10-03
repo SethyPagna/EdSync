@@ -23,7 +23,7 @@ test("Cloudflare public variables are present at Next build time", () => {
 
   assert.equal(env.NEXT_PUBLIC_THEME_DEFAULT, "dark");
   assert.equal(env.NEXT_PUBLIC_PWA_ENABLED, "true");
-  assert.equal(env.NEXT_PUBLIC_APP_URL, "https://edsync.learn-app.workers.dev");
+  assert.equal(env.NEXT_PUBLIC_APP_URL, "https://edsync.pagna.workers.dev");
   assert.equal(env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL, config.vars?.NEXT_PUBLIC_R2_PUBLIC_BASE_URL);
   assert.equal(env.R2_BUCKET, undefined);
   assert.equal(env.APP_ENCRYPTION_KEY, undefined);
@@ -34,7 +34,7 @@ test("demo build selects its own D1 and clears inherited production resource val
   const config = JSON.parse(readFileSync(DEMO_WORKER_CONFIG_PATH, "utf8")) as CloudflareAppConfig;
   const env: NodeJS.ProcessEnv = {
     NODE_ENV: "test",
-    NEXT_PUBLIC_APP_URL: "https://edsync.learn-app.workers.dev",
+    NEXT_PUBLIC_APP_URL: "https://edsync.pagna.workers.dev",
     NEXT_PUBLIC_R2_PUBLIC_BASE_URL: "https://production-assets.example.com",
     CLOUDFLARE_D1_DATABASE_ID: "production-database-id",
     R2_BUCKET: "edsync-assets-prod",
@@ -45,7 +45,7 @@ test("demo build selects its own D1 and clears inherited production resource val
   applyDeploymentBuildVars(config.vars ?? {}, env);
 
   assert.equal(workerConfigPathFromArgs(["--config", DEMO_WORKER_CONFIG_PATH]), DEMO_WORKER_CONFIG_PATH);
-  assert.equal(env.NEXT_PUBLIC_APP_URL, "https://edsync-demo.learn-app.workers.dev");
+  assert.equal(env.NEXT_PUBLIC_APP_URL, "https://edsync-demo.pagna.workers.dev");
   assert.equal(env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL, "");
   assert.equal(env.CLOUDFLARE_D1_DATABASE_ID, config.vars?.CLOUDFLARE_D1_DATABASE_ID);
   assert.equal(env.EDSYNC_DEMO_MODE, "1");
@@ -59,7 +59,7 @@ test("production build clears inherited demo mode", () => {
   const env: NodeJS.ProcessEnv = {
     NODE_ENV: "test",
     EDSYNC_DEMO_MODE: "1",
-    EDSYNC_DEMO_HOSTNAME: "edsync-demo.learn-app.workers.dev",
+    EDSYNC_DEMO_HOSTNAME: "edsync-demo.pagna.workers.dev",
     NEXT_PUBLIC_DEMO_MODE: "true",
   };
 
