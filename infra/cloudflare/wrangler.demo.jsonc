@@ -19,10 +19,10 @@
   "vars": {
     "DEPLOYMENT_TARGET": "cloudflare",
     "EDSYNC_DEMO_MODE": "1",
-    "EDSYNC_DEMO_HOSTNAME": "edsync-demo.learn-app.workers.dev",
+    "EDSYNC_DEMO_HOSTNAME": "edsync-demo.pagna.workers.dev",
     "NEXT_PUBLIC_DEMO_MODE": "true",
     "NEXT_PUBLIC_THEME_DEFAULT": "light",
-    "NEXT_PUBLIC_APP_URL": "https://edsync-demo.learn-app.workers.dev",
+    "NEXT_PUBLIC_APP_URL": "https://edsync-demo.pagna.workers.dev",
     "NEXT_PUBLIC_R2_PUBLIC_BASE_URL": "",
     "NEXT_PUBLIC_PWA_ENABLED": "false",
     "EMAIL_MODE": "outbox",
