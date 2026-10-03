@@ -236,7 +236,7 @@ export default async function CatalogPage({
               {unavailable ? "Please try again in a moment." : copy.emptyCopy}
             </p>}
             {!isDemoSite && !unavailable && !hasFilters && <a
-              href="https://edsync-demo.learn-app.workers.dev"
+              href="https://edsync-demo.pagna.workers.dev"
               className="btn-primary mt-5"
             >
               Explore populated demo <ArrowRight size={16} />
